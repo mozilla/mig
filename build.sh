@@ -3,9 +3,9 @@
 GOPATH="$GOROOT/bin:$(pwd)"
 GOBIN="$(pwd)/bin"
 for target in \
-    types.go \
     mig/modules/filechecker \
-    mig/agent
+    mig/agent \
+    mig/scheduler
 do
 go build -o bin/$(basename $target) $target
 done

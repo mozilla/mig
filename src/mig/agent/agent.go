@@ -120,13 +120,13 @@ func sendResults(c *amqp.Channel, resultChan <-chan mig.Action,
 		    ContentType:  "text/plain",
 		    Body:         []byte(body),
 		}
-		err = c.Publish("migexchange",		// exchange name
-				"mig.action.results",	// exchange key
+		err = c.Publish("migexchange",	// exchange name
+				"mig.action.respond",	// exchange key
 				true,			// is mandatory
 				false,			// is immediate
 				msg)			// AMQP message
 		if err != nil { panic(err) }
-		log.Println("sendResults:", body)
+		log.Printf("sendResults: sending '%s'", msg.Body)
 	}
 	return nil
 }
@@ -138,7 +138,7 @@ func main() {
 	alertChan	:= make(chan mig.Alert, 10)
 	resultChan	:= make(chan mig.Action, 10)
 	// Connects opens an AMQP connection from the credentials in the URL.
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial("amqp://guest:guest@172.21.1.1:5672/")
 	if err != nil { panic(err) }
 	defer conn.Close()
 
@@ -146,7 +146,7 @@ func main() {
 	if err != nil { panic(err) }
 
 	// declare a queue
-	q, err := c.QueueDeclare("mig.action",	// queue name
+	q, err := c.QueueDeclare("mig.action.schedule",	// queue name
 				true,		// is durable
 				false,		// is autoDelete
 				false,		// is exclusive
@@ -154,9 +154,8 @@ func main() {
 				nil)		// AMQP args
 	fmt.Println(q)
 
-	// bind a queue to an exchange via the key
-	err = c.QueueBind("mig.action",		// queue name
-			"mig.action.create",	// exchange key
+	err = c.QueueBind("mig.action.schedule",		// queue name
+			"mig.action.schedule",	// exchange key
 			"migexchange",		// exchange name
 			false,			// is noWait
 			nil)			// AMQP args
@@ -170,7 +169,7 @@ func main() {
 
 	// Initialize a consumer than pulls messages into a channel
 	tag := fmt.Sprintf("%s", time.Now())
-	msgChan, err := c.Consume("mig.action",	// queue name
+	msgChan, err := c.Consume("mig.action.schedule",	// queue name
 			tag,			// exchange key
 			false,			// is autoAck
 			false,			// is exclusive
