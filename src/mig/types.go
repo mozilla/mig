@@ -1,8 +1,8 @@
 package mig
 
 
-type Action struct{
-	Name, Target, Check, Command string
+type Action struct {
+	AgentID, ActionID, Target, Check, Command string
 	FCResults	[]FileCheckerResult
 }
 
@@ -13,4 +13,13 @@ type FileCheckerResult struct {
 
 type Alert struct {
 	IOC, Item string
+}
+
+type Register struct {
+	Name, ID, OS string
+}
+
+type Binding struct {
+	Queue string
+	Key   string
 }

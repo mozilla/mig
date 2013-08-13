@@ -8,6 +8,8 @@ import (
 	"log"
 	"mig"
 	"os/exec"
+	"os"
+	"runtime"
 	"time"
 )
 
@@ -32,9 +34,11 @@ func parseActions(actions <-chan []byte, fCommandChan chan mig.Action,
 	var action mig.Action
 	for a := range actions {
 		err := json.Unmarshal(a, &action)
-		if err != nil { panic(err) }
-		log.Printf("ParseAction: Name '%s' Target '%s' Check '%s' Command '%s'",
-			   action.Name, action.Target, action.Check, action.Command)
+		if err != nil {
+			log.Fatal("parseAction - json.Unmarshal:", err)
+		}
+		log.Printf("ParseAction: Check '%s' Command '%s'",
+			   action.Check, action.Command)
 		switch action.Check{
 		case "filechecker":
 			fCommandChan <- action
@@ -109,82 +113,130 @@ func raiseAlerts(alertChan chan mig.Alert, terminate chan bool) error {
 	return nil
 }
 
-func sendResults(c *amqp.Channel, resultChan <-chan mig.Action,
+func sendResults(c *amqp.Channel, agtID string, resultChan <-chan mig.Action,
 		 terminate chan bool) error {
+	rKey := fmt.Sprintf("mig.scheduler.%s", agtID)
 	for r := range resultChan {
+		r.AgentID = agtID
 		body, err := json.Marshal(r)
-		if err != nil { panic(err) }
-		msg := amqp.Publishing{
-		    DeliveryMode: amqp.Persistent,
-		    Timestamp:    time.Now(),
-		    ContentType:  "text/plain",
-		    Body:         []byte(body),
+		if err != nil {
+			log.Fatalf("sendResults - json.Marshal: %v", err)
 		}
-		err = c.Publish("migexchange",	// exchange name
-				"mig.action.respond",	// exchange key
-				true,			// is mandatory
-				false,			// is immediate
-				msg)			// AMQP message
-		if err != nil { panic(err) }
-		log.Printf("sendResults: sending '%s'", msg.Body)
+		msgXchange(c, "mig", rKey, body)
 	}
 	return nil
 }
 
+func registerAgent(c *amqp.Channel, regMsg mig.Register) error {
+	body, err := json.Marshal(regMsg)
+	if err != nil {
+		log.Fatalf("registerAgent - json.Marshal: %v", err)
+	}
+	msgXchange(c, "mig", "mig.register", body)
+	return nil
+}
+
+func msgXchange(c *amqp.Channel, excName, routingKey string, body []byte) error {
+	msg := amqp.Publishing{
+	    DeliveryMode: amqp.Persistent,
+	    Timestamp:    time.Now(),
+	    ContentType:  "text/plain",
+	    Body:         []byte(body),
+	}
+	err := c.Publish(excName,
+			routingKey,
+			true,	// is mandatory
+			false,	// is immediate
+			msg)	// AMQP message
+	if err != nil {
+		log.Fatalf("msgXchange - ChannelPublish: %v", err)
+	}
+	log.Printf("msgXchange: published '%s'\n", msg.Body)
+	return nil
+}
+
 func main() {
+	// termChan is used to exit the program
 	termChan	:= make(chan bool)
 	actionsChan	:= make(chan []byte, 10)
 	fCommandChan	:= make(chan mig.Action, 10)
 	alertChan	:= make(chan mig.Alert, 10)
 	resultChan	:= make(chan mig.Action, 10)
+	hostname, err	:= os.Hostname()
+	if err != nil {
+		log.Fatalf("os.Hostname(): %v", err)
+	}
+	regMsg := mig.Register{
+		Name: hostname,
+		OS: runtime.GOOS,
+		ID: fmt.Sprintf("%s.%s", runtime.GOOS, hostname),
+	}
+	agentQueue := fmt.Sprintf("mig.agt.%s", regMsg.ID)
+	bindings := []mig.Binding{
+		mig.Binding{agentQueue, agentQueue},
+		mig.Binding{agentQueue, "mig.all"},
+	}
+
+	log.Println("MIG agent starting on", hostname)
+
 	// Connects opens an AMQP connection from the credentials in the URL.
-	conn, err := amqp.Dial("amqp://guest:guest@172.21.1.1:5672/")
-	if err != nil { panic(err) }
+	conn, err := amqp.Dial("amqp://guest:guest@127.0.0.1:5672/")
+	if err != nil {
+		log.Fatalf("amqp.Dial(): %v", err)
+	}
 	defer conn.Close()
-
 	c, err := conn.Channel()
-	if err != nil { panic(err) }
-
-	// declare a queue
-	q, err := c.QueueDeclare("mig.action.schedule",	// queue name
-				true,		// is durable
-				false,		// is autoDelete
-				false,		// is exclusive
+	if err != nil {
+		log.Fatalf("conn.Channel(): %v", err)
+	}
+	for _, b := range bindings {
+		_, err = c.QueueDeclare(b.Queue,	// Queue name
+					true,		// is durable
+					false,		// is autoDelete
+					false,		// is exclusive
+					false,		// is noWait
+					nil)		// AMQP args
+		if err != nil {
+			log.Fatalf("QueueDeclare: %v", err)
+		}
+		err = c.QueueBind(b.Queue,	// Queue name
+				b.Key,		// Routing key name
+				"mig",		// Exchange name
 				false,		// is noWait
 				nil)		// AMQP args
-	fmt.Println(q)
-
-	err = c.QueueBind("mig.action.schedule",		// queue name
-			"mig.action.schedule",	// exchange key
-			"migexchange",		// exchange name
-			false,			// is noWait
-			nil)			// AMQP args
-	if err != nil { panic(err) }
+		if err != nil {
+			log.Fatalf("QueueBind: %v", err)
+		}
+	}
 
 	// Limit the number of message the channel will receive
-	err = c.Qos(1,		// prefetch count (in # of msg)
+	err = c.Qos(2,		// prefetch count (in # of msg)
 		    0,		// prefetch size (in bytes)
 		    false)	// is global
-	if err != nil { panic(err) }
-
-	// Initialize a consumer than pulls messages into a channel
-	tag := fmt.Sprintf("%s", time.Now())
-	msgChan, err := c.Consume("mig.action.schedule",	// queue name
-			tag,			// exchange key
-			false,			// is autoAck
-			false,			// is exclusive
-			false,			// is noLocal
-			false,			// is noWait
-			nil)			// AMQP args
-	if err != nil { panic(err) }
-
-	// This goroutine will continously pull messages from the consumer
-	// channel, print them to stdout and acknowledge them
-	go getActions(msgChan, actionsChan, termChan)
+	if err != nil {
+		log.Fatalf("ChannelQoS: %v", err)
+	}
+	for _, b := range bindings {
+		msgChan, err := c.Consume(b.Queue, // queue name
+					"",	// some tag
+					false,	// is autoAck
+					false,	// is exclusive
+					false,	// is noLocal
+					false,	// is noWait
+					nil)	// AMQP args
+		if err != nil {
+			log.Fatalf("ChannelConsume: %v", err)
+		}
+		go getActions(msgChan, actionsChan, termChan)
+	}
 	go parseActions(actionsChan, fCommandChan, termChan)
 	go runFilechecker(fCommandChan, alertChan, resultChan, termChan)
 	go raiseAlerts(alertChan, termChan)
-	go sendResults(c, resultChan, termChan)
+	go sendResults(c, regMsg.ID, resultChan, termChan)
+
+	// All set, ready to register
+	registerAgent(c, regMsg)
+
 	// block until terminate chan is called
 	<-termChan
 }
