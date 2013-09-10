@@ -1,0 +1,8 @@
+{
+    "Name":     "MOZSYSCOMP_LOWSYSCALL",
+    "Target":   "linux",
+    "Check":    "filechecker",
+    "Arguments":["/etc/audit/audit.rules:contains=-a exit,always -F arch=b(32|64) -S execve -k exec"],
+    "RunDate":  "immediate",
+    "Expiration":  "30m"
+}
