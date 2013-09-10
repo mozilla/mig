@@ -1,0 +1,8 @@
+{
+    "Name":     "MOZSYSCOMP_LOWENCCRED",
+    "Target":   "linux",
+    "Check":    "filechecker",
+    "Arguments":["/etc/shadow:contains=root:$1$"],
+    "RunDate":  "immediate",
+    "Expiration":  "30m"
+}
