@@ -7,12 +7,14 @@ import(
 type Action struct {
 	Name, Target, Check, RunDate, Expiration string
 	Arguments []string
+	UniqID uint32
 }
 
 type Command struct {
 	AgentName, AgentQueueLoc string
 	Action Action
 	FCResults []FileCheckerResult
+	UniqID uint32
 }
 
 type FileCheckerResult struct {
