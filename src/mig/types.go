@@ -1,25 +1,36 @@
 package mig
 
+import(
+	"time"
+)
 
 type Action struct {
-	AgentID, ActionID, Target, Check, Command string
-	FCResults	[]FileCheckerResult
+	Name, Target, Check, RunDate, Expiration string
+	Arguments []string
+}
+
+type Command struct {
+	AgentName, AgentQueueLoc string
+	Action Action
+	FCResults []FileCheckerResult
 }
 
 type FileCheckerResult struct {
 	TestedFiles, ResultCount int
-	Files	[]string
+	Files []string
 }
 
 type Alert struct {
-	IOC, Item string
+	Arguments []string
+	Item string
 }
 
 type Register struct {
-	Name, ID, OS string
+	Name, QueueLoc, OS string
+	FirstRegistrationTime, LastRegistrationTime, LastHeartbeatTime time.Time
 }
 
 type Binding struct {
 	Queue string
-	Key   string
+	Key string
 }

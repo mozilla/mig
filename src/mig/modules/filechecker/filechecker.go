@@ -1,4 +1,4 @@
-/* Look for file IOCs on the local system
+/* Inspect files on the local system
 
 Version: MPL 1.1/GPL 2.0/LGPL 2.1
 
@@ -229,8 +229,7 @@ func GetHash(fd *os.File, HashType int) (hexhash string) {
    returns:
 	- IsVerified: true if a match is found, false otherwise
 */
-func VerifyHash(file string, hash string, check int, ActiveIOCIDs []int,
-	IOCs map[int]FileIOC) (IsVerified bool) {
+func VerifyHash(file string, hash string, check int, ActiveIOCIDs []int, IOCs map[int]FileIOC) (IsVerified bool) {
 	IsVerified = false
 	for _, id := range ActiveIOCIDs {
 		tmpioc := IOCs[id]
@@ -257,8 +256,7 @@ func VerifyHash(file string, hash string, check int, ActiveIOCIDs []int,
    return:
 	- MatchesRegexp is a boolean set to true if at least one regexp matches
 */
-func MatchRegexpsOnFile(fd *os.File, ReList []int,
-	IOCs map[int]FileIOC) (MatchesRegexp bool) {
+func MatchRegexpsOnFile(fd *os.File, ReList []int, IOCs map[int]FileIOC) (MatchesRegexp bool) {
 	MatchesRegexp = false
 	Results := make(map[int]int)
 	scanner := bufio.NewScanner(fd)
@@ -300,8 +298,7 @@ func MatchRegexpsOnFile(fd *os.File, ReList []int,
    return:
 	- MatchesRegexp is a boolean set to true if at least one regexp matches
 */
-func MatchRegexpsOnName(filename string, ReList []int,
-	IOCs map[int]FileIOC) (MatchesRegexp bool) {
+func MatchRegexpsOnName(filename string, ReList []int, IOCs map[int]FileIOC) (MatchesRegexp bool) {
 	MatchesRegexp = false
 	for _, id := range ReList {
 		tmpioc := IOCs[id]
@@ -330,8 +327,7 @@ func MatchRegexpsOnName(filename string, ReList []int,
    returns:
 	- nil on success, error on failure
 */
-func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int,
-	         IOCs map[int]FileIOC) error {
+func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int]FileIOC) error {
 	/* Iterate through the entire checklist, and process the checks of
 	   each file
 	*/
@@ -469,9 +465,7 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int,
    return:
 	- nil on success, error on error
 */
-func GetDownThatPath(path string, ActiveIOCIDs []int, CheckBitMask int,
-	IOCs map[int]FileIOC, ToDoIOCs map[int]FileIOC,
-	Statistics *Stats) error {
+func GetDownThatPath(path string, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int]FileIOC, ToDoIOCs map[int]FileIOC, Statistics *Stats) error {
 	for id, ioc := range ToDoIOCs {
 		if ioc.Path == path {
 			/* Found a new IOC to apply to the current path, add

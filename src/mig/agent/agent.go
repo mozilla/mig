@@ -13,36 +13,36 @@ import (
 	"time"
 )
 
-func getActions(messages <-chan amqp.Delivery, actions chan []byte,
-	     terminate chan bool) error {
+var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
+
+func getCommands(messages <-chan amqp.Delivery, actions chan []byte, terminate chan bool) error {
 	// range waits on the channel and returns all incoming messages
 	// range will exit when the channel closes
 	for m := range messages {
-		log.Printf("getActions: received '%s'", m.Body)
+		log.Printf("getCommands: received '%s'", m.Body)
 		// Ack this message only
 		err := m.Ack(true)
 		if err != nil { panic(err) }
 		actions <- m.Body
-		log.Printf("getActions: queued in pos. %d", len(actions))
+		log.Printf("getCommands: queued in pos. %d", len(actions))
 	}
 	terminate <- true
 	return nil
 }
 
-func parseActions(actions <-chan []byte, fCommandChan chan mig.Action,
-		  terminate chan bool) error {
-	var action mig.Action
-	for a := range actions {
-		err := json.Unmarshal(a, &action)
+func parseCommands(commands <-chan []byte, fCommandChan chan mig.Command, terminate chan bool) error {
+	var cmd mig.Command
+	for a := range commands {
+		err := json.Unmarshal(a, &cmd)
 		if err != nil {
-			log.Fatal("parseAction - json.Unmarshal:", err)
+			log.Fatal("parseCommand - json.Unmarshal:", err)
 		}
-		log.Printf("ParseAction: Check '%s' Command '%s'",
-			   action.Check, action.Command)
-		switch action.Check{
+		log.Printf("ParseCommand: Check '%s' Arguments '%s'",
+			   cmd.Action.Check, cmd.Action.Arguments)
+		switch cmd.Action.Check{
 		case "filechecker":
-			fCommandChan <- action
-			log.Println("parseActions: queued into filechecker",
+			fCommandChan <- cmd
+			log.Println("parseCommands: queued into filechecker",
 				    "in pos.", len(fCommandChan))
 		}
 	}
@@ -50,18 +50,20 @@ func parseActions(actions <-chan []byte, fCommandChan chan mig.Action,
 	return nil
 }
 
-func runFilechecker(fCommandChan <-chan mig.Action, alertChan chan mig.Alert,
-		    resultChan chan mig.Action, terminate chan bool) error {
-	for a := range fCommandChan {
-		c := a.Command
-		log.Printf("RunFilechecker: command '%s' is being executed", c)
-		cmd := exec.Command("./filechecker", c)
-		cmdout, err := cmd.StdoutPipe()
+func runFilechecker(fCommandChan <-chan mig.Command, alertChan chan mig.Alert, resultChan chan mig.Command, terminate chan bool) error {
+	for migCmd := range fCommandChan {
+		log.Printf("RunFilechecker: running with args '%s'", migCmd.Action.Arguments)
+		var cmdArg string
+		for _, arg := range migCmd.Action.Arguments {
+			cmdArg += arg
+		}
+		runCmd := exec.Command("./filechecker", cmdArg)
+		cmdout, err := runCmd.StdoutPipe()
 		if err != nil {
 			log.Fatal(err)
 		}
 		st := time.Now()
-		if err := cmd.Start(); err != nil {
+		if err := runCmd.Start(); err != nil {
 			log.Fatal(err)
 		}
 		results := make(map[string] mig.FileCheckerResult)
@@ -71,15 +73,15 @@ func runFilechecker(fCommandChan <-chan mig.Action, alertChan chan mig.Alert,
 		}
 		cmdDone := make(chan error)
 		go func() {
-			cmdDone <-cmd.Wait()
+			cmdDone <-runCmd.Wait()
 		}()
 		select {
 		// kill the process when timeout expires
 		case <-time.After(30 * time.Second):
-			if err := cmd.Process.Kill(); err != nil {
+			if err := runCmd.Process.Kill(); err != nil {
 				log.Fatal("failed to kill:", err)
 			}
-			log.Fatal("runFileChecker: command '%s' timed out", c)
+			log.Fatal("runFileChecker: command '%s' timed out", migCmd)
 		// exit normally
 		case err := <-cmdDone:
 			if err != nil {
@@ -87,19 +89,19 @@ func runFilechecker(fCommandChan <-chan mig.Action, alertChan chan mig.Alert,
 			}
 		}
 		for _, r := range results {
-			log.Println("runFileChecker: command", c,"tested",
+			log.Println("runFileChecker: command", migCmd,"tested",
 				    r.TestedFiles, "files in", time.Now().Sub(st))
 			if r.ResultCount > 0 {
 				for _, f := range r.Files {
 					alertChan <- mig.Alert{
-						IOC: c,
+						Arguments: migCmd.Action.Arguments,
 						Item: f,
 					}
 				}
 			}
-			a.FCResults = append(a.FCResults, r)
+			migCmd.FCResults = append(migCmd.FCResults, r)
 		}
-		resultChan <- a
+		resultChan <- migCmd
 	}
 	terminate <- true
 	return nil
@@ -108,16 +110,15 @@ func runFilechecker(fCommandChan <-chan mig.Action, alertChan chan mig.Alert,
 func raiseAlerts(alertChan chan mig.Alert, terminate chan bool) error {
 	for a := range alertChan {
 		log.Printf("raiseAlerts: IOC '%s' positive match on '%s'",
-			   a.IOC, a.Item)
+			   a.Arguments, a.Item)
 	}
 	return nil
 }
 
-func sendResults(c *amqp.Channel, agtID string, resultChan <-chan mig.Action,
-		 terminate chan bool) error {
-	rKey := fmt.Sprintf("mig.scheduler.%s", agtID)
+func sendResults(c *amqp.Channel, agtQueueLoc string, resultChan <-chan mig.Command, terminate chan bool) error {
+	rKey := fmt.Sprintf("mig.scheduler.%s", agtQueueLoc)
 	for r := range resultChan {
-		r.AgentID = agtID
+		r.AgentQueueLoc = agtQueueLoc
 		body, err := json.Marshal(r)
 		if err != nil {
 			log.Fatalf("sendResults - json.Marshal: %v", err)
@@ -159,9 +160,9 @@ func main() {
 	// termChan is used to exit the program
 	termChan	:= make(chan bool)
 	actionsChan	:= make(chan []byte, 10)
-	fCommandChan	:= make(chan mig.Action, 10)
+	fCommandChan	:= make(chan mig.Command, 10)
 	alertChan	:= make(chan mig.Alert, 10)
-	resultChan	:= make(chan mig.Action, 10)
+	resultChan	:= make(chan mig.Command, 10)
 	hostname, err	:= os.Hostname()
 	if err != nil {
 		log.Fatalf("os.Hostname(): %v", err)
@@ -169,9 +170,9 @@ func main() {
 	regMsg := mig.Register{
 		Name: hostname,
 		OS: runtime.GOOS,
-		ID: fmt.Sprintf("%s.%s", runtime.GOOS, hostname),
+		QueueLoc: fmt.Sprintf("%s.%s", runtime.GOOS, hostname),
 	}
-	agentQueue := fmt.Sprintf("mig.agt.%s", regMsg.ID)
+	agentQueue := fmt.Sprintf("mig.agt.%s", regMsg.QueueLoc)
 	bindings := []mig.Binding{
 		mig.Binding{agentQueue, agentQueue},
 		mig.Binding{agentQueue, "mig.all"},
@@ -180,7 +181,7 @@ func main() {
 	log.Println("MIG agent starting on", hostname)
 
 	// Connects opens an AMQP connection from the credentials in the URL.
-	conn, err := amqp.Dial("amqp://guest:guest@127.0.0.1:5672/")
+	conn, err := amqp.Dial(AMQPBROKER)
 	if err != nil {
 		log.Fatalf("amqp.Dial(): %v", err)
 	}
@@ -227,12 +228,12 @@ func main() {
 		if err != nil {
 			log.Fatalf("ChannelConsume: %v", err)
 		}
-		go getActions(msgChan, actionsChan, termChan)
+		go getCommands(msgChan, actionsChan, termChan)
 	}
-	go parseActions(actionsChan, fCommandChan, termChan)
+	go parseCommands(actionsChan, fCommandChan, termChan)
 	go runFilechecker(fCommandChan, alertChan, resultChan, termChan)
 	go raiseAlerts(alertChan, termChan)
-	go sendResults(c, regMsg.ID, resultChan, termChan)
+	go sendResults(c, regMsg.QueueLoc, resultChan, termChan)
 
 	// All set, ready to register
 	registerAgent(c, regMsg)
