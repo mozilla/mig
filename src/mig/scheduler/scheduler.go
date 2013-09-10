@@ -30,11 +30,11 @@ var MONGOURI string = "172.21.2.143"
 // AMQP broker. It also launches the goroutines.
 func main() {
 	termChan := make(chan bool)
-	actionNewChan := make(chan string)
-	cmdLaunchChan := make(chan string)
-	cmdInFlightChan := make(chan string)
-	cmdDoneChan := make(chan string)
-	actionDoneChan := make(chan string)
+	actionNewChan := make(chan string, 17)
+	cmdLaunchChan := make(chan string, 67)
+	cmdInFlightChan := make(chan string, 67)
+	cmdDoneChan := make(chan string, 43)
+	actionDoneChan := make(chan string, 11)
 
 	// Setup connection to MongoDB backend database
 	mgofd, err := mgo.Dial(MONGOURI)
