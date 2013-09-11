@@ -1,3 +1,12 @@
+/*
+	TODO LIST
+- add registration expiration goroutine
+- add registration pickup at startup
+- check if goroutine for agent already exist before creating one
+- add timestamp for all actions and commands, stored in the command data
+- store done actions in the database
+- calculation action completion ratio, based on number of agents launched against, and number of command responses received
+*/
 package main
 
 import (
@@ -25,6 +34,7 @@ var LAUNCHCMDDIR string = "/var/cache/mig/commands/ready"
 var INFLIGHTCMDDIR string = "/var/cache/mig/commands/inflight"
 var DONECMDDIR string = "/var/cache/mig/commands/done"
 var DONEACTIONDIR string = "/var/cache/mig/actions/done"
+var INVALIDACTIONDIR string = "/var/cache/mig/actions/invalid"
 var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
 var MONGOURI string = "172.21.2.143"
 var AGTWHITELIST string = "/var/cache/mig/agents_whitelist.txt"
@@ -42,122 +52,121 @@ func main() {
 	// Setup connection to MongoDB backend database
 	mgofd, err := mgo.Dial(MONGOURI)
 	if err != nil {
-		log.Fatal("Main: MongoDB connection error: ", err)
+		log.Fatal("- - Main: MongoDB connection error: ", err)
 	}
 	defer mgofd.Close()
 	mgofd.SetSafe(&mgo.Safe{}) // make safe writes only
 	mgoRegCol := mgofd.DB("mig").C("registrations")
-	log.Println("Main: MongoDB connection successfull. URI=", MONGOURI)
+	log.Println("- - Main: MongoDB connection successfull. URI=", MONGOURI)
 
 	// Watch the data directories for new files
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal("fsnotify.NewWatcher(): ", err)
+		log.Fatal("- - fsnotify.NewWatcher(): ", err)
 	}
 	go func() {
 		for {
 			select {
 			case ev := <-watcher.Event:
-				log.Println("event: ", ev)
 				if strings.HasPrefix(ev.Name, NEWACTIONDIR) {
-					log.Println("Action received:", ev)
+					log.Println("- - Watcher: New Action:", ev)
 					actionNewChan <- ev.Name
 				} else if strings.HasPrefix(ev.Name, LAUNCHCMDDIR) {
-					log.Println("Command ready:", ev)
+					log.Println("- - Watcher: Command ready", ev)
 					cmdLaunchChan <- ev.Name
 				} else if strings.HasPrefix(ev.Name, INFLIGHTCMDDIR) {
-					log.Println("Command in flight:", ev)
+					log.Println("- - Watcher: Command in flight:", ev)
 					cmdInFlightChan <- ev.Name
 				} else if strings.HasPrefix(ev.Name, DONECMDDIR) {
-					log.Println("Command done:", ev)
+					log.Println("- - Watcher: Command done:", ev)
 					cmdDoneChan <- ev.Name
 				} else if strings.HasPrefix(ev.Name, DONEACTIONDIR) {
-					log.Println("Action done:", ev)
+					log.Println("- - Watcher: Action done:", ev)
 					actionDoneChan <- ev.Name
 				}
 			case err := <-watcher.Error:
-				log.Println("error: ", err)
+				log.Fatal("error: ", err)
 			}
 		}
 	}()
 	err = watcher.WatchFlags(NEWACTIONDIR, fsnotify.FSN_CREATE)
 	if err != nil {
-		log.Fatal("watcher.Watch(): ", err)
+		log.Fatal("- - watcher.Watch(): ", err)
 	}
-	log.Println("Main: Initializer watcher on", NEWACTIONDIR)
+	log.Println("- - Main: Initializer watcher on", NEWACTIONDIR)
 	err = watcher.WatchFlags(LAUNCHCMDDIR, fsnotify.FSN_CREATE)
 	if err != nil {
-		log.Fatal("watcher.Watch(): ", err)
+		log.Fatal("- - watcher.Watch(): ", err)
 	}
-	log.Println("Main: Initializer watcher on", LAUNCHCMDDIR)
+	log.Println("- - Main: Initializer watcher on", LAUNCHCMDDIR)
 	err = watcher.WatchFlags(INFLIGHTCMDDIR, fsnotify.FSN_CREATE)
 	if err != nil {
-		log.Fatal("watcher.Watch(): ", err)
+		log.Fatal("- - watcher.Watch(): ", err)
 	}
-	log.Println("Main: Initializer watcher on", INFLIGHTCMDDIR)
+	log.Println("- - Main: Initializer watcher on", INFLIGHTCMDDIR)
 	err = watcher.WatchFlags(DONECMDDIR, fsnotify.FSN_CREATE)
 	if err != nil {
-		log.Fatal("watcher.Watch(): ", err)
+		log.Fatal("- - watcher.Watch(): ", err)
 	}
-	log.Println("Main: Initializer watcher on", DONECMDDIR)
+	log.Println("- - Main: Initializer watcher on", DONECMDDIR)
 	err = watcher.WatchFlags(DONEACTIONDIR, fsnotify.FSN_CREATE)
 	if err != nil {
-		log.Fatal("watcher.Watch(): ", err)
+		log.Fatal("- - watcher.Watch(): ", err)
 	}
-	log.Println("Main: Initializer watcher on", DONEACTIONDIR)
+	log.Println("- - Main: Initializer watcher on", DONEACTIONDIR)
 
 	// Setup the AMQP connections and get ready to recv/send messages
 	conn, err := amqp.Dial(AMQPBROKER)
 	if err != nil {
-		log.Fatalf("amqp.Dial(): %v", err)
+		log.Fatalf("- - amqp.Dial(): %v", err)
 	}
 	defer conn.Close()
-	log.Println("Main: AMQP connection succeeded. Broker=", AMQPBROKER)
+	log.Println("- - Main: AMQP connection succeeded. Broker=", AMQPBROKER)
 	broker, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("Channel(): %v", err)
+		log.Fatalf("- - Channel(): %v", err)
 	}
 	// main exchange for all publications
 	err = broker.ExchangeDeclare("mig", "topic", true, false, false, false, nil)
 	if err != nil {
-		log.Fatalf("ExchangeDeclare: %v", err)
+		log.Fatalf("- - ExchangeDeclare: %v", err)
 	}
-	// agent registrations
+	// agent registrations & heartbeats
 	_, err = broker.QueueDeclare("mig.register", true, false, false, false, nil)
 	if err != nil {
-		log.Fatalf("QueueDeclare: %v", err)
+		log.Fatalf("- - QueueDeclare: %v", err)
 	}
 	err = broker.QueueBind("mig.register", "mig.register", "mig", false, nil)
 	if err != nil {
-		log.Fatalf("QueueBind: %v", err)
+		log.Fatalf("- - QueueBind: %v", err)
 	}
 	err = broker.Qos(1, 0, false)
 	if err != nil {
-		log.Fatalf("ChannelQoS: %v", err)
+		log.Fatalf("- - ChannelQoS: %v", err)
 	}
 	regChan, err := broker.Consume("mig.register", "", false, false, false, false, nil)
 	if err != nil {
-		log.Fatalf("ChannelConsume: %v", err)
+		log.Fatalf("- - ChannelConsume: %v", err)
 	}
-	log.Println("Main: Registration channel initialized")
+	log.Println("- - Main: Registration channel initialized")
 
 	// launch the routines that process action & commands
 	go pullAction(actionNewChan, mgoRegCol)
-	log.Println("Main: pullAction goroutine started")
+	log.Println("- - Main: pullAction goroutine started")
 	go launchCommand(cmdLaunchChan, broker)
-	log.Println("Main: launchCommand goroutine started")
+	log.Println("- - Main: launchCommand goroutine started")
 	go updateCommandStatus(cmdInFlightChan)
-	log.Println("Main: updateCommandStatus gorouting started")
+	log.Println("- - Main: updateCommandStatus gorouting started")
 	go terminateCommand(cmdDoneChan)
-	log.Println("Main: terminateCommand goroutine started")
+	log.Println("- - Main: terminateCommand goroutine started")
 	go terminateAction(actionDoneChan)
-	log.Println("Main: terminateAction goroutine started")
+	log.Println("- - Main: terminateAction goroutine started")
 
 	// launch the routine that handles registrations
 	go getRegistrations(regChan, broker, mgoRegCol)
-	log.Println("Main: getRegistrations goroutine started")
+	log.Println("- - Main: getRegistrations goroutine started")
 
-	log.Println("Main: Initialization completed successfully")
+	log.Println("- - Main: Initialization completed successfully")
 	// won't exit until this chan received something
 	<-termChan
 }
@@ -196,32 +205,58 @@ func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
 			", RunDate:", action.RunDate,
 			", Expiration:", action.Expiration,
 			", Arguments:", action.Arguments)
-		// get the list of targets from the register
-		targets := []mig.Register{}
-		iter := mgoRegCol.Find(bson.M{"os": action.Target}).Iter()
-		err = iter.All(&targets)
-		if err != nil {
-			log.Fatal(uniqid, "- pullAction - iter.All():", err)
-		}
-		for _, target := range targets {
-			cmduniqid := genUniqID()
-			log.Println(uniqid, cmduniqid, "pullAction: scheduling action",
-				action.Name, "on target", target.Name)
-			cmd := mig.Command{
-				AgentName: target.Name,
-				AgentQueueLoc: target.QueueLoc,
-				Action: action,
-				UniqID: cmduniqid,
-			}
-			jsonCmd, err := json.Marshal(cmd)
-			if err != nil {
-				log.Fatal(uniqid, cmduniqid,
-					"pullAction - json.Marshal():", err)
-			}
-			cmdPath := LAUNCHCMDDIR + "/" + target.QueueLoc + ".json"
-			err = ioutil.WriteFile(cmdPath, jsonCmd, 0640)
+
+		// expand the action in one command per agent. if this fails, move the
+		// action to the INVALID folder and move on
+		if err := prepareCommands(action, mgoRegCol); err != nil {
+			log.Println("pullAction: prepareCommand() failed:", err)
+			file := fmt.Sprintf("%s-%d.json", action.Name, action.UniqID)
+			os.Rename(actionPath, INVALIDACTIONDIR + "/" + file)
+			continue
 		}
 		os.Remove(actionPath)
+	}
+	return nil
+}
+
+func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
+	// get the list of targets from the register
+	targets := []mig.Register{}
+	iter := mgoRegCol.Find(bson.M{"os": action.Target}).Iter()
+	err := iter.All(&targets)
+	if err != nil {
+		log.Println(action.UniqID, "- pullAction - iter.All():", err)
+		errors.New("failed to retrieve agents list")
+	}
+	for _, target := range targets {
+		cmduniqid := genUniqID()
+		log.Println(action.UniqID, cmduniqid, "pullAction: scheduling action",
+			action.Name, "on target", target.Name)
+		cmd := mig.Command{
+			AgentName: target.Name,
+			AgentQueueLoc: target.QueueLoc,
+			Action: action,
+			UniqID: cmduniqid,
+		}
+		jsonCmd, err := json.Marshal(cmd)
+		if err != nil {
+			log.Println(action.UniqID, cmduniqid,
+				"pullAction - json.Marshal():", err)
+			errors.New("failed to serialize command")
+		}
+		// write is done in 2 steps:
+		// 1) a temp file is written
+		// 2) the temp file is moved into the target folder
+		// this prevents the dir watcher from waking up before the file is fully written
+		file := fmt.Sprintf("%s-%d-%d.json", action.Name, action.UniqID, cmduniqid)
+		cmdPath := LAUNCHCMDDIR + "/" + file
+		tmpPath := "/var/tmp/" + file
+		err = ioutil.WriteFile(tmpPath, jsonCmd, 0640)
+		if err != nil {
+			log.Fatal(action.UniqID, cmduniqid, "prepareCommands ioutil.WriteFile():", err)
+		}
+		os.Rename(tmpPath, cmdPath)
+		log.Println(action.UniqID, cmduniqid, "prepareCommands WriteFile()", cmdPath)
 	}
 	return nil
 }
@@ -255,7 +290,9 @@ func launchCommand(cmdLaunchChan <-chan string, broker *amqp.Channel) error {
 		log.Println(cmd.Action.UniqID, cmd.UniqID,
 			"launchCommand sent command to", cmd.AgentQueueLoc)
 		// command has been launched, move it to inflight directory
-		os.Rename(cmdPath, INFLIGHTCMDDIR + agtQueue + ".json")
+		cmdFile := fmt.Sprintf("%s-%d-%d.json",
+			cmd.AgentQueueLoc, cmd.Action.UniqID, cmd.UniqID)
+		os.Rename(cmdPath, INFLIGHTCMDDIR + "/" + cmdFile)
 	}
 	return nil
 }
@@ -288,15 +325,29 @@ func terminateAction(actionDoneChan <-chan string) error {
 	return nil
 }
 
-// listenToAgent receives AMQP messages from agents and does something with them
-func listenToAgent(agentChan <-chan amqp.Delivery, c *amqp.Channel) error {
+// recvAgentCommandResult receives AMQP messages with results of commands ran by agents
+func recvAgentResults(agentChan <-chan amqp.Delivery, c *amqp.Channel) error {
 	for m := range agentChan {
-		log.Printf("listenToAgent: queue '%s' received '%s'",
-			m.RoutingKey, m.Body)
-		// Ack this message only
-		err := m.Ack(true)
+		var cmd mig.Command
+		err := json.Unmarshal(m.Body, &cmd)
+		log.Println(cmd.Action.UniqID, cmd.UniqID,
+			"recvAgentCommandResult: queue", m.RoutingKey,
+			"received from agent", cmd.AgentName)
+		cmdPath := fmt.Sprintf("%s/%s-%d-%d.json", DONECMDDIR,
+			cmd.AgentQueueLoc, cmd.Action.UniqID, cmd.UniqID)
+		err = ioutil.WriteFile(cmdPath, m.Body, 0640)
 		if err != nil {
-			log.Fatal("listenToAgent - Ack():", err)
+			log.Fatal(cmd.Action.UniqID, cmd.UniqID,
+				"recvAgentCommandResult ioutil.WriteFile():", err)
+		}
+		inflightPath := fmt.Sprintf("%s/%s-%d-%d.json", INFLIGHTCMDDIR,
+			cmd.AgentQueueLoc, cmd.Action.UniqID, cmd.UniqID)
+		os.Remove(inflightPath)
+		// Ack this message only
+		err = m.Ack(true)
+		if err != nil {
+			log.Fatal(cmd.Action.UniqID, cmd.UniqID,
+				"recvAgentCommandResult Ack():", err)
 		}
 	}
 	return nil
@@ -309,21 +360,23 @@ func getRegistrations(registration <-chan amqp.Delivery, c *amqp.Channel, mgoReg
 	for r := range registration {
 		err := json.Unmarshal(r.Body, &reg)
 		if err != nil {
-			log.Fatal("getRegistration - json.Unmarshal:", err)
+			log.Fatal("- - getRegistration - json.Unmarshal:", err)
 		}
-		log.Println("getRegistrations: Agent Name:", reg.Name, ";",
+		log.Println("- - getRegistrations: Agent Name:", reg.Name, ";",
 			"Agent OS:", reg.OS, "; Agent ID:", reg.QueueLoc)
 
 		// is agent is not authorized to register, ack the message and skip the registration
 		// nothing is returned to the agent. it's simply ignored.
 		if err:= isRegistrationAuthorized(reg.Name); err != nil {
-			log.Println("getRegistrations: agent", reg.Name, "is not authorized to register")
+			log.Println("- - getRegistrations: agent",
+				reg.Name, "is not authorized to register")
 			if err = r.Ack(true); err != nil {
-				log.Fatal("getRegistrations r.Ack():", err)
+				log.Fatal("- - getRegistrations r.Ack():", err)
 			}
 			continue
 		}
-		log.Println("getRegistrations: agent", reg.Name, "is authorized to register")
+		log.Println("- - getRegistrations: agent", reg.Name,
+			"is authorized to register")
 
 		//create a queue for agt message
 		queue := fmt.Sprintf("mig.scheduler.%s", reg.QueueLoc)
@@ -336,24 +389,27 @@ func getRegistrations(registration <-chan amqp.Delivery, c *amqp.Channel, mgoReg
 			log.Fatalf("QueueBind: %v", err)
 		}
 		agentChan, err := c.Consume(queue, "", false, false, false, false, nil)
-		go listenToAgent(agentChan, c)
+
+		// TODO: don't start the goroutine if one already exist on this queue
+		// TODO2: at startup, go through the registration DB and start a goroutine per existing, non expired, registration
+		go recvAgentResults(agentChan, c)
+		log.Println("- - getRegistrations: started recvAgentResults goroutine for agent", reg.Name)
 
 		//save registration in database
 		reg.LastRegistrationTime = time.Now()
-		reg.LastHeartbeatTime = time.Now()
 
 		// try to find an existing entry to update
-		log.Println("getRegistrations: Updating registration info for agent", reg.Name)
+		log.Println("- - getRegistrations: Updating registration info for agent", reg.Name)
 		_, err = mgoRegCol.Upsert(bson.M{"name": reg.Name, "os": reg.OS,
 			"queueloc": reg.QueueLoc},
 			bson.M{"name": reg.Name, "os": reg.OS, "queueloc": reg.QueueLoc,
 			"lastregistrationtime": time.Now(), "lastheartbeattime": time.Now()})
 		if err != nil {
-			log.Fatal("getRegistrations mgoRegCol.Upsert:", err)
+			log.Fatal("- - getRegistrations mgoRegCol.Upsert:", err)
 		}
 		// When we're certain that the registration is processed, ack it
 		if err = r.Ack(true); err != nil {
-			log.Fatal("getRegistrations r.Ack():", err)
+			log.Fatal("- - getRegistrations r.Ack():", err)
 		}
 	}
 	return nil
@@ -398,24 +454,24 @@ func isRegistrationAuthorized(agentName string) error {
 	// if AGTWHITELIST is defined, try to find the agent name in it
 	// and fail if not found
 	if AGTWHITELIST == "" {
-		log.Println("agentWhitelistLookup: no whitelist defined, lookup skipped")
+		log.Println("- - agentWhitelistLookup: no whitelist defined, lookup skipped")
 		return nil
 	}
 	agtRe := regexp.MustCompile("^" + agentName + "$")
 	wfd, err := os.Open(AGTWHITELIST)
 	if err != nil {
-		log.Fatal("isRegistrationAuthorized failed to open whitelist:", err)
+		log.Fatal("- - isRegistrationAuthorized failed to open whitelist:", err)
 	}
 	defer wfd.Close()
 	scanner := bufio.NewScanner(wfd)
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
-			log.Fatal("isRegistrationAuthorized scanner.Scan():", err)
+			log.Fatal("- - isRegistrationAuthorized scanner.Scan():", err)
 		}
 		if agtRe.MatchString(scanner.Text()) {
-			log.Println("isRegistrationAuthorized: agent", agentName, "found in whitelist")
+			log.Println("- - isRegistrationAuthorized: agent", agentName, "found in whitelist")
 			return nil
 		}
 	}
-	return errors.New("isRegistrationAuthorized agent is not authorized")
+	return errors.New("- - isRegistrationAuthorized agent is not authorized")
 }
