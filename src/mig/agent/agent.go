@@ -14,6 +14,7 @@ import (
 )
 
 var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
+var HEARTBEATFREQ string = "10s"
 
 func getCommands(messages <-chan amqp.Delivery, actions chan []byte, terminate chan bool) error {
 	// range waits on the channel and returns all incoming messages
@@ -63,7 +64,8 @@ func runFilechecker(fCommandChan <-chan mig.Command, alertChan chan mig.Alert, r
 			log.Fatal(err)
 		}
 		st := time.Now()
-		if err := runCmd.Start(); err != nil {
+		err = runCmd.Start()
+		if err != nil {
 			log.Fatal(err)
 		}
 		results := make(map[string] mig.FileCheckerResult)
@@ -129,11 +131,18 @@ func sendResults(c *amqp.Channel, agtQueueLoc string, resultChan <-chan mig.Comm
 }
 
 func registerAgent(c *amqp.Channel, regMsg mig.Register) error {
-	body, err := json.Marshal(regMsg)
+	sleepTime, err := time.ParseDuration(HEARTBEATFREQ)
 	if err != nil {
-		log.Fatalf("registerAgent - json.Marshal: %v", err)
+		log.Fatal("sendHeartbeat - time.ParseDuration():", err)
 	}
-	msgXchange(c, "mig", "mig.register", body)
+	for {
+		body, err := json.Marshal(regMsg)
+		if err != nil {
+			log.Fatal("sendHeartbeat - json.Marshal:", err)
+		}
+		msgXchange(c, "mig", "mig.register", body)
+		time.Sleep(sleepTime)
+	}
 	return nil
 }
 
@@ -171,6 +180,7 @@ func main() {
 		Name: hostname,
 		OS: runtime.GOOS,
 		QueueLoc: fmt.Sprintf("%s.%s", runtime.GOOS, hostname),
+		LastRegistrationTime: time.Now(),
 	}
 	agentQueue := fmt.Sprintf("mig.agt.%s", regMsg.QueueLoc)
 	bindings := []mig.Binding{
@@ -236,7 +246,7 @@ func main() {
 	go sendResults(c, regMsg.QueueLoc, resultChan, termChan)
 
 	// All set, ready to register
-	registerAgent(c, regMsg)
+	go registerAgent(c, regMsg)
 
 	// block until terminate chan is called
 	<-termChan
