@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"math/rand"
 	"mig"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -25,6 +27,7 @@ var DONECMDDIR string = "/var/cache/mig/commands/done"
 var DONEACTIONDIR string = "/var/cache/mig/actions/done"
 var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
 var MONGOURI string = "172.21.2.143"
+var AGTWHITELIST string = "/var/cache/mig/agents_whitelist.txt"
 
 // main initializes the mongodb connection, the directory watchers and the
 // AMQP broker. It also launches the goroutines.
@@ -285,41 +288,6 @@ func terminateAction(actionDoneChan <-chan string) error {
 	return nil
 }
 
-/*
-func sendActions(c *amqp.Channel) error {
-	r := rand.New(rand.NewSource(65537))
-	for {
-		action := mig.Action{
-			ActionID: fmt.Sprintf("TestFilechecker%d", r.Intn(1000000000)),
-			Target:	  "all",
-			Check:    "filechecker",
-			Command:  "/usr/bin/vim:sha256=a2fed99838d60d9dc920c5adc61800a48f116c230a76c5f2586487ba09c72d42",
-		}
-		actionJson, err := json.Marshal(action)
-		if err != nil {
-			log.Fatal("sendActions - json.Marshal:", err)
-		}
-		msg := amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
-			Timestamp:    time.Now(),
-			ContentType:  "text/plain",
-			Body:         []byte(actionJson),
-		}
-		log.Printf("Creating action: '%s'", actionJson)
-		err = c.Publish("mig",		// exchange name
-				"mig.all",	// exchange key
-				true,		// is mandatory
-				false,		// is immediate
-				msg)		// AMQP message
-		if err != nil {
-			log.Fatal("sendActions - Publish():", err)
-		}
-		time.Sleep( 60 * time.Second)
-	}
-	return nil
-}
-*/
-
 // listenToAgent receives AMQP messages from agents and does something with them
 func listenToAgent(agentChan <-chan amqp.Delivery, c *amqp.Channel) error {
 	for m := range agentChan {
@@ -345,6 +313,17 @@ func getRegistrations(registration <-chan amqp.Delivery, c *amqp.Channel, mgoReg
 		}
 		log.Println("getRegistrations: Agent Name:", reg.Name, ";",
 			"Agent OS:", reg.OS, "; Agent ID:", reg.QueueLoc)
+
+		// is agent is not authorized to register, ack the message and skip the registration
+		// nothing is returned to the agent. it's simply ignored.
+		if err:= isRegistrationAuthorized(reg.Name); err != nil {
+			log.Println("getRegistrations: agent", reg.Name, "is not authorized to register")
+			if err = r.Ack(true); err != nil {
+				log.Fatal("getRegistrations r.Ack():", err)
+			}
+			continue
+		}
+		log.Println("getRegistrations: agent", reg.Name, "is authorized to register")
 
 		//create a queue for agt message
 		queue := fmt.Sprintf("mig.scheduler.%s", reg.QueueLoc)
@@ -373,7 +352,9 @@ func getRegistrations(registration <-chan amqp.Delivery, c *amqp.Channel, mgoReg
 			log.Fatal("getRegistrations mgoRegCol.Upsert:", err)
 		}
 		// When we're certain that the registration is processed, ack it
-		err = r.Ack(true)
+		if err = r.Ack(true); err != nil {
+			log.Fatal("getRegistrations r.Ack():", err)
+		}
 	}
 	return nil
 }
@@ -410,4 +391,31 @@ func genUniqID() uint32 {
 	rand := string(r.Intn(1000000000))
 	h.Write([]byte(t + rand))
 	return h.Sum32()
+}
+
+// If a whitelist is defined, lookup the agent in it, and return nil if found, or error if not
+func isRegistrationAuthorized(agentName string) error {
+	// if AGTWHITELIST is defined, try to find the agent name in it
+	// and fail if not found
+	if AGTWHITELIST == "" {
+		log.Println("agentWhitelistLookup: no whitelist defined, lookup skipped")
+		return nil
+	}
+	agtRe := regexp.MustCompile("^" + agentName + "$")
+	wfd, err := os.Open(AGTWHITELIST)
+	if err != nil {
+		log.Fatal("isRegistrationAuthorized failed to open whitelist:", err)
+	}
+	defer wfd.Close()
+	scanner := bufio.NewScanner(wfd)
+	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			log.Fatal("isRegistrationAuthorized scanner.Scan():", err)
+		}
+		if agtRe.MatchString(scanner.Text()) {
+			log.Println("isRegistrationAuthorized: agent", agentName, "found in whitelist")
+			return nil
+		}
+	}
+	return errors.New("isRegistrationAuthorized agent is not authorized")
 }
