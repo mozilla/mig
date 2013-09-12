@@ -1,8 +1,5 @@
 /*
 	TODO LIST
-- add registration expiration goroutine
-- add registration pickup at startup
-- check if goroutine for agent already exist before creating one
 - add timestamp for all actions and commands, stored in the command data
 - store done actions in the database
 - calculation action completion ratio, based on number of agents launched against, and number of command responses received
@@ -38,6 +35,7 @@ var INVALIDACTIONDIR string = "/var/cache/mig/actions/invalid"
 var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
 var MONGOURI string = "172.21.2.143"
 var AGTWHITELIST string = "/var/cache/mig/agents_whitelist.txt"
+var AGTTIMEOUT string = "2h"
 
 // main initializes the mongodb connection, the directory watchers and the
 // AMQP broker. It also launches the goroutines.
@@ -48,6 +46,7 @@ func main() {
 	cmdInFlightChan := make(chan string, 67)
 	cmdDoneChan := make(chan string, 43)
 	actionDoneChan := make(chan string, 11)
+	var activeAgentsList []string
 
 	// Setup connection to MongoDB backend database
 	mgofd, err := mgo.Dial(MONGOURI)
@@ -64,32 +63,81 @@ func main() {
 	if err != nil {
 		log.Fatal("- - fsnotify.NewWatcher(): ", err)
 	}
-	go func() {
-		for {
-			select {
-			case ev := <-watcher.Event:
-				if strings.HasPrefix(ev.Name, NEWACTIONDIR) {
-					log.Println("- - Watcher: New Action:", ev)
-					actionNewChan <- ev.Name
-				} else if strings.HasPrefix(ev.Name, LAUNCHCMDDIR) {
-					log.Println("- - Watcher: Command ready", ev)
-					cmdLaunchChan <- ev.Name
-				} else if strings.HasPrefix(ev.Name, INFLIGHTCMDDIR) {
-					log.Println("- - Watcher: Command in flight:", ev)
-					cmdInFlightChan <- ev.Name
-				} else if strings.HasPrefix(ev.Name, DONECMDDIR) {
-					log.Println("- - Watcher: Command done:", ev)
-					cmdDoneChan <- ev.Name
-				} else if strings.HasPrefix(ev.Name, DONEACTIONDIR) {
-					log.Println("- - Watcher: Action done:", ev)
-					actionDoneChan <- ev.Name
-				}
-			case err := <-watcher.Error:
-				log.Fatal("error: ", err)
+	go watchDirectories(watcher, actionNewChan, cmdLaunchChan,
+		cmdInFlightChan, cmdDoneChan, actionDoneChan)
+	initWatchers(watcher)
+
+	// Setup the AMQP broker connection
+	conn, err := amqp.Dial(AMQPBROKER)
+	if err != nil {
+		log.Fatalf("- - amqp.Dial(): %v", err)
+	}
+	defer conn.Close()
+	log.Println("- - Main: AMQP connection succeeded. Broker=", AMQPBROKER)
+	broker, err := conn.Channel()
+	if err != nil {
+		log.Fatalf("- - Channel(): %v", err)
+	}
+	// declare the "mig" exchange used for all publications
+	err = broker.ExchangeDeclare("mig", "topic", true, false, false, false, nil)
+	if err != nil {
+		log.Fatalf("- - ExchangeDeclare: %v", err)
+	}
+
+	// launch the routines that process mig.Action & mig.Command
+	go pullAction(actionNewChan, mgoRegCol)
+	log.Println("- - Main: pullAction goroutine started")
+	go launchCommand(cmdLaunchChan, broker)
+	log.Println("- - Main: launchCommand goroutine started")
+	go updateCommandStatus(cmdInFlightChan)
+	log.Println("- - Main: updateCommandStatus gorouting started")
+	go terminateCommand(cmdDoneChan)
+	log.Println("- - Main: terminateCommand goroutine started")
+	go terminateAction(actionDoneChan)
+	log.Println("- - Main: terminateAction goroutine started")
+
+	// restart queues for agents that are currently alive
+	activeAgentsList = pickUpAliveAgents(broker, mgoRegCol, activeAgentsList)
+
+	// init a channel to receive keepalive from agents
+	startKeepAliveChannel(broker, mgoRegCol, activeAgentsList)
+
+	// won't exit until this chan received something
+	<-termChan
+}
+
+// watchDirectories calls specific function when a file appears in a watched directory
+func watchDirectories(watcher *fsnotify.Watcher, actionNewChan chan string,
+	cmdLaunchChan chan string, cmdInFlightChan chan string,
+	cmdDoneChan chan string, actionDoneChan chan string) error {
+	for {
+		select {
+		case ev := <-watcher.Event:
+			if strings.HasPrefix(ev.Name, NEWACTIONDIR) {
+				log.Println("- - Watcher: New Action:", ev)
+				actionNewChan <- ev.Name
+			} else if strings.HasPrefix(ev.Name, LAUNCHCMDDIR) {
+				log.Println("- - Watcher: Command ready", ev)
+				cmdLaunchChan <- ev.Name
+			} else if strings.HasPrefix(ev.Name, INFLIGHTCMDDIR) {
+				log.Println("- - Watcher: Command in flight:", ev)
+				cmdInFlightChan <- ev.Name
+			} else if strings.HasPrefix(ev.Name, DONECMDDIR) {
+				log.Println("- - Watcher: Command done:", ev)
+				cmdDoneChan <- ev.Name
+			} else if strings.HasPrefix(ev.Name, DONEACTIONDIR) {
+				log.Println("- - Watcher: Action done:", ev)
+				actionDoneChan <- ev.Name
 			}
+		case err := <-watcher.Error:
+			log.Fatal("error: ", err)
 		}
-	}()
-	err = watcher.WatchFlags(NEWACTIONDIR, fsnotify.FSN_CREATE)
+	}
+}
+
+// initWatchers initializes the watcher flags for all the monitored directories
+func initWatchers(watcher *fsnotify.Watcher) error {
+	err := watcher.WatchFlags(NEWACTIONDIR, fsnotify.FSN_CREATE)
 	if err != nil {
 		log.Fatal("- - watcher.Watch(): ", err)
 	}
@@ -114,61 +162,7 @@ func main() {
 		log.Fatal("- - watcher.Watch(): ", err)
 	}
 	log.Println("- - Main: Initializer watcher on", DONEACTIONDIR)
-
-	// Setup the AMQP connections and get ready to recv/send messages
-	conn, err := amqp.Dial(AMQPBROKER)
-	if err != nil {
-		log.Fatalf("- - amqp.Dial(): %v", err)
-	}
-	defer conn.Close()
-	log.Println("- - Main: AMQP connection succeeded. Broker=", AMQPBROKER)
-	broker, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("- - Channel(): %v", err)
-	}
-	// main exchange for all publications
-	err = broker.ExchangeDeclare("mig", "topic", true, false, false, false, nil)
-	if err != nil {
-		log.Fatalf("- - ExchangeDeclare: %v", err)
-	}
-	// agent registrations & heartbeats
-	_, err = broker.QueueDeclare("mig.register", true, false, false, false, nil)
-	if err != nil {
-		log.Fatalf("- - QueueDeclare: %v", err)
-	}
-	err = broker.QueueBind("mig.register", "mig.register", "mig", false, nil)
-	if err != nil {
-		log.Fatalf("- - QueueBind: %v", err)
-	}
-	err = broker.Qos(1, 0, false)
-	if err != nil {
-		log.Fatalf("- - ChannelQoS: %v", err)
-	}
-	regChan, err := broker.Consume("mig.register", "", false, false, false, false, nil)
-	if err != nil {
-		log.Fatalf("- - ChannelConsume: %v", err)
-	}
-	log.Println("- - Main: Registration channel initialized")
-
-	// launch the routines that process action & commands
-	go pullAction(actionNewChan, mgoRegCol)
-	log.Println("- - Main: pullAction goroutine started")
-	go launchCommand(cmdLaunchChan, broker)
-	log.Println("- - Main: launchCommand goroutine started")
-	go updateCommandStatus(cmdInFlightChan)
-	log.Println("- - Main: updateCommandStatus gorouting started")
-	go terminateCommand(cmdDoneChan)
-	log.Println("- - Main: terminateCommand goroutine started")
-	go terminateAction(actionDoneChan)
-	log.Println("- - Main: terminateAction goroutine started")
-
-	// launch the routine that handles registrations
-	go getRegistrations(regChan, broker, mgoRegCol)
-	log.Println("- - Main: getRegistrations goroutine started")
-
-	log.Println("- - Main: Initialization completed successfully")
-	// won't exit until this chan received something
-	<-termChan
+	return nil
 }
 
 // pullAction receives channel message when a new action is available. It pulls
@@ -199,12 +193,9 @@ func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
 			continue
 		}
 		log.Println(uniqid, "- pullAction: new action received:",
-			"Name:", action.Name,
-			", Target:", action.Target,
-			", Check:", action.Check,
-			", RunDate:", action.RunDate,
-			", Expiration:", action.Expiration,
-			", Arguments:", action.Arguments)
+			"Name:", action.Name, ", Target:", action.Target,
+			", Check:", action.Check, ", RunDate:", action.RunDate,
+			", Expiration:", action.Expiration, ", Arguments:", action.Arguments)
 
 		// expand the action in one command per agent. if this fails, move the
 		// action to the INVALID folder and move on
@@ -220,10 +211,15 @@ func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
 }
 
 func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
-	// get the list of targets from the register
-	targets := []mig.Register{}
-	iter := mgoRegCol.Find(bson.M{"os": action.Target}).Iter()
-	err := iter.All(&targets)
+	// get the list of targets from the keepAlive
+	targets := []mig.KeepAlive{}
+	period, err := time.ParseDuration(AGTTIMEOUT)
+	if err != nil {
+		log.Fatal("- - prepareCommands time.ParseDuration():", err)
+	}
+	since := time.Now().Add(-period)
+	iter := mgoRegCol.Find(bson.M{"os": action.Target, "lastkeepalive": bson.M{"$gte": since}}).Iter()
+	err = iter.All(&targets)
 	if err != nil {
 		log.Println(action.UniqID, "- pullAction - iter.All():", err)
 		errors.New("failed to retrieve agents list")
@@ -353,66 +349,123 @@ func recvAgentResults(agentChan <-chan amqp.Delivery, c *amqp.Channel) error {
 	return nil
 }
 
-// getRegistrations processes the registration messages sent by agents that just
+// pickUpAliveAgents lists agents that have recent keepalive in the database and start listening queues for them
+func pickUpAliveAgents(broker *amqp.Channel, mgoRegCol *mgo.Collection, activeAgentsList []string) ([]string) {
+	agents := []mig.KeepAlive{}
+	// get a list of all agents that have a keepalive between AGTTIMEOUT and now
+	period, err := time.ParseDuration(AGTTIMEOUT)
+	if err != nil {
+		log.Fatal("- - pickUpAliveAgents time.ParseDuration():", err)
+	}
+	since := time.Now().Add(-period)
+	iter := mgoRegCol.Find(bson.M{"lastkeepalive": bson.M{"$gte": since}}).Iter()
+	err = iter.All(&agents)
+	if err != nil {
+		log.Fatal("- - pickUpAliveAgents iter.All():", err)
+	}
+	for _, agt := range agents {
+		activeAgentsList = startAgentListener(activeAgentsList, agt, broker)
+	}
+	return activeAgentsList
+}
+
+// startKeepAliveChannel initializes the keepalive AMQP queue and start a goroutine to listen on it
+func startKeepAliveChannel(broker *amqp.Channel, mgoRegCol *mgo.Collection, activeAgentsList []string) error {
+	// agent registrations & heartbeats
+	_, err := broker.QueueDeclare("mig.keepalive", true, false, false, false, nil)
+	if err != nil {
+		log.Fatalf("- - QueueDeclare: %v", err)
+	}
+	err = broker.QueueBind("mig.keepalive", "mig.keepalive", "mig", false, nil)
+	if err != nil {
+		log.Fatalf("- - QueueBind: %v", err)
+	}
+	err = broker.Qos(1, 0, false)
+	if err != nil {
+		log.Fatalf("- - ChannelQoS: %v", err)
+	}
+	keepAliveChan, err := broker.Consume("mig.keepalive", "", false, false, false, false, nil)
+	if err != nil {
+		log.Fatalf("- - ChannelConsume: %v", err)
+	}
+	log.Println("- - Main: KeepAlive channel initialized")
+	// launch the routine that handles registrations
+	go getKeepAlives(keepAliveChan, broker, mgoRegCol, activeAgentsList)
+	log.Println("- - Main: getKeepAlives goroutine started")
+
+	return nil
+}
+
+// getKeepAlives processes the registration messages sent by agents that just
 // came online. Such messages are stored in MongoDB and used to locate agents.
-func getRegistrations(registration <-chan amqp.Delivery, c *amqp.Channel, mgoRegCol *mgo.Collection) error {
-	var reg mig.Register
-	for r := range registration {
+func getKeepAlives(keepalives <-chan amqp.Delivery, c *amqp.Channel, mgoRegCol *mgo.Collection, activeAgentsList []string) error {
+	var reg mig.KeepAlive
+	for r := range keepalives {
 		err := json.Unmarshal(r.Body, &reg)
 		if err != nil {
-			log.Fatal("- - getRegistration - json.Unmarshal:", err)
+			log.Fatal("- - getKeepAlive - json.Unmarshal:", err)
 		}
-		log.Println("- - getRegistrations: Agent Name:", reg.Name, ";",
+		log.Println("- - getKeepAlives: Agent Name:", reg.Name, ";",
 			"Agent OS:", reg.OS, "; Agent ID:", reg.QueueLoc)
 
-		// is agent is not authorized to register, ack the message and skip the registration
+		// is agent is not authorized to keepAlive, ack the message and skip the registration
 		// nothing is returned to the agent. it's simply ignored.
-		if err:= isRegistrationAuthorized(reg.Name); err != nil {
-			log.Println("- - getRegistrations: agent",
-				reg.Name, "is not authorized to register")
+		if err:= isAgentAuthorized(reg.Name); err != nil {
+			log.Println("- - getKeepAlives: agent",
+				reg.Name, "is not authorized to keepAlive")
 			if err = r.Ack(true); err != nil {
-				log.Fatal("- - getRegistrations r.Ack():", err)
+				log.Fatal("- - getKeepAlives r.Ack():", err)
 			}
 			continue
 		}
-		log.Println("- - getRegistrations: agent", reg.Name,
-			"is authorized to register")
+		log.Println("- - getKeepAlives: agent", reg.Name, "is authorized")
 
-		//create a queue for agt message
-		queue := fmt.Sprintf("mig.scheduler.%s", reg.QueueLoc)
-		_, err = c.QueueDeclare(queue, true, false, false, false, nil)
-		if err != nil {
-			log.Fatalf("QueueDeclare: %v", err)
-		}
-		err = c.QueueBind(queue, queue, "mig", false, nil)
-		if err != nil {
-			log.Fatalf("QueueBind: %v", err)
-		}
-		agentChan, err := c.Consume(queue, "", false, false, false, false, nil)
-
-		// TODO: don't start the goroutine if one already exist on this queue
-		// TODO2: at startup, go through the registration DB and start a goroutine per existing, non expired, registration
-		go recvAgentResults(agentChan, c)
-		log.Println("- - getRegistrations: started recvAgentResults goroutine for agent", reg.Name)
+		activeAgentsList = startAgentListener(activeAgentsList, reg, c)
 
 		//save registration in database
-		reg.LastRegistrationTime = time.Now()
+		reg.LastKeepAlive = time.Now()
 
 		// try to find an existing entry to update
-		log.Println("- - getRegistrations: Updating registration info for agent", reg.Name)
-		_, err = mgoRegCol.Upsert(bson.M{"name": reg.Name, "os": reg.OS,
-			"queueloc": reg.QueueLoc},
-			bson.M{"name": reg.Name, "os": reg.OS, "queueloc": reg.QueueLoc,
-			"lastregistrationtime": time.Now(), "lastheartbeattime": time.Now()})
+		log.Println("- - getKeepAlives: Updating info for agent", reg.Name)
+		_, err = mgoRegCol.Upsert(
+			bson.M{"name": reg.Name, "os": reg.OS, "queueloc": reg.QueueLoc},
+			bson.M{"name": reg.Name, "os": reg.OS, "queueloc": reg.QueueLoc, "lastkeepalive": time.Now()})
 		if err != nil {
-			log.Fatal("- - getRegistrations mgoRegCol.Upsert:", err)
+			log.Fatal("- - getKeepAlives mgoRegCol.Upsert:", err)
 		}
 		// When we're certain that the registration is processed, ack it
 		if err = r.Ack(true); err != nil {
-			log.Fatal("- - getRegistrations r.Ack():", err)
+			log.Fatal("- - getKeepAlives r.Ack():", err)
 		}
 	}
 	return nil
+}
+
+// startAgentsListener will create an AMQP consumer for this agent if none exist
+func startAgentListener(list []string, reg mig.KeepAlive, c *amqp.Channel) ([]string) {
+	// lookup the list of active queues, and return if one exists
+	for _, q := range list {
+		if q == reg.QueueLoc {
+			return list
+		}
+	}
+	//create a queue for agent
+	queue := fmt.Sprintf("mig.agents.%s", reg.QueueLoc)
+	_, err := c.QueueDeclare(queue, true, false, false, false, nil)
+	if err != nil {
+		log.Fatalf("QueueDeclare: %v", err)
+	}
+	err = c.QueueBind(queue, queue, "mig", false, nil)
+	if err != nil {
+		log.Fatalf("QueueBind: %v", err)
+	}
+	agentChan, err := c.Consume(queue, "", false, false, false, false, nil)
+	// start a goroutine for this queue
+	go recvAgentResults(agentChan, c)
+	log.Println("- - getKeepAlives: started recvAgentResults goroutine for agent", reg.Name)
+	// add the new active queue to the list
+	list = append(list, reg.QueueLoc)
+	return list
 }
 
 // validateActionSyntax verifies that the Action received contained all the
@@ -450,28 +503,28 @@ func genUniqID() uint32 {
 }
 
 // If a whitelist is defined, lookup the agent in it, and return nil if found, or error if not
-func isRegistrationAuthorized(agentName string) error {
+func isAgentAuthorized(agentName string) error {
 	// if AGTWHITELIST is defined, try to find the agent name in it
 	// and fail if not found
 	if AGTWHITELIST == "" {
-		log.Println("- - agentWhitelistLookup: no whitelist defined, lookup skipped")
+		log.Println("- - isAgentAuthorized: no whitelist defined, lookup skipped")
 		return nil
 	}
 	agtRe := regexp.MustCompile("^" + agentName + "$")
 	wfd, err := os.Open(AGTWHITELIST)
 	if err != nil {
-		log.Fatal("- - isRegistrationAuthorized failed to open whitelist:", err)
+		log.Fatal("- - isAgentAuthorized failed to open whitelist:", err)
 	}
 	defer wfd.Close()
 	scanner := bufio.NewScanner(wfd)
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
-			log.Fatal("- - isRegistrationAuthorized scanner.Scan():", err)
+			log.Fatal("- - isAgentAuthorized scanner.Scan():", err)
 		}
 		if agtRe.MatchString(scanner.Text()) {
-			log.Println("- - isRegistrationAuthorized: agent", agentName, "found in whitelist")
+			log.Println("- - isAgentAuthorized: agent", agentName, "found in whitelist")
 			return nil
 		}
 	}
-	return errors.New("- - isRegistrationAuthorized agent is not authorized")
+	return errors.New("- - isAgentAuthorized agent is not authorized")
 }

@@ -118,7 +118,7 @@ func raiseAlerts(alertChan chan mig.Alert, terminate chan bool) error {
 }
 
 func sendResults(c *amqp.Channel, agtQueueLoc string, resultChan <-chan mig.Command, terminate chan bool) error {
-	rKey := fmt.Sprintf("mig.scheduler.%s", agtQueueLoc)
+	rKey := fmt.Sprintf("mig.agents.%s", agtQueueLoc)
 	for r := range resultChan {
 		r.AgentQueueLoc = agtQueueLoc
 		body, err := json.Marshal(r)
@@ -130,7 +130,7 @@ func sendResults(c *amqp.Channel, agtQueueLoc string, resultChan <-chan mig.Comm
 	return nil
 }
 
-func registerAgent(c *amqp.Channel, regMsg mig.Register) error {
+func keepAliveAgent(c *amqp.Channel, regMsg mig.KeepAlive) error {
 	sleepTime, err := time.ParseDuration(HEARTBEATFREQ)
 	if err != nil {
 		log.Fatal("sendHeartbeat - time.ParseDuration():", err)
@@ -140,7 +140,7 @@ func registerAgent(c *amqp.Channel, regMsg mig.Register) error {
 		if err != nil {
 			log.Fatal("sendHeartbeat - json.Marshal:", err)
 		}
-		msgXchange(c, "mig", "mig.register", body)
+		msgXchange(c, "mig", "mig.keepalive", body)
 		time.Sleep(sleepTime)
 	}
 	return nil
@@ -176,11 +176,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("os.Hostname(): %v", err)
 	}
-	regMsg := mig.Register{
+	regMsg := mig.KeepAlive{
 		Name: hostname,
 		OS: runtime.GOOS,
 		QueueLoc: fmt.Sprintf("%s.%s", runtime.GOOS, hostname),
-		LastRegistrationTime: time.Now(),
+		LastKeepAlive: time.Now(),
 	}
 	agentQueue := fmt.Sprintf("mig.agt.%s", regMsg.QueueLoc)
 	bindings := []mig.Binding{
@@ -245,8 +245,8 @@ func main() {
 	go raiseAlerts(alertChan, termChan)
 	go sendResults(c, regMsg.QueueLoc, resultChan, termChan)
 
-	// All set, ready to register
-	go registerAgent(c, regMsg)
+	// All set, ready to keepAlive
+	go keepAliveAgent(c, regMsg)
 
 	// block until terminate chan is called
 	<-termChan

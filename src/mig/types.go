@@ -27,9 +27,9 @@ type Alert struct {
 	Item string
 }
 
-type Register struct {
+type KeepAlive struct {
 	Name, QueueLoc, OS string
-	FirstRegistrationTime, LastRegistrationTime, LastHeartbeatTime time.Time
+	FirstKeepAlive, LastKeepAlive time.Time
 }
 
 type Binding struct {
