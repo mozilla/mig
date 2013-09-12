@@ -5,8 +5,8 @@
 # see also https://github.com/davecheney/golang-crosscompile
 source ~/Code/golang-crosscompile/crosscompile.bash
 
-GOPATH="$GOROOT/bin:$(pwd)"
-GOBIN="$(pwd)/bin"
+export GOPATH="$GOROOT/bin:$(pwd)"
+export GOBIN="$(pwd)/bin"
 ALLPLATFORMS="darwin/386 darwin/amd64 freebsd/386 freebsd/amd64 freebsd/arm linux/386 linux/amd64 linux/arm windows/386 windows/amd64"
 LINUX64="linux/amd64"
 if [ "$1" == "all" ]; then
