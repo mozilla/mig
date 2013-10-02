@@ -14,7 +14,7 @@ import (
 )
 
 var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
-var HEARTBEATFREQ string = "10s"
+var HEARTBEATFREQ string = "600s"
 
 func getCommands(messages <-chan amqp.Delivery, actions chan []byte, terminate chan bool) error {
 	// range waits on the channel and returns all incoming messages
