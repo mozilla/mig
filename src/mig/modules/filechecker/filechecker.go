@@ -14,7 +14,7 @@ License.
 
 The Initial Developer of the Original Code is
 Mozilla Corporation
-Portions created by the Initial Developer are Copyright (C) 2012
+Portions created by the Initial Developer are Copyright (C) 2013
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -71,97 +71,97 @@ const (
 	CheckSHA3_512
 )
 
-/* Representation of a File IOC.
-- Raw is the raw IOC string received from the program arguments
+/* Representation of a File Check.
+- Raw is the raw Check string received from the program arguments
 - Path is the file system path to inspect
 - Value is the value of the check, such as a md5 hash
-- Check is the type of check in integer form
-- FilesCount is the total number of files inspected for each IOC
-- ResultCount is a counter of positive results for this IOC
-- Result is a boolean set to True when the IOC has matched once or more
+- Type is the type of check in integer form
+- FilesCount is the total number of files inspected for each Check
+- ResultCount is a counter of positive results for this Check
+- Result is a boolean set to True when the Check has matched once or more
 - Files is an slice of string that contains paths of matching files
 */
-type FileIOC struct {
+type FileCheck struct {
 	Raw, Path, Value			string
-	ID, Check, FilesCount, ResultCount	int
+	ID, Type, FilesCount, ResultCount	int
 	Result					bool
 	Files					map[string]int
 	Re					*regexp.Regexp
 }
 
-type IOCResult struct {
+type CheckResult struct {
 	TestedFiles, ResultCount int
 	Files			 []string
 }
 
 /* Statistic counters:
-- IOCCount is the total numbers of IOCs tested
+- CheckCount is the total numbers of Checks tested
 - FilesCount is the total number of files inspected
-- IOCsMatch is the number of IOCs that matched at least once
-- UniqueFiles is the number of files that matches at least one IOC once
-- TotalHits is the total number of IOCs hits
+- ChecksMatch is the number of Checks that matched at least once
+- UniqueFiles is the number of files that matches at least one Check once
+- TotalHits is the total number of Checks hits
 */
 type Stats struct {
-	IOCCount    int
+	CheckCount    int
 	FilesCount  int
-	IOCsMatch   int
+	ChecksMatch   int
 	UniqueFiles int
 	TotalHits   int
 }
 
-/* ParseIOC parses an IOC from the command line into a FileIOC struct
+/* ParseCheck parses an Check from the command line into a FileCheck struct
    parameters:
-	- raw_ioc is a string that contains the IOC from the command line in
+	- raw_check is a string that contains the Check from the command line in
 	the format <path>:<check>=<value>
 	eg. /usr/bin/vim:md5=8680f252cabb7f4752f8927ce0c6f9bd
 	- id is an integer used as a ID reference
    return:
-	- a FileIOC structure
+	- a FileCheck structure
 */
-func ParseIOC(raw_ioc string, id int) (ioc FileIOC) {
-	ioc.Raw = raw_ioc
-	ioc.ID = id
+func ParseCheck(raw_check string, id int) (check FileCheck) {
+	check.Raw = raw_check
+	check.ID = id
 	// split on the first ':' and use the left part as the Path
-	tmp := strings.Split(raw_ioc, ":")
-	ioc.Path = tmp[0]
+	tmp := strings.Split(raw_check, ":")
+	check.Path = tmp[0]
 	// split the right part on '=', left is the check, right is the value
 	tmp = strings.Split(tmp[1], "=")
-	ioc.Value = tmp[1]
+	check.Value = tmp[1]
 	// the check string is transformed into a bitmask and stored
 	checkstring := tmp[0]
 	switch checkstring {
 	case "contains":
-		ioc.Check = CheckContains
+		check.Type = CheckContains
 		// compile the value into a regex
-		ioc.Re = regexp.MustCompile(ioc.Value)
+		check.Re = regexp.MustCompile(check.Value)
 	case "named":
-		ioc.Check = CheckNamed
+		check.Type = CheckNamed
 		// compile the value into a regex
-		ioc.Re = regexp.MustCompile(ioc.Value)
+		check.Re = regexp.MustCompile(check.Value)
 	case "md5":
-		ioc.Check = CheckMD5
+		check.Type = CheckMD5
 	case "sha1":
-		ioc.Check = CheckSHA1
+		check.Type = CheckSHA1
 	case "sha256":
-		ioc.Check = CheckSHA256
+		check.Type = CheckSHA256
 	case "sha384":
-		ioc.Check = CheckSHA384
+		check.Type = CheckSHA384
 	case "sha512":
-		ioc.Check = CheckSHA512
+		check.Type = CheckSHA512
 	case "sha3_224":
-		ioc.Check = CheckSHA3_224
+		check.Type = CheckSHA3_224
 	case "sha3_256":
-		ioc.Check = CheckSHA3_256
+		check.Type = CheckSHA3_256
 	case "sha3_384":
-		ioc.Check = CheckSHA3_384
+		check.Type = CheckSHA3_384
 	case "sha3_512":
-		ioc.Check = CheckSHA3_512
+		check.Type = CheckSHA3_512
 	default:
-		err := fmt.Sprintf("ParseIOC: Invalid check '%s'", checkstring)
+		err := fmt.Sprintf("ParseCheck: Invalid check '%s'", checkstring)
 		panic(err)
 	}
 	// allocate the map
-	ioc.Files = make(map[string]int)
+	check.Files = make(map[string]int)
 	return
 }
 
@@ -219,44 +219,46 @@ func GetHash(fd *os.File, HashType int) (hexhash string) {
 	return
 }
 
-/* VerifyHash compares a file hash with the IOCs that apply to the file
+/* VerifyHash compares a file hash with the Checks that apply to the file
    parameters:
 	- file is the absolute filename of the file to check
 	- hash is the value of the hash being checked
 	- check is the type of check
-	- ActiveIOCIDs is a slice of int with IDs of active IOCs
-	- IOCs is a map of IOC
+	- ActiveCheckIDs is a slice of int with IDs of active Checks
+	- Checks is a map of Check
    returns:
 	- IsVerified: true if a match is found, false otherwise
 */
-func VerifyHash(file string, hash string, check int, ActiveIOCIDs []int, IOCs map[int]FileIOC) (IsVerified bool) {
+func VerifyHash(file string, hash string, check int, ActiveCheckIDs []int,
+		Checks map[int]FileCheck) (IsVerified bool) {
 	IsVerified = false
-	for _, id := range ActiveIOCIDs {
-		tmpioc := IOCs[id]
-		if IOCs[id].Value == hash {
+	for _, id := range ActiveCheckIDs {
+		tmpcheck := Checks[id]
+		if Checks[id].Value == hash {
 			IsVerified = true
-			tmpioc.Result = true
-			tmpioc.ResultCount += 1
-			tmpioc.Files[file] = 1
+			tmpcheck.Result = true
+			tmpcheck.ResultCount += 1
+			tmpcheck.Files[file] = 1
 		}
-		// update IOCs tested files count
-		tmpioc.FilesCount++
-		IOCs[id] = tmpioc
+		// update Checks tested files count
+		tmpcheck.FilesCount++
+		Checks[id] = tmpcheck
 	}
 	return
 }
 
 /* MatchRegexpsOnFile read a file line by line and apply regexp search to each
-   line. If a regexp matches, the corresponding IOC is updated with the result.
+   line. If a regexp matches, the corresponding Check is updated with the result.
    All regexp are compiled during argument parsing and not here.
    parameters:
 	- fd is a file descriptor on the open file
-	- ReList is a integer list of IOC IDs to apply to this file
-	- IOCs is a map of IOC
+	- ReList is a integer list of Check IDs to apply to this file
+	- Checks is a map of Check
    return:
 	- MatchesRegexp is a boolean set to true if at least one regexp matches
 */
-func MatchRegexpsOnFile(fd *os.File, ReList []int, IOCs map[int]FileIOC) (MatchesRegexp bool) {
+func MatchRegexpsOnFile(fd *os.File, ReList []int,
+			Checks map[int]FileCheck) (MatchesRegexp bool) {
 	MatchesRegexp = false
 	Results := make(map[int]int)
 	scanner := bufio.NewScanner(fd)
@@ -265,7 +267,7 @@ func MatchRegexpsOnFile(fd *os.File, ReList []int, IOCs map[int]FileIOC) (Matche
 			panic(err)
 		}
 		for _, id := range ReList {
-			if IOCs[id].Re.MatchString(scanner.Text()) {
+			if Checks[id].Re.MatchString(scanner.Text()) {
 				MatchesRegexp = true
 				Results[id]++
 				break
@@ -274,18 +276,18 @@ func MatchRegexpsOnFile(fd *os.File, ReList []int, IOCs map[int]FileIOC) (Matche
 	}
 	if MatchesRegexp {
 		for id, count := range Results {
-			tmpioc := IOCs[id]
-			tmpioc.Result = true
-			tmpioc.ResultCount += count
-			tmpioc.Files[fd.Name()] = count
-			IOCs[id] = tmpioc
+			tmpcheck := Checks[id]
+			tmpcheck.Result = true
+			tmpcheck.ResultCount += count
+			tmpcheck.Files[fd.Name()] = count
+			Checks[id] = tmpcheck
 		}
 	}
-	// update IOCs tested files count
+	// update Checks tested files count
 	for _, id := range ReList {
-		tmpioc := IOCs[id]
-		tmpioc.FilesCount++
-		IOCs[id] = tmpioc
+		tmpcheck := Checks[id]
+		tmpcheck.FilesCount++
+		Checks[id] = tmpcheck
 	}
 	return
 }
@@ -293,24 +295,25 @@ func MatchRegexpsOnFile(fd *os.File, ReList []int, IOCs map[int]FileIOC) (Matche
 /* MatchRegexpsOnName applies regexp search to a given filename
    parameters:
 	- filename is a string that contains a filename
-	- ReList is a integer list of IOC IDs to apply to this file
-	- IOCs is a map of IOC
+	- ReList is a integer list of Check IDs to apply to this file
+	- Checks is a map of Check
    return:
 	- MatchesRegexp is a boolean set to true if at least one regexp matches
 */
-func MatchRegexpsOnName(filename string, ReList []int, IOCs map[int]FileIOC) (MatchesRegexp bool) {
+func MatchRegexpsOnName(filename string, ReList []int,
+			Checks map[int]FileCheck) (MatchesRegexp bool) {
 	MatchesRegexp = false
 	for _, id := range ReList {
-		tmpioc := IOCs[id]
-		if IOCs[id].Re.MatchString(filename) {
+		tmpcheck := Checks[id]
+		if Checks[id].Re.MatchString(filename) {
 			MatchesRegexp = true
-			tmpioc.Result = true
-			tmpioc.ResultCount++
-			tmpioc.Files[filename] = 1
+			tmpcheck.Result = true
+			tmpcheck.ResultCount++
+			tmpcheck.Files[filename] = 1
 		}
-		// update IOCs tested files count
-		tmpioc.FilesCount++
-		IOCs[id] = tmpioc
+		// update Checks tested files count
+		tmpcheck.FilesCount++
+		Checks[id] = tmpcheck
 	}
 	return
 }
@@ -320,14 +323,15 @@ func MatchRegexpsOnName(filename string, ReList []int, IOCs map[int]FileIOC) (Ma
    to run, and runs the checks in a smart way to minimize effort.
    parameters:
 	- fd is an open file descriptor that points to the file to inspect
-	- ActiveIOCIDs is a slice of integer that contains the IDs of the IOCs
+	- ActiveCheckIDs is a slice of integer that contains the IDs of the Checks
 	that all files in that path and below must be checked against
 	- CheckBitMask is a bitmask of the checks types currently active
-	- IOCs is the global list of IOCs
+	- Checks is the global list of Checks
    returns:
 	- nil on success, error on failure
 */
-func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int]FileIOC) error {
+func InspectFile(fd *os.File, ActiveCheckIDs []int, CheckBitMask int,
+		 Checks map[int]FileCheck) error {
 	/* Iterate through the entire checklist, and process the checks of
 	   each file
 	*/
@@ -336,14 +340,14 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 			fd.Name(), CheckBitMask)
 	}
 	if (CheckBitMask & CheckContains) != 0 {
-		// build a list of IOCs of check type 'contains'
+		// build a list of Checks of check type 'contains'
 		var ReList []int
-		for _, id := range ActiveIOCIDs {
-			if (IOCs[id].Check & CheckContains) != 0 {
+		for _, id := range ActiveCheckIDs {
+			if (Checks[id].Type & CheckContains) != 0 {
 				ReList = append(ReList, id)
 			}
 		}
-		if MatchRegexpsOnFile(fd, ReList, IOCs) {
+		if MatchRegexpsOnFile(fd, ReList, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -351,14 +355,14 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 		}
 	}
 	if (CheckBitMask & CheckNamed) != 0 {
-		// build a list of IOCs of check type 'contains'
+		// build a list of Checks of check type 'contains'
 		var ReList []int
-		for _, id := range ActiveIOCIDs {
-			if (IOCs[id].Check & CheckNamed) != 0 {
+		for _, id := range ActiveCheckIDs {
+			if (Checks[id].Type & CheckNamed) != 0 {
 				ReList = append(ReList, id)
 			}
 		}
-		if MatchRegexpsOnName(fd.Name(), ReList, IOCs) {
+		if MatchRegexpsOnName(fd.Name(), ReList, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -367,7 +371,7 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 	}
 	if (CheckBitMask & CheckMD5) != 0 {
 		hash := GetHash(fd, CheckMD5)
-		if VerifyHash(fd.Name(), hash, CheckMD5, ActiveIOCIDs, IOCs) {
+		if VerifyHash(fd.Name(), hash, CheckMD5, ActiveCheckIDs, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -376,7 +380,7 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 	}
 	if (CheckBitMask & CheckSHA1) != 0 {
 		hash := GetHash(fd, CheckSHA1)
-		if VerifyHash(fd.Name(), hash, CheckSHA1, ActiveIOCIDs, IOCs) {
+		if VerifyHash(fd.Name(), hash, CheckSHA1, ActiveCheckIDs, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -385,7 +389,7 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 	}
 	if (CheckBitMask & CheckSHA256) != 0 {
 		hash := GetHash(fd, CheckSHA256)
-		if VerifyHash(fd.Name(), hash, CheckSHA256, ActiveIOCIDs, IOCs) {
+		if VerifyHash(fd.Name(), hash, CheckSHA256, ActiveCheckIDs, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -394,7 +398,7 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 	}
 	if (CheckBitMask & CheckSHA384) != 0 {
 		hash := GetHash(fd, CheckSHA384)
-		if VerifyHash(fd.Name(), hash, CheckSHA384, ActiveIOCIDs, IOCs) {
+		if VerifyHash(fd.Name(), hash, CheckSHA384, ActiveCheckIDs, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -403,7 +407,7 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 	}
 	if (CheckBitMask & CheckSHA512) != 0 {
 		hash := GetHash(fd, CheckSHA512)
-		if VerifyHash(fd.Name(), hash, CheckSHA512, ActiveIOCIDs, IOCs) {
+		if VerifyHash(fd.Name(), hash, CheckSHA512, ActiveCheckIDs, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -412,7 +416,7 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 	}
 	if (CheckBitMask & CheckSHA3_224) != 0 {
 		hash := GetHash(fd, CheckSHA3_224)
-		if VerifyHash(fd.Name(), hash, CheckSHA3_224, ActiveIOCIDs, IOCs) {
+		if VerifyHash(fd.Name(), hash, CheckSHA3_224, ActiveCheckIDs, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -421,7 +425,7 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 	}
 	if (CheckBitMask & CheckSHA3_256) != 0 {
 		hash := GetHash(fd, CheckSHA3_256)
-		if VerifyHash(fd.Name(), hash, CheckSHA3_256, ActiveIOCIDs, IOCs) {
+		if VerifyHash(fd.Name(), hash, CheckSHA3_256, ActiveCheckIDs, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -430,7 +434,7 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 	}
 	if (CheckBitMask & CheckSHA3_384) != 0 {
 		hash := GetHash(fd, CheckSHA3_384)
-		if VerifyHash(fd.Name(), hash, CheckSHA3_384, ActiveIOCIDs, IOCs) {
+		if VerifyHash(fd.Name(), hash, CheckSHA3_384, ActiveCheckIDs, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -439,7 +443,7 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 	}
 	if (CheckBitMask & CheckSHA3_512) != 0 {
 		hash := GetHash(fd, CheckSHA3_512)
-		if VerifyHash(fd.Name(), hash, CheckSHA3_512, ActiveIOCIDs, IOCs) {
+		if VerifyHash(fd.Name(), hash, CheckSHA3_512, ActiveCheckIDs, Checks) {
 			if DEBUG{
 				fmt.Printf("InspectFile: Positive result " +
 					"found for '%s'\n", fd.Name())
@@ -449,33 +453,35 @@ func InspectFile(fd *os.File, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int
 	return nil
 }
 
-/* GetDownThatPath goes down a directory and build a list of Active IOCs that
+/* GetDownThatPath goes down a directory and build a list of Active Checks that
    apply to the current path. For a given directory, it calls itself for all
    subdirectories fund, recursively walking down the pass. When it find a file,
-   it calls the inspection function, and give it the list of IOCs to inspect
+   it calls the inspection function, and give it the list of Checks to inspect
    the file with.
    parameters:
 	- path is the file system path to inspect
-	- ActiveIOCIDs is a slice of integer that contains the IDs of the IOCs
+	- ActiveCheckIDs is a slice of integer that contains the IDs of the Checks
 	that all files in that path and below must be checked against
 	- CheckBitMask is a bitmask of the checks types currently active
-	- IOCs is the global list of IOCs
-	- ToDoIOCs is a map that contains the IOCs that are not yet active
+	- Checks is the global list of Checks
+	- ToDoChecks is a map that contains the Checks that are not yet active
 	- Statistics is a set of counters
    return:
 	- nil on success, error on error
 */
-func GetDownThatPath(path string, ActiveIOCIDs []int, CheckBitMask int, IOCs map[int]FileIOC, ToDoIOCs map[int]FileIOC, Statistics *Stats) error {
-	for id, ioc := range ToDoIOCs {
-		if ioc.Path == path {
-			/* Found a new IOC to apply to the current path, add
+func GetDownThatPath(path string, ActiveCheckIDs []int, CheckBitMask int,
+		     Checks map[int]FileCheck, ToDoChecks map[int]FileCheck,
+		     Statistics *Stats) error {
+	for id, check := range ToDoChecks {
+		if check.Path == path {
+			/* Found a new Check to apply to the current path, add
 			   it to the active list, and delete it from the todo
 			*/
-			ActiveIOCIDs = append(ActiveIOCIDs, id)
-			CheckBitMask |= ioc.Check
-			delete(ToDoIOCs, id)
+			ActiveCheckIDs = append(ActiveCheckIDs, id)
+			CheckBitMask |= check.Type
+			delete(ToDoChecks, id)
 			if DEBUG {
-				fmt.Printf("GetDownThatPath: Activating IOC "+
+				fmt.Printf("GetDownThatPath: Activating Check "+
 					"id '%d' for path '%s'\n", id, path)
 			}
 		}
@@ -508,8 +514,8 @@ func GetDownThatPath(path string, ActiveIOCIDs []int, CheckBitMask int, IOCs map
 				if err != nil {
 					panic(err)
 				}
-				InspectFile(Entryfd, ActiveIOCIDs,
-					CheckBitMask, IOCs)
+				InspectFile(Entryfd, ActiveCheckIDs,
+					CheckBitMask, Checks)
 				Statistics.FilesCount++
 				if err := Entryfd.Close(); err != nil {
 					panic(err)
@@ -517,7 +523,7 @@ func GetDownThatPath(path string, ActiveIOCIDs []int, CheckBitMask int, IOCs map
 			}
 		}
 	} else if targetMode.Mode().IsRegular() {
-		InspectFile(target, ActiveIOCIDs, CheckBitMask, IOCs)
+		InspectFile(target, ActiveCheckIDs, CheckBitMask, Checks)
 		Statistics.FilesCount++
 	}
 	// close the current target, we are done with it
@@ -526,29 +532,29 @@ func GetDownThatPath(path string, ActiveIOCIDs []int, CheckBitMask int, IOCs map
 	}
 	// if we found any sub directories, go down the rabbit hole
 	for _, dir := range SubDirs {
-		GetDownThatPath(dir, ActiveIOCIDs, CheckBitMask, IOCs,
-			ToDoIOCs, Statistics)
+		GetDownThatPath(dir, ActiveCheckIDs, CheckBitMask, Checks,
+			ToDoChecks, Statistics)
 	}
 	return nil
 }
 
-/* BuildResults iterates on the map of IOCs and print the results to stdout (if
+/* BuildResults iterates on the map of Checks and print the results to stdout (if
    VERBOSE is set) and into JSON format
    parameters:
-	- IOCs is a map of FileIOC
+	- Checks is a map of FileCheck
 	- Statistics is a set of counters
    returns:
 	- nil on success, error on failure
 */
-func BuildResults(IOCs map[int]FileIOC, Statistics *Stats) error {
-	Results := make(map[string]IOCResult)
+func BuildResults(Checks map[int]FileCheck, Statistics *Stats) error {
+	Results := make(map[string]CheckResult)
 	FileHistory := make(map[string]int)
-	for _, ioc := range IOCs {
+	for _, check := range Checks {
 		if VERBOSE {
-			fmt.Printf("Main: IOC '%s' returned %d positive match\n",
-				ioc.Raw, ioc.ResultCount)
-			if ioc.Result {
-				for file, hits := range ioc.Files {
+			fmt.Printf("Main: Check '%s' returned %d positive match\n",
+				check.Raw, check.ResultCount)
+			if check.Result {
+				for file, hits := range check.Files {
 					if VERBOSE {
 						fmt.Printf("\t- %d hits on %s\n",
 							hits, file)
@@ -558,27 +564,27 @@ func BuildResults(IOCs map[int]FileIOC, Statistics *Stats) error {
 						Statistics.UniqueFiles++
 					}
 				}
-				Statistics.IOCsMatch++
+				Statistics.ChecksMatch++
 			}
 		}
 		var listPosFiles []string
-		for f, _ := range ioc.Files {
+		for f, _ := range check.Files {
 			listPosFiles = append(listPosFiles, f)
 		}
-		Results[ioc.Raw] = IOCResult{
-			TestedFiles: ioc.FilesCount,
-			ResultCount: ioc.ResultCount,
+		Results[check.Raw] = CheckResult{
+			TestedFiles: check.FilesCount,
+			ResultCount: check.ResultCount,
 			Files: listPosFiles,
 		}
 	}
 	if VERBOSE {
-		fmt.Printf("Tested IOCs:\t%d\n"+
+		fmt.Printf("Tested Checks:\t%d\n"+
 			"Tested files:\t%d\n"+
-			"IOCs Match:\t%d\n"+
+			"Checks Match:\t%d\n"+
 			"Unique Files:\t%d\n"+
 			"Total hits:\t%d\n",
-			Statistics.IOCCount, Statistics.FilesCount,
-			Statistics.IOCsMatch, Statistics.UniqueFiles,
+			Statistics.CheckCount, Statistics.FilesCount,
+			Statistics.ChecksMatch, Statistics.UniqueFiles,
 			Statistics.TotalHits)
 	}
 	JsonResults, err := json.Marshal(Results)
@@ -588,51 +594,51 @@ func BuildResults(IOCs map[int]FileIOC, Statistics *Stats) error {
 }
 
 /* The Main logic of filechecker parses command line arguments into a list of
-   individual FileIOCs, stored in a map.
-   Each IOC contains a path, which is inspected in the GetDownThatPath function.
-   The results are stored in the IOCs map and built and display at the end.
+   individual FileChecks, stored in a map.
+   Each Check contains a path, which is inspected in the GetDownThatPath function.
+   The results are stored in the Checks map and built and display at the end.
 */
 func main() {
 	if DEBUG {
 		VERBOSE = true
 	}
-	/* IOCs is a map of individual IOCs and associated results
-	IOCs = {
-		<id> = { <struct FileIOC> },
-		<id> = { <struct FileIOC> },
+	/* Checks is a map of individual Checks and associated results
+	Checks = {
+		<id> = { <struct FileCheck> },
+		<id> = { <struct FileCheck> },
 		...
 	}
 	*/
-	IOCs := make(map[int]FileIOC)
+	Checks := make(map[int]FileCheck)
 
-	// list of IOCs to process, remove from list when processed
-	ToDoIOCs := make(map[int]FileIOC)
+	// list of Checks to process, remove from list when processed
+	ToDoChecks := make(map[int]FileCheck)
 
 	var Statistics Stats
 	flag.Parse()
 	for i := 0; flag.Arg(i) != ""; i++ {
 		if DEBUG {
-			fmt.Printf("Main: Parsing IOC id '%d': '%s'\n",
+			fmt.Printf("Main: Parsing Check id '%d': '%s'\n",
 				i, flag.Arg(i))
 		}
-		raw_ioc := flag.Arg(i)
-		IOCs[i] = ParseIOC(raw_ioc, i)
-		ToDoIOCs[i] = IOCs[i]
-		Statistics.IOCCount++
+		raw_check := flag.Arg(i)
+		Checks[i] = ParseCheck(raw_check, i)
+		ToDoChecks[i] = Checks[i]
+		Statistics.CheckCount++
 	}
-	for id, ioc := range IOCs {
+	for id, check := range Checks {
 		if DEBUG {
-			fmt.Printf("Main: Inspecting path '%s' from IOC id "+
-				"'%d'\n", ioc.Path, id)
+			fmt.Printf("Main: Inspecting path '%s' from Check id "+
+				"'%d'\n", check.Path, id)
 		}
-		// loop through the list of IOC, and only process the IOCs that
+		// loop through the list of Check, and only process the Checks that
 		// are still in the todo list
-		if _, ok := ToDoIOCs[id]; !ok {
+		if _, ok := ToDoChecks[id]; !ok {
 			continue
 		}
-		var EmptyActiveIOCs []int
-		GetDownThatPath(ioc.Path, EmptyActiveIOCs, 0, IOCs,
-			ToDoIOCs, &Statistics)
+		var EmptyActiveChecks []int
+		GetDownThatPath(check.Path, EmptyActiveChecks, 0, Checks,
+			ToDoChecks, &Statistics)
 	}
-	BuildResults(IOCs, &Statistics)
+	BuildResults(Checks, &Statistics)
 }
