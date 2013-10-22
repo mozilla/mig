@@ -47,7 +47,6 @@ import (
 	"encoding/json"
 	"os"
 	"regexp"
-	"strings"
 )
 
 var DEBUG bool = false
@@ -71,18 +70,18 @@ const (
 )
 
 /* Representation of a File Check.
-- Raw is the raw Check string received from the program arguments
 - Path is the file system path to inspect
+- Type is the name of the type of check
 - Value is the value of the check, such as a md5 hash
-- Type is the type of check in integer form
+- CodeType is the type of check in integer form
 - FilesCount is the total number of files inspected for each Check
 - ResultCount is a counter of positive results for this Check
 - Result is a boolean set to True when the Check has matched once or more
 - Files is an slice of string that contains paths of matching files
 */
 type FileCheck struct {
-	Raw, Path, Value			string
-	ID, Type, FilesCount, ResultCount	int
+	ID, Path, Type, Value			string
+	CodeType, FilesCount, ResultCount	int
 	Result					bool
 	Files					map[string]int
 	Re					*regexp.Regexp
@@ -108,60 +107,44 @@ type Stats struct {
 	TotalHits   int
 }
 
-/* ParseCheck parses an Check from the command line into a FileCheck struct
-   parameters:
-	- raw_check is a string that contains the Check from the command line in
-	the format <path>:<check>=<value>
-	eg. /usr/bin/vim:md5=8680f252cabb7f4752f8927ce0c6f9bd
-	- id is an integer used as a ID reference
-   return:
-	- a FileCheck structure
+/* ParseCheck verifies and populate checks passed as arguments
 */
-func ParseCheck(raw_check string, id int) (check FileCheck) {
-	check.Raw = raw_check
+func ParseCheck(check FileCheck, id string) (FileCheck) {
 	check.ID = id
-	// split on the first ':' and use the left part as the Path
-	tmp := strings.Split(raw_check, ":")
-	check.Path = tmp[0]
-	// split the right part on '=', left is the check, right is the value
-	tmp = strings.Split(tmp[1], "=")
-	check.Value = tmp[1]
-	// the check string is transformed into a bitmask and stored
-	checkstring := tmp[0]
-	switch checkstring {
+	switch check.Type {
 	case "contains":
-		check.Type = CheckContains
+		check.CodeType = CheckContains
 		// compile the value into a regex
 		check.Re = regexp.MustCompile(check.Value)
 	case "named":
-		check.Type = CheckNamed
+		check.CodeType = CheckNamed
 		// compile the value into a regex
 		check.Re = regexp.MustCompile(check.Value)
 	case "md5":
-		check.Type = CheckMD5
+		check.CodeType = CheckMD5
 	case "sha1":
-		check.Type = CheckSHA1
+		check.CodeType = CheckSHA1
 	case "sha256":
-		check.Type = CheckSHA256
+		check.CodeType = CheckSHA256
 	case "sha384":
-		check.Type = CheckSHA384
+		check.CodeType = CheckSHA384
 	case "sha512":
-		check.Type = CheckSHA512
+		check.CodeType = CheckSHA512
 	case "sha3_224":
-		check.Type = CheckSHA3_224
+		check.CodeType = CheckSHA3_224
 	case "sha3_256":
-		check.Type = CheckSHA3_256
+		check.CodeType = CheckSHA3_256
 	case "sha3_384":
-		check.Type = CheckSHA3_384
+		check.CodeType = CheckSHA3_384
 	case "sha3_512":
-		check.Type = CheckSHA3_512
+		check.CodeType = CheckSHA3_512
 	default:
-		err := fmt.Sprintf("ParseCheck: Invalid check '%s'", checkstring)
+		err := fmt.Sprintf("ParseCheck: Invalid check '%s'", check.Type)
 		panic(err)
 	}
 	// allocate the map
 	check.Files = make(map[string]int)
-	return
+	return check
 }
 
 /* GetHash calculates the hash of a file.
@@ -228,8 +211,8 @@ func GetHash(fd *os.File, HashType int) (hexhash string) {
    returns:
 	- IsVerified: true if a match is found, false otherwise
 */
-func VerifyHash(file string, hash string, check int, ActiveCheckIDs []int,
-		Checks map[int]FileCheck) (IsVerified bool) {
+func VerifyHash(file string, hash string, check int, ActiveCheckIDs []string,
+		Checks map[string]FileCheck) (IsVerified bool) {
 	IsVerified = false
 	for _, id := range ActiveCheckIDs {
 		tmpcheck := Checks[id]
@@ -251,15 +234,15 @@ func VerifyHash(file string, hash string, check int, ActiveCheckIDs []int,
    All regexp are compiled during argument parsing and not here.
    parameters:
 	- fd is a file descriptor on the open file
-	- ReList is a integer list of Check IDs to apply to this file
+	- ReList is a list of Check IDs to apply to this file
 	- Checks is a map of Check
    return:
 	- MatchesRegexp is a boolean set to true if at least one regexp matches
 */
-func MatchRegexpsOnFile(fd *os.File, ReList []int,
-			Checks map[int]FileCheck) (MatchesRegexp bool) {
+func MatchRegexpsOnFile(fd *os.File, ReList []string,
+			Checks map[string]FileCheck) (MatchesRegexp bool) {
 	MatchesRegexp = false
-	Results := make(map[int]int)
+	Results := make(map[string]int)
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
@@ -294,13 +277,13 @@ func MatchRegexpsOnFile(fd *os.File, ReList []int,
 /* MatchRegexpsOnName applies regexp search to a given filename
    parameters:
 	- filename is a string that contains a filename
-	- ReList is a integer list of Check IDs to apply to this file
+	- ReList is a list of Check IDs to apply to this file
 	- Checks is a map of Check
    return:
 	- MatchesRegexp is a boolean set to true if at least one regexp matches
 */
-func MatchRegexpsOnName(filename string, ReList []int,
-			Checks map[int]FileCheck) (MatchesRegexp bool) {
+func MatchRegexpsOnName(filename string, ReList []string,
+			Checks map[string]FileCheck) (MatchesRegexp bool) {
 	MatchesRegexp = false
 	for _, id := range ReList {
 		tmpcheck := Checks[id]
@@ -322,15 +305,15 @@ func MatchRegexpsOnName(filename string, ReList []int,
    to run, and runs the checks in a smart way to minimize effort.
    parameters:
 	- fd is an open file descriptor that points to the file to inspect
-	- ActiveCheckIDs is a slice of integer that contains the IDs of the Checks
+	- ActiveCheckIDs is a slice that contains the IDs of the Checks
 	that all files in that path and below must be checked against
 	- CheckBitMask is a bitmask of the checks types currently active
 	- Checks is the global list of Checks
    returns:
 	- nil on success, error on failure
 */
-func InspectFile(fd *os.File, ActiveCheckIDs []int, CheckBitMask int,
-		 Checks map[int]FileCheck) error {
+func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int,
+		 Checks map[string]FileCheck) error {
 	/* Iterate through the entire checklist, and process the checks of
 	   each file
 	*/
@@ -340,9 +323,9 @@ func InspectFile(fd *os.File, ActiveCheckIDs []int, CheckBitMask int,
 	}
 	if (CheckBitMask & CheckContains) != 0 {
 		// build a list of Checks of check type 'contains'
-		var ReList []int
+		var ReList []string
 		for _, id := range ActiveCheckIDs {
-			if (Checks[id].Type & CheckContains) != 0 {
+			if (Checks[id].CodeType & CheckContains) != 0 {
 				ReList = append(ReList, id)
 			}
 		}
@@ -355,9 +338,9 @@ func InspectFile(fd *os.File, ActiveCheckIDs []int, CheckBitMask int,
 	}
 	if (CheckBitMask & CheckNamed) != 0 {
 		// build a list of Checks of check type 'contains'
-		var ReList []int
+		var ReList []string
 		for _, id := range ActiveCheckIDs {
-			if (Checks[id].Type & CheckNamed) != 0 {
+			if (Checks[id].CodeType & CheckNamed) != 0 {
 				ReList = append(ReList, id)
 			}
 		}
@@ -459,7 +442,7 @@ func InspectFile(fd *os.File, ActiveCheckIDs []int, CheckBitMask int,
    the file with.
    parameters:
 	- path is the file system path to inspect
-	- ActiveCheckIDs is a slice of integer that contains the IDs of the Checks
+	- ActiveCheckIDs is a slice that contains the IDs of the Checks
 	that all files in that path and below must be checked against
 	- CheckBitMask is a bitmask of the checks types currently active
 	- Checks is the global list of Checks
@@ -468,8 +451,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []int, CheckBitMask int,
    return:
 	- nil on success, error on error
 */
-func GetDownThatPath(path string, ActiveCheckIDs []int, CheckBitMask int,
-		     Checks map[int]FileCheck, ToDoChecks map[int]FileCheck,
+func GetDownThatPath(path string, ActiveCheckIDs []string, CheckBitMask int,
+		     Checks map[string]FileCheck, ToDoChecks map[string]FileCheck,
 		     Statistics *Stats) error {
 	for id, check := range ToDoChecks {
 		if check.Path == path {
@@ -477,7 +460,7 @@ func GetDownThatPath(path string, ActiveCheckIDs []int, CheckBitMask int,
 			   it to the active list, and delete it from the todo
 			*/
 			ActiveCheckIDs = append(ActiveCheckIDs, id)
-			CheckBitMask |= check.Type
+			CheckBitMask |= check.CodeType
 			delete(ToDoChecks, id)
 			if DEBUG {
 				fmt.Printf("GetDownThatPath: Activating Check "+
@@ -545,13 +528,13 @@ func GetDownThatPath(path string, ActiveCheckIDs []int, CheckBitMask int,
    returns:
 	- nil on success, error on failure
 */
-func BuildResults(Checks map[int]FileCheck, Statistics *Stats) (string) {
+func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
 	Results := make(map[string]CheckResult)
 	FileHistory := make(map[string]int)
 	for _, check := range Checks {
 		if VERBOSE {
-			fmt.Printf("Main: Check '%s' returned %d positive match\n",
-				check.Raw, check.ResultCount)
+			fmt.Printf("Main: Check '%d' returned %d positive match\n",
+				check.ID, check.ResultCount)
 			if check.Result {
 				for file, hits := range check.Files {
 					if VERBOSE {
@@ -570,7 +553,7 @@ func BuildResults(Checks map[int]FileCheck, Statistics *Stats) (string) {
 		for f, _ := range check.Files {
 			listPosFiles = append(listPosFiles, f)
 		}
-		Results[check.Raw] = CheckResult{
+		Results[check.ID] = CheckResult{
 			TestedFiles: check.FilesCount,
 			ResultCount: check.ResultCount,
 			Files: listPosFiles,
@@ -596,7 +579,7 @@ func BuildResults(Checks map[int]FileCheck, Statistics *Stats) (string) {
    Each Check contains a path, which is inspected in the GetDownThatPath function.
    The results are stored in the Checks map and built and display at the end.
 */
-func Run(Args []string) (string) {
+func Run(Args []byte) (string) {
 	if DEBUG {
 		VERBOSE = true
 	}
@@ -607,17 +590,19 @@ func Run(Args []string) (string) {
 		...
 	}
 	*/
-	Checks := make(map[int]FileCheck)
+	Checks := make(map[string]FileCheck)
+	err := json.Unmarshal(Args, &Checks)
+	if err != nil { panic(err) }
 	// ToDoChecks is a list of Checks to process, dequeued when done
-	ToDoChecks := make(map[int]FileCheck)
+	ToDoChecks := make(map[string]FileCheck)
 	var Statistics Stats
 	// parse the arguments, split on the space
-	for ctr, arg := range Args {
+	for id, check := range Checks {
 		if DEBUG {
-			fmt.Printf("Main: Parsing argument: '%s'\n", arg)
+			fmt.Printf("Main: Parsing check id: '%d'\n", id)
 		}
-		Checks[ctr] = ParseCheck(arg, ctr)
-		ToDoChecks[ctr] = Checks[ctr]
+		Checks[id] = ParseCheck(check, id)
+		ToDoChecks[id] = Checks[id]
 		Statistics.CheckCount++
 	}
 	for id, check := range Checks {
@@ -630,7 +615,7 @@ func Run(Args []string) (string) {
 		if _, ok := ToDoChecks[id]; !ok {
 			continue
 		}
-		var EmptyActiveChecks []int
+		var EmptyActiveChecks []string
 		GetDownThatPath(check.Path, EmptyActiveChecks, 0, Checks,
 			ToDoChecks, &Statistics)
 	}

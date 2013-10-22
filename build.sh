@@ -32,6 +32,5 @@ done
 # basic test
 # (note to self: stop being lazy and write unit tests!)
 echo -n Testing...
-./bin/linux/amd64/agent -m=filechecker '/etc/passwd:contains=root:x:0:0:root:/root:/bin/bash' \
-'/etc/passwd:sha384=d3babeda27bede2b04a60ed0d23f36f2031d451fa246e5f21e309f4281128242e9488b769c2524b70ec3141f388e59aa' > /dev/null
+./bin/linux/amd64/agent -m=filechecker '{"1382464331517679238": {"Path":"/etc/passwd", "Type": "contains", "Value":"root"}, "1382464331517679239": {"Path":"/etc/passwd", "Type": "contains", "Value":"ulfr"}, "1382464331517679240": {"Path":"/bin/ls", "Type": "md5", "Value": "eb47e6fc8ba9d55217c385b8ade30983"}}' > /dev/null
 if [ $? == 0 ]; then echo "OK"; else echo "Failed"; fi

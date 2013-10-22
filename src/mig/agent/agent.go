@@ -174,7 +174,12 @@ func main() {
 	flag.Parse()
 	switch *mode {
 	case "filechecker":
-		fmt.Printf(filechecker.Run(flag.Args()))
+		var tmparg string
+		for _, arg := range flag.Args(){
+			tmparg = tmparg + arg
+		}
+		args := []byte(tmparg)
+		fmt.Printf(filechecker.Run(args))
 		os.Exit(0)
 	case "agent":
 		fmt.Printf("Launching MIG Agent")
