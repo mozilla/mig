@@ -32,7 +32,7 @@ and other provisions required by the GPL or the LGPL. If you do not delete
 the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
 */
-package main
+package filechecker
 
 import (
 	"bufio"
@@ -41,11 +41,10 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
-	"encoding/json"
-	"flag"
 	"fmt"
 	"hash"
 	"io"
+	"encoding/json"
 	"os"
 	"regexp"
 	"strings"
@@ -546,7 +545,7 @@ func GetDownThatPath(path string, ActiveCheckIDs []int, CheckBitMask int,
    returns:
 	- nil on success, error on failure
 */
-func BuildResults(Checks map[int]FileCheck, Statistics *Stats) error {
+func BuildResults(Checks map[int]FileCheck, Statistics *Stats) (string) {
 	Results := make(map[string]CheckResult)
 	FileHistory := make(map[string]int)
 	for _, check := range Checks {
@@ -589,8 +588,7 @@ func BuildResults(Checks map[int]FileCheck, Statistics *Stats) error {
 	}
 	JsonResults, err := json.Marshal(Results)
 	if err != nil { panic(err) }
-	os.Stdout.Write(JsonResults)
-	return nil
+	return string(JsonResults[:])
 }
 
 /* The Main logic of filechecker parses command line arguments into a list of
@@ -598,7 +596,7 @@ func BuildResults(Checks map[int]FileCheck, Statistics *Stats) error {
    Each Check contains a path, which is inspected in the GetDownThatPath function.
    The results are stored in the Checks map and built and display at the end.
 */
-func main() {
+func Run(Args []string) (string) {
 	if DEBUG {
 		VERBOSE = true
 	}
@@ -610,20 +608,16 @@ func main() {
 	}
 	*/
 	Checks := make(map[int]FileCheck)
-
-	// list of Checks to process, remove from list when processed
+	// ToDoChecks is a list of Checks to process, dequeued when done
 	ToDoChecks := make(map[int]FileCheck)
-
 	var Statistics Stats
-	flag.Parse()
-	for i := 0; flag.Arg(i) != ""; i++ {
+	// parse the arguments, split on the space
+	for ctr, arg := range Args {
 		if DEBUG {
-			fmt.Printf("Main: Parsing Check id '%d': '%s'\n",
-				i, flag.Arg(i))
+			fmt.Printf("Main: Parsing argument: '%s'\n", arg)
 		}
-		raw_check := flag.Arg(i)
-		Checks[i] = ParseCheck(raw_check, i)
-		ToDoChecks[i] = Checks[i]
+		Checks[ctr] = ParseCheck(arg, ctr)
+		ToDoChecks[ctr] = Checks[ctr]
 		Statistics.CheckCount++
 	}
 	for id, check := range Checks {
@@ -640,5 +634,5 @@ func main() {
 		GetDownThatPath(check.Path, EmptyActiveChecks, 0, Checks,
 			ToDoChecks, &Statistics)
 	}
-	BuildResults(Checks, &Statistics)
+	return BuildResults(Checks, &Statistics)
 }

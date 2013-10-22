@@ -3,10 +3,12 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/streadway/amqp"
 	"log"
 	"mig"
+	"mig/modules/filechecker"
 	"os/exec"
 	"os"
 	"runtime"
@@ -166,6 +168,18 @@ func msgXchange(c *amqp.Channel, excName, routingKey string, body []byte) error 
 }
 
 func main() {
+	// parse command line argument
+	// -m selects the mode {agent, filechecker, ...}
+	var mode = flag.String("m", "agent", "module to run (eg. agent, filechecker)")
+	flag.Parse()
+	switch *mode {
+	case "filechecker":
+		fmt.Printf(filechecker.Run(flag.Args()))
+		os.Exit(0)
+	case "agent":
+		fmt.Printf("Launching MIG Agent")
+	}
+
 	// termChan is used to exit the program
 	termChan	:= make(chan bool)
 	actionsChan	:= make(chan []byte, 10)

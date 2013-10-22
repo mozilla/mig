@@ -20,7 +20,6 @@ do
     [ ! -d bin/$platform ] && mkdir -p bin/$platform
     goplatbin="go-$(echo $platform|sed 's|\/|-|')"
     for target in \
-        mig/modules/filechecker \
         mig/agent \
         mig/scheduler
     do
@@ -29,3 +28,10 @@ do
         $cmd
     done
 done
+
+# basic test
+# (note to self: stop being lazy and write unit tests!)
+echo -n Testing...
+./bin/linux/amd64/agent -m=filechecker '/etc/passwd:contains=root:x:0:0:root:/root:/bin/bash' \
+'/etc/passwd:sha384=d3babeda27bede2b04a60ed0d23f36f2031d451fa246e5f21e309f4281128242e9488b769c2524b70ec3141f388e59aa' > /dev/null
+if [ $? == 0 ]; then echo "OK"; else echo "Failed"; fi
