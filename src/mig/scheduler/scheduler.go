@@ -37,6 +37,9 @@ var MONGOURI string = "172.21.2.143"
 var AGTWHITELIST string = "/var/cache/mig/agents_whitelist.txt"
 var AGTTIMEOUT string = "2h"
 
+// the list of active agents is shared globally
+var activeAgentsList []string
+
 // main initializes the mongodb connection, the directory watchers and the
 // AMQP broker. It also launches the goroutines.
 func main() {
@@ -46,7 +49,6 @@ func main() {
 	cmdInFlightChan := make(chan string, 67)
 	cmdDoneChan := make(chan string, 43)
 	actionDoneChan := make(chan string, 11)
-	var activeAgentsList []string
 
 	// Setup connection to MongoDB backend database
 	mgofd, err := mgo.Dial(MONGOURI)
@@ -380,11 +382,11 @@ func startKeepAliveChannel(broker *amqp.Channel, mgoRegCol *mgo.Collection, acti
 	if err != nil {
 		log.Fatalf("- - QueueBind: %v", err)
 	}
-	err = broker.Qos(1, 0, false)
+	err = broker.Qos(3, 0, false)
 	if err != nil {
 		log.Fatalf("- - ChannelQoS: %v", err)
 	}
-	keepAliveChan, err := broker.Consume("mig.keepalive", "", false, false, false, false, nil)
+	keepAliveChan, err := broker.Consume("mig.keepalive", "", true, false, false, false, nil)
 	if err != nil {
 		log.Fatalf("- - ChannelConsume: %v", err)
 	}
@@ -434,9 +436,10 @@ func getKeepAlives(keepalives <-chan amqp.Delivery, c *amqp.Channel, mgoRegCol *
 			log.Fatal("- - getKeepAlives mgoRegCol.Upsert:", err)
 		}
 		// When we're certain that the registration is processed, ack it
-		if err = r.Ack(true); err != nil {
-			log.Fatal("- - getKeepAlives r.Ack():", err)
-		}
+		//err = r.Ack(true)
+		//if err != nil {
+		//	log.Fatal("- - getKeepAlives r.Ack():", err)
+		//}
 	}
 	return nil
 }
@@ -459,7 +462,7 @@ func startAgentListener(list []string, reg mig.KeepAlive, c *amqp.Channel) ([]st
 	if err != nil {
 		log.Fatalf("QueueBind: %v", err)
 	}
-	agentChan, err := c.Consume(queue, "", false, false, false, false, nil)
+	agentChan, err := c.Consume(queue, "", true, false, false, false, nil)
 	// start a goroutine for this queue
 	go recvAgentResults(agentChan, c)
 	log.Println("- - getKeepAlives: started recvAgentResults goroutine for agent", reg.Name)
