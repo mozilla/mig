@@ -204,7 +204,7 @@ func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
 		if err := prepareCommands(action, mgoRegCol); err != nil {
 			log.Println("pullAction: prepareCommand() failed:", err)
 			file := fmt.Sprintf("%s-%d.json", action.Name, action.UniqID)
-			os.Rename(actionPath, INVALIDACTIONDIR + "/" + file)
+			os.Rename(actionPath, INVALIDACTIONDIR+"/"+file)
 			continue
 		}
 		os.Remove(actionPath)
@@ -231,10 +231,10 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
 		log.Println(action.UniqID, cmduniqid, "pullAction: scheduling action",
 			action.Name, "on target", target.Name)
 		cmd := mig.Command{
-			AgentName: target.Name,
+			AgentName:     target.Name,
 			AgentQueueLoc: target.QueueLoc,
-			Action: action,
-			UniqID: cmduniqid,
+			Action:        action,
+			UniqID:        cmduniqid,
 		}
 		jsonCmd, err := json.Marshal(cmd)
 		if err != nil {
@@ -275,14 +275,16 @@ func launchCommand(cmdLaunchChan <-chan string, broker *amqp.Channel) error {
 			cmd.Action.Name, "for agent", cmd.AgentName)
 		msg := amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
-			Timestamp: time.Now(),
-			ContentType: "text/plain",
-			Body: []byte(cmdJson),
+			Timestamp:    time.Now(),
+			ContentType:  "text/plain",
+			Body:         []byte(cmdJson),
 		}
 		agtQueue := fmt.Sprintf("mig.agt.%s", cmd.AgentQueueLoc)
 		err = broker.Publish("mig", agtQueue, true, false, msg)
 		if err != nil {
-			log.Fatal(cmd.Action.UniqID, cmd.UniqID,
+			//log.Fatal(cmd.Action.UniqID, cmd.UniqID,
+			//	"launchCommand Publish()", err)
+			log.Println(cmd.Action.UniqID, cmd.UniqID,
 				"launchCommand Publish()", err)
 		}
 		log.Println(cmd.Action.UniqID, cmd.UniqID,
@@ -290,7 +292,7 @@ func launchCommand(cmdLaunchChan <-chan string, broker *amqp.Channel) error {
 		// command has been launched, move it to inflight directory
 		cmdFile := fmt.Sprintf("%s-%d-%d.json",
 			cmd.AgentQueueLoc, cmd.Action.UniqID, cmd.UniqID)
-		os.Rename(cmdPath, INFLIGHTCMDDIR + "/" + cmdFile)
+		os.Rename(cmdPath, INFLIGHTCMDDIR+"/"+cmdFile)
 	}
 	return nil
 }
@@ -351,8 +353,9 @@ func recvAgentResults(agentChan <-chan amqp.Delivery, c *amqp.Channel) error {
 	return nil
 }
 
-// pickUpAliveAgents lists agents that have recent keepalive in the database and start listening queues for them
-func pickUpAliveAgents(broker *amqp.Channel, mgoRegCol *mgo.Collection, activeAgentsList []string) ([]string) {
+// pickUpAliveAgents lists agents that have recent keepalive in the
+// database, and start listening queues for them
+func pickUpAliveAgents(broker *amqp.Channel, mgoRegCol *mgo.Collection, activeAgentsList []string) []string {
 	agents := []mig.KeepAlive{}
 	// get a list of all agents that have a keepalive between AGTTIMEOUT and now
 	period, err := time.ParseDuration(AGTTIMEOUT)
@@ -371,12 +374,13 @@ func pickUpAliveAgents(broker *amqp.Channel, mgoRegCol *mgo.Collection, activeAg
 	return activeAgentsList
 }
 
-// startKeepAliveChannel initializes the keepalive AMQP queue and start a goroutine to listen on it
+// startKeepAliveChannel initializes the keepalive AMQP queue
+// and start a goroutine to listen on it
 func startKeepAliveChannel(broker *amqp.Channel, mgoRegCol *mgo.Collection, activeAgentsList []string) error {
 	// agent registrations & heartbeats
 	_, err := broker.QueueDeclare("mig.keepalive", true, false, false, false, nil)
 	if err != nil {
-		log.Fatalf("- - QueueDeclare: %v", err)
+		log.Fatalf("- - startKeepAliveChannel QueueDeclare: %v", err)
 	}
 	err = broker.QueueBind("mig.keepalive", "mig.keepalive", "mig", false, nil)
 	if err != nil {
@@ -412,29 +416,28 @@ func getKeepAlives(keepalives <-chan amqp.Delivery, c *amqp.Channel, mgoRegCol *
 
 		// is agent is not authorized to keepAlive, ack the message and skip the registration
 		// nothing is returned to the agent. it's simply ignored.
-		if err:= isAgentAuthorized(reg.Name); err != nil {
+		if err := isAgentAuthorized(reg.Name); err != nil {
 			log.Println("- - getKeepAlives: agent",
 				reg.Name, "is not authorized to keepAlive")
-			if err = r.Ack(true); err != nil {
-				log.Fatal("- - getKeepAlives r.Ack():", err)
-			}
 			continue
 		}
 		log.Println("- - getKeepAlives: agent", reg.Name, "is authorized")
 
+		// start a listener for this agent, if needed
 		activeAgentsList = startAgentListener(activeAgentsList, reg, c)
 
 		//save registration in database
 		reg.LastKeepAlive = time.Now()
 
 		// try to find an existing entry to update
-		log.Println("- - getKeepAlives: Updating info for agent", reg.Name)
 		_, err = mgoRegCol.Upsert(
 			bson.M{"name": reg.Name, "os": reg.OS, "queueloc": reg.QueueLoc},
 			bson.M{"name": reg.Name, "os": reg.OS, "queueloc": reg.QueueLoc, "lastkeepalive": time.Now()})
 		if err != nil {
 			log.Fatal("- - getKeepAlives mgoRegCol.Upsert:", err)
 		}
+		log.Println("- - getKeepAlives: Updated keepalive info in database for agent", reg.Name)
+
 		// When we're certain that the registration is processed, ack it
 		//err = r.Ack(true)
 		//if err != nil {
@@ -445,27 +448,28 @@ func getKeepAlives(keepalives <-chan amqp.Delivery, c *amqp.Channel, mgoRegCol *
 }
 
 // startAgentsListener will create an AMQP consumer for this agent if none exist
-func startAgentListener(list []string, reg mig.KeepAlive, c *amqp.Channel) ([]string) {
-	// lookup the list of active queues, and return if one exists
+func startAgentListener(list []string, reg mig.KeepAlive, c *amqp.Channel) []string {
+	// continue only if the scheduler is not already listening for this agent
 	for _, q := range list {
 		if q == reg.QueueLoc {
+			log.Println("- - startAgentListener: active listener exists for", reg.QueueLoc)
 			return list
 		}
 	}
 	//create a queue for agent
-	queue := fmt.Sprintf("mig.agents.%s", reg.QueueLoc)
+	queue := fmt.Sprintf("mig.sched.%s", reg.QueueLoc)
 	_, err := c.QueueDeclare(queue, true, false, false, false, nil)
 	if err != nil {
-		log.Fatalf("QueueDeclare: %v", err)
+		log.Fatalf("- - startAgentListener QueueDeclare '%s': %v", queue, err)
 	}
 	err = c.QueueBind(queue, queue, "mig", false, nil)
 	if err != nil {
-		log.Fatalf("QueueBind: %v", err)
+		log.Fatalf("- - startAgentListener QueueBind: %v", err)
 	}
 	agentChan, err := c.Consume(queue, "", true, false, false, false, nil)
 	// start a goroutine for this queue
 	go recvAgentResults(agentChan, c)
-	log.Println("- - getKeepAlives: started recvAgentResults goroutine for agent", reg.Name)
+	log.Println("- - startAgentListener: started recvAgentResults goroutine for agent", reg.Name)
 	// add the new active queue to the list
 	list = append(list, reg.QueueLoc)
 	return list
