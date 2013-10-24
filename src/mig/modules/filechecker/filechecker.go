@@ -75,20 +75,20 @@ const (
 - Value is the value of the check, such as a md5 hash
 - CodeType is the type of check in integer form
 - FilesCount is the total number of files inspected for each Check
-- ResultCount is a counter of positive results for this Check
+- MatchCount is a counter of positive results for this Check
 - Result is a boolean set to True when the Check has matched once or more
 - Files is an slice of string that contains paths of matching files
 */
 type FileCheck struct {
 	ID, Path, Type, Value			string
-	CodeType, FilesCount, ResultCount	int
+	CodeType, FilesCount, MatchCount	int
 	Result					bool
 	Files					map[string]int
 	Re					*regexp.Regexp
 }
 
 type CheckResult struct {
-	TestedFiles, ResultCount int
+	TestedFiles, MatchCount int
 	Files			 []string
 }
 
@@ -219,7 +219,7 @@ func VerifyHash(file string, hash string, check int, ActiveCheckIDs []string,
 		if Checks[id].Value == hash {
 			IsVerified = true
 			tmpcheck.Result = true
-			tmpcheck.ResultCount += 1
+			tmpcheck.MatchCount += 1
 			tmpcheck.Files[file] = 1
 		}
 		// update Checks tested files count
@@ -260,7 +260,7 @@ func MatchRegexpsOnFile(fd *os.File, ReList []string,
 		for id, count := range Results {
 			tmpcheck := Checks[id]
 			tmpcheck.Result = true
-			tmpcheck.ResultCount += count
+			tmpcheck.MatchCount += count
 			tmpcheck.Files[fd.Name()] = count
 			Checks[id] = tmpcheck
 		}
@@ -290,7 +290,7 @@ func MatchRegexpsOnName(filename string, ReList []string,
 		if Checks[id].Re.MatchString(filename) {
 			MatchesRegexp = true
 			tmpcheck.Result = true
-			tmpcheck.ResultCount++
+			tmpcheck.MatchCount++
 			tmpcheck.Files[filename] = 1
 		}
 		// update Checks tested files count
@@ -534,7 +534,7 @@ func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
 	for _, check := range Checks {
 		if VERBOSE {
 			fmt.Printf("Main: Check '%d' returned %d positive match\n",
-				check.ID, check.ResultCount)
+				check.ID, check.MatchCount)
 			if check.Result {
 				for file, hits := range check.Files {
 					if VERBOSE {
@@ -555,7 +555,7 @@ func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
 		}
 		Results[check.ID] = CheckResult{
 			TestedFiles: check.FilesCount,
-			ResultCount: check.ResultCount,
+			MatchCount: check.MatchCount,
 			Files: listPosFiles,
 		}
 	}
