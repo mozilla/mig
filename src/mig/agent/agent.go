@@ -38,16 +38,20 @@ func main() {
 		fmt.Printf(filechecker.Run(args))
 		os.Exit(0)
 	case "agent":
-		fmt.Printf("Launching MIG Agent")
+		initAgent()
 	}
+}
 
+// initAgent prepare the AMQP connections to the broker and launches the
+// goroutines that will process commands received by the MIG Scheduler
+func initAgent() (error){
+	hostname, err := os.Hostname()
+	log.Println("MIG agent starting on", hostname)
 	// termChan is used to exit the program
 	termChan := make(chan bool)
 	actionsChan := make(chan []byte, 10)
 	fCommandChan := make(chan mig.Command, 10)
-	alertChan := make(chan mig.Alert, 10)
 	resultChan := make(chan mig.Command, 10)
-	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatalf("os.Hostname(): %v", err)
 	}
@@ -67,9 +71,7 @@ func main() {
 		mig.Binding{agentQueue, "mig.all"},
 	}
 
-	log.Println("MIG agent starting on", hostname)
-
-	// Connects opens an AMQP connection from the credentials in the URL.
+	// Open an AMQP connection
 	conn, err := amqp.Dial(AMQPBROKER)
 	if err != nil {
 		log.Fatalf("amqp.Dial(): %v", err)
@@ -128,6 +130,7 @@ func main() {
 
 	// block until terminate chan is called
 	<-termChan
+	return nil
 }
 
 // getCommands receives AMQP messages and pass them to the next level
