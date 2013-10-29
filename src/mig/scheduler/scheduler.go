@@ -212,8 +212,11 @@ func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
 	return nil
 }
 
+// prepareCommands retrieves a list of target agents from the database,
+// and creates a command for each target agent
 func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
-	// get the list of targets from the keepAlive
+	// query the database for alive agent, that have sent keepalive
+	// messages in the last AGTIMEOUT period
 	targets := []mig.KeepAlive{}
 	period, err := time.ParseDuration(AGTTIMEOUT)
 	if err != nil {
@@ -223,23 +226,24 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
 	iter := mgoRegCol.Find(bson.M{"os": action.Target, "lastkeepalive": bson.M{"$gte": since}}).Iter()
 	err = iter.All(&targets)
 	if err != nil {
-		log.Println(action.UniqID, "- pullAction - iter.All():", err)
+		log.Println(action.UniqID, "- prepareCommands - iter.All():", err)
 		errors.New("failed to retrieve agents list")
 	}
+	// loop over the list of targets and create a command for each
 	for _, target := range targets {
 		cmduniqid := genUniqID()
-		log.Println(action.UniqID, cmduniqid, "pullAction: scheduling action",
+		log.Println(action.UniqID, cmduniqid, "prepareCommands: scheduling action",
 			action.Name, "on target", target.Name)
 		cmd := mig.Command{
 			AgentName:     target.Name,
 			AgentQueueLoc: target.QueueLoc,
-			Action:        action,
+			Action:			action,
 			UniqID:        cmduniqid,
 		}
 		jsonCmd, err := json.Marshal(cmd)
 		if err != nil {
 			log.Println(action.UniqID, cmduniqid,
-				"pullAction - json.Marshal():", err)
+				"prepareCommands - json.Marshal():", err)
 			errors.New("failed to serialize command")
 		}
 		// write is done in 2 steps:

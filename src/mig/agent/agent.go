@@ -23,10 +23,13 @@ var HEARTBEATFREQ string = "600s"
 func main() {
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
-	var mode = flag.String("m", "agent", "module to run (eg. agent, filechecker)")
+	var mode = flag.String("m", "agent",
+		"module to run (eg. agent, filechecker)")
 	flag.Parse()
 	switch *mode {
 	case "filechecker":
+		// pass the rest of the arguments as a byte array
+		// to the filechecker module
 		var tmparg string
 		for _, arg := range flag.Args() {
 			tmparg = tmparg + arg
@@ -127,6 +130,7 @@ func main() {
 	<-termChan
 }
 
+// getCommands receives AMQP messages and pass them to the next level
 func getCommands(messages <-chan amqp.Delivery, actions chan []byte, terminate chan bool) error {
 	// range waits on the channel and returns all incoming messages
 	// range will exit when the channel closes
@@ -137,6 +141,7 @@ func getCommands(messages <-chan amqp.Delivery, actions chan []byte, terminate c
 		if err != nil {
 			panic(err)
 		}
+		// pass it along to the parseCommands goroutine
 		actions <- m.Body
 		log.Printf("getCommands: queued in pos. %d", len(actions))
 	}
@@ -144,9 +149,12 @@ func getCommands(messages <-chan amqp.Delivery, actions chan []byte, terminate c
 	return nil
 }
 
+// parseCommands transforms a message into a MIG Command struct, and
+// looks up the command type to pass it to the next level
 func parseCommands(commands <-chan []byte, fCommandChan chan mig.Command, terminate chan bool) error {
 	var cmd mig.Command
 	for a := range commands {
+		// unmarshal the received command into a command struct
 		err := json.Unmarshal(a, &cmd)
 		if err != nil {
 			log.Fatal("parseCommand - json.Unmarshal:", err)
