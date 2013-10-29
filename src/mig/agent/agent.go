@@ -1,3 +1,6 @@
+// TODO
+// * syntax check mig.Action.Arguments before exec()
+
 package main
 
 import (
@@ -114,8 +117,7 @@ func main() {
 		go getCommands(msgChan, actionsChan, termChan)
 	}
 	go parseCommands(actionsChan, fCommandChan, termChan)
-	go runFilechecker(fCommandChan, alertChan, resultChan, termChan)
-	go raiseAlerts(alertChan, termChan)
+	go runFilechecker(fCommandChan, resultChan, termChan)
 	go sendResults(c, regMsg.QueueLoc, resultChan, termChan)
 
 	// All set, ready to keepAlive
@@ -162,69 +164,33 @@ func parseCommands(commands <-chan []byte, fCommandChan chan mig.Command, termin
 	return nil
 }
 
-func runFilechecker(fCommandChan <-chan mig.Command, alertChan chan mig.Alert, resultChan chan mig.Command, terminate chan bool) error {
+func runFilechecker(fCommandChan <-chan mig.Command, resultChan chan mig.Command, terminate chan bool) error {
 	for migCmd := range fCommandChan {
-		log.Printf("RunFilechecker: running with args '%s'", migCmd.Action.Arguments)
-		var cmdArg string
-		for _, arg := range migCmd.Action.Arguments {
-			cmdArg += arg
-		}
-		runCmd := exec.Command("./filechecker", cmdArg)
-		cmdout, err := runCmd.StdoutPipe()
+		// Arguments can contain anything. Syntax Check before feeding
+		// them to exec()
+		args, err := json.Marshal(migCmd.Action.Arguments)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("runFilechecker json.Marshal(migCmd.Action.Arguments): ", err)
 		}
-		st := time.Now()
-		err = runCmd.Start()
+		s_args := fmt.Sprintf("%s", args)
+		log.Printf("runFilechecker: arguments %s", s_args)
+		runCmd := exec.Command("/opt/agent","-m","filechecker",s_args)
+		output, err := runCmd.CombinedOutput()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("runFilechecker cmd.CombinedOutput(): ",
+				fmt.Sprint(err), " - ", string(output))
+		} else {
+			log.Println("runFilechecker cmd.CombinedOutput(): ",
+				string(output))
 		}
-		results := make(map[string]mig.FileCheckerResult)
-		err = json.NewDecoder(cmdout).Decode(&results)
+		err = json.Unmarshal([]byte(output), &migCmd.Results)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("runFilechecker json.Unmarshal(): ", err)
 		}
-		cmdDone := make(chan error)
-		go func() {
-			cmdDone <- runCmd.Wait()
-		}()
-		select {
-		// kill the process when timeout expires
-		case <-time.After(30 * time.Second):
-			if err := runCmd.Process.Kill(); err != nil {
-				log.Fatal("failed to kill:", err)
-			}
-			log.Fatal("runFileChecker: command '%s' timed out", migCmd)
-		// exit normally
-		case err := <-cmdDone:
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-		for _, r := range results {
-			log.Println("runFileChecker: command", migCmd, "tested",
-				r.TestedFiles, "files in", time.Now().Sub(st))
-			if r.ResultCount > 0 {
-				for _, f := range r.Files {
-					alertChan <- mig.Alert{
-						Arguments: migCmd.Action.Arguments,
-						Item:      f,
-					}
-				}
-			}
-			migCmd.FCResults = append(migCmd.FCResults, r)
-		}
+		// send the results back to the scheduler
 		resultChan <- migCmd
 	}
 	terminate <- true
-	return nil
-}
-
-func raiseAlerts(alertChan chan mig.Alert, terminate chan bool) error {
-	for a := range alertChan {
-		log.Printf("raiseAlerts: IOC '%s' positive match on '%s'",
-			a.Arguments, a.Item)
-	}
 	return nil
 }
 

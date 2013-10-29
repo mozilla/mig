@@ -2,7 +2,13 @@
     "Name":     "MOZSYSCOMP_LOWENCCRED",
     "Target":   "linux",
     "Check":    "filechecker",
-    "Arguments":["/etc/shadow:contains=root:$1$"],
+    "Arguments": {
+        "MOZSYSCOMPLOWENCCRED1" : {
+            "Path": "/etc/shadow",
+            "Type": "contains",
+            "Value": "root:\\$6"
+        }
+    },
     "RunDate":  "immediate",
     "Expiration":  "30m"
 }

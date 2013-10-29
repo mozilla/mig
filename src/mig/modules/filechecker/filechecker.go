@@ -41,10 +41,10 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/json"
 	"fmt"
 	"hash"
 	"io"
-	"encoding/json"
 	"os"
 	"regexp"
 )
@@ -69,16 +69,20 @@ const (
 	CheckSHA3_512
 )
 
-/* Representation of a File Check.
-- Path is the file system path to inspect
-- Type is the name of the type of check
-- Value is the value of the check, such as a md5 hash
-- CodeType is the type of check in integer form
-- FilesCount is the total number of files inspected for each Check
-- MatchCount is a counter of positive results for this Check
-- Result is a boolean set to True when the Check has matched once or more
-- Files is an slice of string that contains paths of matching files
-*/
+type Arguments struct {
+	Arg	map[string]FileCheck
+}
+
+// Representation of a File Check.
+// Path is the file system path to inspect
+// Type is the name of the type of check
+// Value is the value of the check, such as a md5 hash
+// CodeType is the type of check in integer form
+// FilesCount is the total number of files inspected for each Check
+// MatchCount is a counter of positive results for this Check
+// Result is a boolean set to True when the Check has matched once or more
+// Files is an slice of string that contains paths of matching files
+// Re is a regular expression
 type FileCheck struct {
 	ID, Path, Type, Value			string
 	CodeType, FilesCount, MatchCount	int
@@ -87,9 +91,9 @@ type FileCheck struct {
 	Re					*regexp.Regexp
 }
 
-type CheckResult struct {
+type Results struct {
 	TestedFiles, MatchCount int
-	Files			 []string
+	Files []string
 }
 
 /* Statistic counters:
@@ -529,7 +533,7 @@ func GetDownThatPath(path string, ActiveCheckIDs []string, CheckBitMask int,
 	- nil on success, error on failure
 */
 func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
-	Results := make(map[string]CheckResult)
+	res := make(map[string]Results)
 	FileHistory := make(map[string]int)
 	for _, check := range Checks {
 		if VERBOSE {
@@ -553,7 +557,7 @@ func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
 		for f, _ := range check.Files {
 			listPosFiles = append(listPosFiles, f)
 		}
-		Results[check.ID] = CheckResult{
+		res[check.ID] = Results{
 			TestedFiles: check.FilesCount,
 			MatchCount: check.MatchCount,
 			Files: listPosFiles,
@@ -569,7 +573,7 @@ func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
 			Statistics.ChecksMatch, Statistics.UniqueFiles,
 			Statistics.TotalHits)
 	}
-	JsonResults, err := json.Marshal(Results)
+	JsonResults, err := json.Marshal(res)
 	if err != nil { panic(err) }
 	return string(JsonResults[:])
 }

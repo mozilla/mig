@@ -6,24 +6,19 @@ import(
 
 type Action struct {
 	Name, Target, Check, RunDate, Expiration string
-	Arguments []string
+	Arguments interface{}
 	UniqID uint32
 }
 
 type Command struct {
 	AgentName, AgentQueueLoc string
 	Action Action
-	FCResults []FileCheckerResult
+	Results interface{}
 	UniqID uint32
 }
 
-type FileCheckerResult struct {
-	TestedFiles, ResultCount int
-	Files []string
-}
-
 type Alert struct {
-	Arguments []string
+	Arguments interface{}
 	Item string
 }
 
