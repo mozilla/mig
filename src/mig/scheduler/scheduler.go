@@ -223,7 +223,7 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
 		log.Fatal("- - prepareCommands time.ParseDuration():", err)
 	}
 	since := time.Now().Add(-period)
-	iter := mgoRegCol.Find(bson.M{"os": action.Target, "lastkeepalive": bson.M{"$gte": since}}).Iter()
+	iter := mgoRegCol.Find(bson.M{"os": action.Target, "heartbeatts": bson.M{"$gte": since}}).Iter()
 	err = iter.All(&targets)
 	if err != nil {
 		log.Println(action.UniqID, "- prepareCommands - iter.All():", err)
@@ -361,7 +361,7 @@ func pickUpAliveAgents(broker *amqp.Channel, mgoRegCol *mgo.Collection, activeAg
 		log.Fatal("- - pickUpAliveAgents time.ParseDuration():", err)
 	}
 	since := time.Now().Add(-period)
-	iter := mgoRegCol.Find(bson.M{"lastkeepalive": bson.M{"$gte": since}}).Iter()
+	iter := mgoRegCol.Find(bson.M{"heartbeatts": bson.M{"$gte": since}}).Iter()
 	err = iter.All(&agents)
 	if err != nil {
 		log.Fatal("- - pickUpAliveAgents iter.All():", err)
@@ -424,13 +424,14 @@ func getKeepAlives(keepalives <-chan amqp.Delivery, c *amqp.Channel, mgoRegCol *
 		// start a listener for this agent, if needed
 		activeAgentsList = startAgentListener(activeAgentsList, reg, c)
 
-		//save registration in database
-		reg.LastKeepAlive = time.Now()
-
-		// try to find an existing entry to update
+		// try to find an existing entry to update, or create a new one
+		// and save registration in database
 		_, err = mgoRegCol.Upsert(
+			// search string
 			bson.M{"name": reg.Name, "os": reg.OS, "queueloc": reg.QueueLoc},
-			bson.M{"name": reg.Name, "os": reg.OS, "queueloc": reg.QueueLoc, "lastkeepalive": time.Now()})
+			// update string
+			bson.M{"name": reg.Name, "os": reg.OS, "queueloc": reg.QueueLoc,
+				"heartbeatts": reg.HeartBeatTS, "starttime": reg.StartTime})
 		if err != nil {
 			log.Fatal("- - getKeepAlives mgoRegCol.Upsert:", err)
 		}

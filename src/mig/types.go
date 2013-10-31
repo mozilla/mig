@@ -24,7 +24,7 @@ type Alert struct {
 
 type KeepAlive struct {
 	Name, QueueLoc, OS string
-	FirstKeepAlive, LastKeepAlive time.Time
+	StartTime, HeartBeatTS time.Time
 }
 
 type Binding struct {

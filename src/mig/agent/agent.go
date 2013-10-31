@@ -56,16 +56,17 @@ func initAgent() (error){
 		log.Fatalf("os.Hostname(): %v", err)
 	}
 	// declare a keepalive message to initiate registration
-	regMsg := mig.KeepAlive{
-		Name:          hostname,
-		OS:            runtime.GOOS,
-		QueueLoc:      fmt.Sprintf("%s.%s", runtime.GOOS, hostname),
-		LastKeepAlive: time.Now(),
+	HeartBeat := mig.KeepAlive{
+		Name:		hostname,
+		OS:		runtime.GOOS,
+		QueueLoc:	fmt.Sprintf("%s.%s", runtime.GOOS, hostname),
+		StartTime:	time.Now(),
+		HeartBeatTS:	time.Now(),
 	}
 	// define two bindings to receive msg from
 	// mig.agt.<OS>.<hostname> is for agent specific messages
 	// mig.all is for broadcasts
-	agentQueue := fmt.Sprintf("mig.agt.%s", regMsg.QueueLoc)
+	agentQueue := fmt.Sprintf("mig.agt.%s", HeartBeat.QueueLoc)
 	bindings := []mig.Binding{
 		mig.Binding{agentQueue, agentQueue},
 		mig.Binding{agentQueue, "mig.all"},
@@ -123,10 +124,10 @@ func initAgent() (error){
 	}
 	go parseCommands(actionsChan, fCommandChan, termChan)
 	go runFilechecker(fCommandChan, resultChan, termChan)
-	go sendResults(c, regMsg.QueueLoc, resultChan, termChan)
+	go sendResults(c, HeartBeat.QueueLoc, resultChan, termChan)
 
 	// All set, ready to keepAlive
-	go keepAliveAgent(c, regMsg)
+	go keepAliveAgent(c, HeartBeat)
 
 	// block until terminate chan is called
 	<-termChan
@@ -218,13 +219,14 @@ func sendResults(c *amqp.Channel, agtQueueLoc string, resultChan <-chan mig.Comm
 	return nil
 }
 
-func keepAliveAgent(c *amqp.Channel, regMsg mig.KeepAlive) error {
+func keepAliveAgent(c *amqp.Channel, HeartBeat mig.KeepAlive) error {
 	sleepTime, err := time.ParseDuration(HEARTBEATFREQ)
 	if err != nil {
 		log.Fatal("sendHeartbeat - time.ParseDuration():", err)
 	}
 	for {
-		body, err := json.Marshal(regMsg)
+		HeartBeat.HeartBeatTS = time.Now()
+		body, err := json.Marshal(HeartBeat)
 		if err != nil {
 			log.Fatal("sendHeartbeat - json.Marshal:", err)
 		}
