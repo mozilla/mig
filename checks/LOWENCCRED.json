@@ -3,10 +3,10 @@
     "Target":   "linux",
     "Check":    "filechecker",
     "Arguments": {
-        "MOZSYSCOMPLOWENCCRED1" : {
+        "MOZSYSCOMPLOWENCCRED" : {
             "Path": "/etc/shadow",
             "Type": "contains",
-            "Value": "root:\\$6"
+            "Value": "root:\\$(1|2a|5|6)\\$"
         }
     },
     "RunDate":  "immediate",
