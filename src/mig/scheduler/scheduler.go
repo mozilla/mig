@@ -347,12 +347,6 @@ func recvAgentResults(agentChan <-chan amqp.Delivery, c *amqp.Channel) error {
 		inflightPath := fmt.Sprintf("%s/%s-%d-%d.json", INFLIGHTCMDDIR,
 			cmd.AgentQueueLoc, cmd.Action.UniqID, cmd.UniqID)
 		os.Remove(inflightPath)
-		// Ack this message only
-		err = m.Ack(true)
-		if err != nil {
-			log.Fatal(cmd.Action.UniqID, cmd.UniqID,
-				"recvAgentCommandResult Ack():", err)
-		}
 	}
 	return nil
 }
