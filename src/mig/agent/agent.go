@@ -82,6 +82,7 @@ func initAgent() (error){
 	if err != nil {
 		log.Fatalf("conn.Channel(): %v", err)
 	}
+	// loop over the bindings and declare and bind the queues
 	for _, b := range bindings {
 		_, err = c.QueueDeclare(b.Queue, // Queue name
 			true,  // is durable
@@ -102,13 +103,14 @@ func initAgent() (error){
 		}
 	}
 
-	// Limit the number of message the channel will receive
+	// Limit the number of message the channel will receive at once
 	err = c.Qos(2, // prefetch count (in # of msg)
 		0,     // prefetch size (in bytes)
 		false) // is global
 	if err != nil {
 		log.Fatalf("ChannelQoS: %v", err)
 	}
+	// loop over the bindins and create a gorouting for each consumer
 	for _, b := range bindings {
 		msgChan, err := c.Consume(b.Queue, // queue name
 			"",    // some tag
@@ -135,7 +137,8 @@ func initAgent() (error){
 }
 
 // getCommands receives AMQP messages and pass them to the next level
-func getCommands(messages <-chan amqp.Delivery, actions chan []byte, terminate chan bool) error {
+func getCommands(messages <-chan amqp.Delivery, actions chan []byte,
+	terminate chan bool) error {
 	// range waits on the channel and returns all incoming messages
 	// range will exit when the channel closes
 	for m := range messages {

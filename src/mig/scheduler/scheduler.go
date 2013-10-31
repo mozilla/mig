@@ -235,10 +235,10 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
 		log.Println(action.UniqID, cmduniqid, "prepareCommands: scheduling action",
 			action.Name, "on target", target.Name)
 		cmd := mig.Command{
-			AgentName:     target.Name,
+			AgentName: target.Name,
 			AgentQueueLoc: target.QueueLoc,
-			Action:			action,
-			UniqID:        cmduniqid,
+			Action:	action,
+			UniqID: cmduniqid,
 		}
 		jsonCmd, err := json.Marshal(cmd)
 		if err != nil {
@@ -304,7 +304,7 @@ func launchCommand(cmdLaunchChan <-chan string, broker *amqp.Channel) error {
 // keep track of running commands, requeue expired onces
 func updateCommandStatus(cmdInFlightChan <-chan string) error {
 	for cmd := range cmdInFlightChan {
-		log.Println(cmd)
+		log.Println("- - updateCommandStatus(): ", cmd)
 	}
 	return nil
 }
@@ -316,7 +316,7 @@ func updateCommandStatus(cmdInFlightChan <-chan string) error {
 // store the result of a command and mark it as completed/failed
 func terminateCommand(cmdDoneChan <-chan string) error {
 	for cmd := range cmdDoneChan {
-		log.Println(cmd)
+		log.Println("- - terminateCommand(): ", cmd)
 	}
 	return nil
 }
@@ -324,7 +324,7 @@ func terminateCommand(cmdDoneChan <-chan string) error {
 // store the result of an action and mark it as completed
 func terminateAction(actionDoneChan <-chan string) error {
 	for act := range actionDoneChan {
-		log.Println(act)
+		log.Println("- - terminateAction(): ", act)
 	}
 	return nil
 }
@@ -334,9 +334,8 @@ func recvAgentResults(agentChan <-chan amqp.Delivery, c *amqp.Channel) error {
 	for m := range agentChan {
 		var cmd mig.Command
 		err := json.Unmarshal(m.Body, &cmd)
-		log.Println(cmd.Action.UniqID, cmd.UniqID,
-			"recvAgentCommandResult: queue", m.RoutingKey,
-			"received from agent", cmd.AgentName)
+		log.Printf("%d %d recvAgentResults(): '%s'",
+			cmd.Action.UniqID, cmd.UniqID, m.Body)
 		cmdPath := fmt.Sprintf("%s/%s-%d-%d.json", DONECMDDIR,
 			cmd.AgentQueueLoc, cmd.Action.UniqID, cmd.UniqID)
 		err = ioutil.WriteFile(cmdPath, m.Body, 0640)
