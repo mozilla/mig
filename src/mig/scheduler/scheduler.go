@@ -32,6 +32,8 @@ var INFLIGHTCMDDIR string = "/var/cache/mig/commands/inflight"
 var DONECMDDIR string = "/var/cache/mig/commands/done"
 var DONEACTIONDIR string = "/var/cache/mig/actions/done"
 var INVALIDACTIONDIR string = "/var/cache/mig/actions/invalid"
+// ** shared dirs end **
+var TMPDIR string = "/var/tmp/"
 var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
 var MONGOURI string = "172.21.2.143"
 var AGTWHITELIST string = "/var/cache/mig/agents_whitelist.txt"
@@ -265,7 +267,7 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) (cmdIDs []uin
 		// this prevents the dir watcher from waking up before the file is fully written
 		file := fmt.Sprintf("%s-%d-%d.json", action.Name, action.ID, cmduniqid)
 		cmdPath := LAUNCHCMDDIR + "/" + file
-		tmpPath := "/var/tmp/" + file
+		tmpPath := TMPDIR + file
 		err = ioutil.WriteFile(tmpPath, jsonCmd, 0640)
 		if err != nil {
 			log.Fatal(action.ID, cmduniqid, "prepareCommands ioutil.WriteFile():", err)
