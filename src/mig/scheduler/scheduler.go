@@ -64,6 +64,8 @@ func main() {
 	log.Println("- - Main: MongoDB connection successfull. URI=", MONGOURI)
 	mgofd.SetSafe(&mgo.Safe{}) // make safe writes only
 	mgoRegCol := mgofd.DB("mig").C("registrations")
+	mgoActionCol := mgofd.DB("mig").C("actions")
+	mgoCmdCol := mgofd.DB("mig").C("commands")
 
 	// Watch the data directories for new files
 	watcher, err := fsnotify.NewWatcher()
@@ -96,9 +98,9 @@ func main() {
 	log.Println("- - Main: processNewAction goroutine started")
 	go launchCommand(cmdLaunchChan, broker)
 	log.Println("- - Main: launchCommand goroutine started")
-	go updateCommandStatus(cmdInFlightChan)
+	go updateCommand(cmdUpdateChan, mgoCmdCol)
 	log.Println("- - Main: updateCommandStatus gorouting started")
-	go terminateCommand(cmdDoneChan)
+	go terminateCommand(cmdDoneChan, mgoCmdCol, mgoActionCol)
 	log.Println("- - Main: terminateCommand goroutine started")
 	go terminateAction(actionDoneChan)
 	log.Println("- - Main: terminateAction goroutine started")
@@ -175,7 +177,8 @@ func initWatchers(watcher *fsnotify.Watcher) error {
 // processNewAction receives channel message when a new action is available. It pulls
 // the action from the directory, parse it, retrieve a list of targets from
 // the backend database, and create individual command for each target.
-func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
+func processNewAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection,
+	mgoActionCol *mgo.Collection) error {
 	for actionPath := range actionNewChan {
 		uniqid := genID()
 		// parse the json of the action into a mig.Action
@@ -223,6 +226,12 @@ func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
 			os.Remove(actionPath)
 			log.Println(action.ID, "- processNewAction: Action ",
 				action.Name, "is in flight")
+			// store action in database
+			err = mgoActionCol.Insert(action)
+			if err != nil {
+				log.Fatal(action.ID,"- processNewAction() mgoActionCol.Insert:", err)
+			}
+			log.Println(action.ID,"- processNewAction(): action inserted in database")
 		}
 	}
 	return nil
@@ -318,21 +327,44 @@ func launchCommand(cmdLaunchChan <-chan string, broker *amqp.Channel) error {
 }
 
 // keep track of running commands, requeue expired onces
-func updateCommandStatus(cmdInFlightChan <-chan string) error {
-	for cmd := range cmdInFlightChan {
-		log.Println("- - updateCommandStatus(): ", cmd)
+func updateCommand(cmdUpdateChan <-chan string, mgoCmdCol *mgo.Collection) error {
+	for cmd := range cmdUpdateChan {
+		log.Println("- - updateCommand(): ", cmd)
 	}
 	return nil
 }
 
-// keep track of running actions
-//func updateActionStatus() error {
-//}
+// receive terminated commands that are read to update a given action
+func updateAction(cmd mig.Command, mgoActionCol *mgo.Collection) error {
+	return nil
+}
 
 // store the result of a command and mark it as completed/failed
-func terminateCommand(cmdDoneChan <-chan string) error {
-	for cmd := range cmdDoneChan {
-		log.Println("- - terminateCommand(): ", cmd)
+// send a message to the Action completion routine to update the action status
+func terminateCommand(cmdDoneChan <-chan string, mgoCmdCol *mgo.Collection,
+	mgoActionCol *mgo.Collection) error {
+	for cmdPath := range cmdDoneChan {
+		// load and parse the command. If this fail, skip it and continue.
+		cmd, err := loadCmdFromFile(cmdPath)
+		if err != nil {
+			log.Fatal("- - launchCommand() loadCmdFromFile() failed")
+			continue
+		}
+		log.Println(cmd.Action.ID, cmd.ID,"terminateCommand():", cmd)
+		// remove command from inflight dir
+		inflightPath := fmt.Sprintf("%s/%s-%d-%d.json", INFLIGHTCMDDIR,
+			cmd.AgentQueueLoc, cmd.Action.ID, cmd.ID)
+		os.Remove(inflightPath)
+		// store command in database
+		err = mgoCmdCol.Insert(cmd)
+		if err != nil {
+			log.Fatal(cmd.Action.ID, cmd.ID,
+				"- terminateCommand() mgoCmdCol.Insert:", err)
+		}
+		log.Println(cmd.Action.ID, cmd.ID,
+			"terminateCommand(): command inserted in database")
+		// call updateAction()
+		updateAction(cmd, mgoActionCol)
 	}
 	return nil
 }
@@ -360,9 +392,6 @@ func recvAgentResults(agentChan <-chan amqp.Delivery, c *amqp.Channel) error {
 			log.Fatal(cmd.Action.ID, cmd.ID,
 				"recvAgentCommandResult ioutil.WriteFile():", err)
 		}
-		inflightPath := fmt.Sprintf("%s/%s-%d-%d.json", INFLIGHTCMDDIR,
-			cmd.AgentQueueLoc, cmd.Action.ID, cmd.ID)
-		os.Remove(inflightPath)
 	}
 	return nil
 }
