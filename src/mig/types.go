@@ -6,15 +6,15 @@ import(
 
 type Action struct {
 	Name, Target, Check, RunDate, Expiration string
+	ID uint64
 	Arguments interface{}
-	UniqID uint32
 }
 
 type Command struct {
 	AgentName, AgentQueueLoc string
+	ID uint64
 	Action Action
 	Results interface{}
-	UniqID uint32
 }
 
 type Alert struct {

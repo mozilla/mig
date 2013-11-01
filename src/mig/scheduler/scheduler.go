@@ -172,7 +172,7 @@ func initWatchers(watcher *fsnotify.Watcher) error {
 // the backend database, and create individual command for each target.
 func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
 	for actionPath := range actionNewChan {
-		uniqid := genUniqID()
+		uniqid := genID()
 		rawAction, err := ioutil.ReadFile(actionPath)
 		if err != nil {
 			log.Fatal(uniqid, "- pullAction ReadFile()", err)
@@ -183,7 +183,7 @@ func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
 			log.Fatal(uniqid, "- pullAction - json.Unmarshal:", err)
 		}
 		// the unique ID is stored with the action
-		action.UniqID = uniqid
+		action.ID = uniqid
 		err = validateActionSyntax(action)
 		if err != nil {
 			log.Println(uniqid,
@@ -226,23 +226,23 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
 	iter := mgoRegCol.Find(bson.M{"os": action.Target, "heartbeatts": bson.M{"$gte": since}}).Iter()
 	err = iter.All(&targets)
 	if err != nil {
-		log.Println(action.UniqID, "- prepareCommands - iter.All():", err)
+		log.Println(action.ID, "- prepareCommands - iter.All():", err)
 		errors.New("failed to retrieve agents list")
 	}
 	// loop over the list of targets and create a command for each
 	for _, target := range targets {
-		cmduniqid := genUniqID()
-		log.Println(action.UniqID, cmduniqid, "prepareCommands: scheduling action",
+		cmduniqid := genID()
+		log.Println(action.ID, cmduniqid, "prepareCommands: scheduling action",
 			action.Name, "on target", target.Name)
 		cmd := mig.Command{
 			AgentName: target.Name,
 			AgentQueueLoc: target.QueueLoc,
 			Action:	action,
-			UniqID: cmduniqid,
+			ID: cmduniqid,
 		}
 		jsonCmd, err := json.Marshal(cmd)
 		if err != nil {
-			log.Println(action.UniqID, cmduniqid,
+			log.Println(action.ID, cmduniqid,
 				"prepareCommands - json.Marshal():", err)
 			errors.New("failed to serialize command")
 		}
@@ -250,15 +250,15 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
 		// 1) a temp file is written
 		// 2) the temp file is moved into the target folder
 		// this prevents the dir watcher from waking up before the file is fully written
-		file := fmt.Sprintf("%s-%d-%d.json", action.Name, action.UniqID, cmduniqid)
+		file := fmt.Sprintf("%s-%d-%d.json", action.Name, action.ID, cmduniqid)
 		cmdPath := LAUNCHCMDDIR + "/" + file
 		tmpPath := "/var/tmp/" + file
 		err = ioutil.WriteFile(tmpPath, jsonCmd, 0640)
 		if err != nil {
-			log.Fatal(action.UniqID, cmduniqid, "prepareCommands ioutil.WriteFile():", err)
+			log.Fatal(action.ID, cmduniqid, "prepareCommands ioutil.WriteFile():", err)
 		}
 		os.Rename(tmpPath, cmdPath)
-		log.Println(action.UniqID, cmduniqid, "prepareCommands WriteFile()", cmdPath)
+		log.Println(action.ID, cmduniqid, "prepareCommands WriteFile()", cmdPath)
 	}
 	return nil
 }
@@ -275,7 +275,7 @@ func launchCommand(cmdLaunchChan <-chan string, broker *amqp.Channel) error {
 		if err != nil {
 			log.Fatal("- - launchCommand json.Unmarshal:", err)
 		}
-		log.Println(cmd.Action.UniqID, cmd.UniqID, "launchCommand got action",
+		log.Println(cmd.Action.ID, cmd.ID, "launchCommand got action",
 			cmd.Action.Name, "for agent", cmd.AgentName)
 		msg := amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
@@ -286,16 +286,16 @@ func launchCommand(cmdLaunchChan <-chan string, broker *amqp.Channel) error {
 		agtQueue := fmt.Sprintf("mig.agt.%s", cmd.AgentQueueLoc)
 		err = broker.Publish("mig", agtQueue, true, false, msg)
 		if err != nil {
-			//log.Fatal(cmd.Action.UniqID, cmd.UniqID,
+			//log.Fatal(cmd.Action.ID, cmd.ID,
 			//	"launchCommand Publish()", err)
-			log.Println(cmd.Action.UniqID, cmd.UniqID,
+			log.Println(cmd.Action.ID, cmd.ID,
 				"launchCommand Publish()", err)
 		}
-		log.Println(cmd.Action.UniqID, cmd.UniqID,
+		log.Println(cmd.Action.ID, cmd.ID,
 			"launchCommand sent command to", cmd.AgentQueueLoc)
 		// command has been launched, move it to inflight directory
 		cmdFile := fmt.Sprintf("%s-%d-%d.json",
-			cmd.AgentQueueLoc, cmd.Action.UniqID, cmd.UniqID)
+			cmd.AgentQueueLoc, cmd.Action.ID, cmd.ID)
 		os.Rename(cmdPath, INFLIGHTCMDDIR+"/"+cmdFile)
 	}
 	return nil
@@ -335,16 +335,16 @@ func recvAgentResults(agentChan <-chan amqp.Delivery, c *amqp.Channel) error {
 		var cmd mig.Command
 		err := json.Unmarshal(m.Body, &cmd)
 		log.Printf("%d %d recvAgentResults(): '%s'",
-			cmd.Action.UniqID, cmd.UniqID, m.Body)
+			cmd.Action.ID, cmd.ID, m.Body)
 		cmdPath := fmt.Sprintf("%s/%s-%d-%d.json", DONECMDDIR,
-			cmd.AgentQueueLoc, cmd.Action.UniqID, cmd.UniqID)
+			cmd.AgentQueueLoc, cmd.Action.ID, cmd.ID)
 		err = ioutil.WriteFile(cmdPath, m.Body, 0640)
 		if err != nil {
-			log.Fatal(cmd.Action.UniqID, cmd.UniqID,
+			log.Fatal(cmd.Action.ID, cmd.ID,
 				"recvAgentCommandResult ioutil.WriteFile():", err)
 		}
 		inflightPath := fmt.Sprintf("%s/%s-%d-%d.json", INFLIGHTCMDDIR,
-			cmd.AgentQueueLoc, cmd.Action.UniqID, cmd.UniqID)
+			cmd.AgentQueueLoc, cmd.Action.ID, cmd.ID)
 		os.Remove(inflightPath)
 	}
 	return nil
@@ -497,14 +497,19 @@ func validateActionSyntax(action mig.Action) error {
 	return nil
 }
 
-// genUniqID return a random and unique CRC32 hash
-func genUniqID() uint32 {
+// genID returns an ID composed of a unix timestamp and a random CRC32
+func genID() uint64 {
 	h := crc32.NewIEEE()
 	t := time.Now().UTC().Format(time.RFC3339Nano)
 	r := rand.New(rand.NewSource(65537))
 	rand := string(r.Intn(1000000000))
 	h.Write([]byte(t + rand))
-	return h.Sum32()
+	// concatenate timestamp and hash into 64 bits ID
+	// id = <32 bits unix ts><32 bits CRC hash>
+	id := uint64(time.Now().Unix())
+	id = id << 32
+	id += uint64(h.Sum32())
+	return id
 }
 
 // If a whitelist is defined, lookup the agent in it, and return nil if found, or error if not
