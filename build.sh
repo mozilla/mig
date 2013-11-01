@@ -26,6 +26,7 @@ do
         cmd="$goplatbin build -o bin/$platform/$(basename $target) $target"
         echo $cmd
         $cmd
+        [ $? -gt 0 ] && exit 1
     done
 done
 
