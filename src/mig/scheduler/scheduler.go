@@ -26,7 +26,11 @@ import (
 	"time"
 )
 
+// If running multiple instances of the MIG scheduler, the repositories below
+// must be shared across all schedulers
+// ** shared dirs start **
 var NEWACTIONDIR string = "/var/cache/mig/actions/new"
+var INFLIGHTACTIONDIR string = "/var/cache/mig/actions/inflight"
 var LAUNCHCMDDIR string = "/var/cache/mig/commands/ready"
 var INFLIGHTCMDDIR string = "/var/cache/mig/commands/inflight"
 var DONECMDDIR string = "/var/cache/mig/commands/done"
@@ -38,7 +42,6 @@ var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
 var MONGOURI string = "172.21.2.143"
 var AGTWHITELIST string = "/var/cache/mig/agents_whitelist.txt"
 var AGTTIMEOUT string = "2h"
-
 // the list of active agents is shared globally
 var activeAgentsList []string
 
@@ -48,7 +51,7 @@ func main() {
 	termChan := make(chan bool)
 	actionNewChan := make(chan string, 17)
 	cmdLaunchChan := make(chan string, 67)
-	cmdInFlightChan := make(chan string, 67)
+	cmdUpdateChan := make(chan string, 67)
 	cmdDoneChan := make(chan string, 43)
 	actionDoneChan := make(chan string, 11)
 
@@ -58,9 +61,9 @@ func main() {
 		log.Fatal("- - Main: MongoDB connection error: ", err)
 	}
 	defer mgofd.Close()
+	log.Println("- - Main: MongoDB connection successfull. URI=", MONGOURI)
 	mgofd.SetSafe(&mgo.Safe{}) // make safe writes only
 	mgoRegCol := mgofd.DB("mig").C("registrations")
-	log.Println("- - Main: MongoDB connection successfull. URI=", MONGOURI)
 
 	// Watch the data directories for new files
 	watcher, err := fsnotify.NewWatcher()
@@ -68,7 +71,7 @@ func main() {
 		log.Fatal("- - fsnotify.NewWatcher(): ", err)
 	}
 	go watchDirectories(watcher, actionNewChan, cmdLaunchChan,
-		cmdInFlightChan, cmdDoneChan, actionDoneChan)
+		cmdUpdateChan, cmdDoneChan, actionDoneChan)
 	initWatchers(watcher)
 
 	// Setup the AMQP broker connection
@@ -89,8 +92,8 @@ func main() {
 	}
 
 	// launch the routines that process mig.Action & mig.Command
-	go pullAction(actionNewChan, mgoRegCol)
-	log.Println("- - Main: pullAction goroutine started")
+	go processNewAction(actionNewChan, mgoRegCol, mgoActionCol)
+	log.Println("- - Main: processNewAction goroutine started")
 	go launchCommand(cmdLaunchChan, broker)
 	log.Println("- - Main: launchCommand goroutine started")
 	go updateCommandStatus(cmdInFlightChan)
@@ -112,7 +115,7 @@ func main() {
 
 // watchDirectories calls specific function when a file appears in a watched directory
 func watchDirectories(watcher *fsnotify.Watcher, actionNewChan chan string,
-	cmdLaunchChan chan string, cmdInFlightChan chan string,
+	cmdLaunchChan chan string, cmdUpdateChan chan string,
 	cmdDoneChan chan string, actionDoneChan chan string) error {
 	for {
 		select {
@@ -125,7 +128,7 @@ func watchDirectories(watcher *fsnotify.Watcher, actionNewChan chan string,
 				cmdLaunchChan <- ev.Name
 			} else if strings.HasPrefix(ev.Name, INFLIGHTCMDDIR) {
 				log.Println("- - Watcher: Command in flight:", ev)
-				cmdInFlightChan <- ev.Name
+				cmdUpdateChan <- ev.Name
 			} else if strings.HasPrefix(ev.Name, DONECMDDIR) {
 				log.Println("- - Watcher: Command done:", ev)
 				cmdDoneChan <- ev.Name
@@ -169,57 +172,56 @@ func initWatchers(watcher *fsnotify.Watcher) error {
 	return nil
 }
 
-// pullAction receives channel message when a new action is available. It pulls
+// processNewAction receives channel message when a new action is available. It pulls
 // the action from the directory, parse it, retrieve a list of targets from
 // the backend database, and create individual command for each target.
 func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
 	for actionPath := range actionNewChan {
 		uniqid := genID()
+		// parse the json of the action into a mig.Action
 		rawAction, err := ioutil.ReadFile(actionPath)
 		if err != nil {
-			log.Fatal(uniqid, "- pullAction ReadFile()", err)
+			log.Fatal(uniqid, "- processNewAction ReadFile()", err)
 		}
 		var action mig.Action
 		err = json.Unmarshal(rawAction, &action)
 		if err != nil {
-			log.Fatal(uniqid, "- pullAction - json.Unmarshal:", err)
+			log.Fatal(uniqid, "- processNewAction - json.Unmarshal:", err)
 		}
-		// the unique ID is stored with the action
+		// generate an action ID
 		action.ID = uniqid
+		actionFileName := fmt.Sprintf("%s-%d.json", action.Name, action.ID)
+		// syntax checking
 		err = validateActionSyntax(action)
 		if err != nil {
-			log.Println(uniqid,
-				"- pullAction - validateActionSyntax(): ", err)
-			log.Println(uniqid,
-				"- pullAction - Deleting invalid action: ", actionPath)
-			// action with invalid syntax are deleted
-			os.Remove(actionPath)
+			log.Println(action.ID, "- processNewAction failed syntax checking.",
+				"Moving to invalid. reason:", err)
+			// move action to invalid dir
+			os.Rename(actionPath, INVALIDACTIONDIR+"/"+actionFileName)
 			continue
 		}
-		log.Println(uniqid, "- pullAction: new action received:",
+		log.Println(uniqid, "- processNewAction: new action received:",
 			"Name:", action.Name, ", Target:", action.Target,
 			", Check:", action.Check, ", RunDate:", action.RunDate,
 			", Expiration:", action.Expiration, ", Arguments:", action.Arguments)
-
 		// expand the action in one command per agent. if this fails, move the
 		// action to the INVALID folder and move on
-		file := fmt.Sprintf("%s-%d.json", action.Name, action.ID)
 		action.CommandIDs = prepareCommands(action, mgoRegCol)
 		if action.CommandIDs == nil {
 			// preparation failed, move action to invalid folder
-			os.Rename(actionPath, INVALIDACTIONDIR+"/"+file)
-			log.Println(action.ID, "- pullAction: preparation failed,",
+			os.Rename(actionPath, INVALIDACTIONDIR+"/"+actionFileName)
+			log.Println(action.ID, "- processNewAction: preparation failed,",
 				"moving to Invalid",  err)
 			continue
 		} else {
+			// move action to inflight dir
 			jsonAction, err := json.Marshal(action)
 			if err != nil {
-				log.Fatal(action.ID, "- pullAction() json.Marshal():", err)
+				log.Fatal(action.ID, "- processNewAction() json.Marshal():", err)
 			}
-			err = ioutil.WriteFile(INFLIGHTACTIONDIR+"/"+file, jsonAction, 0640)
-			// preparation succeeded, move action to inflight folder
+			err = ioutil.WriteFile(INFLIGHTACTIONDIR+"/"+actionFileName, jsonAction, 0640)
 			os.Remove(actionPath)
-			log.Println(action.ID, "- pullAction: Action ",
+			log.Println(action.ID, "- processNewAction: Action ",
 				action.Name, "is in flight")
 		}
 	}
@@ -246,18 +248,18 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) (cmdIDs []uin
 	}
 	// loop over the list of targets and create a command for each
 	for _, target := range targets {
-		cmduniqid := genID()
-		log.Println(action.ID, cmduniqid, "prepareCommands: scheduling action",
+		cmdid := genID()
+		log.Println(action.ID, cmdid, "prepareCommands: scheduling action",
 			action.Name, "on target", target.Name)
 		cmd := mig.Command{
 			AgentName: target.Name,
 			AgentQueueLoc: target.QueueLoc,
 			Action:	action,
-			ID: cmduniqid,
+			ID: cmdid,
 		}
 		jsonCmd, err := json.Marshal(cmd)
 		if err != nil {
-			log.Println(action.ID, cmduniqid,
+			log.Println(action.ID, cmdid,
 				"prepareCommands - json.Marshal():", err)
 			errors.New("failed to serialize command")
 		}
@@ -265,15 +267,15 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) (cmdIDs []uin
 		// 1) a temp file is written
 		// 2) the temp file is moved into the target folder
 		// this prevents the dir watcher from waking up before the file is fully written
-		file := fmt.Sprintf("%s-%d-%d.json", action.Name, action.ID, cmduniqid)
+		file := fmt.Sprintf("%s-%d-%d.json", action.Name, action.ID, cmdid)
 		cmdPath := LAUNCHCMDDIR + "/" + file
 		tmpPath := TMPDIR + file
 		err = ioutil.WriteFile(tmpPath, jsonCmd, 0640)
 		if err != nil {
-			log.Fatal(action.ID, cmduniqid, "prepareCommands ioutil.WriteFile():", err)
+			log.Fatal(action.ID, cmdid, "prepareCommands ioutil.WriteFile():", err)
 		}
 		os.Rename(tmpPath, cmdPath)
-		log.Println(action.ID, cmduniqid, "prepareCommands WriteFile()", cmdPath)
+		log.Println(action.ID, cmdid, "prepareCommands WriteFile()", cmdPath)
 		cmdIDs = append(cmdIDs, cmdid)
 	}
 	return
@@ -338,12 +340,13 @@ func terminateCommand(cmdDoneChan <-chan string) error {
 // store the result of an action and mark it as completed
 func terminateAction(actionDoneChan <-chan string) error {
 	for act := range actionDoneChan {
-		log.Println("- - terminateAction(): ", act)
+		log.Println("- - terminateAction():", act)
 	}
 	return nil
 }
 
-// recvAgentCommandResult receives AMQP messages with results of commands ran by agents
+// recvAgentCommandResult receives the results of a command from an agent
+// and stores the json body into the DOMECMDDIR
 func recvAgentResults(agentChan <-chan amqp.Delivery, c *amqp.Channel) error {
 	for m := range agentChan {
 		var cmd mig.Command
