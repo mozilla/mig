@@ -282,22 +282,20 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) (cmdIDs []uin
 // launchCommand sends commands from command dir to agents via AMQP
 func launchCommand(cmdLaunchChan <-chan string, broker *amqp.Channel) error {
 	for cmdPath := range cmdLaunchChan {
-		cmdJson, err := ioutil.ReadFile(cmdPath)
+		// load and parse the command. If this fail, skip it and continue.
+		cmd, err := loadCmdFromFile(cmdPath)
 		if err != nil {
-			log.Fatal("- - launchCommand ReadFile()", err)
-		}
-		var cmd mig.Command
-		err = json.Unmarshal(cmdJson, &cmd)
-		if err != nil {
-			log.Fatal("- - launchCommand json.Unmarshal:", err)
+			log.Fatal("- - launchCommand() loadCmdFromFile() failed")
+			continue
 		}
 		log.Println(cmd.Action.ID, cmd.ID, "launchCommand got action",
 			cmd.Action.Name, "for agent", cmd.AgentName)
+		jsonCmd, err := json.Marshal(cmd)
 		msg := amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			Timestamp:    time.Now(),
 			ContentType:  "text/plain",
-			Body:         []byte(cmdJson),
+			Body:         []byte(jsonCmd),
 		}
 		agtQueue := fmt.Sprintf("mig.agt.%s", cmd.AgentQueueLoc)
 		err = broker.Publish("mig", agtQueue, true, false, msg)
@@ -553,4 +551,22 @@ func isAgentAuthorized(agentName string) error {
 		}
 	}
 	return errors.New("- - isAgentAuthorized agent is not authorized")
+}
+
+// loadCmdFromFile reads a command from a local file on the file system
+// and return the mig.Command structure
+func loadCmdFromFile(cmdPath string) (cmd mig.Command, err error) {
+	jsonCmd, err := ioutil.ReadFile(cmdPath)
+	if err != nil {
+		log.Println("- - loadCmdFromFile() ReadFile()", err)
+		return
+	}
+	err = json.Unmarshal(jsonCmd, &cmd)
+	if err != nil {
+		log.Println("- - loadCmdFromFile() json.Unmarshal:", err)
+		return
+	}
+	log.Println(cmd.Action.ID, cmd.ID, "loadCmdFromFile():",
+		"command loaded successfully")
+	return
 }
