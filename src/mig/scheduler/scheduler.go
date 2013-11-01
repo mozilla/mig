@@ -201,20 +201,33 @@ func pullAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection) error {
 
 		// expand the action in one command per agent. if this fails, move the
 		// action to the INVALID folder and move on
-		if err := prepareCommands(action, mgoRegCol); err != nil {
-			log.Println("pullAction: prepareCommand() failed:", err)
-			file := fmt.Sprintf("%s-%d.json", action.Name, action.UniqID)
+		file := fmt.Sprintf("%s-%d.json", action.Name, action.ID)
+		action.CommandIDs = prepareCommands(action, mgoRegCol)
+		if action.CommandIDs == nil {
+			// preparation failed, move action to invalid folder
 			os.Rename(actionPath, INVALIDACTIONDIR+"/"+file)
+			log.Println(action.ID, "- pullAction: preparation failed,",
+				"moving to Invalid",  err)
 			continue
+		} else {
+			jsonAction, err := json.Marshal(action)
+			if err != nil {
+				log.Fatal(action.ID, "- pullAction() json.Marshal():", err)
+			}
+			err = ioutil.WriteFile(INFLIGHTACTIONDIR+"/"+file, jsonAction, 0640)
+			// preparation succeeded, move action to inflight folder
+			os.Remove(actionPath)
+			log.Println(action.ID, "- pullAction: Action ",
+				action.Name, "is in flight")
 		}
-		os.Remove(actionPath)
 	}
 	return nil
 }
 
 // prepareCommands retrieves a list of target agents from the database,
 // and creates a command for each target agent
-func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
+// an array of command IDs is returned
+func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) (cmdIDs []uint64) {
 	// query the database for alive agent, that have sent keepalive
 	// messages in the last AGTIMEOUT period
 	targets := []mig.KeepAlive{}
@@ -259,8 +272,9 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) error {
 		}
 		os.Rename(tmpPath, cmdPath)
 		log.Println(action.ID, cmduniqid, "prepareCommands WriteFile()", cmdPath)
+		cmdIDs = append(cmdIDs, cmdid)
 	}
-	return nil
+	return
 }
 
 // launchCommand sends commands from command dir to agents via AMQP

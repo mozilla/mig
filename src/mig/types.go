@@ -8,6 +8,7 @@ type Action struct {
 	Name, Target, Check, RunDate, Expiration string
 	ID uint64
 	Arguments interface{}
+	CommandIDs []uint64
 }
 
 type Command struct {
