@@ -37,6 +37,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -52,6 +53,8 @@ import (
 
 var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
 var HEARTBEATFREQ string = "600s"
+// modules that take longer than 30s to run are killed
+var MODULETIMEOUT time.Duration = 30 * time.Second
 
 func main() {
 	// parse command line argument
@@ -214,6 +217,10 @@ func parseCommands(commands <-chan []byte, fCommandChan chan mig.Command, termin
 
 func runFilechecker(fCommandChan <-chan mig.Command, resultChan chan mig.Command, terminate chan bool) error {
 	for migCmd := range fCommandChan {
+		log.Println(migCmd.Action.ID, migCmd.ID,
+			"runFilechecker: running action", migCmd.Action.Name)
+		waiter := make(chan error, 1)
+		var out bytes.Buffer
 		// Arguments can contain anything. Syntax Check before feeding
 		// them to exec()
 		args, err := json.Marshal(migCmd.Action.Arguments)
@@ -221,22 +228,42 @@ func runFilechecker(fCommandChan <-chan mig.Command, resultChan chan mig.Command
 			log.Fatal("runFilechecker json.Marshal(migCmd.Action.Arguments): ", err)
 		}
 		s_args := fmt.Sprintf("%s", args)
-		log.Printf("runFilechecker: arguments %s", s_args)
-		runCmd := exec.Command("/opt/agent","-m","filechecker",s_args)
-		output, err := runCmd.CombinedOutput()
-		if err != nil {
-			log.Fatal("runFilechecker cmd.CombinedOutput(): ",
-				fmt.Sprint(err), " - ", string(output))
-		} else {
-			log.Println("runFilechecker cmd.CombinedOutput(): ",
-				string(output))
+		cmd := exec.Command("/home/ulfr/git/opsec/mig/bin/linux/amd64/agent","-m","filechecker",s_args)
+		cmd.Stdout = &out
+		if err := cmd.Start(); err != nil {
+			log.Fatal(err)
 		}
-		err = json.Unmarshal([]byte(output), &migCmd.Results)
-		if err != nil {
-			log.Fatal("runFilechecker json.Unmarshal(): ", err)
+		go func() {
+			waiter <- cmd.Wait()
+		}()
+		select {
+		// command has reached timeout, kill it
+		case <-time.After(MODULETIMEOUT):
+			log.Println(migCmd.Action.ID, migCmd.ID,
+				"runFilechecker: command timed out. Killing it.")
+			err := cmd.Process.Kill()
+			if err != nil {
+				log.Fatal(migCmd.Action.ID, migCmd.ID,
+					"Failed to kill: ", err)
+			}
+			<-waiter // allow goroutine to exit
+		// command has finished before the timeout
+		case err := <-waiter:
+			if err != nil {
+				log.Println(migCmd.Action.ID, migCmd.ID,
+					"runFilechecker: command error:", err)
+			} else {
+				log.Println(migCmd.Action.ID, migCmd.ID,
+					"runFilechecker: command terminated successfully")
+				err = json.Unmarshal(out.Bytes(), &migCmd.Results)
+				if err != nil {
+					log.Fatal(migCmd.Action.ID, migCmd.ID,
+						"runFilechecker: failed to Unmarshal results")
+				}
+				// send the results back to the scheduler
+				resultChan <- migCmd
+			}
 		}
-		// send the results back to the scheduler
-		resultChan <- migCmd
 	}
 	terminate <- true
 	return nil
