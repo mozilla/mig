@@ -281,6 +281,14 @@ func prepareCommands(action mig.Action, mgoRegCol *mgo.Collection) (cmdIDs []uin
 	}
 	since := time.Now().Add(-period)
 	iter := mgoRegCol.Find(bson.M{"os": action.Target, "heartbeatts": bson.M{"$gte": since}}).Iter()
+	// Mongo query that looks for a list of targets. The query uses a OR to
+	// select on the OS type, the queueloc and the name. It also only retrieve
+	// agents that have sent an heartbeat in the last `since` period
+	iter := mgoRegCol.Find(bson.M{	"$or": []bson.M{
+						bson.M{"os": action.Target},
+						bson.M{"queueloc": action.Target},
+						bson.M{"name": action.Target}},
+					"heartbeatts": bson.M{"$gte": since}}).Iter()
 	err = iter.All(&targets)
 	if err != nil {
 		log.Println(action.ID, "- prepareCommands - iter.All():", err)
