@@ -1,14 +1,15 @@
 {
-    "Name":     "MOZSYSCOMP_LOWENCCRED",
+    "Name":     "policy_system_rootpasswd_hash",
     "Target":   "linux",
     "Check":    "filechecker",
     "Arguments": {
-        "MOZSYSCOMPLOWENCCRED" : {
+        "root_password_hashed_and_salted" : {
             "Path": "/etc/shadow",
             "Type": "contains",
             "Value": "root:\\$(1|2a|5|6)\\$"
         }
     },
+    "Condition": "policy_system_rootpasswd_hash",
     "RunDate":  "immediate",
-    "Expiration":  "30m"
+    "Expiration":  "5m"
 }
