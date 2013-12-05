@@ -111,8 +111,54 @@ type Stats struct {
 	TotalHits   int
 }
 
-/* ParseCheck verifies and populate checks passed as arguments
-*/
+// Run() is filechecker's entry point. It parses command line arguments into a list of
+// individual FileChecks, stored in a map.
+// Each Check contains a path, which is inspected in the GetDownThatPath function.
+// The results are stored in the Checks map and sent to stdout at the end.
+func Run(Args []byte) (string) {
+	if DEBUG {
+		VERBOSE = true
+	}
+	/* Checks is a map of individual Checks and associated results
+	Checks = {
+		<id> = { <struct FileCheck> },
+		<id> = { <struct FileCheck> },
+		...
+	}
+	*/
+	Checks := make(map[string]FileCheck)
+	err := json.Unmarshal(Args, &Checks)
+	if err != nil { panic(err) }
+	// ToDoChecks is a list of Checks to process, dequeued when done
+	ToDoChecks := make(map[string]FileCheck)
+	var Statistics Stats
+	// parse the arguments, split on the space
+	for id, check := range Checks {
+		if DEBUG {
+			fmt.Printf("Main: Parsing check id: '%d'\n", id)
+		}
+		Checks[id] = ParseCheck(check, id)
+		ToDoChecks[id] = Checks[id]
+		Statistics.CheckCount++
+	}
+	for id, check := range Checks {
+		if DEBUG {
+			fmt.Printf("Main: Inspecting path '%s' from Check id "+
+				"'%d'\n", check.Path, id)
+		}
+		// loop through the list of Check, and only process the Checks that
+		// are still in the todo list
+		if _, ok := ToDoChecks[id]; !ok {
+			continue
+		}
+		var EmptyActiveChecks []string
+		GetDownThatPath(check.Path, EmptyActiveChecks, 0, Checks,
+			ToDoChecks, &Statistics)
+	}
+	return BuildResults(Checks, &Statistics)
+}
+
+// ParseCheck verifies and populate checks passed as arguments
 func ParseCheck(check FileCheck, id string) (FileCheck) {
 	check.ID = id
 	switch check.Type {
@@ -151,176 +197,103 @@ func ParseCheck(check FileCheck, id string) (FileCheck) {
 	return check
 }
 
-/* GetHash calculates the hash of a file.
-   It opens a file, reads it block by block, and updates a
-   sum with each block. This method plays nice with big files
-   parameters:
-	- fd is an open file descriptor that points to the file to inspect
-	- HashType is an integer that define the type of hash
-   return:
-	- hexhash, the hex encoded hash of the file found at fp
-*/
-func GetHash(fd *os.File, HashType int) (hexhash string) {
-	if DEBUG {
-		fmt.Printf("GetHash: computing hash for '%s'\n", fd.Name())
-	}
-	var h hash.Hash
-	switch HashType {
-	case CheckMD5:
-		h = md5.New()
-	case CheckSHA1:
-		h = sha1.New()
-	case CheckSHA256:
-		h = sha256.New()
-	case CheckSHA384:
-		h = sha512.New384()
-	case CheckSHA512:
-		h = sha512.New()
-	case CheckSHA3_224:
-		h = sha3.NewKeccak224()
-	case CheckSHA3_256:
-		h = sha3.NewKeccak256()
-	case CheckSHA3_384:
-		h = sha3.NewKeccak384()
-	case CheckSHA3_512:
-		h = sha3.NewKeccak512()
-	default:
-		err := fmt.Sprintf("GetHash: Unkown hash type %d", HashType)
-		panic(err)
-	}
-	buf := make([]byte, 4096)
-	var offset int64 = 0
-	for {
-		block, err := fd.ReadAt(buf, offset)
-		if err != nil && err != io.EOF {
-			panic(err)
-		}
-		if block == 0 {
-			break
-		}
-		h.Write(buf[:block])
-		offset += int64(block)
-	}
-	hexhash = fmt.Sprintf("%x", h.Sum(nil))
-	return
-}
-
-/* VerifyHash compares a file hash with the Checks that apply to the file
-   parameters:
-	- file is the absolute filename of the file to check
-	- hash is the value of the hash being checked
-	- check is the type of check
-	- ActiveCheckIDs is a slice of int with IDs of active Checks
-	- Checks is a map of Check
-   returns:
-	- IsVerified: true if a match is found, false otherwise
-*/
-func VerifyHash(file string, hash string, check int, ActiveCheckIDs []string,
-		Checks map[string]FileCheck) (IsVerified bool) {
-	IsVerified = false
-	for _, id := range ActiveCheckIDs {
-		tmpcheck := Checks[id]
-		if Checks[id].Value == hash {
-			IsVerified = true
-			tmpcheck.Result = true
-			tmpcheck.MatchCount += 1
-			tmpcheck.Files[file] = 1
-		}
-		// update Checks tested files count
-		tmpcheck.FilesCount++
-		Checks[id] = tmpcheck
-	}
-	return
-}
-
-/* MatchRegexpsOnFile read a file line by line and apply regexp search to each
-   line. If a regexp matches, the corresponding Check is updated with the result.
-   All regexp are compiled during argument parsing and not here.
-   parameters:
-	- fd is a file descriptor on the open file
-	- ReList is a list of Check IDs to apply to this file
-	- Checks is a map of Check
-   return:
-	- MatchesRegexp is a boolean set to true if at least one regexp matches
-*/
-func MatchRegexpsOnFile(fd *os.File, ReList []string,
-			Checks map[string]FileCheck) (MatchesRegexp bool) {
-	MatchesRegexp = false
-	Results := make(map[string]int)
-	scanner := bufio.NewScanner(fd)
-	for scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			panic(err)
-		}
-		for _, id := range ReList {
-			if Checks[id].Re.MatchString(scanner.Text()) {
-				MatchesRegexp = true
-				Results[id]++
-				break
+// GetDownThatPath goes down a directory and build a list of Active Checks that
+// apply to the current path. For a given directory, it calls itself for all
+// subdirectories fund, recursively walking down the pass. When it find a file,
+// it calls the inspection function, and give it the list of Checks to inspect
+// the file with.
+// parameters:
+//      - path is the file system path to inspect
+//      - ActiveCheckIDs is a slice that contains the IDs of the Checks
+//      that all files in that path and below must be checked against
+//      - CheckBitMask is a bitmask of the checks types currently active
+//      - Checks is the global list of Checks
+//      - ToDoChecks is a map that contains the Checks that are not yet active
+//      - Statistics is a set of counters
+// return:
+//      - nil on success, error on error
+func GetDownThatPath(path string, ActiveCheckIDs []string, CheckBitMask int,
+		     Checks map[string]FileCheck, ToDoChecks map[string]FileCheck,
+		     Statistics *Stats) error {
+	for id, check := range ToDoChecks {
+		if check.Path == path {
+			/* Found a new Check to apply to the current path, add
+			   it to the active list, and delete it from the todo
+			*/
+			ActiveCheckIDs = append(ActiveCheckIDs, id)
+			CheckBitMask |= check.CodeType
+			delete(ToDoChecks, id)
+			if DEBUG {
+				fmt.Printf("GetDownThatPath: Activating Check "+
+					"id '%d' for path '%s'\n", id, path)
 			}
 		}
 	}
-	if MatchesRegexp {
-		for id, count := range Results {
-			tmpcheck := Checks[id]
-			tmpcheck.Result = true
-			tmpcheck.MatchCount += count
-			tmpcheck.Files[fd.Name()] = count
-			Checks[id] = tmpcheck
-		}
-	}
-	// update Checks tested files count
-	for _, id := range ReList {
-		tmpcheck := Checks[id]
-		tmpcheck.FilesCount++
-		Checks[id] = tmpcheck
-	}
-	return
-}
-
-/* MatchRegexpsOnName applies regexp search to a given filename
-   parameters:
-	- filename is a string that contains a filename
-	- ReList is a list of Check IDs to apply to this file
-	- Checks is a map of Check
-   return:
-	- MatchesRegexp is a boolean set to true if at least one regexp matches
-*/
-func MatchRegexpsOnName(filename string, ReList []string,
-			Checks map[string]FileCheck) (MatchesRegexp bool) {
-	MatchesRegexp = false
-	for _, id := range ReList {
-		tmpcheck := Checks[id]
-		if Checks[id].Re.MatchString(filename) {
-			MatchesRegexp = true
-			tmpcheck.Result = true
-			tmpcheck.MatchCount++
-			tmpcheck.Files[filename] = 1
-		}
-		// update Checks tested files count
-		tmpcheck.FilesCount++
-		Checks[id] = tmpcheck
-	}
-	return
-}
-
-/* InspectFile is an orchestration function that runs the individual checks
-   against a particular file. It uses the CheckBitMask to select which checks
-   to run, and runs the checks in a smart way to minimize effort.
-   parameters:
-	- fd is an open file descriptor that points to the file to inspect
-	- ActiveCheckIDs is a slice that contains the IDs of the Checks
-	that all files in that path and below must be checked against
-	- CheckBitMask is a bitmask of the checks types currently active
-	- Checks is the global list of Checks
-   returns:
-	- nil on success, error on failure
-*/
-func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int,
-		 Checks map[string]FileCheck) error {
-	/* Iterate through the entire checklist, and process the checks of
-	   each file
+	var SubDirs []string
+	/* Read the content of dir stored in 'path',
+	   put all sub-directories in the SubDirs slice, and call
+	   the inspection function for all files
 	*/
+	target, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	targetMode, _ := target.Stat()
+	if targetMode.Mode().IsDir() {
+		// target is a directory, process its content
+		DirContent, err := target.Readdir(-1)
+		if err != nil {
+			panic(err)
+		}
+		// loop over the content of the directory
+		for _, DirEntry := range DirContent {
+			EntryFullPath := path + "/" + DirEntry.Name()
+			// this entry is a subdirectory, keep it for later
+			if DirEntry.IsDir() {
+				SubDirs = append(SubDirs, EntryFullPath)
+				// that one is a file, open it and inspect it
+			} else if DirEntry.Mode().IsRegular() {
+				Entryfd, err := os.Open(EntryFullPath)
+				if err != nil {
+					panic(err)
+				}
+				InspectFile(Entryfd, ActiveCheckIDs, CheckBitMask, Checks)
+				Statistics.FilesCount++
+				if err := Entryfd.Close(); err != nil {
+					panic(err)
+				}
+			}
+		}
+	} else if targetMode.Mode().IsRegular() {
+		InspectFile(target, ActiveCheckIDs, CheckBitMask, Checks)
+		Statistics.FilesCount++
+	}
+	// close the current target, we are done with it
+	if err := target.Close(); err != nil {
+		panic(err)
+	}
+	// if we found any sub directories, go down the rabbit hole
+	for _, dir := range SubDirs {
+		GetDownThatPath(dir, ActiveCheckIDs, CheckBitMask, Checks,
+			ToDoChecks, Statistics)
+	}
+	return nil
+}
+
+// InspectFile is an orchestration function that runs the individual checks
+// against a selected file. It uses CheckBitMask to find the checks it needs
+// to run. The file is opened once, and all the checks are ran against it,
+// minimizing disk IOs.
+// parameters:
+//      - fd is an open file descriptor that points to the file to inspect
+//      - ActiveCheckIDs is a slice that contains the IDs of the Checks
+//      that all files in that path and below must be checked against
+//      - CheckBitMask is a bitmask of the checks types currently active
+//      - Checks is the global list of Checks
+// returns:
+//      - nil on success, error on failure
+func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks map[string]FileCheck) error {
+	// Iterate through the entire checklist, and process the checks of each file
 	if DEBUG {
 		fmt.Printf("InspectFile: file '%s' CheckMask '%d'\n",
 			fd.Name(), CheckBitMask)
@@ -439,99 +412,159 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int,
 	return nil
 }
 
-/* GetDownThatPath goes down a directory and build a list of Active Checks that
-   apply to the current path. For a given directory, it calls itself for all
-   subdirectories fund, recursively walking down the pass. When it find a file,
-   it calls the inspection function, and give it the list of Checks to inspect
-   the file with.
-   parameters:
-	- path is the file system path to inspect
-	- ActiveCheckIDs is a slice that contains the IDs of the Checks
-	that all files in that path and below must be checked against
-	- CheckBitMask is a bitmask of the checks types currently active
-	- Checks is the global list of Checks
-	- ToDoChecks is a map that contains the Checks that are not yet active
-	- Statistics is a set of counters
-   return:
-	- nil on success, error on error
-*/
-func GetDownThatPath(path string, ActiveCheckIDs []string, CheckBitMask int,
-		     Checks map[string]FileCheck, ToDoChecks map[string]FileCheck,
-		     Statistics *Stats) error {
-	for id, check := range ToDoChecks {
-		if check.Path == path {
-			/* Found a new Check to apply to the current path, add
-			   it to the active list, and delete it from the todo
-			*/
-			ActiveCheckIDs = append(ActiveCheckIDs, id)
-			CheckBitMask |= check.CodeType
-			delete(ToDoChecks, id)
-			if DEBUG {
-				fmt.Printf("GetDownThatPath: Activating Check "+
-					"id '%d' for path '%s'\n", id, path)
-			}
-		}
+// GetHash calculates the hash of a file.
+// It reads a file block by block, and updates a hashsum with each block.
+// Reading by blocks consume very little memory, which is needed for large files.
+// parameters:
+//      - fd is an open file descriptor that points to the file to inspect
+//      - HashType is an integer that define the type of hash
+// return:
+//      - hexhash, the hex encoded hash of the file found at fp
+func GetHash(fd *os.File, HashType int) (hexhash string) {
+	if DEBUG {
+		fmt.Printf("GetHash: computing hash for '%s'\n", fd.Name())
 	}
-	var SubDirs []string
-	/* Read the content of dir stored in 'path',
-	   put all sub-directories in the SubDirs slice, and call
-	   the inspection function for all files
-	*/
-	target, err := os.Open(path)
-	if err != nil {
+	var h hash.Hash
+	switch HashType {
+	case CheckMD5:
+		h = md5.New()
+	case CheckSHA1:
+		h = sha1.New()
+	case CheckSHA256:
+		h = sha256.New()
+	case CheckSHA384:
+		h = sha512.New384()
+	case CheckSHA512:
+		h = sha512.New()
+	case CheckSHA3_224:
+		h = sha3.NewKeccak224()
+	case CheckSHA3_256:
+		h = sha3.NewKeccak256()
+	case CheckSHA3_384:
+		h = sha3.NewKeccak384()
+	case CheckSHA3_512:
+		h = sha3.NewKeccak512()
+	default:
+		err := fmt.Sprintf("GetHash: Unkown hash type %d", HashType)
 		panic(err)
 	}
-	targetMode, _ := target.Stat()
-	if targetMode.Mode().IsDir() {
-		// target is a directory, process its content
-		DirContent, err := target.Readdir(-1)
-		if err != nil {
+	buf := make([]byte, 4096)
+	var offset int64 = 0
+	for {
+		block, err := fd.ReadAt(buf, offset)
+		if err != nil && err != io.EOF {
 			panic(err)
 		}
-		// loop over the content of the directory
-		for _, DirEntry := range DirContent {
-			EntryFullPath := path + "/" + DirEntry.Name()
-			// this entry is a subdirectory, keep it for later
-			if DirEntry.IsDir() {
-				SubDirs = append(SubDirs, EntryFullPath)
-				// that one is a file, open it and inspect it
-			} else if DirEntry.Mode().IsRegular() {
-				Entryfd, err := os.Open(EntryFullPath)
-				if err != nil {
-					panic(err)
-				}
-				InspectFile(Entryfd, ActiveCheckIDs,
-					CheckBitMask, Checks)
-				Statistics.FilesCount++
-				if err := Entryfd.Close(); err != nil {
-					panic(err)
-				}
-			}
+		if block == 0 {
+			break
 		}
-	} else if targetMode.Mode().IsRegular() {
-		InspectFile(target, ActiveCheckIDs, CheckBitMask, Checks)
-		Statistics.FilesCount++
+		h.Write(buf[:block])
+		offset += int64(block)
 	}
-	// close the current target, we are done with it
-	if err := target.Close(); err != nil {
-		panic(err)
-	}
-	// if we found any sub directories, go down the rabbit hole
-	for _, dir := range SubDirs {
-		GetDownThatPath(dir, ActiveCheckIDs, CheckBitMask, Checks,
-			ToDoChecks, Statistics)
-	}
-	return nil
+	hexhash = fmt.Sprintf("%x", h.Sum(nil))
+	return
 }
 
-/* BuildResults iterates on the map of Checks and print the results to stdout (if
-   VERBOSE is set) and into JSON format
-   parameters:
-	- Checks is a map of FileCheck
-	- Statistics is a set of counters
-   returns:
-	- nil on success, error on failure
-*/
+// VerifyHash compares a file hash with the Checks that apply to the file
+// parameters:
+//      - file is the absolute filename of the file to check
+//      - hash is the value of the hash being checked
+//      - check is the type of check
+//      - ActiveCheckIDs is a slice of int with IDs of active Checks
+//      - Checks is a map of Check
+// returns:
+//      - IsVerified: true if a match is found, false otherwise
+func VerifyHash(file string, hash string, check int, ActiveCheckIDs []string, Checks map[string]FileCheck) (IsVerified bool) {
+	IsVerified = false
+	for _, id := range ActiveCheckIDs {
+		tmpcheck := Checks[id]
+		if Checks[id].Value == hash {
+			IsVerified = true
+			tmpcheck.Result = true
+			tmpcheck.MatchCount += 1
+			tmpcheck.Files[file] = 1
+		}
+		// update Checks tested files count
+		tmpcheck.FilesCount++
+		Checks[id] = tmpcheck
+	}
+	return
+}
+
+// MatchRegexpsOnFile read a file line by line and apply regexp search to each
+// line. If a regexp matches, the corresponding Check is updated with the result.
+// All regexp are compiled during argument parsing and not here.
+// parameters:
+//      - fd is a file descriptor on the open file
+//      - ReList is a list of Check IDs to apply to this file
+//      - Checks is a map of Check
+// return:
+//      - MatchesRegexp is a boolean set to true if at least one regexp matches
+func MatchRegexpsOnFile(fd *os.File, ReList []string, Checks map[string]FileCheck) (MatchesRegexp bool) {
+	MatchesRegexp = false
+	Results := make(map[string]int)
+	scanner := bufio.NewScanner(fd)
+	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			panic(err)
+		}
+		for _, id := range ReList {
+			if Checks[id].Re.MatchString(scanner.Text()) {
+				MatchesRegexp = true
+				Results[id]++
+				break
+			}
+		}
+	}
+	if MatchesRegexp {
+		for id, count := range Results {
+			tmpcheck := Checks[id]
+			tmpcheck.Result = true
+			tmpcheck.MatchCount += count
+			tmpcheck.Files[fd.Name()] = count
+			Checks[id] = tmpcheck
+		}
+	}
+	// update Checks tested files count
+	for _, id := range ReList {
+		tmpcheck := Checks[id]
+		tmpcheck.FilesCount++
+		Checks[id] = tmpcheck
+	}
+	return
+}
+
+// MatchRegexpsOnName applies regexp search to a given filename
+// parameters:
+//      - filename is a string that contains a filename
+//      - ReList is a list of Check IDs to apply to this file
+//      - Checks is a map of Check
+// return:
+//      - MatchesRegexp is a boolean set to true if at least one regexp matches
+func MatchRegexpsOnName(filename string, ReList []string, Checks map[string]FileCheck) (MatchesRegexp bool) {
+	MatchesRegexp = false
+	for _, id := range ReList {
+		tmpcheck := Checks[id]
+		if Checks[id].Re.MatchString(filename) {
+			MatchesRegexp = true
+			tmpcheck.Result = true
+			tmpcheck.MatchCount++
+			tmpcheck.Files[filename] = 1
+		}
+		// update Checks tested files count
+		tmpcheck.FilesCount++
+		Checks[id] = tmpcheck
+	}
+	return
+}
+
+// BuildResults iterates on the map of Checks and print the results to stdout (if
+// VERBOSE is set) and into JSON format
+// parameters:
+//      - Checks is a map of FileCheck
+//      - Statistics is a set of counters
+// returns:
+//      - nil on success, error on failure
 func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
 	res := make(map[string]Results)
 	FileHistory := make(map[string]int)
@@ -576,52 +609,4 @@ func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
 	JsonResults, err := json.Marshal(res)
 	if err != nil { panic(err) }
 	return string(JsonResults[:])
-}
-
-/* The Main logic of filechecker parses command line arguments into a list of
-   individual FileChecks, stored in a map.
-   Each Check contains a path, which is inspected in the GetDownThatPath function.
-   The results are stored in the Checks map and built and display at the end.
-*/
-func Run(Args []byte) (string) {
-	if DEBUG {
-		VERBOSE = true
-	}
-	/* Checks is a map of individual Checks and associated results
-	Checks = {
-		<id> = { <struct FileCheck> },
-		<id> = { <struct FileCheck> },
-		...
-	}
-	*/
-	Checks := make(map[string]FileCheck)
-	err := json.Unmarshal(Args, &Checks)
-	if err != nil { panic(err) }
-	// ToDoChecks is a list of Checks to process, dequeued when done
-	ToDoChecks := make(map[string]FileCheck)
-	var Statistics Stats
-	// parse the arguments, split on the space
-	for id, check := range Checks {
-		if DEBUG {
-			fmt.Printf("Main: Parsing check id: '%d'\n", id)
-		}
-		Checks[id] = ParseCheck(check, id)
-		ToDoChecks[id] = Checks[id]
-		Statistics.CheckCount++
-	}
-	for id, check := range Checks {
-		if DEBUG {
-			fmt.Printf("Main: Inspecting path '%s' from Check id "+
-				"'%d'\n", check.Path, id)
-		}
-		// loop through the list of Check, and only process the Checks that
-		// are still in the todo list
-		if _, ok := ToDoChecks[id]; !ok {
-			continue
-		}
-		var EmptyActiveChecks []string
-		GetDownThatPath(check.Path, EmptyActiveChecks, 0, Checks,
-			ToDoChecks, &Statistics)
-	}
-	return BuildResults(Checks, &Statistics)
 }
