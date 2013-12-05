@@ -1,8 +1,6 @@
 /*
 	TODO LIST
 - add timestamp for all actions and commands, stored in the command data
-- store done actions in the database
-- calculation action completion ratio, based on number of agents launched against, and number of command responses received
 /* Mozilla InvestiGator Scheduler
 
 Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -267,6 +265,8 @@ func processNewAction(actionNewChan <-chan string, mgoRegCol *mgo.Collection,
 			}
 			log.Println(action.ID,"- processNewAction(): action inserted in database")
 		}
+	// store action in database
+	err = mgoActionCol.Insert(action)
 	}
 	return nil
 }
@@ -395,10 +395,58 @@ func terminateCommand(cmdDoneChan <-chan string, mgoCmdCol *mgo.Collection,
 			log.Fatal(cmd.Action.ID, cmd.ID,
 				"- terminateCommand() mgoCmdCol.Insert:", err)
 		}
+// updateAction is called when a command has finished and the parent action
+// must be updated. It retrieves an action from the database, loops over the
+// commands, and if all commands have finished, marks the action as finished.
+func updateAction(cmd mig.Command, mgoActionCol *mgo.Collection) error {
+	aid := cmd.Action.ID
+	var actions []mig.Action
+	// get action from mongodb
+	actionCursor := mgoActionCol.Find(bson.M{"id": aid}).Iter()
+	if err := actionCursor.All(&actions); err != nil {
+		log.Fatal(cmd.Action.ID, cmd.ID,
+			"updateAction(): failed to retrieve action from DB")
+	}
+	if len(actions) > 1 {
+		log.Fatal(cmd.Action.ID, cmd.ID,
+			"updateAction(): found multiple action with ID", aid)
+	}
+	action := actions[0]
+	switch cmd.Status {
+	case "completed":
+		action.CmdCompleted++
+	case "cancelled":
+		action.CmdCancelled++
+	case "timedout":
+		action.CmdTimedOut++
+	default:
+		log.Fatal(cmd.Action.ID, cmd.ID,
+			"updateAction(): unknown command status", cmd.Status)
+	}
+	log.Println(cmd.Action.ID, cmd.ID,
+		"updateAction(): updating action", action.Name, ",",
+		"completion:", action.CmdCompleted, "/", len(action.CommandIDs), ",",
+		"cancelled:", action.CmdCancelled, ",",
+		"timed out:", action.CmdTimedOut)
+	// Has the action completed?
+	finished := action.CmdCompleted + action.CmdCancelled + action.CmdTimedOut
+	if finished == len(action.CommandIDs) {
+		action.Status = "completed"
+		action.FinishTime = time.Now().UTC()
+		duration := action.FinishTime.Sub(action.StartTime)
 		log.Println(cmd.Action.ID, cmd.ID,
-			"terminateCommand(): command inserted in database")
-		// call updateAction()
-		updateAction(cmd, mgoActionCol)
+			"updateAction(): action", action.Name,
+			"has completed in", duration)
+		// delete Action from INFLIGHTACTIONDIR
+		actFile := fmt.Sprintf("%s-%d.json", action.Name, action.ID)
+		os.Rename(INFLIGHTACTIONDIR+"/"+actFile, DONEACTIONDIR+"/"+actFile)
+	}
+	// store updated action in database
+	action.LastUpdateTime = time.Now().UTC()
+	err := mgoActionCol.Update(bson.M{"id": aid}, action)
+	if err != nil {
+		log.Fatal(cmd.Action.ID, cmd.ID,
+			"updateAction(): failed to store updated action")
 	}
 	return nil
 }

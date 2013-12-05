@@ -39,14 +39,15 @@ import(
 )
 
 type Action struct {
-	Name, Target, Check, RunDate, Expiration string
+	Name, Target, Check, RunDate, Expiration, Status string
 	ID uint64
 	Arguments interface{}
 	CommandIDs []uint64
+	CmdCompleted, CmdCancelled, CmdTimedOut int
 }
 
 type Command struct {
-	AgentName, AgentQueueLoc string
+	AgentName, AgentQueueLoc, Status string
 	ID uint64
 	Action Action
 	Results interface{}
