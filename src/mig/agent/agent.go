@@ -52,7 +52,8 @@ import (
 )
 
 var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
-var HEARTBEATFREQ string = "600s"
+// agents send keepalives every 5 minutes
+var HEARTBEATFREQ string = "300s"
 // modules that take longer than 30s to run are killed
 var MODULETIMEOUT time.Duration = 30 * time.Second
 
