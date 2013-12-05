@@ -389,13 +389,16 @@ func terminateCommand(cmdDoneChan <-chan string, mgoCmdCol *mgo.Collection,
 			log.Fatal("- - launchCommand() loadCmdFromFile() failed")
 			continue
 		}
-		log.Println(cmd.Action.ID, cmd.ID,"terminateCommand():", cmd)
-		// remove command from inflight dir
-		inflightPath := fmt.Sprintf("%s/%s-%d-%d.json", INFLIGHTCMDDIR,
-			cmd.AgentQueueLoc, cmd.Action.ID, cmd.ID)
-		os.Remove(inflightPath)
-		// store command in database
-		err = mgoCmdCol.Insert(cmd)
+		log.Printf("%d %d recvAgentResults(): got response from agent %s",
+			cmd.Action.ID, cmd.ID, cmd.AgentName)
+		// write is done in 2 steps:
+		// 1) a temp file is written
+		// 2) the temp file is moved into the target folder
+		// this prevents the dir watcher from waking up before the file is fully written
+		file := fmt.Sprintf("%s-%d-%d.json", cmd.AgentQueueLoc, cmd.Action.ID, cmd.ID)
+		cmdPath := DONECMDDIR + "/" + file
+		tmpPath := TMPDIR + "/" + file
+		err = ioutil.WriteFile(tmpPath, m.Body, 0640)
 		if err != nil {
 			log.Fatal(cmd.Action.ID, cmd.ID,
 				"- terminateCommand() mgoCmdCol.Insert:", err)
