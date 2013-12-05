@@ -1,6 +1,3 @@
-/*
-	TODO LIST
-- add timestamp for all actions and commands, stored in the command data
 /* Mozilla InvestiGator Scheduler
 
 Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -395,6 +392,8 @@ func terminateCommand(cmdDoneChan <-chan string, mgoCmdCol *mgo.Collection,
 			log.Fatal(cmd.Action.ID, cmd.ID,
 				"- terminateCommand() mgoCmdCol.Insert:", err)
 		}
+	cmd.FinishTime = time.Now().UTC()
+	cmd.Status = "completed"
 // updateAction is called when a command has finished and the parent action
 // must be updated. It retrieves an action from the database, loops over the
 // commands, and if all commands have finished, marks the action as finished.
