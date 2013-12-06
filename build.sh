@@ -3,6 +3,7 @@
 # requires golang-crosscompile
 # see http://dave.cheney.net/2013/07/09/an-introduction-to-cross-compilation-with-go-1-1
 # see also https://github.com/davecheney/golang-crosscompile
+# rebuild envs using 'go-crosscompile-build-all'
 source ~/Code/golang-crosscompile/crosscompile.bash
 
 export GOPATH="$GOROOT/bin:$(pwd)"
