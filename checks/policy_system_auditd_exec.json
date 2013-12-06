@@ -1,14 +1,15 @@
 {
-    "Name":     "policy_system_auditd_low",
+    "Name":     "policy_system_auditd_exec",
     "Target":   "linux",
     "Check":    "filechecker",
     "Arguments": {
-        "auditd_execve": {
+        "check audit configuration for logging of exec syscalls": {
             "Path": "/etc/audit/audit.rules",
             "Type": "contains",
             "Value": "-a exit,always -F arch=b(32|64) -S execve -k exec"
         }
     },
+    "Condition": "any",
     "RunDate":  "immediate",
     "Expiration":  "30m"
 }
