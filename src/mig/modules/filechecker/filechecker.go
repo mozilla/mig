@@ -45,6 +45,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"log"
 	"os"
 	"regexp"
 )
@@ -152,8 +153,10 @@ func Run(Args []byte) (string) {
 			continue
 		}
 		var EmptyActiveChecks []string
-		GetDownThatPath(check.Path, EmptyActiveChecks, 0, Checks,
-			ToDoChecks, &Statistics)
+		err = GetDownThatPath(check.Path, EmptyActiveChecks, 0, Checks, ToDoChecks, &Statistics)
+		if err != nil {
+			log.Println("failed, send proper error back to agent")
+		}
 	}
 	return BuildResults(Checks, &Statistics)
 }
@@ -230,13 +233,13 @@ func GetDownThatPath(path string, ActiveCheckIDs []string, CheckBitMask int,
 		}
 	}
 	var SubDirs []string
-	/* Read the content of dir stored in 'path',
-	   put all sub-directories in the SubDirs slice, and call
-	   the inspection function for all files
-	*/
+	// Read the content of dir stored in 'path',
+	// put all sub-directories in the SubDirs slice, and call
+	// the inspection function for all files
 	target, err := os.Open(path)
 	if err != nil {
-		panic(err)
+		log.Println("filechecker failed to open", path, ":", err)
+		return err
 	}
 	targetMode, _ := target.Stat()
 	if targetMode.Mode().IsDir() {
@@ -255,7 +258,9 @@ func GetDownThatPath(path string, ActiveCheckIDs []string, CheckBitMask int,
 			} else if DirEntry.Mode().IsRegular() {
 				Entryfd, err := os.Open(EntryFullPath)
 				if err != nil {
-					panic(err)
+					log.Println("filechecker failed to open file",
+						EntryFullPath, ":", err)
+					continue
 				}
 				InspectFile(Entryfd, ActiveCheckIDs, CheckBitMask, Checks)
 				Statistics.FilesCount++
@@ -272,10 +277,9 @@ func GetDownThatPath(path string, ActiveCheckIDs []string, CheckBitMask int,
 	if err := target.Close(); err != nil {
 		panic(err)
 	}
-	// if we found any sub directories, go down the rabbit hole
+	// if we found any sub directories, go down the rabbit hole recursively
 	for _, dir := range SubDirs {
-		GetDownThatPath(dir, ActiveCheckIDs, CheckBitMask, Checks,
-			ToDoChecks, Statistics)
+		GetDownThatPath(dir, ActiveCheckIDs, CheckBitMask, Checks, ToDoChecks, Statistics)
 	}
 	return nil
 }
