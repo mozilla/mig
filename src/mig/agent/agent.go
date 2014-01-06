@@ -229,7 +229,7 @@ func runFilechecker(fCommandChan <-chan mig.Command, resultChan chan mig.Command
 			log.Fatal("runFilechecker json.Marshal(migCmd.Action.Arguments): ", err)
 		}
 		s_args := fmt.Sprintf("%s", args)
-		cmd := exec.Command("/opt/agent","-m","filechecker",s_args)
+		cmd := exec.Command(os.Args[0], "-m", "filechecker", s_args)
 		cmd.Stdout = &out
 		if err := cmd.Start(); err != nil {
 			log.Fatal(err)
