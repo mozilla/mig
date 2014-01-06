@@ -30,6 +30,17 @@ do
     done
 done
 
+# build the C code for action generator
+opwd=$(pwd)
+cd "src/mig/client"
+[ -e libmig_gpgme.o ] && rm libmig_gpgme.o
+[ -e libmig_gpgme.a ] && rm libmig_gpgme.a
+gcc -Wall -c libmig_gpgme.c -o libmig_gpgme.o
+ar -cvq libmig_gpgme.a libmig_gpgme.o
+go build -o $opwd/bin/$LINUX64/mig-action-generator mig-action-generator.go
+rm libmig_gpgme.o libmig_gpgme.a
+cd $opwd
+
 # basic test
 # (note to self: stop being lazy and write unit tests!)
 echo -n Testing...
