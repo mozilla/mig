@@ -8,13 +8,12 @@ source ~/Code/golang-crosscompile/crosscompile.bash
 
 export GOPATH="$GOROOT/bin:$(pwd)"
 export GOBIN="$(pwd)/bin"
-ALLPLATFORMS="darwin/386 darwin/amd64 freebsd/386 freebsd/amd64 freebsd/arm linux/386 linux/amd64 linux/arm windows/386 windows/amd64"
-LINUX64="linux/amd64"
+
+PLATFORMS="linux/amd64"
 if [ "$1" == "all" ]; then
-    PLATFORMS=$ALLPLATFORMS
-else
-    PLATFORMS=$LINUX64
+    PLATFORMS="darwin/386 darwin/amd64 freebsd/386 freebsd/amd64 freebsd/arm linux/386 linux/amd64 linux/arm windows/386 windows/amd64"
 fi
+
 for platform in $PLATFORMS
 do
     echo "Target platform $platform"
