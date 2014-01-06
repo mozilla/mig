@@ -38,28 +38,6 @@ import(
 	"time"
 )
 
-type Action struct {
-	Name, Target, Check, RunDate, Expiration, Status string
-	ID uint64
-	StartTime, FinishTime, LastUpdateTime time.Time
-	Arguments interface{}
-	CommandIDs []uint64
-	CmdCompleted, CmdCancelled, CmdTimedOut int
-}
-
-type Command struct {
-	AgentName, AgentQueueLoc, Status string
-	ID uint64
-	Action Action
-	StartTime, FinishTime time.Time
-	Results interface{}
-}
-
-type Alert struct {
-	Arguments interface{}
-	Item string
-}
-
 type KeepAlive struct {
 	Name, QueueLoc, OS string
 	StartTime, HeartBeatTS time.Time
