@@ -30,14 +30,16 @@ do
     done
 done
 
-# build the C code for action generator
+# build the C code for PGP
 opwd=$(pwd)
-cd "src/mig/client"
+cd "src/mig/pgp"
 [ -e libmig_gpgme.o ] && rm libmig_gpgme.o
 [ -e libmig_gpgme.a ] && rm libmig_gpgme.a
 gcc -Wall -c libmig_gpgme.c -o libmig_gpgme.o
 ar -cvq libmig_gpgme.a libmig_gpgme.o
-go build -o $opwd/bin/$LINUX64/mig-action-generator mig-action-generator.go
+
+# build mig-action-generator
+go build -o $opwd/bin/linux/amd64/mig-action-generator $opwd/src/mig/client/mig-action-generator.go
 rm libmig_gpgme.o libmig_gpgme.a
 cd $opwd
 

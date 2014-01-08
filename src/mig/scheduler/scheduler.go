@@ -280,6 +280,9 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 		panic(err)
 	}
 
+	// generate an action id
+	ea.Action.ID = mig.GenID()
+
 	desc := fmt.Sprintf("new action received: Name='%s' Target='%s' Check='%s' ScheduledDate='%s' ExpirationDate='%s'",
 			ea.Action.Name, ea.Action.Target, ea.Action.Check, ea.Action.ScheduledDate, ea.Action.ExpirationDate)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: desc}
