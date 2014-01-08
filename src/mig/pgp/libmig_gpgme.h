@@ -4,4 +4,4 @@
 #include <locale.h>
 #include <gpgme.h>
 
-const char * MIGSign(char *signKeyID, char *stringToBeSigned);
+const char * GPGME_Sign(char *stringToBeSigned, char *signKeyID);

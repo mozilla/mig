@@ -1,27 +1,15 @@
 package main
 import (
-	"bytes"
-	"code.google.com/p/go.crypto/openpgp"
-	"code.google.com/p/go.crypto/openpgp/armor"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"mig"
 	"mig/modules/filechecker"
+	"mig/pgp"
 	"os"
-	"strings"
 	"time"
-	"unsafe"
 )
-
-/*
-#cgo CFLAGS: -I.
-#cgo LDFLAGS: -lgpgme libmig_gpgme.a
-#include <libmig_gpgme.h>
-*/
-import "C"
 
 func main() {
 
@@ -51,7 +39,7 @@ func main() {
 	var err error
 	if *file != "/path/to/file" {
 		// get action from local json file
-		ea, err = getActionFromFile(*file)
+		ea, err = mig.ActionFromFile(*file)
 	} else {
 		//interactive mode
 		ea, err = getActionFromTerminal()
@@ -59,44 +47,39 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	a := ea.Action
 
-	// Compute a GPG signature of the action
-	sig, err := signAction(ea, *key)
+	// compute the signature
+	str, err := a.String()
+	if err != nil {
+		panic(err)
+	}
+	a.PGPSignature, err = pgp.Sign(str, *key)
 	if err != nil {
 		panic(err)
 	}
 
-	// transform sig into json array
-	asig := strings.Split(sig, "\n")
-	for _, sigcomp := range asig {
-		ea.Signature = append(ea.Signature, sigcomp)
-	}
-	ea.SignatureDate = time.Now().UTC()
-	jsonAction, err := json.Marshal(ea)
+	a.PGPSignatureDate = time.Now().UTC()
+
+	jsonAction, err := json.MarshalIndent(a, "", "\t")
 	if err != nil {
 		panic(err)
+	}
+
+	// Verify the GPG signature
+	str2, err := a.String()
+	if err != nil {
+		panic(err)
+	}
+	valid, _, err := pgp.Verify(str2, a.PGPSignature)
+	if err != nil {
+		panic(err)
+	}
+	if !valid {
+		panic("Invalid PGP Signature")
 	}
 
 	fmt.Printf("%s\n", jsonAction)
-
-	// Verify the GPG signature
-	err = verifySignature(ea)
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-func getActionFromFile(path string) (ea mig.ExtendedAction, err error) {
-	fd, err := ioutil.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(fd, &ea)
-	if err != nil {
-		panic(err)
-	}
-	return
 }
 
 func getActionFromTerminal() (ea mig.ExtendedAction, err error) {
@@ -172,83 +155,6 @@ func getActionFromTerminal() (ea mig.ExtendedAction, err error) {
 	return
 }
 
-// signAction signs a string with a key. The function uses a C library that
-// calls gpgme, for compatibility with gpg-agent.
-func signAction(ea mig.ExtendedAction, key string) (sig string, err error) {
-	// prepare string for signature
-	srcStr := prepDataToSign(ea)
 
-	// convert to C variable
-	ckey := C.CString(key)
-	cstr := C.CString(srcStr)
 
-	// calculate signature
-	csig := C.MIGSign(ckey, cstr)
 
-	// convert signature back to Go string
-	sig = C.GoString(csig)
-
-	C.free(unsafe.Pointer(ckey))
-	C.free(unsafe.Pointer(cstr))
-
-	return
-}
-
-// verifySignature checks the validity of an armored signature
-func verifySignature(ea mig.ExtendedAction) error {
-	var signature string
-
-	// extract armored signature to string
-	for _, s := range ea.Signature {
-		signature = fmt.Sprintf("%s\n%s", signature, s)
-	}
-
-	// transform string into io.Reader
-	sigReader := bytes.NewBufferString(signature)
-
-	// decode armor
-	block, err := armor.Decode(sigReader)
-	if err != nil {
-		panic(err)
-	}
-	if block.Type != "PGP SIGNATURE" {
-		log.Fatal("Wrong signature type", block.Type)
-	}
-
-	// get the source data
-	srcStr := prepDataToSign(ea)
-
-	// convert to io.Reader
-	srcReader := bytes.NewBufferString(srcStr)
-
-	// verify the signature and get the signer back
-	pubringFile, err := os.Open("/home/ulfr/.gnupg/pubring.gpg")
-	if err != nil {
-		panic(err)
-	}
-	defer pubringFile.Close()
-	pubring, err := openpgp.ReadKeyRing(pubringFile)
-	if err != nil {
-		panic(err)
-	}
-	signer, err := openpgp.CheckArmoredDetachedSignature(pubring, srcReader, sigReader)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Signature verified. Signer=")
-	for _, ident := range signer.Identities {
-		fmt.Printf("'%s', ", ident.UserId.Email)
-	}
-	fmt.Printf("\n")
-	return nil
-}
-
-// prepDataToSign concatenates Action components into a string
-func prepDataToSign(ea mig.ExtendedAction) (str string) {
-	str = ea.Action.Name
-	str += ea.Action.Target
-	str += ea.Action.Check
-	str += ea.Action.ScheduledDate.String()
-	str += ea.Action.ExpirationDate.String()
-	return
-}

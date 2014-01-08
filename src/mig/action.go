@@ -15,6 +15,8 @@ type Action struct {
 	Name, Target, Check string
 	ScheduledDate, ExpirationDate time.Time
 	Arguments interface{}
+	PGPSignature string
+	PGPSignatureDate time.Time
 }
 
 type ExtendedAction struct{
@@ -23,18 +25,14 @@ type ExtendedAction struct{
 	StartTime, FinishTime, LastUpdateTime time.Time
 	CommandIDs []uint64
 	CmdCompleted, CmdCancelled, CmdTimedOut int
-	Signature []string
-	SignatureDate time.Time
 }
 
-// FromFile reads an action from a local file on the file system
+// ActionFromFile() reads an action from a local file on the file system
 // and returns a mig.ExtendedAction structure
 func ActionFromFile(path string) (ea ExtendedAction, err error){
 	defer func() {
 		if e := recover(); e != nil {
-			reason := fmt.Sprintf("mig.Action.FromFile(): %v", e)
-			err = errors.New(reason)
-			return
+			err = fmt.Errorf("mig.ActionFromFile(): %v", e)
 		}
 	}()
 	// parse the json of the action into a mig.ExtendedAction
@@ -46,9 +44,6 @@ func ActionFromFile(path string) (ea ExtendedAction, err error){
 	if err != nil {
 		panic(err)
 	}
-
-	// generate an action id
-	ea.Action.ID = GenID()
 
 	// syntax checking
 	err = checkAction(ea.Action)
@@ -100,5 +95,19 @@ func checkAction(action Action) error {
 		return errors.New("Action.Arguments is nil. Expecting string.")
 	}
 	return nil
+}
+
+//  concatenates Action components into a string
+func (a Action) String() (str string, err error) {
+	str = "name=" + a.Name + "; "
+	str += "target=" + a.Target + "; "
+	str += "check=" + a.Check + "; "
+	str += "scheduleddate=" + a.ScheduledDate.String() + "; "
+	str += "expirationdate=" + a.ExpirationDate.String() + "; "
+
+	args, err := json.Marshal(a.Arguments)
+	str += "arguments='" + fmt.Sprintf("%s", args) + "';"
+
+	return
 }
 

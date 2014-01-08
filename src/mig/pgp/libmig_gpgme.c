@@ -22,11 +22,11 @@
 	}									\
 	while(0)
 
-const char * MIGSign(char *signKeyID, char *stringToBeSigned) {
+const char * GPGME_Sign(char *stringToBeSigned, char *signKeyID) {
 	gpgme_ctx_t ctx;
 	gpgme_error_t err;
 	gpgme_data_t in, out;
-	gpgme_key_t signer[1] = {NULL};
+	gpgme_key_t signer;
 	//gpgme_sign_result_t result;
 	//gpgme_new_signature_t sig;
 	// Set the GPGME signature mode
@@ -62,17 +62,24 @@ const char * MIGSign(char *signKeyID, char *stringToBeSigned) {
 	gpgme_set_armor(ctx, 1);
 
 	// Find the signing key
+	// gpgme_op_keylist_start initiates a key listing operation inside the context ctx.
+	// It sets everything up so that subsequent invocations of gpgme_op_keylist_next
+	// return the keys in the list.
 	err = gpgme_op_keylist_start(ctx, signKeyID, 1);
 	fail_if_err(err);
-	err = gpgme_op_keylist_next(ctx, &signer[0]);
+
+	err = gpgme_op_keylist_next(ctx, &signer);
+	if (gpg_err_code(err) == GPG_ERR_EOF)
+		printf("Signing key '%s' not found\n", signKeyID);
 	fail_if_err(err);
+
 	err = gpgme_op_keylist_end(ctx);
 	fail_if_err(err);
 
 	// Clear signers and add the key we want
 	gpgme_signers_clear(ctx);
 	fail_if_err(err);
-	err = gpgme_signers_add(ctx, signer[0]);
+	err = gpgme_signers_add(ctx, signer);
 	fail_if_err(err);
 
 	// Create a data object pointing to the memory segment
