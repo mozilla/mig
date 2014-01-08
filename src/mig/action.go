@@ -7,6 +7,7 @@ import (
 	"hash/crc32"
 	"io/ioutil"
 	"math/rand"
+	"mig/pgp/verify"
 	"time"
 )
 
@@ -45,12 +46,6 @@ func ActionFromFile(path string) (ea ExtendedAction, err error){
 		panic(err)
 	}
 
-	// syntax checking
-	err = checkAction(ea.Action)
-	if err != nil {
-		panic(err)
-	}
-
 	// Populate the Extended attributes of the action
 	ea.StartTime = time.Now().UTC()
 
@@ -75,25 +70,48 @@ func GenID() uint64 {
 
 // checkAction verifies that the Action received contained all the
 // necessary fields, and returns an error when it doesn't.
-func checkAction(action Action) error {
-	if action.Name == "" {
+func (a Action) Validate() (err error) {
+	if a.Name == "" {
 		return errors.New("Action.Name is empty. Expecting string.")
 	}
-	if action.Target == "" {
+	if a.Target == "" {
 		return errors.New("Action.Target is empty. Expecting string.")
 	}
-	if action.Check == "" {
+	if a.Check == "" {
 		return errors.New("Action.Check is empty. Expecting string.")
 	}
-	if action.ScheduledDate.String() == "" {
+	if a.ScheduledDate.String() == "" {
 		return errors.New("Action.RunDate is empty. Expecting string.")
 	}
-	if action.ExpirationDate.String() == "" {
+	if a.ExpirationDate.String() == "" {
 		return errors.New("Action.Expiration is empty. Expecting string.")
 	}
-	if action.Arguments == nil {
+	if a.ScheduledDate.After(a.ExpirationDate) {
+		return errors.New("Action.ExpirationDate is set before Action.ScheduledDate.")
+	}
+	if time.Now().After(a.ExpirationDate) {
+		return errors.New("Action.ExpirationDate is passed. Action has expired.")
+	}
+	if a.Arguments == nil {
 		return errors.New("Action.Arguments is nil. Expecting string.")
 	}
+	if a.PGPSignature == "" {
+		return errors.New("Action.PGPSignature is empty. Expecting string.")
+	}
+
+	// Verify the signature
+	astr, err := a.String()
+	if err != nil {
+		return errors.New("Failed to stringify action")
+	}
+	valid, _, err := verify.Verify(astr, a.PGPSignature)
+	if err != nil {
+		return errors.New("Failed to verify PGP Signature")
+	}
+	if !valid {
+		return errors.New("Invalid PGP Signature")
+	}
+
 	return nil
 }
 
