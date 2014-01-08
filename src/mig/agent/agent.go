@@ -197,14 +197,22 @@ func getCommands(messages <-chan amqp.Delivery, actions chan []byte,
 // looks up the command type to pass it to the next level
 func parseCommands(commands <-chan []byte, fCommandChan chan mig.Command, terminate chan bool) error {
 	var cmd mig.Command
-	for a := range commands {
+	for cmsg := range commands {
 		// unmarshal the received command into a command struct
-		err := json.Unmarshal(a, &cmd)
+		err := json.Unmarshal(cmsg, &cmd)
 		if err != nil {
 			log.Fatal("parseCommand - json.Unmarshal:", err)
 		}
 		log.Printf("ParseCommand: Check '%s' Arguments '%s'",
 			cmd.Action.Check, cmd.Action.Arguments)
+
+		// Check the action syntax and signature
+		err = cmd.Action.Validate()
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("ParseCommands: action signature is valid")
+
 		switch cmd.Action.Check {
 		case "filechecker":
 			fCommandChan <- cmd
