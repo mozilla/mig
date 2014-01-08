@@ -6,7 +6,7 @@ import (
 	"log"
 	"mig"
 	"mig/modules/filechecker"
-	"mig/pgp"
+	"mig/pgp/sign"
 	"os"
 	"time"
 )
@@ -54,7 +54,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	a.PGPSignature, err = pgp.Sign(str, *key)
+	a.PGPSignature, err = sign.Sign(str, *key)
 	if err != nil {
 		panic(err)
 	}
@@ -66,17 +66,10 @@ func main() {
 		panic(err)
 	}
 
-	// Verify the GPG signature
-	str2, err := a.String()
+	// syntax checking
+	err = a.Validate()
 	if err != nil {
 		panic(err)
-	}
-	valid, _, err := pgp.Verify(str2, a.PGPSignature)
-	if err != nil {
-		panic(err)
-	}
-	if !valid {
-		panic("Invalid PGP Signature")
 	}
 
 	fmt.Printf("%s\n", jsonAction)
