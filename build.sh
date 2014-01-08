@@ -14,6 +14,17 @@ if [ "$1" == "all" ]; then
     PLATFORMS="darwin/386 darwin/amd64 freebsd/386 freebsd/amd64 freebsd/arm linux/386 linux/amd64 linux/arm windows/386 windows/amd64"
 fi
 
+root=$(pwd)
+# build the C code for PGP
+opwd=$(pwd)
+pgpdir="$root/src/mig/pgp/sign"
+cd $pgpdir
+[ -e libmig_gpgme.o ] && rm libmig_gpgme.o
+[ -e libmig_gpgme.a ] && rm libmig_gpgme.a
+gcc -Wall -c libmig_gpgme.c -o libmig_gpgme.o
+ar -cvq libmig_gpgme.a libmig_gpgme.o
+cd $opwd
+
 for platform in $PLATFORMS
 do
     echo "Target platform $platform"
@@ -23,23 +34,18 @@ do
         mig/agent \
         mig/scheduler
     do
-        cmd="$goplatbin build -o bin/$platform/$(basename $target) $target"
+        echo building $target
+        cmd="$goplatbin build -o $GOBIN/$platform/$(basename $target) $target"
         echo $cmd
         $cmd
         [ $? -gt 0 ] && exit 1
     done
 done
 
-# build the C code for PGP
-opwd=$(pwd)
-cd "src/mig/pgp"
-[ -e libmig_gpgme.o ] && rm libmig_gpgme.o
-[ -e libmig_gpgme.a ] && rm libmig_gpgme.a
-gcc -Wall -c libmig_gpgme.c -o libmig_gpgme.o
-ar -cvq libmig_gpgme.a libmig_gpgme.o
-
-# build mig-action-generator
-go build -o $opwd/bin/linux/amd64/mig-action-generator $opwd/src/mig/client/mig-action-generator.go
+echo building mig-action-generator
+cd $pgpdir
+go build -o $GOBIN/linux/amd64/mig-action-generator $root/src/mig/client/mig-action-generator.go
+cd $pgpdir
 rm libmig_gpgme.o libmig_gpgme.a
 cd $opwd
 
