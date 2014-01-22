@@ -8,6 +8,7 @@ import (
 	"mig/modules/filechecker"
 	"mig/pgp/sign"
 	"os"
+	"os/user"
 	"time"
 )
 
@@ -66,8 +67,21 @@ func main() {
 		panic(err)
 	}
 
+	// find keyring in default location
+	u, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	// load keyring
+	keyring, err := os.Open(u.HomeDir + "/.gnupg/secring.gpg")
+	if err != nil {
+		panic(err)
+	}
+	defer keyring.Close()
+
 	// syntax checking
-	err = a.Validate()
+	err = a.Validate(keyring)
 	if err != nil {
 		panic(err)
 	}

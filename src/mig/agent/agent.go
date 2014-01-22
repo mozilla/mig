@@ -42,8 +42,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/streadway/amqp"
+	"io"
 	"log"
 	"mig"
+	"mig/pgp"
 	"mig/modules/filechecker"
 	"os"
 	"os/exec"
@@ -51,11 +53,7 @@ import (
 	"time"
 )
 
-var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
-// agents send keepalives every 5 minutes
-var HEARTBEATFREQ string = "300s"
-// modules that take longer than 30s to run are killed
-var MODULETIMEOUT time.Duration = 30 * time.Second
+var keyring io.Reader
 
 func main() {
 	// parse command line argument
@@ -81,7 +79,7 @@ func main() {
 
 // initAgent prepare the AMQP connections to the broker and launches the
 // goroutines that will process commands received by the MIG Scheduler
-func initAgent() (error){
+func initAgent() (err error){
 	hostname, err := os.Hostname()
 	log.Println("MIG agent starting on", hostname)
 	// termChan is used to exit the program
@@ -92,6 +90,13 @@ func initAgent() (error){
 	if err != nil {
 		log.Fatalf("os.Hostname(): %v", err)
 	}
+
+	// build the keyring from the public key
+	keyring, err = pgp.TransformArmoredPubKeyToKeyring(PUBLICPGPKEY)
+	if err != nil {
+		panic(err)
+	}
+
 	// declare a keepalive message to initiate registration
 	HeartBeat := mig.KeepAlive{
 		Name:		hostname,
@@ -207,7 +212,7 @@ func parseCommands(commands <-chan []byte, fCommandChan chan mig.Command, termin
 			cmd.Action.Check, cmd.Action.Arguments)
 
 		// Check the action syntax and signature
-		err = cmd.Action.Validate()
+		err = cmd.Action.Validate(keyring)
 		if err != nil {
 			panic(err)
 		}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"mig/pgp/verify"
@@ -70,7 +71,7 @@ func GenID() uint64 {
 
 // checkAction verifies that the Action received contained all the
 // necessary fields, and returns an error when it doesn't.
-func (a Action) Validate() (err error) {
+func (a Action) Validate(keyring io.Reader) (err error) {
 	if a.Name == "" {
 		return errors.New("Action.Name is empty. Expecting string.")
 	}
@@ -104,7 +105,7 @@ func (a Action) Validate() (err error) {
 	if err != nil {
 		return errors.New("Failed to stringify action")
 	}
-	valid, _, err := verify.Verify(astr, a.PGPSignature)
+	valid, _, err := verify.Verify(astr, a.PGPSignature, keyring)
 	if err != nil {
 		return errors.New("Failed to verify PGP Signature")
 	}

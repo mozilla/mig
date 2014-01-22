@@ -5,13 +5,13 @@ import (
 	"code.google.com/p/go.crypto/openpgp"
 	"code.google.com/p/go.crypto/openpgp/armor"
 	"fmt"
-	"os"
+	"io"
 	"strings"
 )
 
 // Verify() checks the validity of a signature for some data,
 // and returns a boolean set to true if valid and an OpenPGP Entity
-func Verify(data string, signature string) (valid bool, entity *openpgp.Entity, err error) {
+func Verify(data string, signature string, keyring io.Reader) (valid bool, entity *openpgp.Entity, err error) {
 	valid = false
 
 	// re-armor signature and transform into io.Reader
@@ -30,14 +30,8 @@ func Verify(data string, signature string) (valid bool, entity *openpgp.Entity, 
 	// convert to io.Reader
 	srcReader := strings.NewReader(data)
 
-	// verify the signature and get the signer back
-	ringFile, err := os.Open("/home/ulfr/.gnupg/secring.gpg")
-	if err != nil {
-		panic(err)
-	}
-	defer ringFile.Close()
-
-	ring, err := openpgp.ReadKeyRing(ringFile)
+	// open the keyring
+	ring, err := openpgp.ReadKeyRing(keyring)
 	if err != nil {
 		panic(err)
 	}
