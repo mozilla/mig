@@ -49,6 +49,9 @@ import (
 	"time"
 )
 
+// build version
+var version string
+
 // the list of active agents is shared globally
 // TODO: wrap this around mutexes for safety
 var activeAgentsList []string

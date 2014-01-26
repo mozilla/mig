@@ -50,6 +50,9 @@ import (
 	"time"
 )
 
+// build version
+var version string
+
 func main() {
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
@@ -303,6 +306,7 @@ func keepAliveAgent(ctx Context) (err error) {
 	HeartBeat := mig.KeepAlive{
 		Name:		ctx.Agent.Hostname,
 		OS:		ctx.Agent.OS,
+		Version:	version,
 		QueueLoc:	ctx.Agent.QueueLoc,
 		StartTime:	time.Now(),
 	}

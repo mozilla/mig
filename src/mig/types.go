@@ -40,7 +40,7 @@ import(
 )
 
 type KeepAlive struct {
-	Name, QueueLoc, OS string
+	Name, QueueLoc, OS, Version string
 	StartTime, HeartBeatTS time.Time
 }
 

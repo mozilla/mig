@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+BUILDREF=$(git log --pretty=format:'%h' -n 1)
+BUILDDATE=$(date +%Y%m%d%H%M)
+BUILDREV="$BUILDREF-$BUILDDATE"
 # requires golang-crosscompile
 # see http://dave.cheney.net/2013/07/09/an-introduction-to-cross-compilation-with-go-1-1
 # see also https://github.com/davecheney/golang-crosscompile
@@ -35,9 +38,9 @@ do
         mig/scheduler
     do
         echo building $target
-        cmd="$goplatbin build -o $GOBIN/$platform/$(basename $target) $target"
-        echo $cmd
-        $cmd
+        #cmd="$goplatbin build -o $GOBIN/$platform/$(basename $target) $target"
+        echo go build -o $GOBIN/$platform/$(basename $target) -ldflags "-X main.version $BUILDREV" $target
+        go build -o $GOBIN/$platform/$(basename $target) -ldflags "-X main.version $BUILDREV" $target
         [ $? -gt 0 ] && exit 1
     done
 done
