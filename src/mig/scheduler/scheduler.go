@@ -283,8 +283,8 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	// generate an action id
 	ea.Action.ID = mig.GenID()
 
-	desc := fmt.Sprintf("new action received: Name='%s' Target='%s' Check='%s' ScheduledDate='%s' ExpirationDate='%s'",
-			ea.Action.Name, ea.Action.Target, ea.Action.Check, ea.Action.ScheduledDate, ea.Action.ExpirationDate)
+	desc := fmt.Sprintf("new action received: Name='%s' Target='%s' Order='%s' ScheduledDate='%s' ExpirationDate='%s'",
+			ea.Action.Name, ea.Action.Target, ea.Action.Order, ea.Action.ScheduledDate, ea.Action.ExpirationDate)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: desc}
 
 	// expand the action in one command per agent

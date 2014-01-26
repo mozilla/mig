@@ -1,7 +1,7 @@
 {
     "Name":     "policy_system_rootpasswd_hash",
     "Target":   "linux",
-    "Check":    "filechecker",
+    "Order":    "filechecker",
     "ScheduledDate":    "2014-12-31T12:00:00.0Z",
     "ExpirationDate":   "2014-12-31T13:00:00.0Z",
     "Arguments": {
@@ -10,5 +10,5 @@
             "Type": "contains",
             "Value": "root:\\$(1|2a|5|6)\\$"
         }
-    },
+    }
 }

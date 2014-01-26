@@ -101,8 +101,8 @@ func getActionFromTerminal() (ea mig.ExtendedAction, err error) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Print("Action Check> ")
-	_, err = fmt.Scanln(&ea.Action.Check)
+	fmt.Print("Action Order> ")
+	_, err = fmt.Scanln(&ea.Action.Order)
 	if err != nil {
 		panic(err)
 	}
@@ -120,7 +120,7 @@ func getActionFromTerminal() (ea mig.ExtendedAction, err error) {
 	ea.Action.ExpirationDate = time.Now().UTC().Add(period)
 
 	var checkArgs string
-	switch ea.Action.Check {
+	switch ea.Action.Order {
 	default:
 		fmt.Print("Unknown check type, supply JSON arguments> ")
 		_, err := fmt.Scanln(&checkArgs)
@@ -135,7 +135,7 @@ func getActionFromTerminal() (ea mig.ExtendedAction, err error) {
 		fmt.Println("Filechecker module parameters")
 		var name string
 		var fcargs filechecker.FileCheck
-		fmt.Print("Check Name> ")
+		fmt.Print("Filechecker Name> ")
 		_, err := fmt.Scanln(&name)
 		if err != nil {
 			panic(err)
@@ -145,12 +145,12 @@ func getActionFromTerminal() (ea mig.ExtendedAction, err error) {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Print("File Path> ")
+		fmt.Print("Filechecker Path> ")
 		_, err = fmt.Scanln(&fcargs.Path)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Print("Check Value> ")
+		fmt.Print("Filechecker Value> ")
 		_, err = fmt.Scanln(&fcargs.Value)
 		if err != nil {
 			panic(err)

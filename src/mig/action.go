@@ -15,7 +15,7 @@ import (
 
 type Action struct {
 	ID uint64
-	Name, Target, Check string
+	Name, Target, Order string
 	ScheduledDate, ExpirationDate time.Time
 	Arguments interface{}
 	PGPSignature string
@@ -54,7 +54,7 @@ func ActionFromFile(path string) (ea ExtendedAction, err error){
 	return
 }
 
-// genID returns an ID composed of a unix timestamp and a random CRC32
+// GenID returns an ID composed of a unix timestamp and a random CRC32
 func GenID() uint64 {
 	h := crc32.NewIEEE()
 	t := time.Now().UTC().Format(time.RFC3339Nano)
@@ -84,8 +84,8 @@ func (a Action) Validate(keyring io.Reader) (err error) {
 	if a.Target == "" {
 		return errors.New("Action.Target is empty. Expecting string.")
 	}
-	if a.Check == "" {
-		return errors.New("Action.Check is empty. Expecting string.")
+	if a.Order == "" {
+		return errors.New("Action.Order is empty. Expecting string.")
 	}
 	if a.ScheduledDate.String() == "" {
 		return errors.New("Action.RunDate is empty. Expecting string.")
@@ -126,7 +126,7 @@ func (a Action) Validate(keyring io.Reader) (err error) {
 func (a Action) String() (str string, err error) {
 	str = "name=" + a.Name + "; "
 	str += "target=" + a.Target + "; "
-	str += "check=" + a.Check + "; "
+	str += "order=" + a.Order + "; "
 	str += "scheduleddate=" + a.ScheduledDate.String() + "; "
 	str += "expirationdate=" + a.ExpirationDate.String() + "; "
 
