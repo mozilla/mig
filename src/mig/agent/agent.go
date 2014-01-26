@@ -42,11 +42,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/streadway/amqp"
-	"log"
 	"mig"
 	"mig/modules/filechecker"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -86,7 +86,7 @@ func main() {
 		// Goroutine that receives messages from AMQP
 		go getCommands(ctx)
 
-		// GoRoutine that parses commands and launch modules
+		// GoRoutine that parses and validates incoming commands
 		go func(){
 			for msg := range ctx.Channels.NewCommand {
 				err = parseCommands(ctx, msg)
@@ -102,7 +102,21 @@ func main() {
 			}
 		}()
 
-		//go runFilechecker(ctx)
+		// GoRoutine that executes commands that run as agent modules
+		go func(){
+			for cmd := range ctx.Channels.RunAgentCommand {
+				err = runAgentModule(ctx, cmd)
+				if err != nil {
+					// on failure, log and attempt to report it to the scheduler
+					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+					ctx.Channels.Log <- mig.Log{Desc: "Failed to run command. Reporting to scheduler."}.Err()
+					err = ReportErrorToScheduler("AgentCommandRunFailure", []byte(""))
+					if err != nil {
+						ctx.Channels.Log <- mig.Log{Desc: "Unable to report failure to scheduler."}.Err()
+					}
+				}
+			}
+		}()
 
 		// GoRoutine that formats results and send them to scheduler
 		go func() {
@@ -178,10 +192,77 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 	switch cmd.Action.Order {
 	case "filechecker":
-		//fCommandChan <- cmd
+		// send to the agent module execution path
+		ctx.Channels.RunAgentCommand <- cmd
+		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "Command queued for execution"}
+	case "shell":
+		// send to the external command execution path
+		ctx.Channels.RunExternalCommand <- cmd
 		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "Command queued for execution"}
 	case "terminate":
 		ctx.Channels.Terminate <- fmt.Errorf("Terminate order received from scheduler")
+	}
+	return
+}
+
+// runAgentModule is a generic command launcher for MIG modules that are
+// built into the agent's binary. It handles commands timeout.
+func runAgentModule(ctx Context, migCmd mig.Command) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("runCommand() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving runCommand()"}.Debug()
+	}()
+
+	// waiter is a channel that receives a message when the timeout expires
+	waiter := make(chan error, 1)
+	var out bytes.Buffer
+
+	// Command arguments must be in json format
+	tmpargs, err := json.Marshal(migCmd.Action.Arguments)
+	if err != nil {
+		panic(err)
+	}
+
+	// stringify the arguments
+	cmdArgs := fmt.Sprintf("%s", tmpargs)
+
+	// build the command line and execute
+	cmd := exec.Command(os.Args[0], "-m", strings.ToLower(migCmd.Action.Order), cmdArgs)
+	cmd.Stdout = &out
+	if err := cmd.Start(); err != nil {
+		panic(err)
+	}
+
+	// launch the waiter in a separate goroutine
+	go func() {
+		waiter <- cmd.Wait()
+	}()
+
+	select {
+	// Timeout case: command has reached timeout, kill it
+	case <-time.After(MODULETIMEOUT):
+		ctx.Channels.Log <- mig.Log{ActionID: migCmd.Action.ID, CommandID: migCmd.ID, Desc: "command timed out. Killing it."}.Err()
+		err := cmd.Process.Kill()
+		if err != nil {
+			panic(err)
+		}
+		<-waiter // allow goroutine to exit
+	// Normal exit case: command has finished before the timeout
+	case err := <-waiter:
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{ActionID: migCmd.Action.ID, CommandID: migCmd.ID, Desc: "command failed."}.Err()
+			panic(err)
+		} else {
+			ctx.Channels.Log <- mig.Log{ActionID: migCmd.Action.ID, CommandID: migCmd.ID, Desc: "command succeeded."}
+			err = json.Unmarshal(out.Bytes(), &migCmd.Results)
+			if err != nil {
+				panic(err)
+			}
+			// send the results back to the scheduler
+			ctx.Channels.Results <- migCmd
+		}
 	}
 	return
 }
@@ -241,6 +322,7 @@ func ReportErrorToScheduler(condition string, data []byte) (err error){
 	return
 }
 
+// publish is a generic function that sends messages to an AMQP exchange
 func publish(ctx Context, exchange, routingKey string, body []byte) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -266,58 +348,4 @@ func publish(ctx Context, exchange, routingKey string, body []byte) (err error) 
 	ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 	return
 }
-
-func runFilechecker(fCommandChan <-chan mig.Command, resultChan chan mig.Command) error {
-	for migCmd := range fCommandChan {
-		log.Println(migCmd.Action.ID, migCmd.ID,
-			"runFilechecker: running action", migCmd.Action.Name)
-		waiter := make(chan error, 1)
-		var out bytes.Buffer
-		// Arguments can contain anything. Syntax Check before feeding
-		// them to exec()
-		args, err := json.Marshal(migCmd.Action.Arguments)
-		if err != nil {
-			log.Fatal("runFilechecker json.Marshal(migCmd.Action.Arguments): ", err)
-		}
-		s_args := fmt.Sprintf("%s", args)
-		cmd := exec.Command(os.Args[0], "-m", "filechecker", s_args)
-		cmd.Stdout = &out
-		if err := cmd.Start(); err != nil {
-			log.Fatal(err)
-		}
-		go func() {
-			waiter <- cmd.Wait()
-		}()
-		select {
-		// command has reached timeout, kill it
-		case <-time.After(MODULETIMEOUT):
-			log.Println(migCmd.Action.ID, migCmd.ID,
-				"runFilechecker: command timed out. Killing it.")
-			err := cmd.Process.Kill()
-			if err != nil {
-				log.Fatal(migCmd.Action.ID, migCmd.ID,
-					"Failed to kill: ", err)
-			}
-			<-waiter // allow goroutine to exit
-		// command has finished before the timeout
-		case err := <-waiter:
-			if err != nil {
-				log.Println(migCmd.Action.ID, migCmd.ID,
-					"runFilechecker: command error:", err)
-			} else {
-				log.Println(migCmd.Action.ID, migCmd.ID,
-					"runFilechecker: command terminated successfully")
-				err = json.Unmarshal(out.Bytes(), &migCmd.Results)
-				if err != nil {
-					log.Fatal(migCmd.Action.ID, migCmd.ID,
-						"runFilechecker: failed to Unmarshal results")
-				}
-				// send the results back to the scheduler
-				resultChan <- migCmd
-			}
-		}
-	}
-	return nil
-}
-
 
