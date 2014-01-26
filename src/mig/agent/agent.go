@@ -42,25 +42,21 @@ import (
 	"flag"
 	"fmt"
 	"github.com/streadway/amqp"
-	"io"
 	"log"
 	"mig"
-	"mig/pgp"
 	"mig/modules/filechecker"
 	"os"
 	"os/exec"
-	"runtime"
 	"time"
 )
-
-var keyring io.Reader
 
 func main() {
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
-	var mode = flag.String("m", "agent",
-		"module to run (eg. agent, filechecker)")
+	var mode = flag.String("m", "agent", "module to run (eg. agent, filechecker)")
 	flag.Parse()
+
+
 	switch *mode {
 	case "filechecker":
 		// pass the rest of the arguments as a byte array
@@ -73,163 +69,205 @@ func main() {
 		fmt.Printf(filechecker.Run(args))
 		os.Exit(0)
 	case "agent":
-		initAgent()
+		var ctx Context
+		var err error
+
+		// if init fails, sleep for one minute and try again. forever.
+		for {
+			ctx, err = Init()
+			if err == nil {
+				break
+			}
+			fmt.Println(err)
+			fmt.Println("initialisation failed. sleep and retry.");
+			time.Sleep(60 * time.Second)
+		}
+
+		// Goroutine that receives messages from AMQP
+		go getCommands(ctx)
+
+		// GoRoutine that parses commands and launch modules
+		go func(){
+			for msg := range ctx.Channels.NewCommand {
+				err = parseCommands(ctx, msg)
+				if err != nil {
+					// on failure, log and attempt to report it to the scheduler
+					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+					ctx.Channels.Log <- mig.Log{Desc: "Failed to parse command. Reporting to scheduler."}.Err()
+					err = ReportErrorToScheduler("ParsingFailure", msg)
+					if err != nil {
+						ctx.Channels.Log <- mig.Log{Desc: "Unable to report failure to scheduler."}.Err()
+					}
+				}
+			}
+		}()
+
+		//go runFilechecker(ctx)
+
+		// GoRoutine that formats results and send them to scheduler
+		go func() {
+			for result := range ctx.Channels.Results {
+				err = sendResults(ctx, result)
+				if err != nil {
+					// on failure, log and attempt to report it to the scheduler
+					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+					ctx.Channels.Log <- mig.Log{Desc: "Failed to send results. Reporting to scheduler."}.Err()
+					err = ReportErrorToScheduler("SendResults", []byte(""))
+					if err != nil {
+						ctx.Channels.Log <- mig.Log{Desc: "Unable to report failure to scheduler."}.Err()
+					}
+				}
+			}
+		}()
+
+		// GoRoutine that sends keepAlive messages to scheduler
+		go keepAliveAgent(ctx)
+
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Agent '%s' started.", ctx.Agent.QueueLoc)}
+
+		// won't exit until this chan received something
+		exitReason := <-ctx.Channels.Terminate
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
+		Destroy(ctx)
 	}
 }
 
-// initAgent prepare the AMQP connections to the broker and launches the
-// goroutines that will process commands received by the MIG Scheduler
-func initAgent() (err error){
-	hostname, err := os.Hostname()
-	log.Println("MIG agent starting on", hostname)
-	// termChan is used to exit the program
-	termChan := make(chan bool)
-	actionsChan := make(chan []byte, 10)
-	fCommandChan := make(chan mig.Command, 10)
-	resultChan := make(chan mig.Command, 10)
-	if err != nil {
-		log.Fatalf("os.Hostname(): %v", err)
-	}
+// getCommands receives AMQP messages, and feed them to the action chan
+func getCommands(ctx Context) (err error) {
+	for m := range ctx.MQ.Bind.Chan {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("received message '%s'", m.Body)}.Debug()
 
-	// build the keyring from the public key
-	keyring, err = pgp.TransformArmoredPubKeyToKeyring(PUBLICPGPKEY)
+		// Ack this message only
+		err := m.Ack(true)
+		if err != nil {
+			desc := fmt.Sprintf("Failed to acknowledge reception. Message will be ignored. Body: '%s'", m.Body)
+			ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
+			continue
+		}
+
+		// pass it along
+		ctx.Channels.NewCommand <- m.Body
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("received message. queued in position %d", len(ctx.Channels.NewCommand))}
+	}
+	return
+}
+
+// parseCommands transforms a message into a MIG Command struct, performs validation
+// and run the command
+func parseCommands(ctx Context, msg []byte) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("parseCommands() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving parseCommands()"}.Debug()
+	}()
+	var cmd mig.Command
+
+	// unmarshal the received command into a command struct
+	// if this fails, inform the scheduler and skip this message
+	err = json.Unmarshal(msg, &cmd)
 	if err != nil {
 		panic(err)
 	}
 
-	// declare a keepalive message to initiate registration
+	// Check the action syntax and signature
+	err = cmd.Action.Validate(ctx.PGP.KeyRing)
+	if err != nil {
+		panic(err)
+	}
+
+	switch cmd.Action.Order {
+	case "filechecker":
+		//fCommandChan <- cmd
+		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "Command queued for execution"}
+	case "terminate":
+		ctx.Channels.Terminate <- fmt.Errorf("Terminate order received from scheduler")
+	}
+	return
+}
+
+// sendResults builds a message body and send the command results back to the scheduler
+func sendResults(ctx Context, result mig.Command) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("sendResults() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving sendResults()"}.Debug()
+	}()
+
+	result.AgentQueueLoc = ctx.Agent.QueueLoc
+
+	body, err := json.Marshal(result)
+	if err != nil {
+		panic(err)
+	}
+
+	routingKey := fmt.Sprintf("mig.sched.%s", ctx.Agent.QueueLoc)
+	err = publish(ctx, "mig", routingKey, body)
+	if err != nil {
+		panic(err)
+	}
+
+	return
+}
+
+// keepAliveAgent will send heartbeats messages to the scheduler at regular intervals
+func keepAliveAgent(ctx Context) (err error) {
+	// declare a keepalive message
 	HeartBeat := mig.KeepAlive{
-		Name:		hostname,
-		OS:		runtime.GOOS,
-		QueueLoc:	fmt.Sprintf("%s.%s", runtime.GOOS, hostname),
+		Name:		ctx.Agent.Hostname,
+		OS:		ctx.Agent.OS,
+		QueueLoc:	ctx.Agent.QueueLoc,
 		StartTime:	time.Now(),
-		HeartBeatTS:	time.Now(),
-	}
-	// define two bindings to receive msg from
-	// mig.agt.<OS>.<hostname> is for agent specific messages
-	// mig.all is for broadcasts
-	agentQueue := fmt.Sprintf("mig.agt.%s", HeartBeat.QueueLoc)
-	bindings := []mig.Binding{
-		mig.Binding{agentQueue, agentQueue},
-		mig.Binding{agentQueue, "mig.all"},
 	}
 
-	// Open an AMQP connection
-	conn, err := amqp.Dial(AMQPBROKER)
-	if err != nil {
-		log.Fatalf("amqp.Dial(): %v", err)
-	}
-	defer conn.Close()
-	c, err := conn.Channel()
-	if err != nil {
-		log.Fatalf("conn.Channel(): %v", err)
-	}
-	// loop over the bindings and declare and bind the queues
-	for _, b := range bindings {
-		_, err = c.QueueDeclare(b.Queue, // Queue name
-			true,  // is durable
-			false, // is autoDelete
-			false, // is exclusive
-			false, // is noWait
-			nil)   // AMQP args
+	// loop forever
+	for {
+		HeartBeat.HeartBeatTS = time.Now()
+		body, err := json.Marshal(HeartBeat)
 		if err != nil {
-			log.Fatalf("QueueDeclare: %v", err)
+			desc := fmt.Sprintf("keepAliveAgent failed with error '%v'", err)
+			ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
 		}
-		err = c.QueueBind(b.Queue, // Queue name
-			b.Key, // Routing key name
-			"mig", // Exchange name
-			false, // is noWait
-			nil)   // AMQP args
-		if err != nil {
-			log.Fatalf("QueueBind: %v", err)
-		}
+		desc := fmt.Sprintf("heartbeat '%s'", body)
+		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
+		publish(ctx, "mig", "mig.keepalive", body)
+		time.Sleep(ctx.Sleeper)
 	}
-
-	// Limit the number of message the channel will receive at once
-	err = c.Qos(2, // prefetch count (in # of msg)
-		0,     // prefetch size (in bytes)
-		false) // is global
-	if err != nil {
-		log.Fatalf("ChannelQoS: %v", err)
-	}
-	// loop over the bindins and create a gorouting for each consumer
-	for _, b := range bindings {
-		msgChan, err := c.Consume(b.Queue, // queue name
-			"",    // some tag
-			false, // is autoAck
-			false, // is exclusive
-			false, // is noLocal
-			false, // is noWait
-			nil)   // AMQP args
-		if err != nil {
-			log.Fatalf("ChannelConsume: %v", err)
-		}
-		go getCommands(msgChan, actionsChan, termChan)
-	}
-	go parseCommands(actionsChan, fCommandChan, termChan)
-	go runFilechecker(fCommandChan, resultChan, termChan)
-	go sendResults(c, HeartBeat.QueueLoc, resultChan, termChan)
-
-	// All set, ready to keepAlive
-	go keepAliveAgent(c, HeartBeat)
-
-	// block until terminate chan is called
-	<-termChan
-	return nil
+	return
 }
 
-// getCommands receives AMQP messages and pass them to the next level
-func getCommands(messages <-chan amqp.Delivery, actions chan []byte,
-	terminate chan bool) error {
-	// range waits on the channel and returns all incoming messages
-	// range will exit when the channel closes
-	for m := range messages {
-		log.Printf("getCommands: received '%s'", m.Body)
-		// Ack this message only
-		err := m.Ack(true)
-		if err != nil {
-			panic(err)
-		}
-		// pass it along to the parseCommands goroutine
-		actions <- m.Body
-		log.Printf("getCommands: queued in pos. %d", len(actions))
-	}
-	terminate <- true
-	return nil
+func ReportErrorToScheduler(condition string, data []byte) (err error){
+	return
 }
 
-// parseCommands transforms a message into a MIG Command struct, and
-// looks up the command type to pass it to the next level
-func parseCommands(commands <-chan []byte, fCommandChan chan mig.Command, terminate chan bool) error {
-	var cmd mig.Command
-	for cmsg := range commands {
-		// unmarshal the received command into a command struct
-		err := json.Unmarshal(cmsg, &cmd)
-		if err != nil {
-			log.Fatal("parseCommand - json.Unmarshal:", err)
+func publish(ctx Context, exchange, routingKey string, body []byte) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("publish() -> %v", e)
 		}
-		log.Printf("ParseCommand: Check '%s' Arguments '%s'",
-			cmd.Action.Check, cmd.Action.Arguments)
+		ctx.Channels.Log <- mig.Log{Desc: "leaving publish()"}.Debug()
+	}()
 
-		// Check the action syntax and signature
-		err = cmd.Action.Validate(keyring)
-		if err != nil {
-			panic(err)
-		}
-		log.Printf("ParseCommands: action signature is valid")
-
-		switch cmd.Action.Check {
-		case "filechecker":
-			fCommandChan <- cmd
-			log.Println("parseCommands: queued into filechecker",
-				"in pos.", len(fCommandChan))
-		}
+	msg := amqp.Publishing{
+		DeliveryMode: amqp.Persistent,
+		Timestamp:    time.Now(),
+		ContentType:  "text/plain",
+		Body:         []byte(body),
 	}
-	terminate <- true
-	return nil
+	err = ctx.MQ.Chan.Publish(exchange, routingKey,
+				true,  // is mandatory
+				false, // is immediate
+				msg)   // AMQP message
+	if err != nil {
+		panic(err)
+	}
+	desc := fmt.Sprintf("Message published to exchange '%s' with routing key '%s'", exchange, routingKey)
+	ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
+	return
 }
 
-func runFilechecker(fCommandChan <-chan mig.Command, resultChan chan mig.Command, terminate chan bool) error {
+func runFilechecker(fCommandChan <-chan mig.Command, resultChan chan mig.Command) error {
 	for migCmd := range fCommandChan {
 		log.Println(migCmd.Action.ID, migCmd.ID,
 			"runFilechecker: running action", migCmd.Action.Name)
@@ -279,55 +317,7 @@ func runFilechecker(fCommandChan <-chan mig.Command, resultChan chan mig.Command
 			}
 		}
 	}
-	terminate <- true
 	return nil
 }
 
-func sendResults(c *amqp.Channel, agtQueueLoc string, resultChan <-chan mig.Command, terminate chan bool) error {
-	rKey := fmt.Sprintf("mig.sched.%s", agtQueueLoc)
-	for r := range resultChan {
-		r.AgentQueueLoc = agtQueueLoc
-		body, err := json.Marshal(r)
-		if err != nil {
-			log.Fatalf("sendResults - json.Marshal: %v", err)
-		}
-		msgXchange(c, "mig", rKey, body)
-	}
-	return nil
-}
 
-func keepAliveAgent(c *amqp.Channel, HeartBeat mig.KeepAlive) error {
-	sleepTime, err := time.ParseDuration(HEARTBEATFREQ)
-	if err != nil {
-		log.Fatal("sendHeartbeat - time.ParseDuration():", err)
-	}
-	for {
-		HeartBeat.HeartBeatTS = time.Now()
-		body, err := json.Marshal(HeartBeat)
-		if err != nil {
-			log.Fatal("sendHeartbeat - json.Marshal:", err)
-		}
-		msgXchange(c, "mig", "mig.keepalive", body)
-		time.Sleep(sleepTime)
-	}
-	return nil
-}
-
-func msgXchange(c *amqp.Channel, excName, routingKey string, body []byte) error {
-	msg := amqp.Publishing{
-		DeliveryMode: amqp.Persistent,
-		Timestamp:    time.Now(),
-		ContentType:  "text/plain",
-		Body:         []byte(body),
-	}
-	err := c.Publish(excName,
-		routingKey,
-		true,  // is mandatory
-		false, // is immediate
-		msg)   // AMQP message
-	if err != nil {
-		log.Fatalf("msgXchange - ChannelPublish: %v", err)
-	}
-	log.Printf("msgXchange: published '%s'\n", msg.Body)
-	return nil
-}

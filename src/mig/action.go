@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"mig/pgp/verify"
+	"strconv"
 	"time"
 )
 
@@ -68,6 +69,11 @@ func GenID() uint64 {
 	return id
 }
 
+// GenHexID returns a string with an hexadecimal encoded ID
+func GenB32ID() string {
+	id := GenID()
+	return strconv.FormatUint(id, 32)
+}
 
 // checkAction verifies that the Action received contained all the
 // necessary fields, and returns an error when it doesn't.

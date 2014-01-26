@@ -36,6 +36,7 @@ package mig
 
 import(
 	"time"
+	"github.com/streadway/amqp"
 )
 
 type KeepAlive struct {
@@ -46,4 +47,5 @@ type KeepAlive struct {
 type Binding struct {
 	Queue string
 	Key string
+	Chan <-chan amqp.Delivery
 }

@@ -1,8 +1,18 @@
 package main
 
 import(
+	"mig"
 	"time"
 )
+
+var LOGGINGCONF = mig.Logging{
+	Mode:	"stdout",	// stdout | file | syslog
+	Level:	"debug",	// debug | info | ...
+	//File:	"/tmp/migagt.log",
+	//Host:	"syslog_hostname",
+	//Port:	514,
+	//Protocol: "udp",
+}
 
 // location of the rabbitmq server
 var AMQPBROKER string = "amqp://guest:guest@172.21.1.1:5672/"
