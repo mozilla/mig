@@ -27,7 +27,7 @@ type ExtendedAction struct{
 	Status string
 	StartTime, FinishTime, LastUpdateTime time.Time
 	CommandIDs []uint64
-	CmdCompleted, CmdCancelled, CmdTimedOut int
+	CmdCompleted, CmdSucceeded, CmdCancelled, CmdFailed, CmdTimeOut int
 }
 
 // ActionFromFile() reads an action from a local file on the file system

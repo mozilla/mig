@@ -94,10 +94,9 @@ func main() {
 			for msg := range ctx.Channels.NewCommand {
 				err = parseCommands(ctx, msg)
 				if err != nil {
-					// on failure, log and attempt to report it to the scheduler
-					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
-					ctx.Channels.Log <- mig.Log{Desc: "Failed to parse command. Reporting to scheduler."}.Err()
-					err = ReportErrorToScheduler("ParsingFailure", msg)
+					log := mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+					ctx.Channels.Log <- log
+					err = ReportErrorToScheduler(log)
 					if err != nil {
 						ctx.Channels.Log <- mig.Log{Desc: "Unable to report failure to scheduler."}.Err()
 					}
@@ -110,13 +109,8 @@ func main() {
 			for cmd := range ctx.Channels.RunAgentCommand {
 				err = runAgentModule(ctx, cmd)
 				if err != nil {
-					// on failure, log and attempt to report it to the scheduler
-					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
-					ctx.Channels.Log <- mig.Log{Desc: "Failed to run command. Reporting to scheduler."}.Err()
-					err = ReportErrorToScheduler("AgentCommandRunFailure", []byte(""))
-					if err != nil {
-						ctx.Channels.Log <- mig.Log{Desc: "Unable to report failure to scheduler."}.Err()
-					}
+					log := mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
+					ctx.Channels.Log <- log
 				}
 			}
 		}()
@@ -127,9 +121,9 @@ func main() {
 				err = sendResults(ctx, result)
 				if err != nil {
 					// on failure, log and attempt to report it to the scheduler
-					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
-					ctx.Channels.Log <- mig.Log{Desc: "Failed to send results. Reporting to scheduler."}.Err()
-					err = ReportErrorToScheduler("SendResults", []byte(""))
+					log := mig.Log{CommandID: result.ID, ActionID: result.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
+					ctx.Channels.Log <- log
+					err = ReportErrorToScheduler(log)
 					if err != nil {
 						ctx.Channels.Log <- mig.Log{Desc: "Unable to report failure to scheduler."}.Err()
 					}
@@ -172,13 +166,21 @@ func getCommands(ctx Context) (err error) {
 // parseCommands transforms a message into a MIG Command struct, performs validation
 // and run the command
 func parseCommands(ctx Context, msg []byte) (err error) {
+	var cmd mig.Command
+	cmd.ID = 0	// safety net
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("parseCommands() -> %v", e)
+
+			// if we have a command to return, update status and send back
+			if cmd.ID > 0 {
+				cmd.Results = mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+				cmd.Status = "failed"
+				ctx.Channels.Results <- cmd
+			}
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving parseCommands()"}.Debug()
 	}()
-	var cmd mig.Command
 
 	// unmarshal the received command into a command struct
 	// if this fails, inform the scheduler and skip this message
@@ -190,7 +192,11 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 	// Check the action syntax and signature
 	err = cmd.Action.Validate(ctx.PGP.KeyRing)
 	if err != nil {
-		panic(err)
+		desc := fmt.Sprintf("action validation failed: %v", err)
+		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: desc}.Err()
+		panic(desc)
+	}
+
 	// Expiration is verified by the Validate() call above, but we need
 	// to verify the ScheduledDate ourselves
 	if time.Now().Before(cmd.Action.ScheduledDate) {
@@ -209,6 +215,9 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "Command queued for execution"}
 	case "terminate":
 		ctx.Channels.Terminate <- fmt.Errorf("Terminate order received from scheduler")
+	default:
+		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("order '%s' is invalid", cmd.Action.Order)}
+		panic("OrderNotUnderstood")
 	}
 	return
 }
@@ -249,25 +258,40 @@ func runAgentModule(ctx Context, migCmd mig.Command) (err error) {
 	}()
 
 	select {
+
 	// Timeout case: command has reached timeout, kill it
 	case <-time.After(MODULETIMEOUT):
 		ctx.Channels.Log <- mig.Log{ActionID: migCmd.Action.ID, CommandID: migCmd.ID, Desc: "command timed out. Killing it."}.Err()
+
+		// update the command status and send the response back
+		migCmd.Status = "timeout"
+		ctx.Channels.Results <- migCmd
+
+		// kill the command
 		err := cmd.Process.Kill()
 		if err != nil {
 			panic(err)
 		}
 		<-waiter // allow goroutine to exit
+
 	// Normal exit case: command has finished before the timeout
 	case err := <-waiter:
+
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{ActionID: migCmd.Action.ID, CommandID: migCmd.ID, Desc: "command failed."}.Err()
+			// update the command status and send the response back
+			migCmd.Status = "failed"
+			ctx.Channels.Results <- migCmd
 			panic(err)
+
 		} else {
 			ctx.Channels.Log <- mig.Log{ActionID: migCmd.Action.ID, CommandID: migCmd.ID, Desc: "command succeeded."}
 			err = json.Unmarshal(out.Bytes(), &migCmd.Results)
 			if err != nil {
 				panic(err)
 			}
+			// mark command status as successfully completed
+			migCmd.Status = "succeeded"
 			// send the results back to the scheduler
 			ctx.Channels.Results <- migCmd
 		}
@@ -285,7 +309,6 @@ func sendResults(ctx Context, result mig.Command) (err error) {
 	}()
 
 	result.AgentQueueLoc = ctx.Agent.QueueLoc
-
 	body, err := json.Marshal(result)
 	if err != nil {
 		panic(err)
@@ -327,7 +350,7 @@ func keepAliveAgent(ctx Context) (err error) {
 	return
 }
 
-func ReportErrorToScheduler(condition string, data []byte) (err error){
+func ReportErrorToScheduler(log mig.Log) (err error){
 	return
 }
 
@@ -353,7 +376,7 @@ func publish(ctx Context, exchange, routingKey string, body []byte) (err error) 
 	if err != nil {
 		panic(err)
 	}
-	desc := fmt.Sprintf("Message published to exchange '%s' with routing key '%s'", exchange, routingKey)
+	desc := fmt.Sprintf("Message published to exchange '%s' with routing key '%s' and body '%s'", exchange, routingKey, msg.Body)
 	ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 	return
 }

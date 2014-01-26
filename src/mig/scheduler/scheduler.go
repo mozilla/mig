@@ -479,7 +479,7 @@ func recvAgentResults(msg amqp.Delivery, ctx Context) (err error) {
 	return
 }
 
-// terminateCommand is called when a command result is dropped into ctx.Directories.Command.Done
+// terminateCommand is called when a command result is dropped into ctx.Directories.Command.Returned
 // it stores the result of a command and mark it as completed/failed and then
 // send a message to the Action completion routine to update the action status
 func terminateCommand(cmdPath string, ctx Context) (err error) {
@@ -498,7 +498,6 @@ func terminateCommand(cmdPath string, ctx Context) (err error) {
 	}
 
 	cmd.FinishTime = time.Now().UTC()
-	cmd.Status = "completed"
 
 	// remove command from inflight dir
 	inflightPath := fmt.Sprintf("%s/%d-%d.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
@@ -558,24 +557,26 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	// there is only one entry in the slice, so take the first entry from
 	ea := eas[0]
 	switch cmd.Status {
-	case "completed":
-		ea.CmdCompleted++
+	case "succeeded":
+		ea.CmdSucceeded++
 	case "cancelled":
 		ea.CmdCancelled++
-	case "timedout":
-		ea.CmdTimedOut++
+	case "failed":
+		ea.CmdFailed++
+	case "timeout":
+		ea.CmdTimeOut++
 	default:
 		err = fmt.Errorf("unknown command status: %s", cmd.Status)
 		panic(err)
 	}
-
-	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, cancelled=%d, timeout=%d",
-			ea.Action.Name, ea.CmdCompleted, len(ea.CommandIDs), ea.CmdCancelled, ea.CmdTimedOut)
+	// regardless of returned status, increase completion counter
+	ea.CmdCompleted++
+	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, succeeded=%d, cancelled=%d, failed=%d, timeout=%d",
+			ea.Action.Name, ea.CmdCompleted, len(ea.CommandIDs), ea.CmdSucceeded, ea.CmdCancelled, ea.CmdFailed, ea.CmdTimeOut)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, CommandID: cmd.ID, Desc: desc}
 
 	// Has the action completed?
-	finished := ea.CmdCompleted + ea.CmdCancelled + ea.CmdTimedOut
-	if finished == len(ea.CommandIDs) {
+	if ea.CmdCompleted == len(ea.CommandIDs) {
 		// update status and timestamps
 		ea.Status = "completed"
 		ea.FinishTime = time.Now().UTC()
