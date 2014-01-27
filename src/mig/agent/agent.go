@@ -62,6 +62,7 @@ func main() {
 
 
 	switch *mode {
+
 	case "filechecker":
 		// pass the rest of the arguments as a byte array
 		// to the filechecker module
@@ -72,6 +73,7 @@ func main() {
 		args := []byte(tmparg)
 		fmt.Printf(filechecker.Run(args))
 		os.Exit(0)
+
 	case "agent":
 		var ctx Context
 		var err error
@@ -97,10 +99,6 @@ func main() {
 				if err != nil {
 					log := mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
 					ctx.Channels.Log <- log
-					err = ReportErrorToScheduler(log)
-					if err != nil {
-						ctx.Channels.Log <- mig.Log{Desc: "Unable to report failure to scheduler."}.Err()
-					}
 				}
 			}
 		}()
@@ -124,10 +122,6 @@ func main() {
 					// on failure, log and attempt to report it to the scheduler
 					log := mig.Log{CommandID: result.ID, ActionID: result.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
 					ctx.Channels.Log <- log
-					err = ReportErrorToScheduler(log)
-					if err != nil {
-						ctx.Channels.Log <- mig.Log{Desc: "Unable to report failure to scheduler."}.Err()
-					}
 				}
 			}
 		}()
@@ -135,7 +129,7 @@ func main() {
 		// GoRoutine that sends keepAlive messages to scheduler
 		go keepAliveAgent(ctx)
 
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Agent '%s' started.", ctx.Agent.QueueLoc)}
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.QueueLoc)}
 
 		// won't exit until this chan received something
 		exitReason := <-ctx.Channels.Terminate
@@ -175,12 +169,12 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 			// if we have a command to return, update status and send back
 			if cmd.ID > 0 {
-				cmd.Results = mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+				cmd.Results = mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
 				cmd.Status = "failed"
 				ctx.Channels.Results <- cmd
 			}
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving parseCommands()"}.Debug()
+		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "leaving parseCommands()"}.Debug()
 	}()
 
 	// unmarshal the received command into a command struct
@@ -236,9 +230,10 @@ func runAgentModule(ctx Context, migCmd mig.Command) (err error) {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("runCommand() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving runCommand()"}.Debug()
+		ctx.Channels.Log <- mig.Log{CommandID: migCmd.ID, ActionID: migCmd.Action.ID, Desc: "leaving runCommand()"}.Debug()
 	}()
 
+	ctx.Channels.Log <- mig.Log{CommandID: migCmd.ID, ActionID: migCmd.Action.ID, Desc: fmt.Sprintf("executing command '%s'", migCmd.Action.Order)}.Debug()
 	// waiter is a channel that receives a message when the timeout expires
 	waiter := make(chan error, 1)
 	var out bytes.Buffer
@@ -312,9 +307,10 @@ func sendResults(ctx Context, result mig.Command) (err error) {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("sendResults() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving sendResults()"}.Debug()
+		ctx.Channels.Log <- mig.Log{CommandID: result.ID, ActionID: result.Action.ID, Desc: "leaving sendResults()"}.Debug()
 	}()
 
+	ctx.Channels.Log <- mig.Log{CommandID: result.ID, ActionID: result.Action.ID, Desc: "sending command results"}
 	result.AgentQueueLoc = ctx.Agent.QueueLoc
 	body, err := json.Marshal(result)
 	if err != nil {
@@ -357,10 +353,6 @@ func keepAliveAgent(ctx Context) (err error) {
 	return
 }
 
-func ReportErrorToScheduler(log mig.Log) (err error){
-	return
-}
-
 // publish is a generic function that sends messages to an AMQP exchange
 func publish(ctx Context, exchange, routingKey string, body []byte) (err error) {
 	defer func() {
@@ -387,4 +379,3 @@ func publish(ctx Context, exchange, routingKey string, body []byte) (err error) 
 	ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 	return
 }
-
