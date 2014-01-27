@@ -3,10 +3,8 @@ package main
 import(
 	"fmt"
 	"github.com/streadway/amqp"
-	"io"
 	"io/ioutil"
 	"mig"
-	"mig/pgp"
 	"os"
 	"runtime"
 	"time"
@@ -36,9 +34,6 @@ type Context struct {
 		conn *amqp.Connection
 		Chan *amqp.Channel
 		Bind mig.Binding
-	}
-	PGP struct {
-		KeyRing io.Reader
 	}
 	Sleeper time.Duration	// timer used when the agent has to sleep for a while
 	Stats struct {
@@ -88,12 +83,6 @@ func Init() (ctx Context, err error){
 			}
 		}
 	}()
-
-	// tranform the public key into a keyring
-	ctx.PGP.KeyRing, err = pgp.TransformArmoredPubKeyToKeyring(PUBLICPGPKEY)
-	if err != nil {
-		panic(err)
-	}
 
 	// retrieve information on agent environment
 	ctx, err = initAgentEnv(ctx)

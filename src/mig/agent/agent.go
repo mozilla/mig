@@ -44,6 +44,7 @@ import (
 	"github.com/streadway/amqp"
 	"mig"
 	"mig/modules/filechecker"
+	"mig/pgp"
 	"os"
 	"os/exec"
 	"strings"
@@ -189,8 +190,14 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 		panic(err)
 	}
 
+	// get an io.Reader from the public pgp key
+	keyring, err := pgp.TransformArmoredPubKeyToKeyring(PUBLICPGPKEY)
+	if err != nil {
+		panic(err)
+	}
+
 	// Check the action syntax and signature
-	err = cmd.Action.Validate(ctx.PGP.KeyRing)
+	err = cmd.Action.Validate(keyring)
 	if err != nil {
 		desc := fmt.Sprintf("action validation failed: %v", err)
 		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: desc}.Err()
