@@ -67,6 +67,8 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Printf("%s\n", jsonAction)
+
 	// find keyring in default location
 	u, err := user.Current()
 	if err != nil {
@@ -86,7 +88,6 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("%s\n", jsonAction)
 }
 
 func getActionFromTerminal() (ea mig.ExtendedAction, err error) {

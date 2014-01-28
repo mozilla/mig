@@ -185,10 +185,11 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 	}
 
 	// get an io.Reader from the public pgp key
-	keyring, err := pgp.TransformArmoredPubKeyToKeyring(PUBLICPGPKEY)
+	keyring, keycount, err := pgp.ArmoredPubKeysToKeyring(PUBLICPGPKEYS[0:])
 	if err != nil {
 		panic(err)
 	}
+	ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("loaded %d keys", keycount)}.Debug()
 
 	// Check the action syntax and signature
 	err = cmd.Action.Validate(keyring)
