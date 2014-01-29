@@ -67,10 +67,10 @@ func main() {
 		// get input data from file
 		ea, err := mig.ActionFromFile(*file)
 		input, err = json.Marshal(ea.Action.Arguments)
-		*mode = ea.Action.Order
 		if err != nil {
 			panic(err)
 		}
+		*mode = ea.Action.Order
 		hasInputFile = true
 	}
 
