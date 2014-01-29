@@ -27,21 +27,21 @@ GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install
 
-all: mig_agent mig_scheduler mig_action_generator
+all: mig-agent mig-scheduler mig-action-generator
 
-mig_agent:
+mig-agent:
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_agent $(GOLDFLAGS) mig/agent
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent $(GOLDFLAGS) mig/agent
 
-mig_scheduler:
+mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_scheduler $(GOLDFLAGS) mig/scheduler
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig/scheduler
 
-mig_action_generator: gpgme
+mig-action_generator: gpgme
 	$(MKDIR) -p $(BINDIR)
 # XXX this could be nicer
-	ln -sf src/mig/pgp/sign/libmig_gpgme.a ./
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_action-generator $(GOLDFLAGS) mig/client
+	ln -sf src/mig/pgp/sign/libmig-gpgme.a ./
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/client
 
 go_get_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
@@ -50,16 +50,16 @@ go_get_deps:
 	$(GOGETTER) labix.org/v2/mgo/bson
 	$(GOGETTER) code.google.com/p/gcfg
 
-install: gpgme mig_agent mig_scheduler
-	$(INSTALL) -p $(BINDIR)/mig_agent $(DESTDIR)$(PREFIX)/bin/mig_agent
-	$(INSTALL) -p $(BINDIR)/mig_scheduler $(DESTDIR)$(PREFIX)/bin/mig_scheduler
+install: gpgme mig-agent mig-scheduler
+	$(INSTALL) -p $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/bin/mig-agent
+	$(INSTALL) -p $(BINDIR)/mig-scheduler $(DESTDIR)$(PREFIX)/bin/mig-scheduler
 	make -C $(GPGMEDIR) install
 
 gpgme: 
 	make -C $(GPGMEDIR)
 
-tests: mig_agent
-	$(BINDIR)/mig_agent -m=filechecker '{"1382464331517679238": {"Path":"/etc/passwd", "Type": "contains", "Value":"root"}, "1382464331517679239": {"Path":"/etc/passwd", "Type": "contains", "Value":"ulfr"}, "1382464331517679240": {"Path":"/bin/ls", "Type": "md5", "Value": "eb47e6fc8ba9d55217c385b8ade30983"}}' > /dev/null
+tests: mig-agent
+	$(BINDIR)/mig-agent -m=filechecker '{"1382464331517679238": {"Path":"/etc/passwd", "Type": "contains", "Value":"root"}, "1382464331517679239": {"Path":"/etc/passwd", "Type": "contains", "Value":"ulfr"}, "1382464331517679240": {"Path":"/bin/ls", "Type": "md5", "Value": "eb47e6fc8ba9d55217c385b8ade30983"}}' > /dev/null
 
 clean:
 	make -C $(GPGMEDIR) clean
