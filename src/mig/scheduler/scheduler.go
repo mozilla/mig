@@ -313,6 +313,19 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 			ea.Action.Name, ea.Action.Target, ea.Action.Order, ea.Action.ScheduledDate, ea.Action.ExpirationDate)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: desc}
 
+	// TODO: replace with action.Validate(), to include signature verification
+	if time.Now().Before(ea.Action.ScheduledDate) {
+		// queue new action
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: fmt.Sprintf("action '%s' not ready for scheduling", ea.Action.Name)}
+		return
+	}
+	if time.Now().After(ea.Action.ExpirationDate) {
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: fmt.Sprintf("removing expired action '%s'", ea.Action.Name)}
+		// delete expired action
+		os.Remove(actionPath)
+		return
+	}
+
 	// expand the action in one command per agent
 	ea.CommandIDs, err = prepareCommands(ea.Action, ctx)
 	if err != nil {
