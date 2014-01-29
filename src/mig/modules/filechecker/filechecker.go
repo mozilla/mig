@@ -610,7 +610,7 @@ func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
 			Statistics.ChecksMatch, Statistics.UniqueFiles,
 			Statistics.TotalHits)
 	}
-	JsonResults, err := json.Marshal(res)
+	JsonResults, err := json.MarshalIndent(res, "", "\t")
 	if err != nil { panic(err) }
 	return string(JsonResults[:])
 }

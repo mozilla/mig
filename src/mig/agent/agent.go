@@ -55,23 +55,38 @@ import (
 var version string
 
 func main() {
+	var hasInputFile = false
+	var input []byte
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
 	var mode = flag.String("m", "agent", "module to run (eg. agent, filechecker)")
+	var file = flag.String("i", "/path/to/file", "Load action from file")
 	flag.Parse()
 
+	if *file != "/path/to/file" {
+		// get input data from file
+		ea, err := mig.ActionFromFile(*file)
+		input, err = json.Marshal(ea.Action.Arguments)
+		*mode = ea.Action.Order
+		if err != nil {
+			panic(err)
+		}
+		hasInputFile = true
+	}
 
 	switch *mode {
 
 	case "filechecker":
-		// pass the rest of the arguments as a byte array
-		// to the filechecker module
-		var tmparg string
-		for _, arg := range flag.Args() {
-			tmparg = tmparg + arg
+		if !hasInputFile {
+			// pass the rest of the arguments as a byte array
+			// to the filechecker module
+			var tmparg string
+			for _, arg := range flag.Args() {
+				tmparg = tmparg + arg
+			}
+			input = []byte(tmparg)
 		}
-		args := []byte(tmparg)
-		fmt.Printf(filechecker.Run(args))
+		fmt.Println(filechecker.Run(input))
 		os.Exit(0)
 
 	case "agent":
