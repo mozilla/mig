@@ -1,0 +1,9 @@
+{
+    "Name":     "LongRunningActionThatShouldTimeOut",
+    "Target":   "linux",
+    "Order":    "terminate",
+    "ScheduledDate":    "2014-01-01T00:00:00.0Z",
+    "ExpirationDate":   "2024-12-31T23:59:00.0Z",
+    "Arguments": {
+    }
+}
