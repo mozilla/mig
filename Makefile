@@ -37,10 +37,10 @@ mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig/scheduler
 
-mig-action_generator: gpgme
+mig-action-generator: gpgme
 	$(MKDIR) -p $(BINDIR)
 # XXX this could be nicer
-	ln -sf src/mig/pgp/sign/libmig-gpgme.a ./
+	ln -sf src/mig/pgp/sign/libmig_gpgme.a ./
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/client
 
 go_get_deps:
