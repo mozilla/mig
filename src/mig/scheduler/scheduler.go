@@ -258,6 +258,15 @@ func watchDirectories(watcher *fsnotify.Watcher, ctx Context) {
 		select {
 		case ev := <-watcher.Event:
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("watchDirectories(): %s", ev.String())}.Debug()
+
+			// New file detected, but the file size might still be zero, because inotify wakes up before
+			// the file is fully written. If that's the case, wait a little and hope that's enough to finish writing
+			if fileHasSizeZero(ev.Name) {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("file '%s' is size zero. waiting for write to finish.", ev.Name)}.Debug()
+				time.Sleep(200 * time.Millisecond)
+			}
+
+			// Use the prefix of the filename to send it to the appropriate channel
 			if strings.HasPrefix(ev.Name, ctx.Directories.Action.New) {
 				ctx.Channels.NewAction <- ev.Name
 			} else if strings.HasPrefix(ev.Name, ctx.Directories.Command.Ready) {
@@ -678,3 +687,13 @@ func checkNewActions(ctx Context) (err error) {
 	return
 }
 
+func fileHasSizeZero(filepath string)(bool){
+	fd, _ := os.Open(filepath)
+	defer fd.Close()
+	fi, _ := fd.Stat()
+	if fi.Size() == 0 {
+		return true
+	} else {
+		return false
+	}
+}
