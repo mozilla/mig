@@ -1,5 +1,3 @@
-// TODO
-// * syntax check mig.Action.Arguments before exec()
 /* Mozilla InvestiGator Agent
 
 Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -16,11 +14,12 @@ License.
 
 The Initial Developer of the Original Code is
 Mozilla Corporation
-Portions created by the Initial Developer are Copyright (C) 2013
+Portions created by the Initial Developer are Copyright (C) 2014
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
 Julien Vehent jvehent@mozilla.com [:ulfr]
+Guillaume Destuynder <kang@mozilla.com>
 
 Alternatively, the contents of this file may be used under the terms of
 either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,6 +33,9 @@ and other provisions required by the GPL or the LGPL. If you do not delete
 the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
 */
+
+// TODO
+// * syntax check mig.Action.Arguments before exec()
 package main
 
 import (
