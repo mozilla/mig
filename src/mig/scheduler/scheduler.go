@@ -178,6 +178,20 @@ func main() {
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "Agent KeepAlive routine started"}
 
+	// launch the routine that regularly walks through the local directories
+	go func() {
+		for {
+			ctx.OpID = mig.GenID()
+			err := spoolInspection(ctx)
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+			}
+			time.Sleep( 60 * time.Second )
+		}
+	}()
+	ctx.Channels.Log <- mig.Log{Desc: "spoolInspection() routine started"}
+
+
 	// won't exit until this chan received something
 	exitReason := <-ctx.Channels.Terminate
 	fmt.Fprintf(os.Stderr, "Scheduler is shutting down. Reason: %s", exitReason)
@@ -603,3 +617,64 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 
 	return
 }
+
+// spoolInspection walks through the local directories and performs the following
+// * load actions that are sitting in the new action directory, and are passed their scheduleddate
+// 
+func spoolInspection(ctx Context) (err error){
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("spoolInspection() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving spoolInspection()"}.Debug()
+	}()
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "initiating spool inspection"}.Debug()
+
+	err = checkNewActions(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	return
+}
+
+// loadScheduledActions walks through the new actions directories and load the actions
+// that are passed their scheduled date. It also delete expired actions.
+func checkNewActions(ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("checkNewActions() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving checkNewActions()"}.Debug()
+	}()
+	dir, err := os.Open(ctx.Directories.Action.New)
+	dirContent, err := dir.Readdir(-1)
+	if err != nil {
+		panic(err)
+	}
+	// loop over the content of the directory
+	for _, DirEntry := range dirContent {
+		if ! DirEntry.Mode().IsRegular() {
+			// ignore non file
+			continue
+		}
+		filename := ctx.Directories.Action.New + "/" + DirEntry.Name()
+		ea, err := mig.ActionFromFile(filename)
+		if err != nil {
+			panic(err)
+		}
+		if time.Now().After(ea.Action.ScheduledDate) {
+			// queue new action
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: fmt.Sprintf("scheduling action '%s'", ea.Action.Name)}
+			ctx.Channels.NewAction <- filename
+		}
+		if time.Now().After(ea.Action.ExpirationDate) {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: fmt.Sprintf("removing expired action '%s'", ea.Action.Name)}
+			// delete expired action
+			os.Remove(filename)
+		}
+	}
+	dir.Close()
+	return
+}
+
