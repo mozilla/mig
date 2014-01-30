@@ -68,6 +68,9 @@ func main() {
 	if *file != "/path/to/file" {
 		// get input data from file
 		ea, err := mig.ActionFromFile(*file)
+		if err != nil {
+			panic(err)
+		}
 		input, err = json.Marshal(ea.Action.Arguments)
 		if err != nil {
 			panic(err)
