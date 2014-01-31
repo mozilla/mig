@@ -55,6 +55,8 @@ install: gpgme mig-agent mig-scheduler
 	$(INSTALL) -p $(BINDIR)/mig-scheduler $(DESTDIR)$(PREFIX)/sbin/mig-scheduler
 	$(INSTALL) -p $(BINDIR)/mig_action-generator $(DESTDIR)$(PREFIX)/bin/mig_action-generator
 	make -C $(GPGMEDIR) install
+	$(INSTALL) -p mig.cfg $(DESTDIR)$(PREFIX)/etc/mig/mig.cfg
+	$(MKDIR) -p $(DESTDIR)$(PREFIX)/var/cache/mig
 
 gpgme: 
 	make -C $(GPGMEDIR)
