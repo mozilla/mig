@@ -51,8 +51,9 @@ go_get_deps:
 	$(GOGETTER) code.google.com/p/gcfg
 
 install: gpgme mig-agent mig-scheduler
-	$(INSTALL) -p $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/bin/mig-agent
-	$(INSTALL) -p $(BINDIR)/mig-scheduler $(DESTDIR)$(PREFIX)/bin/mig-scheduler
+	$(INSTALL) -p $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
+	$(INSTALL) -p $(BINDIR)/mig-scheduler $(DESTDIR)$(PREFIX)/sbin/mig-scheduler
+	$(INSTALL) -p $(BINDIR)/mig_action-generator $(DESTDIR)$(PREFIX)/bin/mig_action-generator
 	make -C $(GPGMEDIR) install
 
 gpgme: 
