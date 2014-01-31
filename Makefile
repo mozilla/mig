@@ -51,12 +51,40 @@ go_get_deps:
 	$(GOGETTER) code.google.com/p/gcfg
 
 install: gpgme mig-agent mig-scheduler
-	$(INSTALL) -p $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
-	$(INSTALL) -p $(BINDIR)/mig-scheduler $(DESTDIR)$(PREFIX)/sbin/mig-scheduler
-	$(INSTALL) -p $(BINDIR)/mig_action-generator $(DESTDIR)$(PREFIX)/bin/mig_action-generator
-	make -C $(GPGMEDIR) install
-	$(INSTALL) -p mig.cfg $(DESTDIR)$(PREFIX)/etc/mig/mig.cfg
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler $(DESTDIR)$(PREFIX)/sbin/mig-scheduler
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig_action-generator $(DESTDIR)$(PREFIX)/bin/mig_action-generator
+	$(INSTALL) -D -m 0640 mig.cfg $(DESTDIR)$(PREFIX)/etc/mig/mig.cfg
 	$(MKDIR) -p $(DESTDIR)$(PREFIX)/var/cache/mig
+
+rpm: rpm-agent rpm-scheduler rpm-utils
+
+rpm-agent: mig-agent
+# Bonus FPM options
+#       --rpm-digest sha512 --rpm-sign
+	rm -fr tmp
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent tmp/sbin/mig-agent
+	$(MKDIR) -p tmp/var/cache/mig
+	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
+		--url https://github.com/jvehent/mig \
+		-s dir -t rpm .
+
+rpm-scheduler: mig-scheduler
+	rm -rf tmp
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/sbin/mig-scheduler
+	$(INSTALL) -D -m 0640 mig.cfg tmp/etc/mig/mig.cfg
+	$(MKDIR) -p tmp/var/cache/mig
+	fpm -C tmp -n mig-scheduler --license GPL --vendor mozilla --description "Mozilla InvestiGator Scheduler" \
+		--url https://github.com/jvehent/mig \
+		-s dir -t rpm .
+
+rpm-utils: mig-action-generator
+	rm -rf tmp
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/bin/mig-action-generator
+	$(MKDIR) -p tmp/var/cache/mig
+	fpm -C tmp -n mig-utils --license GPL --vendor mozilla --description "Mozilla InvestiGator Utilities" \
+		--url https://github.com/jvehent/mig \
+		-s dir -t rpm .
 
 gpgme: 
 	make -C $(GPGMEDIR)
@@ -69,6 +97,7 @@ clean:
 	make -C $(GPGMEDIR) clean
 	rm -f libmig_gpgme.a
 	rm -rf bin
+	rm -rf tmp
 
 clean-all: clean
 	rm -rf pkg
