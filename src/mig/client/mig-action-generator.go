@@ -112,7 +112,12 @@ func main() {
 	}
 
 	// load keyring
-	keyring, err := os.Open(u.HomeDir + "/.gnupg/pubring.gpg")
+	var gnupghome string
+	gnupghome = os.Getenv("GNUPGHOME")
+	if gnupghome == "" {
+		gnupghome = "/.gnupg"
+	}
+	keyring, err := os.Open(u.HomeDir + gnupghome + "/pubring.gpg")
 	if err != nil {
 		panic(err)
 	}
