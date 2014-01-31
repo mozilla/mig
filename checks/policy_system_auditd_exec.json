@@ -1,14 +1,139 @@
 {
     "Name":             "policy_system_auditd_exec",
+	"Description":		"These checks are compiled from https://mana.mozilla.org/wiki/display/SECURITY/System+Security+Policy+Standard+for+Linux+systems",
     "Target":           "linux",
     "Order":            "filechecker",
     "ScheduledDate":    "2014-12-31T12:00:00.0Z",
     "ExpirationDate":   "2014-12-31T13:00:00.0Z",
     "Arguments": {
-        "check audit configuration for logging of exec syscalls": {
+		"audit buffer size": {
+			"Path":		"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-b 16384$"
+		},
+		"audit rate limit": {
+			"Path":     "/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-r 500$"
+		},
+        "audit execve()": {
             "Path":     "/etc/audit/audit.rules",
             "Type":     "contains",
-            "Value":    "-a exit,always -F arch=b(32|64) -S execve -k exec"
+            "Value":    "^-a exit,always -F arch=b(32|64) -S execve"
         }
-    }
+		"audit personality() syscall bypass": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-a always,exit -F arch=b(32|64) -S personality"
+		},
+		"attempts to alter audit config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/audi(t|sp)/ -p wa"
+		},
+		"attempts to alter audit config (RH systems)": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/sysconfig/auditd -p wa"
+		},
+		"attempts to alter libaudit config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/libaudit.conf -p wa"
+		},
+		"attempts to alter syslog config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/syslog.conf -p wa"
+		},
+		"attempts to alter rsyslog config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/rsyslog.conf -p wa"
+		},
+		"attempts to alter syslog-ng config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/syslog-ng.conf -p wa"
+		},
+		"attempts to alter syslog-ng (dir) config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/rsyslog-ng/ -p wa"
+		},
+		"attempts to alter heka config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w -w /data/hekad/hekad.toml -p wa"
+		},
+		"attempts to alter heka (alternative directory) config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /data/hekad/hekad.toml -p wa"
+		},
+		"attempts to alter cron config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/cron.(allow|deny) -p wa"
+		},
+		"attempts to alter cron (directory) config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/cron.(d|hourly|daily|weekly|monthly) -p wa"
+		},
+		"attempts to alter crontab config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/crontab -p wa"
+		},
+		"attempts to alter crontab (user) config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /var/spool/cron/root -p wa"
+		},
+		"attempts to alter system V init": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/rc.d/init.d/ -p wa"
+		},
+		"attempts to alter systemd (directory) init": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/systemd -p wa"
+		},
+		"attempts to alter system init binary": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w  /sbin/init -p wa"
+		},
+		"attempts to alter inittab": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/inittab -p wa"
+		},
+		"attempts to alter PAM": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/pam.d -p wa"
+		},
+		"attempts to alter PAM (directories)": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /(etc|lib)/security -p wa"
+		},
+		"attempts to alter OpenSSH config": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/sshd -p wa"
+		},
+		"attempts to alter user management": {
+			"Path": 	"/etc/audit/audit.rules",
+			"Type":		"contains",
+			"Value":	"^-w /etc/(group|passwd|shadow|gshadow|sudoers) -p wa"
+		},
+
+
+
+
+
 }
