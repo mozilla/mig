@@ -112,7 +112,7 @@ func main() {
 	}
 
 	// load keyring
-	keyring, err := os.Open(u.HomeDir + "/.gnupg/secring.gpg")
+	keyring, err := os.Open(u.HomeDir + "/.gnupg/pubring.gpg")
 	if err != nil {
 		panic(err)
 	}
