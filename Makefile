@@ -60,6 +60,7 @@ gpgme:
 
 tests: mig-agent
 	$(BINDIR)/mig-agent -m=filechecker '{"1382464331517679238": {"Path":"/etc/passwd", "Type": "contains", "Value":"root"}, "1382464331517679239": {"Path":"/etc/passwd", "Type": "contains", "Value":"ulfr"}, "1382464331517679240": {"Path":"/bin/ls", "Type": "md5", "Value": "eb47e6fc8ba9d55217c385b8ade30983"}}' > /dev/null
+	$(BINDIR)/mig-agent -m=filechecker -i=checks/policy_system_auditd_exec.json
 
 clean:
 	make -C $(GPGMEDIR) clean
