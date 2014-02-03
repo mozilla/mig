@@ -66,7 +66,7 @@ rpm-agent: mig-agent
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent tmp/sbin/mig-agent
 	$(MKDIR) -p tmp/var/cache/mig
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		--url https://github.com/jvehent/mig \
+		--url https://github.com/mozilla/mig \
 		-s dir -t rpm .
 
 rpm-scheduler: mig-scheduler
@@ -75,7 +75,7 @@ rpm-scheduler: mig-scheduler
 	$(INSTALL) -D -m 0640 mig.cfg tmp/etc/mig/mig.cfg
 	$(MKDIR) -p tmp/var/cache/mig
 	fpm -C tmp -n mig-scheduler --license GPL --vendor mozilla --description "Mozilla InvestiGator Scheduler" \
-		--url https://github.com/jvehent/mig \
+		--url https://github.com/mozilla/mig \
 		-s dir -t rpm .
 
 rpm-utils: mig-action-generator
@@ -83,7 +83,7 @@ rpm-utils: mig-action-generator
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/bin/mig-action-generator
 	$(MKDIR) -p tmp/var/cache/mig
 	fpm -C tmp -n mig-utils --license GPL --vendor mozilla --description "Mozilla InvestiGator Utilities" \
-		--url https://github.com/jvehent/mig \
+		--url https://github.com/mozilla/mig \
 		-s dir -t rpm .
 
 gpgme: 
