@@ -1,9 +1,16 @@
 {
     "Name": "test action to demonstrate the syntax",
-    "Description": "https://example.net/url_to_something#useful",
+    "Description": {
+        "Author": "Julien Vehent",
+        "Email": "jvehent@mozilla.com",
+        "URL": "https://example.net/url_to_something#useful",
+        "Revision": "201402041000"
+    },
     "Target": "linux",
-    "ValidFrom": "2014-01-01T12:00:00.0Z",
-    "ExpireAt": "2014-12-31T12:00:00.0Z",
+    "Threat": {
+        "Level": "alert",
+        "Family": "rootkit"
+    },
     "Operations": [
         {
             "Module": "filechecker",
@@ -25,9 +32,6 @@
                         "some md5s for fun": [
                             "451bbb983d522af59204417b0af15fd9",
                             "698b744f7fd977fb307effc664d8c8a4",
-                            "3311cb97534f1eafc68b1693afedb1e6",
-                            "eb4510b5ef08bbcfb44fa49194920f0b",
-                            "337a74578769de48f6d9b373a95e3e97",
                             "9c55b79710160279f88d447c2df3b99e"
                         ]
                     },
@@ -60,14 +64,6 @@
                 "check for connected IP in netstat": [
                     "98.143.145.80",
                     "96.46.4.237",
-                    "109.169.86.178",
-                    "125.67.89.156",
-                    "142.4.96.6",
-                    "124.115.21.209",
-                    "67.198.140.148",
-                    "96.44.179.26",
-                    "235.22.123.90",
-                    "178.77.45.32"
                 ]
             }
         }
