@@ -309,16 +309,16 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	ea.Action.ID = mig.GenID()
 
 	desc := fmt.Sprintf("new action received: Name='%s' Target='%s' Order='%s' ScheduledDate='%s' ExpirationDate='%s'",
-		ea.Action.Name, ea.Action.Target, ea.Action.Order, ea.Action.ScheduledDate, ea.Action.ExpirationDate)
+		ea.Action.Name, ea.Action.Target, ea.Action.Order, ea.Action.ValidFrom, ea.Action.ExpireAfter)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: desc}
 
 	// TODO: replace with action.Validate(), to include signature verification
-	if time.Now().Before(ea.Action.ScheduledDate) {
+	if time.Now().Before(ea.Action.ValidFrom) {
 		// queue new action
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: fmt.Sprintf("action '%s' not ready for scheduling", ea.Action.Name)}
 		return
 	}
-	if time.Now().After(ea.Action.ExpirationDate) {
+	if time.Now().After(ea.Action.ExpireAfter) {
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: fmt.Sprintf("removing expired action '%s'", ea.Action.Name)}
 		// delete expired action
 		os.Remove(actionPath)
@@ -684,12 +684,12 @@ func checkNewActions(ctx Context) (err error) {
 		if err != nil {
 			panic(err)
 		}
-		if time.Now().After(ea.Action.ScheduledDate) {
+		if time.Now().After(ea.Action.ValidFrom) {
 			// queue new action
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: fmt.Sprintf("scheduling action '%s'", ea.Action.Name)}
 			ctx.Channels.NewAction <- filename
 		}
-		if time.Now().After(ea.Action.ExpirationDate) {
+		if time.Now().After(ea.Action.ExpireAfter) {
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: fmt.Sprintf("removing expired action '%s'", ea.Action.Name)}
 			// delete expired action
 			os.Remove(filename)

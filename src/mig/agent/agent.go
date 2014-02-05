@@ -221,7 +221,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 	// Expiration is verified by the Validate() call above, but we need
 	// to verify the ScheduledDate ourselves
-	if time.Now().Before(cmd.Action.ScheduledDate) {
+	if time.Now().Before(cmd.Action.ValidFrom) {
 		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "action is scheduled for later"}.Err()
 		panic("ScheduledDateInFuture")
 	}
