@@ -86,7 +86,7 @@ rpm-utils: mig-action-generator
 		--url https://github.com/mozilla/mig \
 		-s dir -t rpm .
 
-gpgme: 
+gpgme:
 	make -C $(GPGMEDIR)
 
 tests: mig-agent

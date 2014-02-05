@@ -1,0 +1,7 @@
+bin/*
+*.swp
+*.swo
+mig-agent-conf.go
+doc/*.html
+*.a
+*.so
