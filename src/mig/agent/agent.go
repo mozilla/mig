@@ -56,106 +56,141 @@ import (
 // build version
 var version string
 
+type moduleResult struct {
+	id     uint64
+	err    error
+	status string
+	output interface{}
+}
+
+type moduleOp struct {
+	id         uint64
+	mode       string
+	params     interface{}
+	resultChan chan moduleResult
+}
+
 func main() {
-	var hasInputFile = false
-	var input []byte
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
 	var mode = flag.String("m", "agent", "module to run (eg. agent, filechecker)")
 	var file = flag.String("i", "/path/to/file", "Load action from file")
 	flag.Parse()
 
+	// run the agent, and exit when done
+	if *mode == "agent" && *file == "/path/to/file" {
+		err := runAgent()
+		if err != nil {
+			panic(err)
+		}
+		os.Exit(0)
+	}
+
+	// outside of agent mode, parse and run modules
 	if *file != "/path/to/file" {
 		// get input data from file
-		ea, err := mig.ActionFromFile(*file)
+		action, err := mig.ActionFromFile(*file)
 		if err != nil {
 			panic(err)
 		}
-		input, err = json.Marshal(ea.Action.Operations)
-		if err != nil {
-			panic(err)
+
+		// launch each operation consecutively
+		for _, op := range action.Operations {
+			args, err := json.Marshal(op.Parameters)
+			if err != nil {
+				panic(err)
+			}
+			runModuleDirectly(op.Module, args)
 		}
-		*mode = ea.Action.Order
-		hasInputFile = true
+	} else {
+		// without an input file, use the mode from the command line
+		var tmparg string
+		for _, arg := range flag.Args() {
+			tmparg = tmparg + arg
+		}
+		args := []byte(tmparg)
+		runModuleDirectly(*mode, args)
 	}
 
-	switch *mode {
+}
 
+// runModuleDirectly executes a module and displays the results on stdout
+func runModuleDirectly(mode string, args []byte) (err error) {
+	switch mode {
 	case "filechecker":
-		if !hasInputFile {
-			// pass the rest of the arguments as a byte array
-			// to the filechecker module
-			var tmparg string
-			for _, arg := range flag.Args() {
-				tmparg = tmparg + arg
-			}
-			input = []byte(tmparg)
-		}
-		fmt.Println(filechecker.Run(input))
+		fmt.Println(filechecker.Run(args))
 		os.Exit(0)
-
-	case "agent":
-		var ctx Context
-		var err error
-
-		// if init fails, sleep for one minute and try again. forever.
-		for {
-			ctx, err = Init()
-			if err == nil {
-				break
-			}
-			fmt.Println(err)
-			fmt.Println("initialisation failed. sleep and retry.")
-			time.Sleep(60 * time.Second)
-		}
-
-		// Goroutine that receives messages from AMQP
-		go getCommands(ctx)
-
-		// GoRoutine that parses and validates incoming commands
-		go func() {
-			for msg := range ctx.Channels.NewCommand {
-				err = parseCommands(ctx, msg)
-				if err != nil {
-					log := mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
-					ctx.Channels.Log <- log
-				}
-			}
-		}()
-
-		// GoRoutine that executes commands that run as agent modules
-		go func() {
-			for cmd := range ctx.Channels.RunAgentCommand {
-				err = runAgentModule(ctx, cmd)
-				if err != nil {
-					log := mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
-					ctx.Channels.Log <- log
-				}
-			}
-		}()
-
-		// GoRoutine that formats results and send them to scheduler
-		go func() {
-			for result := range ctx.Channels.Results {
-				err = sendResults(ctx, result)
-				if err != nil {
-					// on failure, log and attempt to report it to the scheduler
-					log := mig.Log{CommandID: result.ID, ActionID: result.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
-					ctx.Channels.Log <- log
-				}
-			}
-		}()
-
-		// GoRoutine that sends keepAlive messages to scheduler
-		go keepAliveAgent(ctx)
-
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.QueueLoc)}
-
-		// won't exit until this chan received something
-		exitReason := <-ctx.Channels.Terminate
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
-		Destroy(ctx)
+	default:
+		fmt.Println("Module", mode, "is not implemented")
 	}
+
+	return
+}
+
+// runAgent is the startup function for agent mode. It only exits when the agent
+// must shut down.
+func runAgent() (err error) {
+	var ctx Context
+
+	// if init fails, sleep for one minute and try again. forever.
+	for {
+		ctx, err = Init()
+		if err == nil {
+			break
+		}
+		fmt.Println(err)
+		fmt.Println("initialisation failed. sleep and retry.")
+		time.Sleep(60 * time.Second)
+	}
+
+	// Goroutine that receives messages from AMQP
+	go getCommands(ctx)
+
+	// GoRoutine that parses and validates incoming commands
+	go func() {
+		for msg := range ctx.Channels.NewCommand {
+			err = parseCommands(ctx, msg)
+			if err != nil {
+				log := mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+				ctx.Channels.Log <- log
+			}
+		}
+	}()
+
+	// GoRoutine that executes commands that run as agent modules
+	go func() {
+		for op := range ctx.Channels.RunAgentCommand {
+			err = runAgentModule(ctx, op)
+			if err != nil {
+				log := mig.Log{OpID: op.id, Desc: fmt.Sprintf("%v", err)}.Err()
+				ctx.Channels.Log <- log
+			}
+		}
+	}()
+
+	// GoRoutine that formats results and send them to scheduler
+	go func() {
+		for result := range ctx.Channels.Results {
+			err = sendResults(ctx, result)
+			if err != nil {
+				// on failure, log and attempt to report it to the scheduler
+				log := mig.Log{CommandID: result.ID, ActionID: result.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
+				ctx.Channels.Log <- log
+			}
+		}
+	}()
+
+	// GoRoutine that sends keepAlive messages to scheduler
+	go keepAliveAgent(ctx)
+
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.QueueLoc)}
+
+	// won't exit until this chan received something
+	exitReason := <-ctx.Channels.Terminate
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
+	Destroy(ctx)
+
+	return
 }
 
 // getCommands receives AMQP messages, and feed them to the action chan
@@ -189,7 +224,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 			// if we have a command to return, update status and send back
 			if cmd.ID > 0 {
-				cmd.Results = mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
+				cmd.Results[0] = mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
 				cmd.Status = "failed"
 				ctx.Channels.Results <- cmd
 			}
@@ -226,41 +261,62 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 		panic("ScheduledDateInFuture")
 	}
 
-	switch cmd.Action.Order {
-	case "filechecker":
-		// send to the agent module execution path
-		ctx.Channels.RunAgentCommand <- cmd
-		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "Command queued for execution"}
-	case "shell":
-		// send to the external command execution path
-		ctx.Channels.RunExternalCommand <- cmd
-		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "Command queued for execution"}
-	case "terminate":
-		ctx.Channels.Terminate <- fmt.Errorf("Terminate order received from scheduler")
-	default:
-		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("order '%s' is invalid", cmd.Action.Order)}
-		panic("OrderNotUnderstood")
+	// Each operation is ran separately by a module, a channel is created to receive the results from each module
+	// a goroutine is created to read from the result channel, and when all modules are done, build the response
+	resultChan := make(chan moduleResult)
+
+	for counter, operation := range cmd.Action.Operations {
+		// create an module operation object
+		currentOp := moduleOp{id: mig.GenID(),
+			mode:       operation.Module,
+			params:     operation.Parameters,
+			resultChan: resultChan}
+
+		desc := fmt.Sprintf("sending operation %d to module %s", counter, operation.Module)
+		ctx.Channels.Log <- mig.Log{OpID: currentOp.id, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: desc}
+
+		// pass the module operation object to the proper channel
+		switch operation.Module {
+		case "filechecker":
+			// send the operation to the module
+			ctx.Channels.RunAgentCommand <- currentOp
+		case "shell":
+			// send to the external execution path
+			ctx.Channels.RunExternalCommand <- currentOp
+		case "terminate":
+			ctx.Channels.Terminate <- fmt.Errorf("Terminate order received from scheduler")
+		default:
+			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("module '%s' is invalid", operation.Module)}
+			panic("UnknownModule")
+		}
 	}
+
+	// start the goroutine that will receive the results
+	go receiveResults(ctx, cmd, resultChan)
+
 	return
 }
 
 // runAgentModule is a generic command launcher for MIG modules that are
 // built into the agent's binary. It handles commands timeout.
-func runAgentModule(ctx Context, migCmd mig.Command) (err error) {
+func runAgentModule(ctx Context, op moduleOp) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("runCommand() -> %v", e)
+			err = fmt.Errorf("runAgentModule() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{CommandID: migCmd.ID, ActionID: migCmd.Action.ID, Desc: "leaving runCommand()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "leaving runAgentModule()"}.Debug()
 	}()
 
-	ctx.Channels.Log <- mig.Log{CommandID: migCmd.ID, ActionID: migCmd.Action.ID, Desc: fmt.Sprintf("executing command '%s'", migCmd.Action.Order)}.Debug()
+	var result moduleResult
+	result.id = op.id
+
+	ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: fmt.Sprintf("executing module '%s'", op.mode)}.Debug()
 	// waiter is a channel that receives a message when the timeout expires
 	waiter := make(chan error, 1)
 	var out bytes.Buffer
 
 	// Command arguments must be in json format
-	tmpargs, err := json.Marshal(migCmd.Action.Operations)
+	tmpargs, err := json.Marshal(op.params)
 	if err != nil {
 		panic(err)
 	}
@@ -269,7 +325,7 @@ func runAgentModule(ctx Context, migCmd mig.Command) (err error) {
 	cmdArgs := fmt.Sprintf("%s", tmpargs)
 
 	// build the command line and execute
-	cmd := exec.Command(os.Args[0], "-m", strings.ToLower(migCmd.Action.Order), cmdArgs)
+	cmd := exec.Command(os.Args[0], "-m", strings.ToLower(op.mode), cmdArgs)
 	cmd.Stdout = &out
 	if err := cmd.Start(); err != nil {
 		panic(err)
@@ -284,11 +340,11 @@ func runAgentModule(ctx Context, migCmd mig.Command) (err error) {
 
 	// Timeout case: command has reached timeout, kill it
 	case <-time.After(MODULETIMEOUT):
-		ctx.Channels.Log <- mig.Log{ActionID: migCmd.Action.ID, CommandID: migCmd.ID, Desc: "command timed out. Killing it."}.Err()
+		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command timed out. Killing it."}.Err()
 
 		// update the command status and send the response back
-		migCmd.Status = "timeout"
-		ctx.Channels.Results <- migCmd
+		result.status = "timeout"
+		op.resultChan <- result
 
 		// kill the command
 		err := cmd.Process.Kill()
@@ -301,24 +357,55 @@ func runAgentModule(ctx Context, migCmd mig.Command) (err error) {
 	case err := <-waiter:
 
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{ActionID: migCmd.Action.ID, CommandID: migCmd.ID, Desc: "command failed."}.Err()
+			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command failed."}.Err()
 			// update the command status and send the response back
-			migCmd.Status = "failed"
-			ctx.Channels.Results <- migCmd
+			result.status = "failed"
+			op.resultChan <- result
 			panic(err)
 
 		} else {
-			ctx.Channels.Log <- mig.Log{ActionID: migCmd.Action.ID, CommandID: migCmd.ID, Desc: "command succeeded."}
-			err = json.Unmarshal(out.Bytes(), &migCmd.Results)
+			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command succeeded."}
+			err = json.Unmarshal(out.Bytes(), &result.output)
 			if err != nil {
 				panic(err)
 			}
 			// mark command status as successfully completed
-			migCmd.Status = "succeeded"
-			// send the results back to the scheduler
-			ctx.Channels.Results <- migCmd
+			result.status = "succeeded"
+			// send the results
+			op.resultChan <- result
 		}
 	}
+	return
+}
+
+// receiveResult listens on a temporary channels for results coming from modules. It aggregated them, and
+// when all are received, it build a response that is passed to the Result channel
+func receiveResults(ctx Context, cmd mig.Command, resultChan chan moduleResult) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("sendResults() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "leaving sendResults()"}.Debug()
+	}()
+
+	resultReceived := 0
+
+	// for each result received, populate the content of cmd.Results with it
+	// stop when we received all the expected results
+	for result := range resultChan {
+		cmd.Status = result.status
+		cmd.Results = append(cmd.Results, result.output)
+		resultReceived += 1
+		if resultReceived >= len(cmd.Action.Operations) {
+			break
+		}
+	}
+
+	// forward the updated command
+	ctx.Channels.Results <- cmd
+
+	// close the channel, we're done here
+	close(resultChan)
 	return
 }
 

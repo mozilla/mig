@@ -47,7 +47,7 @@ type Command struct {
 	ID                               uint64
 	Action                           Action
 	AgentName, AgentQueueLoc, Status string
-	Results                          interface{}
+	Results                          []interface{}
 	StartTime, FinishTime            time.Time
 }
 

@@ -55,10 +55,11 @@ type Context struct {
 	}
 	Channels struct {
 		// internal
-		Terminate                                    chan error
-		Log                                          chan mig.Log
-		NewCommand                                   chan []byte
-		RunAgentCommand, RunExternalCommand, Results chan mig.Command
+		Terminate                           chan error
+		Log                                 chan mig.Log
+		NewCommand                          chan []byte
+		RunAgentCommand, RunExternalCommand chan moduleOp
+		Results                             chan mig.Command
 	}
 	MQ struct {
 		// configuration
@@ -138,8 +139,8 @@ func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
 	ctx.Channels.Terminate = make(chan error)
 	ctx.Channels.NewCommand = make(chan []byte, 7)
-	ctx.Channels.RunAgentCommand = make(chan mig.Command, 5)
-	ctx.Channels.RunExternalCommand = make(chan mig.Command, 5)
+	ctx.Channels.RunAgentCommand = make(chan moduleOp, 5)
+	ctx.Channels.RunExternalCommand = make(chan moduleOp, 5)
 	ctx.Channels.Results = make(chan mig.Command, 5)
 	ctx.Channels.Log = make(chan mig.Log, 97)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
