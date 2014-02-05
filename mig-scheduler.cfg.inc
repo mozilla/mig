@@ -1,17 +1,23 @@
 ; Sample MIG configuration file
+
 [agent]
     timeout = "20m"
     whitelist = "/var/cache/mig/agents_whitelist.txt"
+
 [directories]
     spool = "/var/cache/mig/"
     tmp = "/var/tmp/"
+
 [db]
-    host = "172.21.4.148"
+    host = "127.0.0.1"
+    port = 27017
+
 [mq]
-    host = "172.21.1.1"
+    host = "127.0.0.1"
     port = 5672
     user = "guest"
     pass = "guest"
+
 [logging]
     mode = "stdout" ; stdout | file | syslog
     level = "debug"

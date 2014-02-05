@@ -60,7 +60,7 @@ var activeAgentsList []string
 // AMQP ctx.MQ.Chan. It also launches the goroutines.
 func main() {
 	// command line options
-	var config = flag.String("c", "/etc/mig/mig.cfg", "Load configuration from file")
+	var config = flag.String("c", "/etc/mig/scheduler.cfg", "Load configuration from file")
 	flag.Parse()
 
 	// The context initialization takes care of parsing the configuration,
