@@ -71,7 +71,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		input, err = json.Marshal(ea.Action.Arguments)
+		input, err = json.Marshal(ea.Action.Operations)
 		if err != nil {
 			panic(err)
 		}
@@ -260,7 +260,7 @@ func runAgentModule(ctx Context, migCmd mig.Command) (err error) {
 	var out bytes.Buffer
 
 	// Command arguments must be in json format
-	tmpargs, err := json.Marshal(migCmd.Action.Arguments)
+	tmpargs, err := json.Marshal(migCmd.Action.Operations)
 	if err != nil {
 		panic(err)
 	}

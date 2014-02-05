@@ -70,7 +70,7 @@ const (
 	CheckSHA3_512
 )
 
-type Arguments struct {
+type Operations struct {
 	Arg map[string]FileCheck
 }
 
