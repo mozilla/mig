@@ -15,14 +15,14 @@ PREFIX		:= /usr/local/
 DESTDIR		:= /
 GPGMEDIR	:= src/mig/pgp/sign
 BINDIR		:= bin/$(OS)/$(ARCH)
-AGTCONF		:= mig-agent-conf.go
+AGTCONF		:= conf/mig-agent-conf.go
 
 GCC			:= gcc
 CFLAGS		:=
 LDFLAGS		:=
 GOOPTS		:=
 GO			:= GOPATH=$(shell go env GOROOT)/bin:$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go
-GOGETTER	:= GOPATH=$(shell pwd) go get
+GOGETTER	:= GOPATH=$(shell pwd) go get -u
 GOLDFLAGS	:= -ldflags "-X main.version $(BUILDREV)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
