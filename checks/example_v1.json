@@ -4,7 +4,7 @@
         "Author": "Julien Vehent",
         "Email": "jvehent@mozilla.com",
         "URL": "https://example.net/url_to_something#useful",
-        "Revision": "201402041000"
+        "Revision": 201402041000
     },
     "Target": "linux",
     "Threat": {
@@ -63,7 +63,7 @@
             "Parameters": {
                 "check for connected IP in netstat": [
                     "98.143.145.80",
-                    "96.46.4.237",
+                    "96.46.4.237"
                 ]
             }
         }
