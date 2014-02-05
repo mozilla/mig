@@ -186,11 +186,10 @@ func main() {
 			if err != nil {
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
 			}
-			time.Sleep( 60 * time.Second )
+			time.Sleep(60 * time.Second)
 		}
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "spoolInspection() routine started"}
-
 
 	// won't exit until this chan received something
 	exitReason := <-ctx.Channels.Terminate
@@ -310,7 +309,7 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	ea.Action.ID = mig.GenID()
 
 	desc := fmt.Sprintf("new action received: Name='%s' Target='%s' Order='%s' ScheduledDate='%s' ExpirationDate='%s'",
-			ea.Action.Name, ea.Action.Target, ea.Action.Order, ea.Action.ScheduledDate, ea.Action.ExpirationDate)
+		ea.Action.Name, ea.Action.Target, ea.Action.Order, ea.Action.ScheduledDate, ea.Action.ExpirationDate)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: desc}
 
 	// TODO: replace with action.Validate(), to include signature verification
@@ -366,12 +365,12 @@ func prepareCommands(action mig.Action, ctx Context) (cmdIDs []uint64, err error
 	// select on the OS type, the queueloc and the name. It also only retrieve
 	// agents that have sent an heartbeat in the last `since` period
 	iter := ctx.DB.Col.Reg.Find(bson.M{"$or": []bson.M{
-							bson.M{"os": action.Target},
-							bson.M{"queueloc": action.Target},
-							bson.M{"name": action.Target},
-						},
-					"heartbeatts": bson.M{"$gte": since},
-				}).Iter()
+		bson.M{"os": action.Target},
+		bson.M{"queueloc": action.Target},
+		bson.M{"name": action.Target},
+	},
+		"heartbeatts": bson.M{"$gte": since},
+	}).Iter()
 	err = iter.All(&targets)
 	if err != nil {
 		panic(err)
@@ -402,12 +401,12 @@ func createCommand(ctx Context, action mig.Action, target mig.KeepAlive) (cmdid 
 	cmdid = mig.GenID()
 
 	cmd := mig.Command{
-		AgentName: target.Name,
+		AgentName:     target.Name,
 		AgentQueueLoc: target.QueueLoc,
-		Status: "prepared",
-		Action:	action,
-		ID: cmdid,
-		StartTime: time.Now().UTC(),
+		Status:        "prepared",
+		Action:        action,
+		ID:            cmdid,
+		StartTime:     time.Now().UTC(),
 	}
 
 	data, err := json.Marshal(cmd)
@@ -608,7 +607,7 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	// regardless of returned status, increase completion counter
 	ea.CmdCompleted++
 	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, succeeded=%d, cancelled=%d, failed=%d, timeout=%d",
-			ea.Action.Name, ea.CmdCompleted, len(ea.CommandIDs), ea.CmdSucceeded, ea.CmdCancelled, ea.CmdFailed, ea.CmdTimeOut)
+		ea.Action.Name, ea.CmdCompleted, len(ea.CommandIDs), ea.CmdSucceeded, ea.CmdCancelled, ea.CmdFailed, ea.CmdTimeOut)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, CommandID: cmd.ID, Desc: desc}
 
 	// Has the action completed?
@@ -642,8 +641,8 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 
 // spoolInspection walks through the local directories and performs the following
 // * load actions that are sitting in the new action directory, and are passed their scheduleddate
-// 
-func spoolInspection(ctx Context) (err error){
+//
+func spoolInspection(ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("spoolInspection() -> %v", e)
@@ -676,7 +675,7 @@ func checkNewActions(ctx Context) (err error) {
 	}
 	// loop over the content of the directory
 	for _, DirEntry := range dirContent {
-		if ! DirEntry.Mode().IsRegular() {
+		if !DirEntry.Mode().IsRegular() {
 			// ignore non file
 			continue
 		}
@@ -700,7 +699,7 @@ func checkNewActions(ctx Context) (err error) {
 	return
 }
 
-func fileHasSizeZero(filepath string)(bool){
+func fileHasSizeZero(filepath string) bool {
 	fd, _ := os.Open(filepath)
 	defer fd.Close()
 	fi, _ := fd.Stat()

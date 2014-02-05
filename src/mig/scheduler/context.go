@@ -48,21 +48,21 @@ import (
 // database and message brokers. It also contains some statistics.
 // Context is intended as a single structure that can be passed around easily.
 type Context struct {
-	OpID uint64	// ID of the current operation, used for tracking
+	OpID  uint64 // ID of the current operation, used for tracking
 	Agent struct {
 		// configuration
 		TimeOut, Whitelist string
 	}
 	Channels struct {
 		// internal
-		Terminate chan error
-		Log chan mig.Log
+		Terminate                                                                        chan error
+		Log                                                                              chan mig.Log
 		NewAction, ActionDone, CommandReady, UpdateCommand, CommandReturned, CommandDone chan string
 	}
 	Directories struct {
 		// configuration
 		Spool string
-		Tmp string
+		Tmp   string
 		// internal
 		Action struct {
 			New, InFlight, Done, Invalid string
@@ -74,19 +74,19 @@ type Context struct {
 	DB struct {
 		// configuration
 		Host, User, Pass string
-		Port int
-		UseTLS bool
+		Port             int
+		UseTLS           bool
 		// internal
 		session *mgo.Session
-		Col struct {
+		Col     struct {
 			Reg, Action, Cmd *mgo.Collection
 		}
 	}
 	MQ struct {
 		// configuration
 		Host, User, Pass string
-		Port int
-		UseTLS bool
+		Port             int
+		UseTLS           bool
 		// internal
 		conn *amqp.Connection
 		Chan *amqp.Channel
@@ -94,12 +94,11 @@ type Context struct {
 	Stats struct {
 	}
 	Logging mig.Logging
-
 }
 
 // Init() initializes a context from a configuration file into an
 // existing context struct
-func Init(path string) (ctx Context, err error){
+func Init(path string) (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("Init() -> %v", e)
@@ -201,9 +200,8 @@ func initDirectories(orig_ctx Context) (ctx Context, err error) {
 	return
 }
 
-
 // initDB() sets up the connection to the MongoDB backend database
-func initDB(orig_ctx Context) (ctx Context, err error){
+func initDB(orig_ctx Context) (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initDB() -> %v", e)
@@ -220,16 +218,16 @@ func initDB(orig_ctx Context) (ctx Context, err error){
 	ctx.DB.session.SetSafe(&mgo.Safe{}) // make safe writes only
 
 	// create handlers to collections
-	ctx.DB.Col.Reg		= ctx.DB.session.DB("mig").C("registrations")
-	ctx.DB.Col.Action	= ctx.DB.session.DB("mig").C("actions")
-	ctx.DB.Col.Cmd		= ctx.DB.session.DB("mig").C("commands")
+	ctx.DB.Col.Reg = ctx.DB.session.DB("mig").C("registrations")
+	ctx.DB.Col.Action = ctx.DB.session.DB("mig").C("actions")
+	ctx.DB.Col.Cmd = ctx.DB.session.DB("mig").C("commands")
 
 	ctx.Channels.Log <- mig.Log{Sev: "info", Desc: "MongoDB connection opened"}
 	return
 }
 
 // initBroker() sets up the connection to the RabbitMQ broker
-func initBroker(orig_ctx Context) (ctx Context, err error){
+func initBroker(orig_ctx Context) (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initBroker() -> %v", e)
@@ -286,13 +284,13 @@ func initBroker(orig_ctx Context) (ctx Context, err error){
 // initChannels creates Go channels used by the disk watcher
 func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
-	ctx.Channels.NewAction		= make(chan string, 173)
-	ctx.Channels.ActionDone		= make(chan string, 127)
-	ctx.Channels.CommandReady	= make(chan string, 991)
-	ctx.Channels.UpdateCommand	= make(chan string, 599)
-	ctx.Channels.CommandReturned	= make(chan string, 271)
-	ctx.Channels.CommandDone	= make(chan string, 641)
-	ctx.Channels.Log		= make(chan mig.Log, 601)
+	ctx.Channels.NewAction = make(chan string, 173)
+	ctx.Channels.ActionDone = make(chan string, 127)
+	ctx.Channels.CommandReady = make(chan string, 991)
+	ctx.Channels.UpdateCommand = make(chan string, 599)
+	ctx.Channels.CommandReturned = make(chan string, 271)
+	ctx.Channels.CommandDone = make(chan string, 641)
+	ctx.Channels.Log = make(chan mig.Log, 601)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
 	return
 }

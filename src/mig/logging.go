@@ -35,7 +35,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 
 package mig
 
-import(
+import (
 	"fmt"
 	"log"
 	"log/syslog"
@@ -52,18 +52,18 @@ const (
 type Logging struct {
 	// configuration
 	Mode, Level, File, Host, Protocol, Facility string
-	Port int
+	Port                                        int
 	// internal
-	logmode int
-	maxlvl syslog.Priority
+	logmode  int
+	maxlvl   syslog.Priority
 	syslogfd *syslog.Writer
 }
 
 // Log defines a log entry
 type Log struct {
 	OpID, ActionID, CommandID uint64
-	Sev, Desc string
-	Priority syslog.Priority
+	Sev, Desc                 string
+	Priority                  syslog.Priority
 }
 
 func (l Log) Emerg() (mlog Log) {
@@ -184,7 +184,7 @@ func InitLogger(orig_logctx Logging) (logctx Logging, err error) {
 }
 
 // initSyslog creates a connection to syslog and stores the handler in ctx
-func initSyslog(orig_logctx Logging) (logctx Logging, err error){
+func initSyslog(orig_logctx Logging) (logctx Logging, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("mig.initSyslog() -> %v", e)
@@ -202,7 +202,7 @@ func initSyslog(orig_logctx Logging) (logctx Logging, err error){
 		panic("Syslog protocol is missing")
 	}
 	dialaddr := logctx.Host + ":" + fmt.Sprintf("%d", logctx.Port)
-	logctx.syslogfd, err = syslog.Dial(logctx.Protocol, dialaddr, syslog.LOG_LOCAL3 | syslog.LOG_INFO, "mig_scheduler")
+	logctx.syslogfd, err = syslog.Dial(logctx.Protocol, dialaddr, syslog.LOG_LOCAL3|syslog.LOG_INFO, "mig_scheduler")
 	if err != nil {
 		panic(err)
 	}
@@ -213,7 +213,7 @@ func initSyslog(orig_logctx Logging) (logctx Logging, err error){
 }
 
 // initLogFile creates a logfile and stores the descriptor in ctx
-func initLogFile(orig_logctx Logging) (logctx Logging, err error){
+func initLogFile(orig_logctx Logging) (logctx Logging, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("mig.InitLogFile() -> %v", e)
@@ -221,7 +221,7 @@ func initLogFile(orig_logctx Logging) (logctx Logging, err error){
 	}()
 
 	logctx = orig_logctx
-	fd, err := os.OpenFile(logctx.File, os.O_WRONLY | os.O_APPEND | os.O_CREATE, 0640)
+	fd, err := os.OpenFile(logctx.File, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0640)
 	if err != nil {
 		panic(err)
 	}
@@ -231,7 +231,7 @@ func initLogFile(orig_logctx Logging) (logctx Logging, err error){
 
 // initLogStdOut does nothing except storing in ctx that logs should be
 // sent to stdout directly
-func initLogStdOut(orig_logctx Logging) (logctx Logging, err error){
+func initLogStdOut(orig_logctx Logging) (logctx Logging, err error) {
 	logctx = orig_logctx
 	return
 }
@@ -291,7 +291,7 @@ func ProcessLog(logctx Logging, l Log) (stop bool, err error) {
 	}
 
 	switch logctx.logmode {
-	case MODE_SYSLOG :
+	case MODE_SYSLOG:
 		switch l.Priority {
 		// emergency logging causes the scheduler to shut down
 		case syslog.LOG_EMERG:

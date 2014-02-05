@@ -44,11 +44,11 @@ import (
 )
 
 type Command struct {
-	ID uint64
-	Action Action
+	ID                               uint64
+	Action                           Action
 	AgentName, AgentQueueLoc, Status string
-	Results interface{}
-	StartTime, FinishTime time.Time
+	Results                          interface{}
+	StartTime, FinishTime            time.Time
 }
 
 // FromFile reads a command from a local file on the file system

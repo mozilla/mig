@@ -35,6 +35,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 */
 
 package main
+
 import (
 	"encoding/json"
 	"flag"
@@ -52,11 +53,11 @@ func main() {
 
 	var Usage = func() {
 		fmt.Fprintf(os.Stderr,
-			"Mozilla InvestiGator Action Generator\n" +
-			"usage: %s -k=<key id> (-i <input file)\n\n" +
-			"Command line to generate and sign MIG Actions.\n" +
-			"The resulting actions are display on stdout.\n\n" +
-			"Options:\n",
+			"Mozilla InvestiGator Action Generator\n"+
+				"usage: %s -k=<key id> (-i <input file)\n\n"+
+				"Command line to generate and sign MIG Actions.\n"+
+				"The resulting actions are display on stdout.\n\n"+
+				"Options:\n",
 			os.Args[0])
 		flag.PrintDefaults()
 	}
@@ -161,49 +162,45 @@ func getActionFromTerminal() (a mig.Action, err error) {
 		panic(err)
 	}
 
-//	var checkArgs string
-//	switch ea.Action.Order {
-//	default:
-//		fmt.Print("Unknown check type, supply JSON arguments> ")
-//		_, err := fmt.Scanln(&checkArgs)
-//		if err != nil {
-//			panic(err)
-//		}
-//		err = json.Unmarshal([]byte(checkArgs), ea.Action.Arguments)
-//		if err != nil {
-//			panic(err)
-//		}
-//	case "filechecker":
-//		fmt.Println("Filechecker module parameters")
-//		var name string
-//		var fcargs filechecker.FileCheck
-//		fmt.Print("Filechecker Name> ")
-//		_, err := fmt.Scanln(&name)
-//		if err != nil {
-//			panic(err)
-//		}
-//		fmt.Print("Filechecker Type> ")
-//		_, err = fmt.Scanln(&fcargs.Type)
-//		if err != nil {
-//			panic(err)
-//		}
-//		fmt.Print("Filechecker Path> ")
-//		_, err = fmt.Scanln(&fcargs.Path)
-//		if err != nil {
-//			panic(err)
-//		}
-//		fmt.Print("Filechecker Value> ")
-//		_, err = fmt.Scanln(&fcargs.Value)
-//		if err != nil {
-//			panic(err)
-//		}
-//		fc := make(map[string]filechecker.FileCheck)
-//		fc[name] = fcargs
-//		ea.Action.Arguments = fc
-//	}
+	//	var checkArgs string
+	//	switch ea.Action.Order {
+	//	default:
+	//		fmt.Print("Unknown check type, supply JSON arguments> ")
+	//		_, err := fmt.Scanln(&checkArgs)
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//		err = json.Unmarshal([]byte(checkArgs), ea.Action.Arguments)
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//	case "filechecker":
+	//		fmt.Println("Filechecker module parameters")
+	//		var name string
+	//		var fcargs filechecker.FileCheck
+	//		fmt.Print("Filechecker Name> ")
+	//		_, err := fmt.Scanln(&name)
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//		fmt.Print("Filechecker Type> ")
+	//		_, err = fmt.Scanln(&fcargs.Type)
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//		fmt.Print("Filechecker Path> ")
+	//		_, err = fmt.Scanln(&fcargs.Path)
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//		fmt.Print("Filechecker Value> ")
+	//		_, err = fmt.Scanln(&fcargs.Value)
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//		fc := make(map[string]filechecker.FileCheck)
+	//		fc[name] = fcargs
+	//		ea.Action.Arguments = fc
+	//	}
 	return
 }
-
-
-
-

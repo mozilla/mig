@@ -71,7 +71,7 @@ const (
 )
 
 type Arguments struct {
-	Arg	map[string]FileCheck
+	Arg map[string]FileCheck
 }
 
 // Representation of a File Check.
@@ -85,16 +85,16 @@ type Arguments struct {
 // Files is an slice of string that contains paths of matching files
 // Re is a regular expression
 type FileCheck struct {
-	ID, Path, Type, Value			string
-	CodeType, FilesCount, MatchCount	int
-	Result					bool
-	Files					map[string]int
-	Re					*regexp.Regexp
+	ID, Path, Type, Value            string
+	CodeType, FilesCount, MatchCount int
+	Result                           bool
+	Files                            map[string]int
+	Re                               *regexp.Regexp
 }
 
 type Results struct {
 	TestedFiles, MatchCount int
-	Files []string
+	Files                   []string
 }
 
 /* Statistic counters:
@@ -105,9 +105,9 @@ type Results struct {
 - TotalHits is the total number of Checks hits
 */
 type Stats struct {
-	CheckCount    int
+	CheckCount  int
 	FilesCount  int
-	ChecksMatch   int
+	ChecksMatch int
 	UniqueFiles int
 	TotalHits   int
 }
@@ -116,7 +116,7 @@ type Stats struct {
 // individual FileChecks, stored in a map.
 // Each Check contains a path, which is inspected in the GetDownThatPath function.
 // The results are stored in the Checks map and sent to stdout at the end.
-func Run(Args []byte) (string) {
+func Run(Args []byte) string {
 	if DEBUG {
 		VERBOSE = true
 	}
@@ -129,7 +129,9 @@ func Run(Args []byte) (string) {
 	*/
 	Checks := make(map[string]FileCheck)
 	err := json.Unmarshal(Args, &Checks)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	// ToDoChecks is a list of Checks to process, dequeued when done
 	ToDoChecks := make(map[string]FileCheck)
 	var Statistics Stats
@@ -162,7 +164,7 @@ func Run(Args []byte) (string) {
 }
 
 // ParseCheck verifies and populate checks passed as arguments
-func ParseCheck(check FileCheck, id string) (FileCheck) {
+func ParseCheck(check FileCheck, id string) FileCheck {
 	check.ID = id
 	switch check.Type {
 	case "contains":
@@ -216,8 +218,8 @@ func ParseCheck(check FileCheck, id string) (FileCheck) {
 // return:
 //      - nil on success, error on error
 func GetDownThatPath(path string, ActiveCheckIDs []string, CheckBitMask int,
-		     Checks map[string]FileCheck, ToDoChecks map[string]FileCheck,
-		     Statistics *Stats) error {
+	Checks map[string]FileCheck, ToDoChecks map[string]FileCheck,
+	Statistics *Stats) error {
 	for id, check := range ToDoChecks {
 		if check.Path == path {
 			/* Found a new Check to apply to the current path, add
@@ -311,8 +313,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 			}
 		}
 		if MatchRegexpsOnFile(fd, ReList, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -326,8 +328,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 			}
 		}
 		if MatchRegexpsOnName(fd.Name(), ReList, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -335,8 +337,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 	if (CheckBitMask & CheckMD5) != 0 {
 		hash := GetHash(fd, CheckMD5)
 		if VerifyHash(fd.Name(), hash, CheckMD5, ActiveCheckIDs, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -344,8 +346,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 	if (CheckBitMask & CheckSHA1) != 0 {
 		hash := GetHash(fd, CheckSHA1)
 		if VerifyHash(fd.Name(), hash, CheckSHA1, ActiveCheckIDs, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -353,8 +355,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 	if (CheckBitMask & CheckSHA256) != 0 {
 		hash := GetHash(fd, CheckSHA256)
 		if VerifyHash(fd.Name(), hash, CheckSHA256, ActiveCheckIDs, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -362,8 +364,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 	if (CheckBitMask & CheckSHA384) != 0 {
 		hash := GetHash(fd, CheckSHA384)
 		if VerifyHash(fd.Name(), hash, CheckSHA384, ActiveCheckIDs, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -371,8 +373,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 	if (CheckBitMask & CheckSHA512) != 0 {
 		hash := GetHash(fd, CheckSHA512)
 		if VerifyHash(fd.Name(), hash, CheckSHA512, ActiveCheckIDs, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -380,8 +382,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 	if (CheckBitMask & CheckSHA3_224) != 0 {
 		hash := GetHash(fd, CheckSHA3_224)
 		if VerifyHash(fd.Name(), hash, CheckSHA3_224, ActiveCheckIDs, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -389,8 +391,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 	if (CheckBitMask & CheckSHA3_256) != 0 {
 		hash := GetHash(fd, CheckSHA3_256)
 		if VerifyHash(fd.Name(), hash, CheckSHA3_256, ActiveCheckIDs, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -398,8 +400,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 	if (CheckBitMask & CheckSHA3_384) != 0 {
 		hash := GetHash(fd, CheckSHA3_384)
 		if VerifyHash(fd.Name(), hash, CheckSHA3_384, ActiveCheckIDs, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -407,8 +409,8 @@ func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks 
 	if (CheckBitMask & CheckSHA3_512) != 0 {
 		hash := GetHash(fd, CheckSHA3_512)
 		if VerifyHash(fd.Name(), hash, CheckSHA3_512, ActiveCheckIDs, Checks) {
-			if DEBUG{
-				fmt.Printf("InspectFile: Positive result " +
+			if DEBUG {
+				fmt.Printf("InspectFile: Positive result "+
 					"found for '%s'\n", fd.Name())
 			}
 		}
@@ -569,7 +571,7 @@ func MatchRegexpsOnName(filename string, ReList []string, Checks map[string]File
 //      - Statistics is a set of counters
 // returns:
 //      - nil on success, error on failure
-func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
+func BuildResults(Checks map[string]FileCheck, Statistics *Stats) string {
 	res := make(map[string]Results)
 	FileHistory := make(map[string]int)
 	for _, check := range Checks {
@@ -596,8 +598,8 @@ func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
 		}
 		res[check.ID] = Results{
 			TestedFiles: check.FilesCount,
-			MatchCount: check.MatchCount,
-			Files: listPosFiles,
+			MatchCount:  check.MatchCount,
+			Files:       listPosFiles,
 		}
 	}
 	if VERBOSE {
@@ -611,6 +613,8 @@ func BuildResults(Checks map[string]FileCheck, Statistics *Stats) (string) {
 			Statistics.TotalHits)
 	}
 	JsonResults, err := json.MarshalIndent(res, "", "\t")
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	return string(JsonResults[:])
 }

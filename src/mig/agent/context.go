@@ -35,7 +35,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 
 package main
 
-import(
+import (
 	"fmt"
 	"github.com/streadway/amqp"
 	"io/ioutil"
@@ -49,36 +49,36 @@ import(
 // logs and channels
 // Context is intended as a single structure that can be passed around easily.
 type Context struct {
-	OpID uint64	// ID of the current operation, used for tracking
+	OpID  uint64 // ID of the current operation, used for tracking
 	Agent struct {
 		Hostname, OS, QueueLoc, UID string
 	}
 	Channels struct {
 		// internal
-		Terminate chan error
-		Log chan mig.Log
-		NewCommand chan []byte
+		Terminate                                    chan error
+		Log                                          chan mig.Log
+		NewCommand                                   chan []byte
 		RunAgentCommand, RunExternalCommand, Results chan mig.Command
 	}
 	MQ struct {
 		// configuration
 		Host, User, Pass string
-		Port int
-		UseTLS bool
+		Port             int
+		UseTLS           bool
 		// internal
 		conn *amqp.Connection
 		Chan *amqp.Channel
 		Bind mig.Binding
 	}
-	Sleeper time.Duration	// timer used when the agent has to sleep for a while
-	Stats struct {
+	Sleeper time.Duration // timer used when the agent has to sleep for a while
+	Stats   struct {
 	}
 	Logging mig.Logging
 }
 
 // Init prepare the AMQP connections to the broker and launches the
 // goroutines that will process commands received by the MIG Scheduler
-func Init() (ctx Context, err error){
+func Init() (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initAgent() -> %v", e)
@@ -134,20 +134,20 @@ func Init() (ctx Context, err error){
 	return
 }
 
-func initChannels(orig_ctx Context) (ctx Context, err error){
+func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
-	ctx.Channels.Terminate		= make(chan error)
-	ctx.Channels.NewCommand		= make(chan []byte, 7)
-	ctx.Channels.RunAgentCommand	= make(chan mig.Command, 5)
-	ctx.Channels.RunExternalCommand	= make(chan mig.Command, 5)
-	ctx.Channels.Results		= make(chan mig.Command, 5)
-	ctx.Channels.Log		= make(chan mig.Log, 97)
+	ctx.Channels.Terminate = make(chan error)
+	ctx.Channels.NewCommand = make(chan []byte, 7)
+	ctx.Channels.RunAgentCommand = make(chan mig.Command, 5)
+	ctx.Channels.RunExternalCommand = make(chan mig.Command, 5)
+	ctx.Channels.Results = make(chan mig.Command, 5)
+	ctx.Channels.Log = make(chan mig.Log, 97)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
 	return
 }
 
 // initAgentEnv retrieves information about the running system
-func initAgentEnv(orig_ctx Context) (ctx Context, err error){
+func initAgentEnv(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
@@ -178,7 +178,7 @@ func initAgentEnv(orig_ctx Context) (ctx Context, err error){
 }
 
 // initAgentID will retrieve an ID from disk, or request one if missing
-func initAgentID(orig_ctx Context) (ctx Context, err error){
+func initAgentID(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
@@ -213,7 +213,7 @@ func initAgentID(orig_ctx Context) (ctx Context, err error){
 
 // createIDFile will generate a new ID for this agent and store it on disk
 // the location depends on the operating system
-func createIDFile(loc string) (id []byte, err error){
+func createIDFile(loc string) (id []byte, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("createIDFile() -> %v", e)
@@ -242,7 +242,7 @@ func createIDFile(loc string) (id []byte, err error){
 	tdir.Close()
 
 	// write the ID
-	err = ioutil.WriteFile(loc + ".migagtid", []byte(sid), 400)
+	err = ioutil.WriteFile(loc+".migagtid", []byte(sid), 400)
 	if err != nil {
 		panic(err)
 	}
@@ -256,7 +256,7 @@ func createIDFile(loc string) (id []byte, err error){
 	return
 }
 
-func initMQ(orig_ctx Context) (ctx Context, err error){
+func initMQ(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
@@ -281,37 +281,37 @@ func initMQ(orig_ctx Context) (ctx Context, err error){
 	}
 
 	// Limit the number of message the channel will receive at once
-	err = ctx.MQ.Chan.Qos(	7,	// prefetch count (in # of msg)
-				0,	// prefetch size (in bytes)
-				false)	// is global
+	err = ctx.MQ.Chan.Qos(7, // prefetch count (in # of msg)
+		0,     // prefetch size (in bytes)
+		false) // is global
 
-	_, err = ctx.MQ.Chan.QueueDeclare(ctx.MQ.Bind.Queue,	// Queue name
-					  true,			// is durable
-					  false,		// is autoDelete
-					  false,		// is exclusive
-					  false,		// is noWait
-					  nil)			// AMQP args
+	_, err = ctx.MQ.Chan.QueueDeclare(ctx.MQ.Bind.Queue, // Queue name
+		true,  // is durable
+		false, // is autoDelete
+		false, // is exclusive
+		false, // is noWait
+		nil)   // AMQP args
 	if err != nil {
 		panic(err)
 	}
 
-	err = ctx.MQ.Chan.QueueBind(ctx.MQ.Bind.Queue,	// Queue name
-				    ctx.MQ.Bind.Key,	// Routing key name
-				    "mig",		// Exchange name
-				    false,		// is noWait
-				    nil)		// AMQP args
+	err = ctx.MQ.Chan.QueueBind(ctx.MQ.Bind.Queue, // Queue name
+		ctx.MQ.Bind.Key, // Routing key name
+		"mig",           // Exchange name
+		false,           // is noWait
+		nil)             // AMQP args
 	if err != nil {
 		panic(err)
 	}
 
 	// Consume AMQP message into channel
-	ctx.MQ.Bind.Chan, err = ctx.MQ.Chan.Consume(ctx.MQ.Bind.Queue,	// queue name
-						"",			// some tag
-						false,			// is autoAck
-						false,			// is exclusive
-						false,			// is noLocal
-						false,			// is noWait
-						nil)			// AMQP args
+	ctx.MQ.Bind.Chan, err = ctx.MQ.Chan.Consume(ctx.MQ.Bind.Queue, // queue name
+		"",    // some tag
+		false, // is autoAck
+		false, // is exclusive
+		false, // is noLocal
+		false, // is noWait
+		nil)   // AMQP args
 	if err != nil {
 		panic(err)
 	}

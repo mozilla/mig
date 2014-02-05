@@ -105,7 +105,7 @@ func main() {
 				break
 			}
 			fmt.Println(err)
-			fmt.Println("initialisation failed. sleep and retry.");
+			fmt.Println("initialisation failed. sleep and retry.")
 			time.Sleep(60 * time.Second)
 		}
 
@@ -113,7 +113,7 @@ func main() {
 		go getCommands(ctx)
 
 		// GoRoutine that parses and validates incoming commands
-		go func(){
+		go func() {
 			for msg := range ctx.Channels.NewCommand {
 				err = parseCommands(ctx, msg)
 				if err != nil {
@@ -124,7 +124,7 @@ func main() {
 		}()
 
 		// GoRoutine that executes commands that run as agent modules
-		go func(){
+		go func() {
 			for cmd := range ctx.Channels.RunAgentCommand {
 				err = runAgentModule(ctx, cmd)
 				if err != nil {
@@ -182,7 +182,7 @@ func getCommands(ctx Context) (err error) {
 // and run the command
 func parseCommands(ctx Context, msg []byte) (err error) {
 	var cmd mig.Command
-	cmd.ID = 0	// safety net
+	cmd.ID = 0 // safety net
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("parseCommands() -> %v", e)
@@ -351,11 +351,11 @@ func sendResults(ctx Context, result mig.Command) (err error) {
 func keepAliveAgent(ctx Context) (err error) {
 	// declare a keepalive message
 	HeartBeat := mig.KeepAlive{
-		Name:		ctx.Agent.Hostname,
-		OS:		ctx.Agent.OS,
-		Version:	version,
-		QueueLoc:	ctx.Agent.QueueLoc,
-		StartTime:	time.Now(),
+		Name:      ctx.Agent.Hostname,
+		OS:        ctx.Agent.OS,
+		Version:   version,
+		QueueLoc:  ctx.Agent.QueueLoc,
+		StartTime: time.Now(),
 	}
 
 	// loop forever
@@ -390,9 +390,9 @@ func publish(ctx Context, exchange, routingKey string, body []byte) (err error) 
 		Body:         []byte(body),
 	}
 	err = ctx.MQ.Chan.Publish(exchange, routingKey,
-				true,  // is mandatory
-				false, // is immediate
-				msg)   // AMQP message
+		true,  // is mandatory
+		false, // is immediate
+		msg)   // AMQP message
 	if err != nil {
 		panic(err)
 	}

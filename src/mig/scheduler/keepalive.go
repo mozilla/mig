@@ -81,7 +81,7 @@ func pickUpAliveAgents(ctx Context) (err error) {
 }
 
 // startKeepAliveChannel initializes the keepalive AMQP queue
-func startKeepAliveChannel(ctx Context) (keepaliveChan <- chan amqp.Delivery, err error) {
+func startKeepAliveChannel(ctx Context) (keepaliveChan <-chan amqp.Delivery, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("startKeepAliveChannel() -> %v", e)
@@ -222,7 +222,7 @@ func startAgentListener(reg mig.KeepAlive, ctx Context) (err error) {
 	}
 
 	// start a goroutine for this queue
-	go func(){
+	go func() {
 		for msg := range agentChan {
 			ctx.OpID = mig.GenID()
 			err = recvAgentResults(msg, ctx)

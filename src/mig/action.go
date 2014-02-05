@@ -51,11 +51,11 @@ import (
 // a MetaAction is a json object that extends an Action with
 // additional parameters. It is used to track the completion
 // of an action on agents.
-type MetaAction struct{
-	Action Action
-	Status string
-	StartTime, FinishTime, LastUpdateTime time.Time
-	CommandIDs []uint64
+type MetaAction struct {
+	Action                                                          Action
+	Status                                                          string
+	StartTime, FinishTime, LastUpdateTime                           time.Time
+	CommandIDs                                                      []uint64
 	CmdCompleted, CmdSucceeded, CmdCancelled, CmdFailed, CmdTimeOut int
 }
 
@@ -63,16 +63,16 @@ type MetaAction struct{
 // and provided to the MIG platform. It must be PGP signed.
 type Action struct {
 	// meta
-	ID uint64
+	ID           uint64
 	Name, Target string
-	Description description
-	Threat threat
+	Description  description
+	Threat       threat
 	// time window
 	ValidFrom, ExpireAfter time.Time
 	// operation to perform
 	Operations []operation
 	// action signature
-	PGPSignature string
+	PGPSignature     string
 	PGPSignatureDate time.Time
 	// action syntax version
 	SyntaxVersion int
@@ -82,7 +82,7 @@ type Action struct {
 // action's author, and it's revision.
 type description struct {
 	Author, Email, URL string
-	Revision int
+	Revision           int
 }
 
 // a threat provides the investigator with an idea of how dangerous
@@ -95,13 +95,13 @@ type threat struct {
 // the parameters of the operation are passed to the module as argument,
 // and thus their format depend on the module itself.
 type operation struct {
-	Module string
+	Module     string
 	Parameters interface{}
 }
 
 // ActionFromFile() reads an action from a local file on the file system
 // and returns a mig.ExtendedAction structure
-func ActionFromFile(path string) (a Action, err error){
+func ActionFromFile(path string) (a Action, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("mig.ActionFromFile(): %v", e)
@@ -200,4 +200,3 @@ func (a Action) String() (str string, err error) {
 
 	return
 }
-

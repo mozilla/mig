@@ -125,7 +125,7 @@ func flyAction(ctx Context, ea mig.ExtendedAction, origin string) (err error) {
 // 1) a temp file is written
 // 2) the temp file is moved into the target folder
 // this prevents the dir watcher from waking up before the file is fully written
-func safeWrite(ctx Context, destination string, data []byte)(err error){
+func safeWrite(ctx Context, destination string, data []byte) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("safeWrite() -> %v", e)
