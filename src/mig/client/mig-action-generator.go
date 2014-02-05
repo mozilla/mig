@@ -41,7 +41,7 @@ import (
 	"fmt"
 	"log"
 	"mig"
-	"mig/modules/filechecker"
+	//"mig/modules/filechecker"
 	"mig/pgp/sign"
 	"os"
 	"os/user"
@@ -64,6 +64,8 @@ func main() {
 	// command line options
 	var key = flag.String("k", "key identifier", "Key identifier used to sign the action (ex: B75C2346)")
 	var file = flag.String("i", "/path/to/file", "Load action from file")
+	var validfrom = flag.String("validfrom", "now", "(optional) set an ISO8601 date the action will be valid from. If unset, use 'now'.")
+	var expireafter = flag.String("expireafter", "30m", "(optional) set a validity duration for the action. If unset, use '30m'.")
 	flag.Parse()
 
 	// We need a key, if none is set on the command line, fail
@@ -72,19 +74,34 @@ func main() {
 		os.Exit(-1)
 	}
 
-	var ea mig.ExtendedAction
+	var a mig.Action
 	var err error
+
+	// if a file is defined, load action from that
 	if *file != "/path/to/file" {
-		// get action from local json file
-		ea, err = mig.ActionFromFile(*file)
+		a, err = mig.ActionFromFile(*file)
 	} else {
-		//interactive mode
-		ea, err = getActionFromTerminal()
+		// otherwise, use interactive mode
+		a, err = getActionFromTerminal()
 	}
 	if err != nil {
 		panic(err)
 	}
-	a := ea.Action
+
+	// set the dates
+	if *validfrom == "now" {
+		a.ValidFrom = time.Now().UTC()
+	} else {
+		a.ValidFrom, err = time.Parse("2014-01-01T00:00:00.0Z", *validfrom)
+		if err != nil {
+			panic(err)
+		}
+	}
+	period, err := time.ParseDuration(*expireafter)
+	if err != nil {
+		log.Fatal(err)
+	}
+	a.ExpireAfter = a.ValidFrom.Add(period)
 
 	// compute the signature
 	str, err := a.String()
@@ -131,76 +148,59 @@ func main() {
 
 }
 
-func getActionFromTerminal() (ea mig.ExtendedAction, err error) {
+func getActionFromTerminal() (a mig.Action, err error) {
 	err = nil
 	fmt.Print("Action name> ")
-	_, err = fmt.Scanln(&ea.Action.Name)
+	_, err = fmt.Scanln(&a.Name)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Print("Action Target> ")
-	_, err = fmt.Scanln(&ea.Action.Target)
+	_, err = fmt.Scanln(&a.Target)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Print("Action Order> ")
-	_, err = fmt.Scanln(&ea.Action.Order)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Print("Action Expiration> ")
-	var expiration string
-	_, err = fmt.Scanln(&expiration)
-	if err != nil {
-		panic(err)
-	}
-	ea.Action.ScheduledDate = time.Now().UTC()
-	period, err := time.ParseDuration(expiration)
-	if err != nil {
-		log.Fatal(err)
-	}
-	ea.Action.ExpirationDate = time.Now().UTC().Add(period)
 
-	var checkArgs string
-	switch ea.Action.Order {
-	default:
-		fmt.Print("Unknown check type, supply JSON arguments> ")
-		_, err := fmt.Scanln(&checkArgs)
-		if err != nil {
-			panic(err)
-		}
-		err = json.Unmarshal([]byte(checkArgs), ea.Action.Arguments)
-		if err != nil {
-			panic(err)
-		}
-	case "filechecker":
-		fmt.Println("Filechecker module parameters")
-		var name string
-		var fcargs filechecker.FileCheck
-		fmt.Print("Filechecker Name> ")
-		_, err := fmt.Scanln(&name)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Print("Filechecker Type> ")
-		_, err = fmt.Scanln(&fcargs.Type)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Print("Filechecker Path> ")
-		_, err = fmt.Scanln(&fcargs.Path)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Print("Filechecker Value> ")
-		_, err = fmt.Scanln(&fcargs.Value)
-		if err != nil {
-			panic(err)
-		}
-		fc := make(map[string]filechecker.FileCheck)
-		fc[name] = fcargs
-		ea.Action.Arguments = fc
-	}
+//	var checkArgs string
+//	switch ea.Action.Order {
+//	default:
+//		fmt.Print("Unknown check type, supply JSON arguments> ")
+//		_, err := fmt.Scanln(&checkArgs)
+//		if err != nil {
+//			panic(err)
+//		}
+//		err = json.Unmarshal([]byte(checkArgs), ea.Action.Arguments)
+//		if err != nil {
+//			panic(err)
+//		}
+//	case "filechecker":
+//		fmt.Println("Filechecker module parameters")
+//		var name string
+//		var fcargs filechecker.FileCheck
+//		fmt.Print("Filechecker Name> ")
+//		_, err := fmt.Scanln(&name)
+//		if err != nil {
+//			panic(err)
+//		}
+//		fmt.Print("Filechecker Type> ")
+//		_, err = fmt.Scanln(&fcargs.Type)
+//		if err != nil {
+//			panic(err)
+//		}
+//		fmt.Print("Filechecker Path> ")
+//		_, err = fmt.Scanln(&fcargs.Path)
+//		if err != nil {
+//			panic(err)
+//		}
+//		fmt.Print("Filechecker Value> ")
+//		_, err = fmt.Scanln(&fcargs.Value)
+//		if err != nil {
+//			panic(err)
+//		}
+//		fc := make(map[string]filechecker.FileCheck)
+//		fc[name] = fcargs
+//		ea.Action.Arguments = fc
+//	}
 	return
 }
 
