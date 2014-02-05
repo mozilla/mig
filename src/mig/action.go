@@ -48,16 +48,10 @@ import (
 	"time"
 )
 
-type Action struct {
-	ID uint64
-	Name, Target, Order string
-	ScheduledDate, ExpirationDate time.Time
-	Arguments interface{}
-	PGPSignature string
-	PGPSignatureDate time.Time
-}
-
-type ExtendedAction struct{
+// a MetaAction is a json object that extends an Action with
+// additional parameters. It is used to track the completion
+// of an action on agents.
+type MetaAction struct{
 	Action Action
 	Status string
 	StartTime, FinishTime, LastUpdateTime time.Time
@@ -65,9 +59,49 @@ type ExtendedAction struct{
 	CmdCompleted, CmdSucceeded, CmdCancelled, CmdFailed, CmdTimeOut int
 }
 
+// an Action is the json object that is created by an investigator
+// and provided to the MIG platform. It must be PGP signed.
+type Action struct {
+	// meta
+	ID uint64
+	Name, Target string
+	Description description
+	Threat threat
+	// time window
+	ValidFrom, ExpireAfter time.Time
+	// operation to perform
+	Operations []operation
+	// action signature
+	PGPSignature string
+	PGPSignatureDate time.Time
+	// action syntax version
+	SyntaxVersion int
+}
+
+// a description is a simple object that contains detail about the
+// action's author, and it's revision.
+type description struct {
+	Author, Email, URL string
+	Revision int
+}
+
+// a threat provides the investigator with an idea of how dangerous
+// a the compromission might be, if the indicators return positive
+type threat struct {
+	Level, Family string
+}
+
+// an operation is an object that map to an agent module.
+// the parameters of the operation are passed to the module as argument,
+// and thus their format depend on the module itself.
+type operation struct {
+	Module string
+	Parameters interface{}
+}
+
 // ActionFromFile() reads an action from a local file on the file system
 // and returns a mig.ExtendedAction structure
-func ActionFromFile(path string) (ea ExtendedAction, err error){
+func ActionFromFile(path string) (a Action, err error){
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("mig.ActionFromFile(): %v", e)
@@ -78,13 +112,10 @@ func ActionFromFile(path string) (ea ExtendedAction, err error){
 	if err != nil {
 		panic(err)
 	}
-	err = json.Unmarshal(fd, &ea.Action)
+	err = json.Unmarshal(fd, &a)
 	if err != nil {
 		panic(err)
 	}
-
-	// Populate the Extended attributes of the action
-	ea.StartTime = time.Now().UTC()
 
 	return
 }
@@ -119,22 +150,22 @@ func (a Action) Validate(keyring io.Reader) (err error) {
 	if a.Target == "" {
 		return errors.New("Action.Target is empty. Expecting string.")
 	}
-	if a.Order == "" {
+	if a.SyntaxVersion < 1 {
 		return errors.New("Action.Order is empty. Expecting string.")
 	}
-	if a.ScheduledDate.String() == "" {
+	if a.ValidFrom.String() == "" {
 		return errors.New("Action.RunDate is empty. Expecting string.")
 	}
-	if a.ExpirationDate.String() == "" {
+	if a.ExpireAfter.String() == "" {
 		return errors.New("Action.Expiration is empty. Expecting string.")
 	}
-	if a.ScheduledDate.After(a.ExpirationDate) {
+	if a.ValidFrom.After(a.ExpireAfter) {
 		return errors.New("Action.ExpirationDate is set before Action.ScheduledDate.")
 	}
-	if time.Now().After(a.ExpirationDate) {
+	if time.Now().After(a.ExpireAfter) {
 		return errors.New("Action.ExpirationDate is passed. Action has expired.")
 	}
-	if a.Arguments == nil {
+	if a.Operations == nil {
 		return errors.New("Action.Arguments is nil. Expecting string.")
 	}
 	if a.PGPSignature == "" {
@@ -161,12 +192,11 @@ func (a Action) Validate(keyring io.Reader) (err error) {
 func (a Action) String() (str string, err error) {
 	str = "name=" + a.Name + "; "
 	str += "target=" + a.Target + "; "
-	str += "order=" + a.Order + "; "
-	str += "scheduleddate=" + a.ScheduledDate.String() + "; "
-	str += "expirationdate=" + a.ExpirationDate.String() + "; "
+	str += "validfrom=" + a.ValidFrom.String() + "; "
+	str += "expireafter=" + a.ExpireAfter.String() + "; "
 
-	args, err := json.Marshal(a.Arguments)
-	str += "arguments='" + fmt.Sprintf("%s", args) + "';"
+	args, err := json.Marshal(a.Operations)
+	str += "operations='" + fmt.Sprintf("%s", args) + "';"
 
 	return
 }
