@@ -15,6 +15,7 @@ PREFIX		:= /usr/local/
 DESTDIR		:= /
 GPGMEDIR	:= src/mig/pgp/sign
 BINDIR		:= bin/$(OS)/$(ARCH)
+AGTCONF		:= mig-agent-conf.go
 
 GCC			:= gcc
 CFLAGS		:=
@@ -30,6 +31,8 @@ INSTALL		:= install
 all: mig-agent mig-scheduler mig-action-generator
 
 mig-agent:
+	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
+	cp $(AGTCONF) src/mig/agent/configuration.go
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent $(GOLDFLAGS) mig/agent
 

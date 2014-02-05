@@ -2,6 +2,7 @@ bin/*
 *.swp
 *.swo
 mig-agent-conf.go
+src/mig/agent/configuration.go
 doc/*.html
 *.a
 *.so
