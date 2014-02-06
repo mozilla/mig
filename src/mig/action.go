@@ -151,22 +151,22 @@ func (a Action) Validate(keyring io.Reader) (err error) {
 		return errors.New("Action.Target is empty. Expecting string.")
 	}
 	if a.SyntaxVersion < 1 {
-		return errors.New("Action.Order is empty. Expecting string.")
+		return errors.New("SyntaxVersion is empty. Expecting string.")
 	}
 	if a.ValidFrom.String() == "" {
-		return errors.New("Action.RunDate is empty. Expecting string.")
+		return errors.New("Action.ValidFrom is empty. Expecting string.")
 	}
 	if a.ExpireAfter.String() == "" {
-		return errors.New("Action.Expiration is empty. Expecting string.")
+		return errors.New("Action.ExpireAfter is empty. Expecting string.")
 	}
 	if a.ValidFrom.After(a.ExpireAfter) {
-		return errors.New("Action.ExpirationDate is set before Action.ScheduledDate.")
+		return errors.New("Action.ExpireAfter is set before Action.ValidFrom.")
 	}
 	if time.Now().After(a.ExpireAfter) {
-		return errors.New("Action.ExpirationDate is passed. Action has expired.")
+		return errors.New("Action.ExpireAfter is passed. Action has expired.")
 	}
 	if a.Operations == nil {
-		return errors.New("Action.Arguments is nil. Expecting string.")
+		return errors.New("Action.Operations is nil. Expecting string.")
 	}
 	if a.PGPSignature == "" {
 		return errors.New("Action.PGPSignature is empty. Expecting string.")

@@ -306,6 +306,8 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	}
 	ea.Action = a
 
+	ea.StartTime = time.Now()
+
 	// generate an action id
 	ea.Action.ID = mig.GenID()
 
