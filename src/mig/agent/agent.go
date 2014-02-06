@@ -264,7 +264,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 	// Each operation is ran separately by a module, a channel is created to receive the results from each module
 	// a goroutine is created to read from the result channel, and when all modules are done, build the response
 	resultChan := make(chan moduleResult)
-
+	opsCounter := 0
 	for counter, operation := range cmd.Action.Operations {
 		// create an module operation object
 		currentOp := moduleOp{id: mig.GenID(),
@@ -280,19 +280,21 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 		case "filechecker":
 			// send the operation to the module
 			ctx.Channels.RunAgentCommand <- currentOp
+			opsCounter++
 		case "shell":
 			// send to the external execution path
 			ctx.Channels.RunExternalCommand <- currentOp
+			opsCounter++
 		case "terminate":
 			ctx.Channels.Terminate <- fmt.Errorf("Terminate order received from scheduler")
+			opsCounter++
 		default:
 			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("module '%s' is invalid", operation.Module)}
-			panic("UnknownModule")
 		}
 	}
 
 	// start the goroutine that will receive the results
-	go receiveResults(ctx, cmd, resultChan)
+	go receiveModuleResults(ctx, cmd, resultChan, opsCounter)
 
 	return
 }
@@ -380,23 +382,25 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 
 // receiveResult listens on a temporary channels for results coming from modules. It aggregated them, and
 // when all are received, it build a response that is passed to the Result channel
-func receiveResults(ctx Context, cmd mig.Command, resultChan chan moduleResult) (err error) {
+func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleResult, opsCounter int) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("sendResults() -> %v", e)
+			err = fmt.Errorf("receiveModuleResults() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "leaving sendResults()"}.Debug()
+		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "leaving receiveModuleResults()"}.Debug()
 	}()
+	ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "entering receiveModuleResults()"}.Debug()
 
 	resultReceived := 0
 
 	// for each result received, populate the content of cmd.Results with it
 	// stop when we received all the expected results
 	for result := range resultChan {
+		ctx.Channels.Log <- mig.Log{OpID: result.id, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "received results from module"}.Debug()
 		cmd.Status = result.status
 		cmd.Results = append(cmd.Results, result.output)
-		resultReceived += 1
-		if resultReceived >= len(cmd.Action.Operations) {
+		resultReceived++
+		if resultReceived >= opsCounter {
 			break
 		}
 	}
