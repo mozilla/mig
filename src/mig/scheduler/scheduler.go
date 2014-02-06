@@ -291,7 +291,7 @@ func watchDirectories(watcher *fsnotify.Watcher, ctx Context) {
 // the action from the directory, parse it, retrieve a list of targets from
 // the backend database, and create individual command for each target.
 func processNewAction(actionPath string, ctx Context) (err error) {
-	var ea mig.ExtendedAction
+	var ea mig.MetaAction
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("processNewAction() -> %v", e)
@@ -300,16 +300,17 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	}()
 
 	// load the action file
-	ea, err = mig.ActionFromFile(actionPath)
+	a, err := mig.ActionFromFile(actionPath)
 	if err != nil {
 		panic(err)
 	}
+	ea.Action = a
 
 	// generate an action id
 	ea.Action.ID = mig.GenID()
 
-	desc := fmt.Sprintf("new action received: Name='%s' Target='%s' Order='%s' ScheduledDate='%s' ExpirationDate='%s'",
-		ea.Action.Name, ea.Action.Target, ea.Action.Order, ea.Action.ValidFrom, ea.Action.ExpireAfter)
+	desc := fmt.Sprintf("new action received: Name='%s' Target='%s' ValidFrom='%s' ExpireAfter='%s'",
+		ea.Action.Name, ea.Action.Target, ea.Action.ValidFrom, ea.Action.ExpireAfter)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: desc}
 
 	// TODO: replace with action.Validate(), to include signature verification
@@ -578,7 +579,7 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	}
 
 	// use the action ID from the command file to get the action from the database
-	var eas []mig.ExtendedAction
+	var eas []mig.MetaAction
 	actionCursor := ctx.DB.Col.Action.Find(bson.M{"action.id": cmd.Action.ID}).Iter()
 	err = actionCursor.All(&eas)
 	if err != nil {
@@ -680,17 +681,17 @@ func checkNewActions(ctx Context) (err error) {
 			continue
 		}
 		filename := ctx.Directories.Action.New + "/" + DirEntry.Name()
-		ea, err := mig.ActionFromFile(filename)
+		a, err := mig.ActionFromFile(filename)
 		if err != nil {
 			panic(err)
 		}
-		if time.Now().After(ea.Action.ValidFrom) {
+		if time.Now().After(a.ValidFrom) {
 			// queue new action
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: fmt.Sprintf("scheduling action '%s'", ea.Action.Name)}
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: fmt.Sprintf("scheduling action '%s'", a.Name)}
 			ctx.Channels.NewAction <- filename
 		}
-		if time.Now().After(ea.Action.ExpireAfter) {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: fmt.Sprintf("removing expired action '%s'", ea.Action.Name)}
+		if time.Now().After(a.ExpireAfter) {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: fmt.Sprintf("removing expired action '%s'", a.Name)}
 			// delete expired action
 			os.Remove(filename)
 		}

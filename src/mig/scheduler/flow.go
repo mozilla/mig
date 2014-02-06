@@ -84,7 +84,7 @@ import (
 
 // Fly moves an action file to the InFlight directory and
 // write it to database
-func flyAction(ctx Context, ea mig.ExtendedAction, origin string) (err error) {
+func flyAction(ctx Context, ea mig.MetaAction, origin string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("flyAction() -> %v", e)
