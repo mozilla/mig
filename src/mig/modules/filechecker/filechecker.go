@@ -48,17 +48,16 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"time"
 )
 
 var DEBUG bool = false
-var VERBOSE bool = false
 
-/* BitMask for the type of check to apply to a given file
-   see documentation about iota for more info
-*/
+// BitMask for the type of check to apply to a given file
+// see documentation about iota for more info
 const (
-	CheckContains = 1 << iota
-	CheckNamed
+	CheckRegex = 1 << iota
+	CheckFileName
 	CheckMD5
 	CheckSHA1
 	CheckSHA256
@@ -70,171 +69,279 @@ const (
 	CheckSHA3_512
 )
 
-type Operations struct {
-	Arg map[string]FileCheck
+// A checklist is an object that has the following representation:
+// Parameters {
+//	path "path1" {
+//		method "name1" {
+//			check "id1" [
+//				test "value1"
+//				test "value2"
+//				...
+//			],
+//			check "id2" [
+//				test "value3"
+//			]
+//		}
+//		method "name 2" {
+//			...
+//		}
+//	}
+//	path "path2" {
+//		...
+//	}
+// }
+//
+// In JSON form, the structure above looks like the following:
+// {
+//	"/some/path/or/file": {
+//		"<method=[filename|regex|md5|sha256|...]>": {
+//			"random string as identifier": [
+//				"^testregex1$",
+//				"^.+[0-9][a-z]",
+//				.....
+//			]
+//		}
+//	},
+//	"/some/other/path":{
+//		etc...
+//	}
+// }
+type Parameters struct {
+	Elements map[string]map[string]map[string][]string
 }
 
-// Representation of a File Check.
-// Path is the file system path to inspect
-// Type is the name of the type of check
-// Value is the value of the check, such as a md5 hash
-// CodeType is the type of check in integer form
-// FilesCount is the total number of files inspected for each Check
-// MatchCount is a counter of positive results for this Check
-// Result is a boolean set to True when the Check has matched once or more
-// Files is an slice of string that contains paths of matching files
-// Re is a regular expression
-type FileCheck struct {
-	ID, Path, Type, Value            string
-	CodeType, FilesCount, MatchCount int
-	Result                           bool
-	Files                            map[string]int
-	Re                               *regexp.Regexp
+// Create a new Parameters
+func NewParameters() *Parameters {
+	return &Parameters{Elements: make(map[string]map[string]map[string][]string)}
 }
 
-type Results struct {
-	TestedFiles, MatchCount int
-	Files                   []string
-}
-
-/* Statistic counters:
-- CheckCount is the total numbers of Checks tested
-- FilesCount is the total number of files inspected
-- ChecksMatch is the number of Checks that matched at least once
-- UniqueFiles is the number of files that matches at least one Check once
-- TotalHits is the total number of Checks hits
-*/
-type Stats struct {
-	CheckCount  int
-	FilesCount  int
-	ChecksMatch int
-	UniqueFiles int
-	TotalHits   int
-}
-
-// Run() is filechecker's entry point. It parses command line arguments into a list of
-// individual FileChecks, stored in a map.
-// Each Check contains a path, which is inspected in the GetDownThatPath function.
-// The results are stored in the Checks map and sent to stdout at the end.
-func Run(Args []byte) string {
-	if DEBUG {
-		VERBOSE = true
-	}
-	/* Checks is a map of individual Checks and associated results
-	Checks = {
-		<id> = { <struct FileCheck> },
-		<id> = { <struct FileCheck> },
-		...
-	}
-	*/
-	Checks := make(map[string]FileCheck)
-	err := json.Unmarshal(Args, &Checks)
-	if err != nil {
-		panic(err)
-	}
-	// ToDoChecks is a list of Checks to process, dequeued when done
-	ToDoChecks := make(map[string]FileCheck)
-	var Statistics Stats
-	// parse the arguments, split on the space
-	for id, check := range Checks {
-		if DEBUG {
-			fmt.Printf("Main: Parsing check id: '%d'\n", id)
+// validate a Parameters
+func (p Parameters) Validate() (err error) {
+	for path, methods := range p.Elements {
+		if string(path) == "" {
+			return fmt.Errorf("Invalid path parameter. Expected string")
 		}
-		Checks[id] = ParseCheck(check, id)
-		ToDoChecks[id] = Checks[id]
-		Statistics.CheckCount++
-	}
-	for id, check := range Checks {
-		if DEBUG {
-			fmt.Printf("Main: Inspecting path '%s' from Check id "+
-				"'%d'\n", check.Path, id)
-		}
-		// loop through the list of Check, and only process the Checks that
-		// are still in the todo list
-		if _, ok := ToDoChecks[id]; !ok {
-			continue
-		}
-		var EmptyActiveChecks []string
-		err = GetDownThatPath(check.Path, EmptyActiveChecks, 0, Checks, ToDoChecks, &Statistics)
-		if err != nil {
-			log.Println("failed, send proper error back to agent")
-		}
-	}
-	return BuildResults(Checks, &Statistics)
-}
-
-// ParseCheck verifies and populate checks passed as arguments
-func ParseCheck(check FileCheck, id string) FileCheck {
-	check.ID = id
-	switch check.Type {
-	case "contains":
-		check.CodeType = CheckContains
-		// compile the value into a regex
-		check.Re = regexp.MustCompile(check.Value)
-	case "named":
-		check.CodeType = CheckNamed
-		// compile the value into a regex
-		check.Re = regexp.MustCompile(check.Value)
-	case "md5":
-		check.CodeType = CheckMD5
-	case "sha1":
-		check.CodeType = CheckSHA1
-	case "sha256":
-		check.CodeType = CheckSHA256
-	case "sha384":
-		check.CodeType = CheckSHA384
-	case "sha512":
-		check.CodeType = CheckSHA512
-	case "sha3_224":
-		check.CodeType = CheckSHA3_224
-	case "sha3_256":
-		check.CodeType = CheckSHA3_256
-	case "sha3_384":
-		check.CodeType = CheckSHA3_384
-	case "sha3_512":
-		check.CodeType = CheckSHA3_512
-	default:
-		err := fmt.Sprintf("ParseCheck: Invalid check '%s'", check.Type)
-		panic(err)
-	}
-	// allocate the map
-	check.Files = make(map[string]int)
-	return check
-}
-
-// GetDownThatPath goes down a directory and build a list of Active Checks that
-// apply to the current path. For a given directory, it calls itself for all
-// subdirectories fund, recursively walking down the pass. When it find a file,
-// it calls the inspection function, and give it the list of Checks to inspect
-// the file with.
-// parameters:
-//      - path is the file system path to inspect
-//      - ActiveCheckIDs is a slice that contains the IDs of the Checks
-//      that all files in that path and below must be checked against
-//      - CheckBitMask is a bitmask of the checks types currently active
-//      - Checks is the global list of Checks
-//      - ToDoChecks is a map that contains the Checks that are not yet active
-//      - Statistics is a set of counters
-// return:
-//      - nil on success, error on error
-func GetDownThatPath(path string, ActiveCheckIDs []string, CheckBitMask int,
-	Checks map[string]FileCheck, ToDoChecks map[string]FileCheck,
-	Statistics *Stats) error {
-	for id, check := range ToDoChecks {
-		if check.Path == path {
-			/* Found a new Check to apply to the current path, add
-			   it to the active list, and delete it from the todo
-			*/
-			ActiveCheckIDs = append(ActiveCheckIDs, id)
-			CheckBitMask |= check.CodeType
-			delete(ToDoChecks, id)
-			if DEBUG {
-				fmt.Printf("GetDownThatPath: Activating Check "+
-					"id '%d' for path '%s'\n", id, path)
+		for method, identifiers := range methods {
+			if string(method) == "" {
+				return fmt.Errorf("Invalid method parameter. Expected string")
+			}
+			switch method {
+			case "filename", "regex", "md5", "sha1", "sha256", "sha384", "sha512",
+				"sha3_224", "sha3_256", "sha3_384", "sha3_512":
+				err = nil
+			default:
+				return fmt.Errorf("Invalid method '%s'", method)
+			}
+			for identifier, tests := range identifiers {
+				if string(identifier) == "" {
+					return fmt.Errorf("Invalid identifier parameter. Expected string")
+				}
+				for _, test := range tests {
+					if string(test) == "" {
+						return fmt.Errorf("Invalid test parameter. Expected string")
+					}
+				}
 			}
 		}
 	}
-	var SubDirs []string
+	return
+}
+
+/* Statistic counters:
+- CheckCount is the total numbers of checklist tested
+- FilesCount is the total number of files inspected
+- Checksmatch is the number of checks that matched at least once
+- YniqueFiles is the number of files that matches at least one Check once
+- Totalhits is the total number of checklist hits
+*/
+type statistics struct {
+	Checkcount  int
+	Filescount  int
+	Openfailed  int
+	Checksmatch int
+	Uniquefiles int
+	Totalhits   int
+	Exectime    string
+}
+
+// stats is a global variable
+var stats statistics
+
+// Representation of a filecheck.
+// id is a string that identifies the check
+// path is the file system path to inspect
+// method is the name of the type of check
+// test is the value of the check, such as a md5 hash
+// testcode is the type of test in integer form
+// filecount is the total number of files inspected for each Check
+// matchcount is a counter of positive results for this Check
+// hasmatched is a boolean set to True when the Check has matched once or more
+// files is an slice of string that contains paths of matching files
+// regex is a regular expression
+type filecheck struct {
+	id, path, method, test          string
+	testcode, filecount, matchcount int
+	hasmatched                      bool
+	files                           map[string]int
+	regex                           *regexp.Regexp
+}
+
+// Response is a struct that formats the data returned to the caller
+type Response struct {
+	FoundAnything bool
+	Elements      map[string]map[string]map[string]map[string]singleresult
+	Extra         extraresults
+}
+
+// singleresult contains information on the result of a single test
+type singleresult struct {
+	Filecount, Matchcount int
+	Files                 map[string]int
+}
+
+// extraresult contains additional data, this is optional but nice to have
+type extraresults struct {
+	Statistics statistics
+}
+
+// NewResponse constructs a Response
+func NewResponse() *Response {
+	return &Response{Elements: make(map[string]map[string]map[string]map[string]singleresult), FoundAnything: false}
+}
+
+// Run() is filechecker's entry point. It parses command line arguments into a list of
+// individual checks, stored in a map.
+// Each Check contains a path, which is inspected in the pathWalk function.
+// The results are stored in the checklist map and sent to stdout at the end.
+func Run(Args []byte) string {
+	t0 := time.Now()
+	params := NewParameters()
+	err := json.Unmarshal(Args, &params.Elements)
+	if err != nil {
+		panic(err)
+	}
+
+	err = params.Validate()
+	if err != nil {
+		panic(err)
+	}
+
+	// walk through the parameters and generate a checklist of filechecks
+	checklist := make(map[int]filecheck)
+	todolist := make(map[int]filecheck)
+	i := 0
+	for path, methods := range params.Elements {
+		for method, identifiers := range methods {
+			for identifier, tests := range identifiers {
+				for _, test := range tests {
+					check := createCheck(path, method, identifier, test)
+					checklist[i] = check
+					todolist[i] = check
+					i++
+					stats.Checkcount++
+				}
+			}
+		}
+	}
+
+	// loop through the list of checks and initiate a path walk. A given path is walked
+	// only once, and the pathwalk function will build a list of checks to run when entering
+	// a new path.
+	for id, check := range checklist {
+		if DEBUG {
+			fmt.Printf("Main: Inspecting path '%s' from Check id '%d'\n", check.path, id)
+		}
+		// loop through the list of checks, and only process the ones that
+		// are still in the todo list
+		if _, ok := todolist[id]; !ok {
+			// this check isn't in the todolist anymore, skip it
+			continue
+		}
+		var activechecks []int
+		err = pathWalk(check.path, activechecks, 0, checklist, todolist)
+		if err != nil {
+			panic("pathWalk failed")
+		}
+	}
+
+	return buildResults(checklist, t0)
+}
+
+// createCheck creates a new filecheck
+func createCheck(path, method, identifier, test string) (check filecheck) {
+	check.id = identifier
+	check.path = path
+	check.method = method
+	check.test = test
+	switch method {
+	case "regex":
+		check.testcode = CheckRegex
+		// compile the value into a regex
+		check.regex = regexp.MustCompile(test)
+	case "filename":
+		check.testcode = CheckFileName
+		// compile the value into a regex
+		check.regex = regexp.MustCompile(test)
+	case "md5":
+		check.testcode = CheckMD5
+	case "sha1":
+		check.testcode = CheckSHA1
+	case "sha256":
+		check.testcode = CheckSHA256
+	case "sha384":
+		check.testcode = CheckSHA384
+	case "sha512":
+		check.testcode = CheckSHA512
+	case "sha3_224":
+		check.testcode = CheckSHA3_224
+	case "sha3_256":
+		check.testcode = CheckSHA3_256
+	case "sha3_384":
+		check.testcode = CheckSHA3_384
+	case "sha3_512":
+		check.testcode = CheckSHA3_512
+	default:
+		err := fmt.Sprintf("ParseCheck: Invalid method '%s'", method)
+		panic(err)
+	}
+	// allocate the map
+	check.files = make(map[string]int)
+	// init the variables
+	check.hasmatched = false
+	check.filecount = 0
+	check.matchcount = 0
+	return
+}
+
+// pathWalk goes down a directory and build a list of Active checklist that
+// apply to the current path. For a given directory, it calls itself for all
+// subdirectories fund, recursively walking down the pass. When it find a file,
+// it calls the inspection function, and give it the list of checklist to inspect
+// the file with.
+// parameters:
+//      - path is the file system path to inspect
+//      - activechecks is a slice that contains the IDs of the checklist
+//        that all files in that path and below must be checked against
+//      - checkBitmask is a bitmask of the checks types currently active
+//      - checklist is the global list of checklist
+//      - todolist is a map that contains the checklist that are not yet active
+// return:
+//      - nil on success, error on error
+func pathWalk(path string, activechecks []int, checkBitmask int, checklist, todolist map[int]filecheck) (err error) {
+	for id, check := range todolist {
+		if check.path == path {
+			/* Found a new Check to apply to the current path, add
+			   it to the active list, and delete it from the todo
+			*/
+			activechecks = append(activechecks, id)
+			checkBitmask |= check.testcode
+			delete(todolist, id)
+			if DEBUG {
+				fmt.Printf("pathWalk: Activating Check id '%d' for path '%s'\n", id, path)
+			}
+		}
+	}
+	var subdirs []string
 	// Read the content of dir stored in 'path',
 	// put all sub-directories in the SubDirs slice, and call
 	// the inspection function for all files
@@ -246,192 +353,181 @@ func GetDownThatPath(path string, ActiveCheckIDs []string, CheckBitMask int,
 	targetMode, _ := target.Stat()
 	if targetMode.Mode().IsDir() {
 		// target is a directory, process its content
-		DirContent, err := target.Readdir(-1)
+		dirContent, err := target.Readdir(-1)
 		if err != nil {
 			panic(err)
 		}
 		// loop over the content of the directory
-		for _, DirEntry := range DirContent {
-			EntryFullPath := path + "/" + DirEntry.Name()
+		for _, dirEntry := range dirContent {
+			entryAbsPath := path + "/" + dirEntry.Name()
 			// this entry is a subdirectory, keep it for later
-			if DirEntry.IsDir() {
-				SubDirs = append(SubDirs, EntryFullPath)
+			if dirEntry.IsDir() {
+				subdirs = append(subdirs, entryAbsPath)
+			} else if dirEntry.Mode().IsRegular() {
 				// that one is a file, open it and inspect it
-			} else if DirEntry.Mode().IsRegular() {
-				Entryfd, err := os.Open(EntryFullPath)
+				entryfd, err := os.Open(entryAbsPath)
 				if err != nil {
-					log.Println("filechecker failed to open file",
-						EntryFullPath, ":", err)
+					// woops, open failed. update counters and move on
+					stats.Openfailed++
 					continue
 				}
-				InspectFile(Entryfd, ActiveCheckIDs, CheckBitMask, Checks)
-				Statistics.FilesCount++
-				if err := Entryfd.Close(); err != nil {
+				inspectFile(entryfd, activechecks, checkBitmask, checklist)
+				stats.Filescount++
+				if err := entryfd.Close(); err != nil {
 					panic(err)
 				}
 			}
 		}
 	} else if targetMode.Mode().IsRegular() {
-		InspectFile(target, ActiveCheckIDs, CheckBitMask, Checks)
-		Statistics.FilesCount++
+		inspectFile(target, activechecks, checkBitmask, checklist)
+		stats.Filescount++
 	}
 	// close the current target, we are done with it
 	if err := target.Close(); err != nil {
 		panic(err)
 	}
 	// if we found any sub directories, go down the rabbit hole recursively
-	for _, dir := range SubDirs {
-		GetDownThatPath(dir, ActiveCheckIDs, CheckBitMask, Checks, ToDoChecks, Statistics)
+	for _, dir := range subdirs {
+		pathWalk(dir, activechecks, checkBitmask, checklist, todolist)
 	}
 	return nil
 }
 
-// InspectFile is an orchestration function that runs the individual checks
-// against a selected file. It uses CheckBitMask to find the checks it needs
+// inspectFile is an orchestration function that runs the individual checks
+// against a selected file. It uses checkBitmask to find the checks it needs
 // to run. The file is opened once, and all the checks are ran against it,
 // minimizing disk IOs.
 // parameters:
 //      - fd is an open file descriptor that points to the file to inspect
-//      - ActiveCheckIDs is a slice that contains the IDs of the Checks
+//      - activechecks is a slice that contains the IDs of the checklist
 //      that all files in that path and below must be checked against
-//      - CheckBitMask is a bitmask of the checks types currently active
-//      - Checks is the global list of Checks
+//      - checkBitmask is a bitmask of the checks types currently active
+//      - checklist is the global list of checklist
 // returns:
 //      - nil on success, error on failure
-func InspectFile(fd *os.File, ActiveCheckIDs []string, CheckBitMask int, Checks map[string]FileCheck) error {
+func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist map[int]filecheck) (err error) {
 	// Iterate through the entire checklist, and process the checks of each file
 	if DEBUG {
 		fmt.Printf("InspectFile: file '%s' CheckMask '%d'\n",
-			fd.Name(), CheckBitMask)
+			fd.Name(), checkBitmask)
 	}
-	if (CheckBitMask & CheckContains) != 0 {
-		// build a list of Checks of check type 'contains'
-		var ReList []string
-		for _, id := range ActiveCheckIDs {
-			if (Checks[id].CodeType & CheckContains) != 0 {
+	if (checkBitmask & CheckRegex) != 0 {
+		// build a list of checklist of check type 'contains'
+		var ReList []int
+		for _, id := range activechecks {
+			if (checklist[id].testcode & CheckRegex) != 0 {
 				ReList = append(ReList, id)
 			}
 		}
-		if MatchRegexpsOnFile(fd, ReList, Checks) {
+		if matchRegexOnFile(fd, ReList, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (CheckBitMask & CheckNamed) != 0 {
-		// build a list of Checks of check type 'contains'
-		var ReList []string
-		for _, id := range ActiveCheckIDs {
-			if (Checks[id].CodeType & CheckNamed) != 0 {
+	if (checkBitmask & CheckFileName) != 0 {
+		// build a list of checklist of check type 'contains'
+		var ReList []int
+		for _, id := range activechecks {
+			if (checklist[id].testcode & CheckFileName) != 0 {
 				ReList = append(ReList, id)
 			}
 		}
-		if MatchRegexpsOnName(fd.Name(), ReList, Checks) {
+		if matchRegexOnName(fd.Name(), ReList, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (CheckBitMask & CheckMD5) != 0 {
-		hash := GetHash(fd, CheckMD5)
-		if VerifyHash(fd.Name(), hash, CheckMD5, ActiveCheckIDs, Checks) {
+	if (checkBitmask & CheckMD5) != 0 {
+		hash := getHash(fd, CheckMD5)
+		if verifyHash(fd.Name(), hash, CheckMD5, activechecks, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (CheckBitMask & CheckSHA1) != 0 {
-		hash := GetHash(fd, CheckSHA1)
-		if VerifyHash(fd.Name(), hash, CheckSHA1, ActiveCheckIDs, Checks) {
+	if (checkBitmask & CheckSHA1) != 0 {
+		hash := getHash(fd, CheckSHA1)
+		if verifyHash(fd.Name(), hash, CheckSHA1, activechecks, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (CheckBitMask & CheckSHA256) != 0 {
-		hash := GetHash(fd, CheckSHA256)
-		if VerifyHash(fd.Name(), hash, CheckSHA256, ActiveCheckIDs, Checks) {
+	if (checkBitmask & CheckSHA256) != 0 {
+		hash := getHash(fd, CheckSHA256)
+		if verifyHash(fd.Name(), hash, CheckSHA256, activechecks, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (CheckBitMask & CheckSHA384) != 0 {
-		hash := GetHash(fd, CheckSHA384)
-		if VerifyHash(fd.Name(), hash, CheckSHA384, ActiveCheckIDs, Checks) {
+	if (checkBitmask & CheckSHA384) != 0 {
+		hash := getHash(fd, CheckSHA384)
+		if verifyHash(fd.Name(), hash, CheckSHA384, activechecks, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (CheckBitMask & CheckSHA512) != 0 {
-		hash := GetHash(fd, CheckSHA512)
-		if VerifyHash(fd.Name(), hash, CheckSHA512, ActiveCheckIDs, Checks) {
+	if (checkBitmask & CheckSHA512) != 0 {
+		hash := getHash(fd, CheckSHA512)
+		if verifyHash(fd.Name(), hash, CheckSHA512, activechecks, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (CheckBitMask & CheckSHA3_224) != 0 {
-		hash := GetHash(fd, CheckSHA3_224)
-		if VerifyHash(fd.Name(), hash, CheckSHA3_224, ActiveCheckIDs, Checks) {
+	if (checkBitmask & CheckSHA3_224) != 0 {
+		hash := getHash(fd, CheckSHA3_224)
+		if verifyHash(fd.Name(), hash, CheckSHA3_224, activechecks, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (CheckBitMask & CheckSHA3_256) != 0 {
-		hash := GetHash(fd, CheckSHA3_256)
-		if VerifyHash(fd.Name(), hash, CheckSHA3_256, ActiveCheckIDs, Checks) {
+	if (checkBitmask & CheckSHA3_256) != 0 {
+		hash := getHash(fd, CheckSHA3_256)
+		if verifyHash(fd.Name(), hash, CheckSHA3_256, activechecks, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (CheckBitMask & CheckSHA3_384) != 0 {
-		hash := GetHash(fd, CheckSHA3_384)
-		if VerifyHash(fd.Name(), hash, CheckSHA3_384, ActiveCheckIDs, Checks) {
+	if (checkBitmask & CheckSHA3_384) != 0 {
+		hash := getHash(fd, CheckSHA3_384)
+		if verifyHash(fd.Name(), hash, CheckSHA3_384, activechecks, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (CheckBitMask & CheckSHA3_512) != 0 {
-		hash := GetHash(fd, CheckSHA3_512)
-		if VerifyHash(fd.Name(), hash, CheckSHA3_512, ActiveCheckIDs, Checks) {
+	if (checkBitmask & CheckSHA3_512) != 0 {
+		hash := getHash(fd, CheckSHA3_512)
+		if verifyHash(fd.Name(), hash, CheckSHA3_512, activechecks, checklist) {
 			if DEBUG {
-				fmt.Printf("InspectFile: Positive result "+
-					"found for '%s'\n", fd.Name())
+				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	return nil
+	return
 }
 
-// GetHash calculates the hash of a file.
+// getHash calculates the hash of a file.
 // It reads a file block by block, and updates a hashsum with each block.
 // Reading by blocks consume very little memory, which is needed for large files.
 // parameters:
 //      - fd is an open file descriptor that points to the file to inspect
-//      - HashType is an integer that define the type of hash
+//      - hashType is an integer that define the type of hash
 // return:
 //      - hexhash, the hex encoded hash of the file found at fp
-func GetHash(fd *os.File, HashType int) (hexhash string) {
+func getHash(fd *os.File, hashType int) (hexhash string) {
 	if DEBUG {
-		fmt.Printf("GetHash: computing hash for '%s'\n", fd.Name())
+		fmt.Printf("getHash: computing hash for '%s'\n", fd.Name())
 	}
 	var h hash.Hash
-	switch HashType {
+	switch hashType {
 	case CheckMD5:
 		h = md5.New()
 	case CheckSHA1:
@@ -451,7 +547,7 @@ func GetHash(fd *os.File, HashType int) (hexhash string) {
 	case CheckSHA3_512:
 		h = sha3.NewKeccak512()
 	default:
-		err := fmt.Sprintf("GetHash: Unkown hash type %d", HashType)
+		err := fmt.Sprintf("getHash: Unkown hash type %d", hashType)
 		panic(err)
 	}
 	buf := make([]byte, 4096)
@@ -471,146 +567,179 @@ func GetHash(fd *os.File, HashType int) (hexhash string) {
 	return
 }
 
-// VerifyHash compares a file hash with the Checks that apply to the file
+// verifyHash compares a file hash with the checklist that apply to the file
 // parameters:
 //      - file is the absolute filename of the file to check
 //      - hash is the value of the hash being checked
 //      - check is the type of check
-//      - ActiveCheckIDs is a slice of int with IDs of active Checks
-//      - Checks is a map of Check
+//      - activechecks is a slice of int with IDs of active checklist
+//      - checklist is a map of Check
 // returns:
 //      - IsVerified: true if a match is found, false otherwise
-func VerifyHash(file string, hash string, check int, ActiveCheckIDs []string, Checks map[string]FileCheck) (IsVerified bool) {
+func verifyHash(file string, hash string, check int, activechecks []int, checklist map[int]filecheck) (IsVerified bool) {
 	IsVerified = false
-	for _, id := range ActiveCheckIDs {
-		tmpcheck := Checks[id]
-		if Checks[id].Value == hash {
+	for _, id := range activechecks {
+		tmpcheck := checklist[id]
+		if checklist[id].test == hash {
 			IsVerified = true
-			tmpcheck.Result = true
-			tmpcheck.MatchCount += 1
-			tmpcheck.Files[file] = 1
+			tmpcheck.hasmatched = true
+			tmpcheck.matchcount++
+			tmpcheck.files[file] = 1
 		}
-		// update Checks tested files count
-		tmpcheck.FilesCount++
-		Checks[id] = tmpcheck
+		// update checklist tested files count
+		tmpcheck.filecount++
+		checklist[id] = tmpcheck
 	}
 	return
 }
 
-// MatchRegexpsOnFile read a file line by line and apply regexp search to each
+// matchRegexOnFile read a file line by line and apply regexp search to each
 // line. If a regexp matches, the corresponding Check is updated with the result.
 // All regexp are compiled during argument parsing and not here.
 // parameters:
 //      - fd is a file descriptor on the open file
 //      - ReList is a list of Check IDs to apply to this file
-//      - Checks is a map of Check
+//      - checklist is a map of Check
 // return:
-//      - MatchesRegexp is a boolean set to true if at least one regexp matches
-func MatchRegexpsOnFile(fd *os.File, ReList []string, Checks map[string]FileCheck) (MatchesRegexp bool) {
-	MatchesRegexp = false
-	Results := make(map[string]int)
+//      - hasmatched is a boolean set to true if at least one regexp matches
+func matchRegexOnFile(fd *os.File, ReList []int, checklist map[int]filecheck) (hasmatched bool) {
+	hasmatched = false
+	// temp map to store the results
+	results := make(map[int]int)
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
 			panic(err)
 		}
 		for _, id := range ReList {
-			if Checks[id].Re.MatchString(scanner.Text()) {
-				MatchesRegexp = true
-				Results[id]++
+			if checklist[id].regex.MatchString(scanner.Text()) {
+				hasmatched = true
+				results[id]++
 				break
 			}
 		}
 	}
-	if MatchesRegexp {
-		for id, count := range Results {
-			tmpcheck := Checks[id]
-			tmpcheck.Result = true
-			tmpcheck.MatchCount += count
-			tmpcheck.Files[fd.Name()] = count
-			Checks[id] = tmpcheck
+	if hasmatched {
+		for id, count := range results {
+			tmpcheck := checklist[id]
+			tmpcheck.hasmatched = true
+			tmpcheck.matchcount += count
+			tmpcheck.files[fd.Name()] = count
+			checklist[id] = tmpcheck
 		}
 	}
-	// update Checks tested files count
+	// update checklist tested files count
 	for _, id := range ReList {
-		tmpcheck := Checks[id]
-		tmpcheck.FilesCount++
-		Checks[id] = tmpcheck
+		tmpcheck := checklist[id]
+		tmpcheck.filecount++
+		checklist[id] = tmpcheck
 	}
 	return
 }
 
-// MatchRegexpsOnName applies regexp search to a given filename
+// matchRegexOnName applies regexp search to a given filename
 // parameters:
 //      - filename is a string that contains a filename
 //      - ReList is a list of Check IDs to apply to this file
-//      - Checks is a map of Check
+//      - checklist is a map of Check
 // return:
-//      - MatchesRegexp is a boolean set to true if at least one regexp matches
-func MatchRegexpsOnName(filename string, ReList []string, Checks map[string]FileCheck) (MatchesRegexp bool) {
-	MatchesRegexp = false
+//      - hasmatched is a boolean set to true if at least one regexp matches
+func matchRegexOnName(filename string, ReList []int, checklist map[int]filecheck) (hasmatched bool) {
+	hasmatched = false
 	for _, id := range ReList {
-		tmpcheck := Checks[id]
-		if Checks[id].Re.MatchString(filename) {
-			MatchesRegexp = true
-			tmpcheck.Result = true
-			tmpcheck.MatchCount++
-			tmpcheck.Files[filename] = 1
+		tmpcheck := checklist[id]
+		if checklist[id].regex.MatchString(filename) {
+			hasmatched = true
+			tmpcheck.hasmatched = true
+			tmpcheck.matchcount++
+			tmpcheck.files[filename] = tmpcheck.matchcount
 		}
-		// update Checks tested files count
-		tmpcheck.FilesCount++
-		Checks[id] = tmpcheck
+		// update checklist tested files count
+		tmpcheck.filecount++
+		checklist[id] = tmpcheck
 	}
 	return
 }
 
-// BuildResults iterates on the map of Checks and print the results to stdout (if
-// VERBOSE is set) and into JSON format
-// parameters:
-//      - Checks is a map of FileCheck
-//      - Statistics is a set of counters
-// returns:
-//      - nil on success, error on failure
-func BuildResults(Checks map[string]FileCheck, Statistics *Stats) string {
-	res := make(map[string]Results)
-	FileHistory := make(map[string]int)
-	for _, check := range Checks {
-		if VERBOSE {
-			fmt.Printf("Main: Check '%d' returned %d positive match\n",
-				check.ID, check.MatchCount)
-			if check.Result {
-				for file, hits := range check.Files {
-					if VERBOSE {
-						fmt.Printf("\t- %d hits on %s\n",
-							hits, file)
-					}
-					Statistics.TotalHits += hits
-					if _, ok := FileHistory[file]; !ok {
-						Statistics.UniqueFiles++
-					}
+// buildResults iterates on the map of checklist and print the results to stdout (if
+// DEBUG is set) and into JSON format
+func buildResults(checklist map[int]filecheck, t0 time.Time) string {
+	res := NewResponse()
+	history := make(map[string]int)
+
+	// iterate through the checklist and parse the results
+	// into a Response object
+	for _, check := range checklist {
+		if DEBUG {
+			fmt.Printf("Main: Check '%d' returned %d positive match\n", check.id, check.matchcount)
+		}
+		if check.hasmatched {
+			for file, hits := range check.files {
+				if DEBUG {
+					fmt.Printf("\t- %d hits on %s\n", hits, file)
 				}
-				Statistics.ChecksMatch++
+				stats.Totalhits += hits
+				if _, ok := history[file]; !ok {
+					stats.Uniquefiles++
+				}
 			}
+			stats.Checksmatch++
 		}
-		var listPosFiles []string
-		for f, _ := range check.Files {
-			listPosFiles = append(listPosFiles, f)
+		//var listMatchedFiles map[string]int
+		//listMatchedFiles = check.files
+		//for file, hits := range check.files {
+		//	listMatchedFiles = append(listMatchedFiles, f)
+		//}
+		r := singleresult{
+			Filecount:  check.filecount,
+			Matchcount: check.matchcount,
+			Files:      check.files,
 		}
-		res[check.ID] = Results{
-			TestedFiles: check.FilesCount,
-			MatchCount:  check.MatchCount,
-			Files:       listPosFiles,
+		if _, ok := res.Elements[check.path]; !ok {
+			res.Elements[check.path] = map[string]map[string]map[string]singleresult{
+				check.method: map[string]map[string]singleresult{
+					check.id: map[string]singleresult{
+						check.test: r,
+					},
+				},
+			}
+		} else if _, ok := res.Elements[check.path][check.method]; !ok {
+			res.Elements[check.path][check.method] = map[string]map[string]singleresult{
+				check.id: map[string]singleresult{
+					check.test: r,
+				},
+			}
+		} else if _, ok := res.Elements[check.path][check.method][check.id]; !ok {
+			res.Elements[check.path][check.method][check.id] = map[string]singleresult{
+				check.test: r,
+			}
+		} else if _, ok := res.Elements[check.path][check.method][check.id][check.test]; !ok {
+			res.Elements[check.path][check.method][check.id][check.test] = r
 		}
 	}
-	if VERBOSE {
-		fmt.Printf("Tested Checks:\t%d\n"+
-			"Tested files:\t%d\n"+
-			"Checks Match:\t%d\n"+
-			"Unique Files:\t%d\n"+
-			"Total hits:\t%d\n",
-			Statistics.CheckCount, Statistics.FilesCount,
-			Statistics.ChecksMatch, Statistics.UniqueFiles,
-			Statistics.TotalHits)
+
+	// if something matched anywhere, set the global boolean to true
+	if stats.Checksmatch > 0 {
+		res.FoundAnything = true
+	}
+
+	// calculate execution time
+	t1 := time.Now()
+	stats.Exectime = t1.Sub(t0).String()
+
+	// store the stats in the response
+	res.Extra.Statistics = stats
+
+	if DEBUG {
+		fmt.Printf("Tested checklist: %d\n"+
+			"Tested files:     %d\n"+
+			"checklist Match:  %d\n"+
+			"Unique Files:     %d\n"+
+			"Total hits:       %d\n"+
+			"Execution time:   %s\n",
+			stats.Checkcount, stats.Filescount,
+			stats.Checksmatch, stats.Uniquefiles,
+			stats.Totalhits, stats.Exectime)
 	}
 	JsonResults, err := json.MarshalIndent(res, "", "\t")
 	if err != nil {
