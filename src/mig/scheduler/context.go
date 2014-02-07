@@ -39,6 +39,7 @@ import (
 	"code.google.com/p/gcfg"
 	"fmt"
 	"github.com/streadway/amqp"
+	"github.com/VividCortex/godaemon"
 	"labix.org/v2/mgo"
 	"mig"
 	"os"
@@ -109,6 +110,11 @@ func Init(path string) (ctx Context, err error) {
 	err = gcfg.ReadFileInto(&ctx, path)
 	if err != nil {
 		panic(err)
+	}
+
+	// daemonize unless logging is set to stdout
+	if ctx.Logging.Mode != "stdout" {
+		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
 	}
 
 	ctx, err = initChannels(ctx)

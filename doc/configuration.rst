@@ -28,8 +28,8 @@ platform, simply run 'make'.
 
     $ make
 
-Configuration
--------------
+Agent Configuration
+-------------------
 
 The MIG Agent configuration must be prepared before build. The configuration is
 hardwired into the agent, such that no external file is required to run it.
@@ -58,4 +58,22 @@ error, the build will fail with a Go compilation error.
     mkdir -p bin/linux/amd64
     GOPATH=/home/ulfr/Code/golang/bin:/home/ulfr/git/opsec/mig GOOS=linux GOARCH=amd64 go build  -o bin/linux/amd64/mig-agent -ldflags "-X main.version 4ba6776-201402051327" mig/agent
 
+Scheduler Configuration
+-----------------------
+
+The scheduler template configuration is in 'conf/mig-scheduler.cfg.inc'. It must
+be copied to a location of your choice, and edited.
+
+The scheduler will run in foreground if the logging mode is set to 'stdout'. For
+the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.
+
+ ::
+
+	[logging]
+    mode = "syslog" ; stdout | file | syslog
+    level = "debug"
+	; for syslog, logs go into local3
+    host = "localhost"
+    port = 514
+    protocol = "udp"
 
