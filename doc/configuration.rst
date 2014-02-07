@@ -15,11 +15,9 @@ Several Go dependencies can be resolved by running:
 .. code:: bash
 
     $ make go_get_deps
-    GOPATH=/home/ulfr/git/opsec/mig go get -u code.google.com/p/go.crypto/openpgp
-    GOPATH=/home/ulfr/git/opsec/mig go get -u github.com/streadway/amqp
-    GOPATH=/home/ulfr/git/opsec/mig go get -u github.com/howeyc/fsnotify
-    GOPATH=/home/ulfr/git/opsec/mig go get -u labix.org/v2/mgo/bson
-    GOPATH=/home/ulfr/git/opsec/mig go get -u code.google.com/p/gcfg
+    GOPATH=. go get -u code.google.com/p/go.crypto/openpgp
+    GOPATH=. go get -u github.com/streadway/amqp
+	...
 
 Each component of MIG can be built independently, but to build the entire
 platform, simply run 'make'.
@@ -56,7 +54,7 @@ error, the build will fail with a Go compilation error.
     if [ ! -r conf/mig-agent-conf.go ]; then echo "conf/mig-agent-conf.go configuration file is missing" ; exit 1; fi
     cp conf/mig-agent-conf.go src/mig/agent/configuration.go
     mkdir -p bin/linux/amd64
-    GOPATH=/home/ulfr/Code/golang/bin:/home/ulfr/git/opsec/mig GOOS=linux GOARCH=amd64 go build  -o bin/linux/amd64/mig-agent -ldflags "-X main.version 4ba6776-201402051327" mig/agent
+    GOPATH=../Code/golang/bin:. GOOS=linux GOARCH=amd64 go build  -o bin/linux/amd64/mig-agent -ldflags "-X main.version 4ba6776-201402051327" mig/agent
 
 Scheduler Configuration
 -----------------------
@@ -70,10 +68,11 @@ the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.
  ::
 
 	[logging]
-    mode = "syslog" ; stdout | file | syslog
-    level = "debug"
+	; select a mode between 'stdout', 'file' and 'syslog
 	; for syslog, logs go into local3
-    host = "localhost"
-    port = 514
-    protocol = "udp"
+	mode		= "syslog"
+	level		= "debug"
+	host		= "localhost"
+	port		= 514
+	protocol	= "udp"
 
