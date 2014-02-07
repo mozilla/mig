@@ -1,9 +1,21 @@
 {
-    "Name":     "LongRunningActionThatShouldTimeOut",
-    "Target":   "linux",
-    "Order":    "terminate",
-    "ScheduledDate":    "2014-01-01T00:00:00.0Z",
-    "ExpirationDate":   "2024-12-31T23:59:00.0Z",
-    "Arguments": {
-    }
+    "Name": "shut down all linux agents",
+    "Description": {
+        "Author": "Julien Vehent",
+        "Email": "jvehent@mozilla.com",
+        "URL": "https://example.net/url_to_something#useful",
+        "Revision": 201402071000
+    },
+    "Target": "linux",
+    "Threat": {
+        "Level": "info",
+        "Family": ""
+    },
+    "Operations": [
+        {
+            "Module": "terminate",
+            "Parameters": {}
+        }
+    ],
+    "SyntaxVersion": 1
 }
