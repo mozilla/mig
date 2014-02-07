@@ -76,3 +76,84 @@ the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.
 	port		= 514
 	protocol	= "udp"
 
+RabbitMQ Configuration
+----------------------
+
+All communications between scheduler and agents rely on RabbitMQ's AMQP
+protocol. While MIG does not rely on the security of RabbitMQ to pass orders to
+agents, an attacker that gains control to the message broker would be able to
+listen to all message, or shut down MIG entirely. To prevent this, RabbitMQ must
+provide a reasonable level of protection, at two levels:
+
+* All communications on the public internet are authentication using client and
+  server certificates. Since all agents share a single client certificate, this
+  provides minimal security, and should only be used to make it harder for
+  attacker to establish an AMQP connection to rabbitmq.
+
+* A given agent can listen and write to its own queue, and no other. We
+  accomplish this by adding a random number to the queue ID, which is generated
+  by an agent, and hard to guess by another agent.
+
+Note that, even if a random agent manages to connect to the relay, the scheduler
+will accept its registration only if it is present in the scheduler's whitelist.
+
+
+**RabbitMQ Permissions**
+
+1. On the rabbitmq server, create three users:
+
+	* **admin**, with the tag 'administrator'
+	* **scheduler** and **agent**, with no tag
+
+   All three should have strong passwords. The scheduler password goes into the
+   configuration file 'conf/mig-scheduler.cfg', in '[mq] password'. The agent
+   password goes into 'conf/mig-agent-conf.go', in the agent 'AMQPBROKER' dial
+   string. The admin password is, of course, for yourself.
+
+.. code:: bash
+
+   rabbitmqctl add_user admin SomeRandomPassword
+   rabbitmqctl set_user_tags admin administrator
+
+   rabbitmqctl add_user scheduler SomeRandomPassword
+
+   rabbitmqctl add_user agent SomeRandomPassword
+
+   rabbitmqctl list_users
+
+2. Create a 'mig' virtual host and assign permissions for the scheduler and
+   agent users
+
+.. code:: bash
+
+   rabbitmqctl add_vhost mig
+   rabbitmqctl list_vhosts
+
+3. Create permissions for the scheduler user. The scheduler is allowed to
+   publish message (write) to the mig exchange. It can also configure and read
+   from the keepalive and sched queues. The command below sets those permissions.
+
+.. code:: bash
+
+   rabbitmqctl set_permissions -p mig scheduler '^mig(|\.(keepalive|sched\..*))' '^mig.*' '^mig(|\.(keepalive|sched\..*))'
+
+4. Same thing for the agent. The agent is allowed to configure and read on the
+   'mig.agt.*' resource, and write to the 'mig' exchange.
+
+.. code:: bash
+
+   rabbitmqctl set_permissions -p mig agent "^mig\.agt\.*" "^mig*" "^mig(|\.agt\..*)"
+
+5. Start the scheduler, it shouldn't return any ACCESS error. You can also list
+   the permissions with the command:
+
+.. code:: bash
+
+   rabbitmqctl list_permissions -p mig
+                CONFIGURE                           WRITE       READ
+   agent        ^mig\\.agt\\.*                      ^mig*       ^mig(|\\.agt\\..*)
+   scheduler    ^mig(|\\.(keepalive|sched\\..*))    ^mig.*      ^mig(|\\.(keepalive|sched\\..*))
+
+
+**RabbitMQ TLS configuration**
+

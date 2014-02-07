@@ -38,8 +38,8 @@ package main
 import (
 	"code.google.com/p/gcfg"
 	"fmt"
-	"github.com/streadway/amqp"
 	"github.com/VividCortex/godaemon"
+	"github.com/streadway/amqp"
 	"labix.org/v2/mgo"
 	"mig"
 	"os"
@@ -85,9 +85,9 @@ type Context struct {
 	}
 	MQ struct {
 		// configuration
-		Host, User, Pass string
-		Port             int
-		UseTLS           bool
+		Host, User, Pass, Vhost string
+		Port                    int
+		UseTLS                  bool
 		// internal
 		conn *amqp.Connection
 		Chan *amqp.Channel
@@ -242,8 +242,8 @@ func initBroker(orig_ctx Context) (ctx Context, err error) {
 	}()
 
 	ctx = orig_ctx
-	// dialing address use format "<scheme>://<user>:<pass>@<host>:<port>/"
-	var scheme, user, pass, host, port string
+	// dialing address use format "<scheme>://<user>:<pass>@<host>:<port><vhost>"
+	var scheme, user, pass, host, port, vhost string
 	if ctx.MQ.UseTLS {
 		panic("TLS AMQPS mode not supported")
 	} else {
@@ -265,8 +265,8 @@ func initBroker(orig_ctx Context) (ctx Context, err error) {
 		panic("MQ Port is missing")
 	}
 	port = fmt.Sprintf("%d", ctx.MQ.Port)
-
-	dialaddr := scheme + "://" + user + ":" + pass + "@" + host + ":" + port + "/"
+	vhost = ctx.MQ.Vhost
+	dialaddr := scheme + "://" + user + ":" + pass + "@" + host + ":" + port + "/" + vhost
 
 	// Setup the AMQP broker connection
 	ctx.MQ.conn, err = amqp.Dial(dialaddr)

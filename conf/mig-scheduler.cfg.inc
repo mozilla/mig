@@ -17,6 +17,7 @@
     port = 5672
     user = "guest"
     pass = "guest"
+    vhost = "/"
 
 [logging]
     mode = "stdout" ; stdout | file | syslog
