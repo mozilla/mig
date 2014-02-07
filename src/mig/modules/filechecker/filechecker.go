@@ -106,18 +106,17 @@ const (
 //		etc...
 //	}
 // }
-type Parameters struct {
-	Elements map[string]map[string]map[string][]string
-}
+type Parameters map[string]map[string]map[string][]string
 
 // Create a new Parameters
 func NewParameters() *Parameters {
-	return &Parameters{Elements: make(map[string]map[string]map[string][]string)}
+	p := make(Parameters)
+	return &p
 }
 
 // validate a Parameters
 func (p Parameters) Validate() (err error) {
-	for path, methods := range p.Elements {
+	for path, methods := range p {
 		if string(path) == "" {
 			return fmt.Errorf("Invalid path parameter. Expected string")
 		}
@@ -187,7 +186,7 @@ type filecheck struct {
 }
 
 // Response is a struct that formats the data returned to the caller
-type Response struct {
+type Results struct {
 	FoundAnything bool
 	Elements      map[string]map[string]map[string]map[string]singleresult
 	Extra         extraresults
@@ -205,8 +204,8 @@ type extraresults struct {
 }
 
 // NewResponse constructs a Response
-func NewResponse() *Response {
-	return &Response{Elements: make(map[string]map[string]map[string]map[string]singleresult), FoundAnything: false}
+func NewResults() *Results {
+	return &Results{Elements: make(map[string]map[string]map[string]map[string]singleresult), FoundAnything: false}
 }
 
 // Run() is filechecker's entry point. It parses command line arguments into a list of
@@ -216,7 +215,7 @@ func NewResponse() *Response {
 func Run(Args []byte) string {
 	t0 := time.Now()
 	params := NewParameters()
-	err := json.Unmarshal(Args, &params.Elements)
+	err := json.Unmarshal(Args, &params)
 	if err != nil {
 		panic(err)
 	}
@@ -230,7 +229,7 @@ func Run(Args []byte) string {
 	checklist := make(map[int]filecheck)
 	todolist := make(map[int]filecheck)
 	i := 0
-	for path, methods := range params.Elements {
+	for path, methods := range *params {
 		for method, identifiers := range methods {
 			for identifier, tests := range identifiers {
 				for _, test := range tests {
@@ -664,7 +663,7 @@ func matchRegexOnName(filename string, ReList []int, checklist map[int]filecheck
 // buildResults iterates on the map of checklist and print the results to stdout (if
 // DEBUG is set) and into JSON format
 func buildResults(checklist map[int]filecheck, t0 time.Time) string {
-	res := NewResponse()
+	res := NewResults()
 	history := make(map[string]int)
 
 	// iterate through the checklist and parse the results
@@ -685,16 +684,14 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) string {
 			}
 			stats.Checksmatch++
 		}
-		//var listMatchedFiles map[string]int
-		//listMatchedFiles = check.files
-		//for file, hits := range check.files {
-		//	listMatchedFiles = append(listMatchedFiles, f)
-		//}
+
+		// build a single results and insert it into the result structure
 		r := singleresult{
 			Filecount:  check.filecount,
 			Matchcount: check.matchcount,
 			Files:      check.files,
 		}
+		// to avoid overwriting existing elements, we test each level before inserting the result
 		if _, ok := res.Elements[check.path]; !ok {
 			res.Elements[check.path] = map[string]map[string]map[string]singleresult{
 				check.method: map[string]map[string]singleresult{
