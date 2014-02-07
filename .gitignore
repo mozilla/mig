@@ -8,3 +8,5 @@ doc/*.html
 *.a
 *.so
 *.o
+src/*
+!src/mig
