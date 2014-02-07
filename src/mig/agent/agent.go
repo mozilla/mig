@@ -73,13 +73,14 @@ type moduleOp struct {
 func main() {
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
-	var mode = flag.String("m", "agent", "module to run (eg. agent, filechecker)")
+	var mode = flag.String("m", "agent", "Module to run (eg. agent, filechecker).")
 	var file = flag.String("i", "/path/to/file", "Load action from file")
+	var foreground = flag.Bool("f", false, "Agent will run in background by default. Except if this flag is set, or if LOGGING.Mode is stdout. All other modules run in foreground by default.")
 	flag.Parse()
 
 	// run the agent, and exit when done
 	if *mode == "agent" && *file == "/path/to/file" {
-		err := runAgent()
+		err := runAgent(*foreground)
 		if err != nil {
 			panic(err)
 		}
@@ -129,12 +130,12 @@ func runModuleDirectly(mode string, args []byte) (err error) {
 
 // runAgent is the startup function for agent mode. It only exits when the agent
 // must shut down.
-func runAgent() (err error) {
+func runAgent(foreground bool) (err error) {
 	var ctx Context
 
 	// if init fails, sleep for one minute and try again. forever.
 	for {
-		ctx, err = Init()
+		ctx, err = Init(foreground)
 		if err == nil {
 			break
 		}
@@ -327,7 +328,7 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 	cmdArgs := fmt.Sprintf("%s", tmpargs)
 
 	// build the command line and execute
-	cmd := exec.Command(os.Args[0], "-m", strings.ToLower(op.mode), cmdArgs)
+	cmd := exec.Command(ctx.Agent.BinPath, "-m", strings.ToLower(op.mode), cmdArgs)
 	cmd.Stdout = &out
 	if err := cmd.Start(); err != nil {
 		panic(err)

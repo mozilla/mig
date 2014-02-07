@@ -52,6 +52,7 @@ go_get_deps:
 	$(GOGETTER) github.com/howeyc/fsnotify
 	$(GOGETTER) labix.org/v2/mgo/bson
 	$(GOGETTER) code.google.com/p/gcfg
+	$(GOGETTER) github.com/VividCortex/godaemon
 
 install: gpgme mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent

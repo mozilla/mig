@@ -38,6 +38,7 @@ package main
 import (
 	"fmt"
 	"github.com/streadway/amqp"
+	"github.com/VividCortex/godaemon"
 	"io/ioutil"
 	"mig"
 	"os"
@@ -51,7 +52,7 @@ import (
 type Context struct {
 	OpID  uint64 // ID of the current operation, used for tracking
 	Agent struct {
-		Hostname, OS, QueueLoc, UID string
+		Hostname, OS, QueueLoc, UID, BinPath string
 	}
 	Channels struct {
 		// internal
@@ -79,13 +80,26 @@ type Context struct {
 
 // Init prepare the AMQP connections to the broker and launches the
 // goroutines that will process commands received by the MIG Scheduler
-func Init() (ctx Context, err error) {
+func Init(foreground bool) (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initAgent() -> %v", e)
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
 	}()
+
+	// find out current working dir and build the bin path
+	// it's important to do that before we daemonize, other the cwd will be /
+	cdir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	ctx.Agent.BinPath = cdir + "/" + os.Args[0]
+
+	// daemonize
+	if !foreground && LOGGINGCONF.Mode != "stdout" {
+		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
+	}
 
 	// convert heartbeat frequency into duration for sleep
 	ctx.Sleeper, err = time.ParseDuration(HEARTBEATFREQ)
