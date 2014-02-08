@@ -89,7 +89,7 @@ QnD9SDA9/d80
 // CA cert that signs the rabbitmq server certificate, for verification
 // of the chain of trust. If rabbitmq uses a self-signed cert, add this
 // cert below
-var AMQPCACERT string = `-----BEGIN CERTIFICATE-----
+var CACERT string = `-----BEGIN CERTIFICATE-----
 MIIHyTCCBbGgAwIBAgIBATANBgkqhkiG9w0BAQUFADB9MQswCQYDVQQGEwJJTDEW
 ........
 NOsF/5oirpt9P/FlUQqmMGqz9IgcgA38corog14=
