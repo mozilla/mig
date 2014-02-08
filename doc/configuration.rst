@@ -267,3 +267,14 @@ Note: erlang r14B doesn't support TLS 1.1 and 1.2, as returned by the command:
 
 That is it for rabbitmq. Go back to the MIG Agent configuration section of this
 page in order to add the client certificate into your agents.
+
+**Serving AMQPS on port 443**
+
+To prevent yours agents from getting blocked by firewalls, it may be a good idea
+to use port 443 for connections between agents and rabbitmq. However, rabbitmq
+is not designed to run on a privileged port. The solution, then, is to use
+iptables to redirect the port on the rabbitmq server.
+
+.. code:: bash
+
+	iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 5671 -m comment --comment "Serve RabbitMQ on HTTPS port"
