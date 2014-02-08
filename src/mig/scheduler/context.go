@@ -37,9 +37,13 @@ package main
 
 import (
 	"code.google.com/p/gcfg"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"github.com/VividCortex/godaemon"
 	"github.com/streadway/amqp"
+	"io/ioutil"
 	"labix.org/v2/mgo"
 	"mig"
 	"os"
@@ -88,6 +92,7 @@ type Context struct {
 		Host, User, Pass, Vhost string
 		Port                    int
 		UseTLS                  bool
+		TLScert, TLSkey, CAcert string
 		// internal
 		conn *amqp.Connection
 		Chan *amqp.Channel
@@ -245,7 +250,7 @@ func initBroker(orig_ctx Context) (ctx Context, err error) {
 	// dialing address use format "<scheme>://<user>:<pass>@<host>:<port><vhost>"
 	var scheme, user, pass, host, port, vhost string
 	if ctx.MQ.UseTLS {
-		panic("TLS AMQPS mode not supported")
+		scheme = "amqps"
 	} else {
 		scheme = "amqp"
 	}
@@ -268,11 +273,38 @@ func initBroker(orig_ctx Context) (ctx Context, err error) {
 	vhost = ctx.MQ.Vhost
 	dialaddr := scheme + "://" + user + ":" + pass + "@" + host + ":" + port + "/" + vhost
 
-	// Setup the AMQP broker connection
-	ctx.MQ.conn, err = amqp.Dial(dialaddr)
-	if err != nil {
-		panic(err)
+	if ctx.MQ.UseTLS {
+		// import the client certificates
+		cert, err := tls.LoadX509KeyPair(ctx.MQ.TLScert, ctx.MQ.TLSkey)
+		if err != nil {
+			panic(err)
+		}
+
+		// import the ca cert
+		data, err := ioutil.ReadFile(ctx.MQ.CAcert)
+		ca := x509.NewCertPool()
+		if ok := ca.AppendCertsFromPEM(data); !ok {
+			panic("failed to import CA Certificate")
+		}
+		TLSconfig := tls.Config{Certificates: []tls.Certificate{cert},
+			RootCAs:            ca,
+			InsecureSkipVerify: false,
+			Rand:               rand.Reader}
+
+		// Open an encrypted AMQP connection
+		ctx.MQ.conn, err = amqp.DialTLS(dialaddr, &TLSconfig)
+		if err != nil {
+			panic(err)
+		}
+
+	} else {
+		// Setup the AMQP broker connection
+		ctx.MQ.conn, err = amqp.Dial(dialaddr)
+		if err != nil {
+			panic(err)
+		}
 	}
+
 	ctx.MQ.Chan, err = ctx.MQ.conn.Channel()
 	if err != nil {
 		panic(err)

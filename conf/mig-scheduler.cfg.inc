@@ -13,11 +13,17 @@
     port = 27017
 
 [mq]
-    host = "127.0.0.1"
-    port = 5672
-    user = "guest"
-    pass = "guest"
+    host  = "127.0.0.1"
+    port  = 5672
+    user  = "guest"
+    pass  = "guest"
     vhost = "/"
+
+; TLS options
+;   usetls  = true
+;   cacert  = "/path/to/cacert.pem"
+;   tlscert = "/path/to/cert.pem"
+;   tlskey  = "/path/to/key.pem"
 
 [logging]
     mode = "stdout" ; stdout | file | syslog
