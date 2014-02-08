@@ -36,13 +36,17 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
-	"github.com/streadway/amqp"
 	"github.com/VividCortex/godaemon"
+	"github.com/streadway/amqp"
 	"io/ioutil"
 	"mig"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -66,11 +70,11 @@ type Context struct {
 		// configuration
 		Host, User, Pass string
 		Port             int
-		UseTLS           bool
 		// internal
-		conn *amqp.Connection
-		Chan *amqp.Channel
-		Bind mig.Binding
+		UseTLS bool
+		conn   *amqp.Connection
+		Chan   *amqp.Channel
+		Bind   mig.Binding
 	}
 	Sleeper time.Duration // timer used when the agent has to sleep for a while
 	Stats   struct {
@@ -96,8 +100,9 @@ func Init(foreground bool) (ctx Context, err error) {
 	}
 	ctx.Agent.BinPath = cdir + "/" + os.Args[0]
 
-	// daemonize
+	// daemonize, and force logging to stdout
 	if !foreground && LOGGINGCONF.Mode != "stdout" {
+		LOGGINGCONF.Mode = "stdout"
 		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
 	}
 
@@ -284,10 +289,40 @@ func initMQ(orig_ctx Context) (ctx Context, err error) {
 	ctx.MQ.Bind.Queue = fmt.Sprintf("mig.agt.%s", ctx.Agent.QueueLoc)
 	ctx.MQ.Bind.Key = fmt.Sprintf("mig.agt.%s", ctx.Agent.QueueLoc)
 
-	// Open an AMQP connection
-	ctx.MQ.conn, err = amqp.Dial(AMQPBROKER)
-	if err != nil {
-		panic(err)
+	// parse the dial string and use TLS if using amqps
+	if strings.Contains(AMQPBROKER, "amqps://") {
+		ctx.MQ.UseTLS = true
+	}
+
+	if ctx.MQ.UseTLS {
+		// import the client certificates
+		cert, err := tls.X509KeyPair([]byte(AGENTCERT), []byte(AGENTKEY))
+		if err != nil {
+			panic(err)
+		}
+
+		// import the ca cert
+		ca := x509.NewCertPool()
+		if ok := ca.AppendCertsFromPEM([]byte(CACERT)); !ok {
+			panic("failed to import CA Certificate")
+		}
+		TLSconfig := tls.Config{Certificates: []tls.Certificate{cert},
+			RootCAs:            ca,
+			InsecureSkipVerify: false,
+			Rand:               rand.Reader}
+
+		// Open an encrypted AMQP connection
+		ctx.MQ.conn, err = amqp.DialTLS(AMQPBROKER, &TLSconfig)
+		if err != nil {
+			panic(err)
+		}
+
+	} else {
+		// Open a non-encrypted AMQP connection
+		ctx.MQ.conn, err = amqp.Dial(AMQPBROKER)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	ctx.MQ.Chan, err = ctx.MQ.conn.Channel()
