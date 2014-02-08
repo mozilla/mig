@@ -4,28 +4,6 @@ Mozilla InvestiGator Configuration Documentation
 This document describes the steps to build and configure a complete MIG
 platform.
 
-Build instructions
-------------------
-
-To build MIG, you need Go version 1.2 or superior. The PGP signature also
-requires GPGME (called 'gpgme-devel' on fedora, and 'libgpgme' on debian).
-
-Several Go dependencies can be resolved by running:
-
-.. code:: bash
-
-    $ make go_get_deps
-    GOPATH=. go get -u code.google.com/p/go.crypto/openpgp
-    GOPATH=. go get -u github.com/streadway/amqp
-	...
-
-Each component of MIG can be built independently, but to build the entire
-platform, simply run 'make'.
-
-.. code:: bash
-
-    $ make
-
 Agent Configuration
 -------------------
 
@@ -43,18 +21,61 @@ and you're done.
 A template of agent configuration is in 'conf/mig-agent-conf.go.inc'. Copy this
 to 'conf/mig-agent-conf.go' and edit the file. Make sure to respect Go syntax
 format.
-Then, run 'make mig-agent'. The Makefile will copy the configuration from
-'conf/mig-agent-conf.go' into 'src/mig/agent/configuration.go' and proceed to
-building the agent. If the configuration file is missing, or if it contains
-error, the build will fail with a Go compilation error.
 
 .. code:: bash
 
-    $ make mig-agent
-    if [ ! -r conf/mig-agent-conf.go ]; then echo "conf/mig-agent-conf.go configuration file is missing" ; exit 1; fi
-    cp conf/mig-agent-conf.go src/mig/agent/configuration.go
-    mkdir -p bin/linux/amd64
-    GOPATH=../Code/golang/bin:. GOOS=linux GOARCH=amd64 go build  -o bin/linux/amd64/mig-agent -ldflags "-X main.version 4ba6776-201402051327" mig/agent
+   git clone git@github.com:mozilla/mig.git
+   cd mig/conf
+   cp mig-agent-conf.go.inc mig-agent-conf.go
+   vim mig-agent-conf.go
+
+Later on, when you run 'make mig-agent', the Makefile will copy the agent
+configuration to the agent source code, and build the binary. If the
+configuration file is missing, Makefile will alert you. If you have an error in
+the format of the file, the Go compiler will return a list of compilation errors
+for you to fix.
+
+**AMQPS configuration**
+
+TLS support between agents and rabbitmq is optional, but strongly recommended.
+If you want to use TLS, you need to import the PEM encoded client certificate,
+client key and CA certificate into 'mig-agent-conf.go'.
+
+1. **CACERT** must contain the PEM encoded certificate of the Root CA.
+
+2. **AGENTCERT** must contain the PEM encoded client certificate of the agent.
+
+3. **AGENTKEY** must contain the PEM encoded client certificate of the agent.
+
+You also need to edit the **AMQPBROKER** variable to invoke **amqps** instead of
+the regular amqp mode. You probably also want to change the port from 5672
+(default amqp) to 5671 (default amqps).
+
+Build instructions
+------------------
+
+To build MIG, you need Go version 1.2 or superior. The PGP signature also
+requires GPGME (called 'gpgme-devel' on fedora, and 'libgpgme' on debian).
+
+Several Go dependencies can be resolved by running:
+
+.. code:: bash
+
+    $ make go_get_deps
+    GOPATH=. go get -u code.google.com/p/go.crypto/openpgp
+    GOPATH=. go get -u github.com/streadway/amqp
+	...
+
+Each component of MIG can be built independently with 'make mig-action-generator',
+'make mig-scheduler' and 'make mig-agent'. To build the entire platform, simply
+run 'make'.
+
+.. code:: bash
+
+    $ make
+
+Built binaries will be placed in **bin/linux/amd64/** (or in a similar directory
+if you are building on a different platform).
 
 Scheduler Configuration
 -----------------------
@@ -62,8 +83,11 @@ Scheduler Configuration
 The scheduler template configuration is in 'conf/mig-scheduler.cfg.inc'. It must
 be copied to a location of your choice, and edited.
 
-The scheduler will run in foreground if the logging mode is set to 'stdout'. For
-the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.
+**Logging**
+
+The scheduler can log to stdout, syslog, or a target file. It will run in
+foreground if the logging mode is set to 'stdout'.
+For the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.
 
  ::
 
@@ -75,6 +99,30 @@ the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.
 	host		= "localhost"
 	port		= 514
 	protocol	= "udp"
+
+**AMQPS configuration**
+
+TLS support between the scheduler and rabbitmq is optional but strongly
+recommended. To enable it, generate a client certificate and set the
+[mq] configuration section of the scheduler as follow:
+
+ ::
+
+	[mq]
+		host = "relay1.mig.allizom.org"
+		port = 5671
+		user = "scheduler"
+		pass = "Hsiuhdq&1huiaosd080uaf_091asdhfofqe"
+		vhost = "mig"
+
+	; TLS options
+		usetls  = true
+		cacert  = "/etc/mig/scheduler/cacert.pem"
+		tlscert = "/etc/mig/scheduler/scheduler-amqps.pem"
+		tlskey  = "/etc/mig/scheduler/scheduler-amqps-key.pem"
+
+Make sure to use **fully qualified paths** otherwise the scheduler will fail to
+load them after going in the background.
 
 RabbitMQ Configuration
 ----------------------
@@ -157,3 +205,65 @@ will accept its registration only if it is present in the scheduler's whitelist.
 
 **RabbitMQ TLS configuration**
 
+The documentation from rabbitmq has a thorough explanation of SSL support in
+rabbit at http://www.rabbitmq.com/ssl.html . Without going into too much
+details, we need three things:
+
+1. a PKI (and its public cert)
+
+2. a server certificate and private key for rabbitmq itself
+
+3. a client certificate and private key for the agents
+
+You can obtain these three things on you own, or follow the openssl tutorial
+from the rabbitmq documentation. Come back here when you have all three.
+
+On the rabbitmq server, place the certificates under **/etc/rabbitmq/certs/**.
+
+ ::
+
+	/etc/rabbitmq/certs/
+	├── cacert.pem
+	├── migrelay1.example.net.key
+	└── migrelay1.example.net.pem
+
+Edit (or create) the configuration file of rabbitmq to reference the
+certificates.
+
+ ::
+
+	[
+	  {rabbit, [
+		 {ssl_listeners, [5671]},
+		 {ssl_options, [{cacertfile,"/etc/rabbitmq/certs/cacert.pem"},
+						{certfile,"/etc/rabbitmq/certs/migrelay1.example.net.pem"},
+						{keyfile,"/etc/rabbitmq/certs/migrelay1.example.net.key"},
+						{verify,verify_peer},
+						{fail_if_no_peer_cert,false},
+						{ciphers, [{dhe_rsa,aes_128_cbc,sha},
+								   {dhe_rsa,aes_256_cbc,sha},
+								   {dhe_rsa,'3des_ede_cbc',sha},
+								   {rsa,aes_128_cbc,sha},
+								   {rsa,aes_256_cbc,sha},
+								   {rsa,'3des_ede_cbc',sha}]},
+						{versions, [tlsv1]}
+		 ]}
+	  ]}
+	].
+
+Use this command to list the ciphers supported by a rabbitmq server:
+
+.. code:: bash
+
+	rabbitmqctl eval 'ssl:cipher_suites().'
+
+Note: erlang r14B doesn't support TLS 1.1 and 1.2, as returned by the command:
+
+.. code:: bash
+
+	# rabbitmqctl eval 'ssl:versions().'
+	[{ssl_app,"4.1.6"},{supported,[tlsv1,sslv3]},{available,[tlsv1,sslv3]}]
+	...done.
+
+That is it for rabbitmq. Go back to the MIG Agent configuration section of this
+page in order to add the client certificate into your agents.
