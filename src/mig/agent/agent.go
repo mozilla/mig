@@ -225,7 +225,8 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 			// if we have a command to return, update status and send back
 			if cmd.ID > 0 {
-				cmd.Results[0] = mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
+				errLog := mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
+				cmd.Results = append(cmd.Results, errLog)
 				cmd.Status = "failed"
 				ctx.Channels.Results <- cmd
 			}
