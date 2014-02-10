@@ -106,6 +106,7 @@ clean:
 	rm -f libmig_gpgme.a
 	rm -rf bin
 	rm -rf tmp
+	rm *.rpm
 	find src/ -maxdepth 1 -mindepth 1 ! -name mig -exec rm -rf {} \;
 
 clean-all: clean
