@@ -106,8 +106,8 @@ func Init(foreground bool) (ctx Context, err error) {
 		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
 	}
 
-	// convert heartbeat frequency into duration for sleep
-	ctx.Sleeper, err = time.ParseDuration(HEARTBEATFREQ)
+	// store heartbeat frequency
+	ctx.Sleeper = HEARTBEATFREQ
 	if err != nil {
 		panic(err)
 	}
@@ -294,6 +294,11 @@ func initMQ(orig_ctx Context) (ctx Context, err error) {
 		ctx.MQ.UseTLS = true
 	}
 
+	// create an AMQP configuration with specific timers
+	var dialConfig amqp.Config
+	dialConfig.ConnectionTimeout = 10 * ctx.Sleeper
+	dialConfig.Heartbeat = 2 * ctx.Sleeper
+
 	if ctx.MQ.UseTLS {
 		// import the client certificates
 		cert, err := tls.X509KeyPair([]byte(AGENTCERT), []byte(AGENTKEY))
@@ -311,18 +316,12 @@ func initMQ(orig_ctx Context) (ctx Context, err error) {
 			InsecureSkipVerify: false,
 			Rand:               rand.Reader}
 
-		// Open an encrypted AMQP connection
-		ctx.MQ.conn, err = amqp.DialTLS(AMQPBROKER, &TLSconfig)
-		if err != nil {
-			panic(err)
-		}
-
-	} else {
-		// Open a non-encrypted AMQP connection
-		ctx.MQ.conn, err = amqp.Dial(AMQPBROKER)
-		if err != nil {
-			panic(err)
-		}
+		dialConfig.TLSClientConfig = &TLSconfig
+	}
+	// Open a non-encrypted AMQP connection
+	ctx.MQ.conn, err = amqp.DialConfig(AMQPBROKER, dialConfig)
+	if err != nil {
+		panic(err)
 	}
 
 	ctx.MQ.Chan, err = ctx.MQ.conn.Channel()

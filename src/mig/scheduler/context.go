@@ -47,6 +47,7 @@ import (
 	"labix.org/v2/mgo"
 	"mig"
 	"os"
+	"time"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -93,6 +94,7 @@ type Context struct {
 		Port                    int
 		UseTLS                  bool
 		TLScert, TLSkey, CAcert string
+		Timeout                 string
 		// internal
 		conn *amqp.Connection
 		Chan *amqp.Channel
@@ -273,6 +275,20 @@ func initBroker(orig_ctx Context) (ctx Context, err error) {
 	vhost = ctx.MQ.Vhost
 	dialaddr := scheme + "://" + user + ":" + pass + "@" + host + ":" + port + "/" + vhost
 
+	if ctx.MQ.Timeout == "" {
+		ctx.MQ.Timeout = "600s"
+	}
+	timeout, err := time.ParseDuration(ctx.MQ.Timeout)
+	if err != nil {
+		panic("Failed to parse timeout duration")
+	}
+
+	// create an AMQP configuration with specific timers
+	var dialConfig amqp.Config
+	dialConfig.ConnectionTimeout = timeout
+	dialConfig.Heartbeat = timeout
+
+	// create the TLS configuration
 	if ctx.MQ.UseTLS {
 		// import the client certificates
 		cert, err := tls.LoadX509KeyPair(ctx.MQ.TLScert, ctx.MQ.TLSkey)
@@ -291,18 +307,14 @@ func initBroker(orig_ctx Context) (ctx Context, err error) {
 			InsecureSkipVerify: false,
 			Rand:               rand.Reader}
 
-		// Open an encrypted AMQP connection
-		ctx.MQ.conn, err = amqp.DialTLS(dialaddr, &TLSconfig)
-		if err != nil {
-			panic(err)
-		}
+		dialConfig.TLSClientConfig = &TLSconfig
 
-	} else {
-		// Setup the AMQP broker connection
-		ctx.MQ.conn, err = amqp.Dial(dialaddr)
-		if err != nil {
-			panic(err)
-		}
+	}
+
+	// Setup the AMQP broker connection
+	ctx.MQ.conn, err = amqp.DialConfig(dialaddr, dialConfig)
+	if err != nil {
+		panic(err)
 	}
 
 	ctx.MQ.Chan, err = ctx.MQ.conn.Channel()

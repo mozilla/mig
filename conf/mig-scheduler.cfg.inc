@@ -25,6 +25,11 @@
 ;   tlscert = "/path/to/cert.pem"
 ;   tlskey  = "/path/to/key.pem"
 
+; AMQP options
+; timeout defaults to 10 minutes
+; keep this higher than the agent heartbeat value
+;   timeout = "10m"
+
 [logging]
     mode = "stdout" ; stdout | file | syslog
     level = "debug"

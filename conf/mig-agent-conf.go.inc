@@ -53,7 +53,7 @@ var LOGGINGCONF = mig.Logging{
 var AMQPBROKER string = "amqp://guest:guest@localhost:5672/"
 
 // frequency at which the agent sends keepalive messages
-var HEARTBEATFREQ string = "300s"
+var HEARTBEATFREQ time.Duration = 300 * time.Second
 
 // timeout after which a module run is killed
 var MODULETIMEOUT time.Duration = 300 * time.Second
