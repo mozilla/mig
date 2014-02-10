@@ -50,6 +50,7 @@ go_get_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
 	$(GOGETTER) github.com/streadway/amqp
 	$(GOGETTER) github.com/howeyc/fsnotify
+	$(GOGETTER) labix.org/v2/mgo
 	$(GOGETTER) labix.org/v2/mgo/bson
 	$(GOGETTER) code.google.com/p/gcfg
 	$(GOGETTER) github.com/VividCortex/godaemon
