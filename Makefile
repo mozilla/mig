@@ -44,7 +44,7 @@ mig-action-generator: gpgme
 	$(MKDIR) -p $(BINDIR)
 # XXX this could be nicer
 	ln -sf src/mig/pgp/sign/libmig_gpgme.a ./
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/client
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/client/generator
 
 go_get_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
