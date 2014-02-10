@@ -71,7 +71,7 @@ rpm-agent: mig-agent
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent tmp/sbin/mig-agent
 	$(MKDIR) -p tmp/var/cache/mig
 # Agent auto install startup scripts, so we just need to execute it once as priviligied user
-	echo -en "#!/bin/sh\n/usr/sbin/mig_agent" > tmp/agent_install.sh
+	echo -en "#!/bin/sh\n/sbin/mig-agent" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
