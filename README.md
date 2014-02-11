@@ -1,5 +1,5 @@
-Mozilla Investigator
-====================
+MIG: Mozilla InvestiGator
+=========================
 
 MIG is OpSec's platform for investigative surgery of remote endpoints. It's a
 platform that allows investigators to send actions to pools of agents, and check
