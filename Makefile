@@ -40,11 +40,15 @@ mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig/scheduler
 
+mig-api:
+	$(MKDIR) -p $(BINDIR)
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-api $(GOLDFLAGS) mig/api
+
 mig-action-generator: gpgme
 	$(MKDIR) -p $(BINDIR)
 # XXX this could be nicer
 	ln -sf src/mig/pgp/sign/libmig_gpgme.a ./
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/client/generator
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/clients/generator
 
 go_get_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
@@ -54,6 +58,7 @@ go_get_deps:
 	$(GOGETTER) labix.org/v2/mgo/bson
 	$(GOGETTER) code.google.com/p/gcfg
 	$(GOGETTER) github.com/VividCortex/godaemon
+	$(GOGETTER) github.com/gorilla/mux
 
 install: gpgme mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
