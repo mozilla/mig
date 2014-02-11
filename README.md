@@ -26,6 +26,10 @@ Speed is a strong requirement. Most actions will only take a few hundreds
 milliseconds to run. Larger ones, for example when looking for a hash in a large
 directory, should run in less than a minute.
 
+Check out this 6 minutes presentation for background:
+
+[![MIG youtube video](http://img.youtube.com/vi/SHjSdGOv7Nk/0.jpg)](http://www.youtube.com/watch?v=SHjSdGOv7Nk)
+
 Goals
 -----
 
