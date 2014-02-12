@@ -23,8 +23,8 @@ the scheduler, each action and command are stored individually in a text file in
 
 	10 directories
 
-MongoDB
--------
+MongoDB Cookbook
+----------------
 
 Data is also stored in MongoDB. Actions and Commands have their own separate
 collections. MongoDB is also used to store agent's keepalives.
@@ -67,12 +67,10 @@ See the **concepts** documentation for details on the action and command fields.
 
 .. code:: javascript
 
-	> var actionFoundSomething = db.commands.find(
-	... {
-	... 'action.id': 5978800913477866376,
-	... 'results.0.FoundAnything': true
-	... }
-	... );
+	> var actionFoundSomething = db.commands.find({
+		'action.id': 5978800913477866376,
+		'results.0.FoundAnything': true
+	});
 
 The results are stored in a variable called 'actionFoundSomething', that is
 created inside the mongo shell. We can iterate through the results of the query,
@@ -81,10 +79,10 @@ and print the list of agents, using a second shell command:
 .. code:: javascript
 
 	> actionFoundSomething.forEach(
-	... function(currentcommand){
-	... ... print(currentcommand.agentname);
-	... }
-	... );
+		function(currentcommand){
+			print(currentcommand.agentname);
+		}
+	);
 
 To print the result of the commands ran on the agent, we need to know the
 parameters of the action that was sent. In this case, the 'filechecker' module
@@ -209,5 +207,256 @@ to parse, so the generic mongodb query below will do it for you:
 
 	{            test identifier           }  {mode} {   test value  }       {counter}     {   file   }           {agent name}
 
+**Find the agents where a given action has not completed**
+
+One action spans one command per agent. Since each command is stored
+individually in the database, we can write a query that count commands per
+status.
+
+.. code:: javascript
+
+	> db.commands.group({
+		key: {status: 1},
+		cond: { 'action.id': 5979546396770985756},
+		reduce: function(cur, result){ result.count++ },
+		initial: { count: 0}
+	})
+
+	[ { "status" : "succeeded", "count" : 149 } ]
+
+If the action was still running on some agents, the result would be:
+
+.. code:: json
+
+	[
+		{
+			"status" : "sent",
+			"count" : 11
+		},
+		{
+			"status" : "succeeded",
+			"count" : 138
+		}
+	]
+
+If the action had timed out on some agent, we would get:
+
+.. code:: json
+
+	[
+		{
+			"status" : "timeout",
+			"count" : 4
+		},
+		{
+			"status" : "succeeded",
+			"count" : 145
+		}
+	]
+
+We can list the names of the agents where the action timed out:
+
+.. code:: javascript
+
+	> var actionTimedOut = db.commands.find({'action.id': 5979555683008369409,'status': 'timeout'});
+
+	> actionTimedOut.forEach(function(cmd){ print(cmd.agentname);});
+
+	someagent123.example.net
+	someagent567.datacenter1.example.com
+	someagent2912.datacenter2.example.net
+	server5.example.com
+
+**List the commands that have run on a specific agent in the last 10 minutes**
+
+The query below returns the detail of each command that was ran on agent
+'server1234.example.net' in the last 10 minutes. You can see the full command,
+including the action embedded in it, in the output.
+
+.. code:: javascript
+
+	> db.commands.find({
+		'action.validfrom': {
+			$gt: new Date(ISODate().getTime() - 1000 * 60 * 10)
+		},
+		'agentname': 'server1234.example.net'
+	}).pretty()
+
+	{
+		"_id" : ObjectId("52fba637fbfe511da91fd447"),
+		"id" : NumberLong("5979555681133474350"),
+		"action" : {
+			"id" : NumberLong("5979555683008369409"),
+			"name" : "secrets,keys and other goodies stored in homedir",
+			"target" : "linux",
+			"description" : {
+				"author" : "Julien Vehent",
+				"email" : "ulfr@mozilla.com",
+				"url" : "",
+				"revision" : NumberLong("201402121138")
+			},
+			"threat" : {
+				"level" : "info",
+				"family" : "compliance"
+			},
+			"validfrom" : ISODate("2014-02-12T16:49:53.551Z"),
+			"expireafter" : ISODate("2014-02-12T17:19:53.551Z"),
+			"operations" : [
+				{
+					"module" : "filechecker",
+					"parameters" : {
+						"/home" : {
+							"filename" : {
+								"DB file" : [
+									"\\.db\\$"
+								],
+								"Dump file" : [
+									"\\.dump\\$"
+								],
+								"SQL file" : [
+									"\\.sql\\$"
+								],
+								"gnupg secring" : [
+									"secring.gpg"
+								],
+								"key file" : [
+									"\\.key\\$"
+								],
+								"log file" : [
+									"\\.log\\$"
+								],
+								"password file" : [
+									"password"
+								]
+							},
+							"regex" : {
+								"cleartext RSA private key" : [
+									"-----BEGIN RSA PRIVATE KEY-----"
+								]
+							}
+						}
+					}
+				}
+			],
+			"pgpsignature" : "iQEcBAEBCAAGBQJS+6YxAAoJEKPWUhc7dj6PHSEIAM5AAF4yIZqvV8bLjY0xjjUfjubIEsH0s0ZlXtQOaqbE8x0DL4CmeDR4d8Z8zGwFO+VGrcRa/axAe3486DjBijpKWnNxYbFhrsLroExrSwxJOGogglJeZMT+/grnxVwU7r2z0aY90tld5KXNhEbwdE84re+4fKq9tdS4C3f+sWR1ZwZ2L2wKrNWP6uByI031z2WDcn8osLJjbyZUYNW7HdkrMiM+n/oZzMpKvqyoKvAPrlYNNQgztOhgw3OHDoeXYKhV2MsQJuFcNMGf87ebUJkhUbbzvf6RjkJTmBUfygYeGXPq3ZapuDLVdV2fThFQFDqc9eQxSG9Ua54DCdQpFIQ==nIL4",
+			"pgpsignaturedate" : ISODate("2014-02-12T16:49:53.575Z"),
+			"syntaxversion" : 1
+		},
+		"agentname" : "server1234.example.net",
+		"agentqueueloc" : "linux.server1234.example.net.55tjipop5r2h1",
+		"status" : "succeeded",
+		"results" : [
+			{
+				"Elements" : {
+					"/home" : {
+						"filename" : {
+							"DB file" : {
+								"\.db\$" : {
+									"Filecount" : 972,
+									"Files" : {
+									},
+									"Matchcount" : 0
+								}
+							},
+							"Dump file" : {
+								"\.dump\$" : {
+									"Filecount" : 972,
+									"Files" : {
+									},
+									"Matchcount" : 0
+								}
+							},
+							"SQL file" : {
+								"\.sql\$" : {
+									"Filecount" : 972,
+									"Files" : {
+									},
+									"Matchcount" : 0
+								}
+							},
+							"gnupg secring" : {
+								"secring.gpg" : {
+									"Filecount" : 972,
+									"Files" : {
+									},
+									"Matchcount" : 0
+								}
+							},
+							"key file" : {
+								"\.key\$" : {
+									"Filecount" : 972,
+									"Files" : {
+									},
+									"Matchcount" : 0
+								}
+							},
+							"log file" : {
+								"\.log\$" : {
+									"Filecount" : 972,
+									"Files" : {
+									},
+									"Matchcount" : 0
+								}
+							},
+							"password file" : {
+								"password" : {
+									"Filecount" : 972,
+									"Files" : {
+									},
+									"Matchcount" : 0
+								}
+							}
+						},
+						"regex" : {
+							"cleartext RSA private key" : {
+								"-----BEGIN RSA PRIVATE KEY-----" : {
+									"Filecount" : 972,
+									"Files" : {
+									},
+									"Matchcount" : 0
+								}
+							}
+						}
+					}
+				},
+				"Extra" : {
+					"Statistics" : {
+						"Checkcount" : 8,
+						"Checksmatch" : 0,
+						"Exectime" : "83.966495ms",
+						"Filescount" : 972,
+						"Openfailed" : 0,
+						"Totalhits" : 0,
+						"Uniquefiles" : 0
+					}
+				},
+				"FoundAnything" : false
+			}
+		],
+		"starttime" : ISODate("2014-02-12T16:49:58.790Z"),
+		"finishtime" : ISODate("2014-02-12T16:49:59.279Z")
+	}
+
+**Get a list of agents that have not sent a heartbeat recently**
+
+The following query will search the **registrations** collection to list agents
+that haven't checked in for the last two hours. It uses javascript's date
+operation to substract 120 minutes to the current date, and query on that.
+
+.. code:: javascript
+
+	> db.registrations.find({ heartbeatts: {$lt: new Date(ISODate().getTime() - 1000 * 60 * 120)}});
+
+We can use javascript to print the agent name, queueloc and timestamp of last
+heartbeat.
+
+.. code:: javascript
+
+	> var lateagents = db.registrations.find({ heartbeatts: {$lt: new Date(ISODate().getTime() - 1000 * 60 * 120)}});
+
+	> lateagents.forEach(function(agent){ print(agent.name, agent.queueloc, agent.heartbeatts);});
+	agentXYZ.example.net      linux.agentXYZ.example.net.55t93uhd7m69p     Wed Feb 12 2014 15:49:12 GMT+0000 (UTC)
+	database123.example.com   linux.database123.example.com.55tjdn0fsrdaf  Wed Feb 12 2014 15:49:43 GMT+0000 (UTC)
+	firewall55.example.net    linux.firewall55.example.net.55ub9eh81igbi   Wed Feb 12 2014 15:48:29 GMT+0000 (UTC)
 
 See MongoDB reference documentation for a full explanation of the query language.
