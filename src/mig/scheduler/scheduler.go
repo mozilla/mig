@@ -65,11 +65,12 @@ func main() {
 
 	// The context initialization takes care of parsing the configuration,
 	// and creating connections to database, message broker, syslog, ...
-	fmt.Fprintf(os.Stderr, "Initializing Scheduler context\n")
+	fmt.Fprintf(os.Stderr, "Initializing Scheduler context...")
 	ctx, err := Init(*config)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Fprintf(os.Stderr, "OK\n")
 
 	// Goroutine that handles events, such as logs and panics,
 	// and decides what to do with them
@@ -309,7 +310,9 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	ea.StartTime = time.Now()
 
 	// generate an action id
-	ea.Action.ID = mig.GenID()
+	if ea.Action.ID < 1 {
+		ea.Action.ID = mig.GenID()
+	}
 
 	desc := fmt.Sprintf("new action received: Name='%s' Target='%s' ValidFrom='%s' ExpireAfter='%s'",
 		ea.Action.Name, ea.Action.Target, ea.Action.ValidFrom, ea.Action.ExpireAfter)
