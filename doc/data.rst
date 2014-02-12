@@ -1,6 +1,12 @@
 ========
 MIG Data
 ========
+:Author: Julien Vehent <jvehent@mozilla.com>
+
+.. contents:: Table of Contents
+
+Scheduler Spool
+---------------
 
 MIG data is stored both on the file system of the scheduler, and in mongodb. On
 the scheduler, each action and command are stored individually in a text file in
@@ -30,7 +36,8 @@ Data is also stored in MongoDB. Actions and Commands have their own separate
 collections. MongoDB is also used to store agent's keepalives.
 
 
-**Use the Mongo Shell**
+Use the Mongo Shell
+~~~~~~~~~~~~~~~~~~~
 
 On the mongo database, enter the mongodb shell as follow:
 
@@ -49,7 +56,8 @@ On the mongo database, enter the mongodb shell as follow:
 	registrations
 	system.indexes
 
-**Retrieve an action or command**
+Retrieve an action or command
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Actions and commands can be queried by their ID.
 
@@ -59,7 +67,8 @@ Actions and commands can be queried by their ID.
 
 	> db.commands.find({ 'id': 5978800912567560121 }).pretty()
 
-**Retrieve the list of agents that have positive results**
+Retrieve the list of agents that have positive results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The query below retrieves a list of agents that have executed a specific action,
 identified by its ID, and have found something.
@@ -168,7 +177,8 @@ With this information, we can write the following queries:
 	1 match in /etc/shadow on mytestserver2.example.net
 	1 match in /etc/shadow on .....
 
-**Extracting results from Filechecker in MongoDB**
+Extracting results from Filechecker in MongoDB
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The result syntax of each module is different. Filechecker, for example, use a
 heavily nested object that represents a path with a method, a test ID, a test
@@ -207,7 +217,8 @@ to parse, so the generic mongodb query below will do it for you:
 
 	{            test identifier           }  {mode} {   test value  }       {counter}     {   file   }           {agent name}
 
-**Find the agents where a given action has not completed**
+Find the agents where a given action has not completed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 One action spans one command per agent. Since each command is stored
 individually in the database, we can write a query that count commands per
@@ -267,7 +278,8 @@ We can list the names of the agents where the action timed out:
 	someagent2912.datacenter2.example.net
 	server5.example.com
 
-**List the commands that have run on a specific agent in the last 10 minutes**
+List the commands that have ran on a specific agent in the last 10 minutes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The query below returns the detail of each command that was ran on agent
 'server1234.example.net' in the last 10 minutes. You can see the full command,
@@ -437,7 +449,8 @@ including the action embedded in it, in the output.
 		"finishtime" : ISODate("2014-02-12T16:49:59.279Z")
 	}
 
-**Get a list of agents that have not sent a heartbeat recently**
+Get a list of agents that have not sent a heartbeat recently
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following query will search the **registrations** collection to list agents
 that haven't checked in for the last two hours. It uses javascript's date

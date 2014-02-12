@@ -1,6 +1,9 @@
 ===========
 MIG Modules
 ===========
+:Author: Julien Vehent <jvehent@mozilla.com>
+
+.. contents:: Table of Contents
 
 The MIG Agent does not execute operations by itself. It relies on modules, that
 are imported into the agent at compile time. Agent modules are typically Go

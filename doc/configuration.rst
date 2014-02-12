@@ -1,5 +1,8 @@
 Mozilla InvestiGator Configuration Documentation
 ================================================
+:Author: Julien Vehent <jvehent@mozilla.com>
+
+.. contents:: Table of Contents
 
 This document describes the steps to build and configure a complete MIG
 platform.
@@ -35,7 +38,8 @@ configuration file is missing, Makefile will alert you. If you have an error in
 the format of the file, the Go compiler will return a list of compilation errors
 for you to fix.
 
-**AMQPS configuration**
+AMQPS configuration
+~~~~~~~~~~~~~~~~~~~
 
 TLS support between agents and rabbitmq is optional, but strongly recommended.
 If you want to use TLS, you need to import the PEM encoded client certificate,
@@ -83,7 +87,8 @@ Scheduler Configuration
 The scheduler template configuration is in 'conf/mig-scheduler.cfg.inc'. It must
 be copied to a location of your choice, and edited.
 
-**Logging**
+Logging
+~~~~~~~
 
 The scheduler can log to stdout, syslog, or a target file. It will run in
 foreground if the logging mode is set to 'stdout'.
@@ -100,7 +105,8 @@ For the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.
 	port		= 514
 	protocol	= "udp"
 
-**AMQPS configuration**
+AMQPS configuration
+~~~~~~~~~~~~~~~~~~~
 
 TLS support between the scheduler and rabbitmq is optional but strongly
 recommended. To enable it, generate a client certificate and set the
@@ -146,7 +152,8 @@ Note that, even if a random agent manages to connect to the relay, the scheduler
 will accept its registration only if it is present in the scheduler's whitelist.
 
 
-**RabbitMQ Permissions**
+RabbitMQ Permissions
+~~~~~~~~~~~~~~~~~~~~
 
 1. On the rabbitmq server, create three users:
 
@@ -203,7 +210,8 @@ will accept its registration only if it is present in the scheduler's whitelist.
    scheduler    ^mig(|\\.(keepalive|sched\\..*))    ^mig.*      ^mig(|\\.(keepalive|sched\\..*))
 
 
-**RabbitMQ TLS configuration**
+RabbitMQ TLS configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The documentation from rabbitmq has a thorough explanation of SSL support in
 rabbit at http://www.rabbitmq.com/ssl.html . Without going into too much
@@ -268,7 +276,8 @@ Note: erlang r14B doesn't support TLS 1.1 and 1.2, as returned by the command:
 That is it for rabbitmq. Go back to the MIG Agent configuration section of this
 page in order to add the client certificate into your agents.
 
-**Serving AMQPS on port 443**
+Serving AMQPS on port 443
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To prevent yours agents from getting blocked by firewalls, it may be a good idea
 to use port 443 for connections between agents and rabbitmq. However, rabbitmq
