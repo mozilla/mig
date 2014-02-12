@@ -449,6 +449,33 @@ including the action embedded in it, in the output.
 		"finishtime" : ISODate("2014-02-12T16:49:59.279Z")
 	}
 
+Retrieve the execution time of each command that returned positive results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We can obtain that information by comparing the **starttime** and **finishtime**
+of the command in javascript.
+
+.. code:: javascript
+
+	> var actionFoundSomething = db.commands.find({'action.id': 5979555683008369409, 'results.0.FoundAnything': true});
+	> actionFoundSomething.forEach(
+		function(cmd){
+			print((cmd.finishtime - cmd.starttime)/1000,"seconds on",cmd.agentname);
+		}
+	)
+
+	0.315  seconds on 213ssaoid198.example.net
+	0.463  seconds on 432esaoid198.example.net
+	0.476  seconds on 5bsaoid198.example.net
+	0.574  seconds on 8osaoid198.example.net
+	0.581  seconds on 34osaoid198.example.net
+	0.634  seconds on 879ssaoid198.example.net
+	0.698  seconds on 314564csaoid198.example.net
+	.....
+	40.531 seconds on 536jsaoid198.example.net
+	48.303 seconds on yr65ssaoid198.example.net
+	53.355 seconds on 234thsaoid198.example.net
+
 Get a list of agents that have not sent a heartbeat recently
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
