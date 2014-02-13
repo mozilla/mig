@@ -338,6 +338,8 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	}
 
 	// move action to Fly-ing state
+	ea.Status = "inflight"
+	ea.CmdSent = len(ea.CommandIDs)
 	err = flyAction(ctx, ea, actionPath)
 	if err != nil {
 		panic(err)
