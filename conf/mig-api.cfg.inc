@@ -1,4 +1,8 @@
-; Sample MIG configuration file
+; Sample MIG API configuration file
+
+[server]
+    listening_ip = "127.0.0.1"
+    listening_port = 12345
 
 [openpgp]
     pubring = "/var/cache/mig/.gnupg/pubring.gpg"

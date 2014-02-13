@@ -83,6 +83,10 @@ type Context struct {
 	OpenPGP struct {
 		PubRing string
 	}
+	Server struct {
+		IP   string
+		Port int
+	}
 	Stats struct {
 	}
 	Logging mig.Logging

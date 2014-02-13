@@ -92,7 +92,11 @@ func main() {
 
 	// all set, start the http handler
 	http.Handle("/", r)
-	http.ListenAndServe(":1664", nil)
+	listenAddr := fmt.Sprintf("%s:%d", ctx.Server.IP, ctx.Server.Port)
+	err = http.ListenAndServe(listenAddr, nil)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // createAction receives a signed action in a POST request, validates it,
