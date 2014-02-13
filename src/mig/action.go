@@ -51,12 +51,12 @@ import (
 // a MetaAction is a json object that extends an Action with
 // additional parameters. It is used to track the completion
 // of an action on agents.
-type MetaAction struct {
 	Action                                                          Action
 	Status                                                          string
 	StartTime, FinishTime, LastUpdateTime                           time.Time
 	CommandIDs                                                      []uint64
 	CmdCompleted, CmdSucceeded, CmdCancelled, CmdFailed, CmdTimeOut int
+type ExtendedAction struct {
 }
 
 // an Action is the json object that is created by an investigator

@@ -292,7 +292,7 @@ func watchDirectories(watcher *fsnotify.Watcher, ctx Context) {
 // the action from the directory, parse it, retrieve a list of targets from
 // the backend database, and create individual command for each target.
 func processNewAction(actionPath string, ctx Context) (err error) {
-	var ea mig.MetaAction
+	var ea mig.ExtendedAction
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("processNewAction() -> %v", e)
@@ -584,7 +584,7 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	}
 
 	// use the action ID from the command file to get the action from the database
-	var eas []mig.MetaAction
+	var eas []mig.ExtendedAction
 	actionCursor := ctx.DB.Col.Action.Find(bson.M{"action.id": cmd.Action.ID}).Iter()
 	err = actionCursor.All(&eas)
 	if err != nil {
