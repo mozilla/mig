@@ -35,7 +35,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 
 package main
 
-import(
+import (
 	"code.google.com/p/gcfg"
 	//"crypto/rand"
 	//"crypto/tls"
@@ -53,7 +53,7 @@ import(
 // database and logging. It also contains some statistics.
 // Context is intended as a single structure that can be passed around easily.
 type Context struct {
-	OpID  uint64 // ID of the current operation, used for tracking
+	OpID     uint64 // ID of the current operation, used for tracking
 	Channels struct {
 		Log chan mig.Log
 	}
@@ -189,7 +189,6 @@ func initDirectories(orig_ctx Context) (ctx Context, err error) {
 	return
 }
 
-
 // initDB() sets up the connection to the MongoDB backend database
 func initDB(orig_ctx Context) (ctx Context, err error) {
 	defer func() {
@@ -215,4 +214,3 @@ func initDB(orig_ctx Context) (ctx Context, err error) {
 	ctx.Channels.Log <- mig.Log{Sev: "info", Desc: "MongoDB connection opened"}
 	return
 }
-

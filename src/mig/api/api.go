@@ -35,15 +35,17 @@ the terms of any one of the MPL, the GPL or the LGPL.
 
 package main
 
-import(
+import (
 	"encoding/json"
-	"github.com/gorilla/mux"
-	"io/ioutil"
 	"flag"
 	"fmt"
+	"github.com/gorilla/mux"
+	"io/ioutil"
+	"labix.org/v2/mgo/bson"
 	"mig"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 var ctx Context
@@ -81,24 +83,31 @@ func main() {
 
 	// register routes
 	r := mux.NewRouter()
-	r.HandleFunc("/action/create/", createAction).Methods("POST")
-	r.HandleFunc("/action/cancel/{actionID:[0-9]{1,20}}", cancelAction).Methods("POST")
-	r.HandleFunc("/action/{actionID:[0-9]{1,20}}", getAction).Methods("GET")
-	r.HandleFunc("/action/{actionID:[0-9]{1,20}}/command/{commandID:[0-9]{1,20}}", getCommand).Methods("GET")
-	r.HandleFunc("/agent/dashboard/", getAgentsDashboard).Methods("GET")
-	r.HandleFunc("/agent/search/", searchAgents).Methods("POST")
+	r.HandleFunc("/api/action/create/", createAction).Methods("POST")
+	r.HandleFunc("/api/action/cancel/{actionID:[0-9]{1,20}}", cancelAction).Methods("POST")
+	r.HandleFunc("/api/action/{actionID:[0-9]{1,20}}", getAction).Methods("GET")
+	r.HandleFunc("/api/action/{actionID:[0-9]{1,20}}/command/{commandID:[0-9]{1,20}}", getCommand).Methods("GET")
+	r.HandleFunc("/api/agent/dashboard/", getAgentsDashboard).Methods("GET")
+	r.HandleFunc("/api/agent/search/", searchAgents).Methods("POST")
 
 	// all set, start the http handler
 	http.Handle("/", r)
 	http.ListenAndServe(":1664", nil)
 }
 
+// createAction receives a signed action in a POST request, validates it,
+// and write it into the scheduler spool
 func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
 	var action mig.Action
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: fmt.Sprintf("%v", e)}.Err()
+			// return an error to the client
+			respWriter.Header().Set("Content-Type", "application/json")
+			respWriter.WriteHeader(500)
+			http_error := `{"error":{"opid":` + string(opid) + `,"reason":"` + fmt.Sprintf("%v", e) + `}}`
+			respWriter.Write([]byte(http_error))
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "leaving createAction()"}.Debug()
 	}()
@@ -153,10 +162,42 @@ func cancelAction(respWriter http.ResponseWriter, request *http.Request) {
 	respWriter.Write([]byte(`{"Error": "Not Implemented"}`))
 }
 
+// getAction queries the database and retrieves the detail of an action
 func getAction(respWriter http.ResponseWriter, request *http.Request) {
+	opid := mig.GenID()
+	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAction()"}.Debug()
+	}()
+
+	vars := mux.Vars(request)
+	actionID, err := strconv.Atoi(vars["actionID"])
+	if err != nil {
+		panic(err)
+	}
+
+	// retrieve the action
+	eas := []mig.ExtendedAction{}
+	iter := ctx.DB.Col.Action.Find(bson.M{"action.id": actionID}).Iter()
+	err = iter.All(&eas)
+	if err != nil {
+		panic(err)
+	}
+	if len(eas) == 0 {
+		respWriter.WriteHeader(404)
+		respWriter.Write([]byte(`{"error": "not found"}`))
+		panic("Action not found in the database")
+	}
+	actionsList, err := json.Marshal(eas)
+	if err != nil {
+		panic(err)
+	}
+
 	respWriter.Header().Set("Content-Type", "application/json")
-	respWriter.WriteHeader(501)
-	respWriter.Write([]byte(`{"Error": "Not Implemented"}`))
+	respWriter.WriteHeader(200)
+	respWriter.Write(actionsList)
 }
 
 func getCommand(respWriter http.ResponseWriter, request *http.Request) {
@@ -176,7 +217,6 @@ func searchAgents(respWriter http.ResponseWriter, request *http.Request) {
 	respWriter.WriteHeader(501)
 	respWriter.Write([]byte(`{"Error": "Not Implemented"}`))
 }
-
 
 // safeWrite performs a two steps write:
 // 1) a temp file is written
