@@ -339,7 +339,7 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 
 	// move action to Fly-ing state
 	ea.Status = "inflight"
-	ea.CmdSent = len(ea.CommandIDs)
+	ea.Counters.Sent = len(ea.CommandIDs)
 	err = flyAction(ctx, ea, actionPath)
 	if err != nil {
 		panic(err)
@@ -601,25 +601,28 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	ea := eas[0]
 	switch cmd.Status {
 	case "succeeded":
-		ea.CmdSucceeded++
+		ea.Counters.Succeeded++
 	case "cancelled":
-		ea.CmdCancelled++
+		ea.Counters.Cancelled++
 	case "failed":
-		ea.CmdFailed++
+		ea.Counters.Failed++
 	case "timeout":
-		ea.CmdTimeOut++
+		ea.Counters.TimeOut++
 	default:
 		err = fmt.Errorf("unknown command status: %s", cmd.Status)
 		panic(err)
 	}
 	// regardless of returned status, increase completion counter
-	ea.CmdCompleted++
-	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, succeeded=%d, cancelled=%d, failed=%d, timeout=%d",
-		ea.Action.Name, ea.CmdCompleted, len(ea.CommandIDs), ea.CmdSucceeded, ea.CmdCancelled, ea.CmdFailed, ea.CmdTimeOut)
+	ea.Counters.Completed++
+	ea.LastUpdateTime = time.Now().UTC()
+
+	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, succeeded=%d, cancelled=%d, failed=%d, timeout=%d. duration=",
+		ea.Action.Name, ea.Counters.Completed, ea.Counters.Sent, ea.Counters.Succeeded,
+		ea.Counters.Cancelled, ea.Counters.Failed, ea.Counters.TimeOut, ea.LastUpdateTime.Sub(ea.StartTime))
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, CommandID: cmd.ID, Desc: desc}
 
 	// Has the action completed?
-	if ea.CmdCompleted == len(ea.CommandIDs) {
+	if ea.Counters.Completed == ea.Counters.Sent {
 		// update status and timestamps
 		ea.Status = "completed"
 		ea.FinishTime = time.Now().UTC()
@@ -638,7 +641,6 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	}
 
 	// store updated action in database
-	ea.LastUpdateTime = time.Now().UTC()
 	err = ctx.DB.Col.Action.Update(bson.M{"action.id": ea.Action.ID}, ea)
 	if err != nil {
 		panic(err)

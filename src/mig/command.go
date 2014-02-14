@@ -44,11 +44,14 @@ import (
 )
 
 type Command struct {
-	ID                               uint64
-	Action                           Action
-	AgentName, AgentQueueLoc, Status string
-	Results                          []interface{}
-	StartTime, FinishTime            time.Time
+	ID            uint64        `json:"id"`
+	Action        Action        `json:"action"`
+	AgentName     string        `json:"agentname"`
+	AgentQueueLoc string        `json:"agentqueueloc"`
+	Status        string        `json:"status"`
+	Results       []interface{} `json:"results"`
+	StartTime     time.Time     `json:"starttime"`
+	FinishTime    time.Time     `json:"finishtime"`
 }
 
 // FromFile reads a command from a local file on the file system
