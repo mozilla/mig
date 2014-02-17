@@ -28,7 +28,7 @@ directory, should run in less than a minute.
 
 Check out this 6 minutes presentation for background:
 
-[![MIG youtube video](http://img.youtube.com/vi/SHjSdGOv7Nk/0.jpg)](http://www.youtube.com/watch?v=SHjSdGOv7Nk)
+[![MIG youtube video](http://img.youtube.com/vi/uwrJ6Mtc4S0/0.jpg)](http://www.youtube.com/watch?v=uwrJ6Mtc4S0)
 
 Goals
 -----
