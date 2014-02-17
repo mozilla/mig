@@ -28,8 +28,7 @@ format.
 .. code:: bash
 
    git clone git@github.com:mozilla/mig.git
-   cd mig/conf
-   cp mig-agent-conf.go.inc mig-agent-conf.go
+   cp conf/mig-agent-conf.go{.inc,}
    vim mig-agent-conf.go
 
 Later on, when you run 'make mig-agent', the Makefile will copy the agent
@@ -80,6 +79,16 @@ run 'make'.
 
 Built binaries will be placed in **bin/linux/amd64/** (or in a similar directory
 if you are building on a different platform).
+
+Build agent with specific configuration file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use the AGTCONF make variable to specify a different path than
+'conf/mig-agent-conf.go'.
+
+.. code:: bash
+
+	make mig-agent AGTCONF=conf/mig-agent-conf.dev.go
 
 Scheduler Configuration
 -----------------------
