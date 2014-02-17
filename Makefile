@@ -59,6 +59,7 @@ go_get_deps:
 	$(GOGETTER) code.google.com/p/gcfg
 	$(GOGETTER) github.com/VividCortex/godaemon
 	$(GOGETTER) github.com/gorilla/mux
+	$(GOGETTER) github.com/jvehent/cljs
 
 install: gpgme mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
