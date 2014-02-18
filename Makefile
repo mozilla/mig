@@ -28,7 +28,7 @@ GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install
 
-all: mig-agent mig-scheduler mig-action-generator
+all: mig-agent mig-scheduler mig-action-generator mig-action-verifier
 
 mig-agent:
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
@@ -49,6 +49,11 @@ mig-action-generator: gpgme
 # XXX this could be nicer
 	ln -sf src/mig/pgp/sign/libmig_gpgme.a ./
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/clients/generator
+
+mig-action-verifier: gpgme
+	$(MKDIR) -p $(BINDIR)
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig/clients/verifier
+
 
 go_get_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
