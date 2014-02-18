@@ -616,9 +616,9 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	ea.Counters.Completed++
 	ea.LastUpdateTime = time.Now().UTC()
 
-	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, succeeded=%d, cancelled=%d, failed=%d, timeout=%d. duration=",
+	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, succeeded=%d, cancelled=%d, failed=%d, timeout=%d. duration=%s",
 		ea.Action.Name, ea.Counters.Completed, ea.Counters.Sent, ea.Counters.Succeeded,
-		ea.Counters.Cancelled, ea.Counters.Failed, ea.Counters.TimeOut, ea.LastUpdateTime.Sub(ea.StartTime))
+		ea.Counters.Cancelled, ea.Counters.Failed, ea.Counters.TimeOut, ea.LastUpdateTime.Sub(ea.StartTime).String())
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, CommandID: cmd.ID, Desc: desc}
 
 	// Has the action completed?
