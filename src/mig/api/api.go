@@ -251,6 +251,7 @@ func describeCreateAction(respWriter http.ResponseWriter, request *http.Request)
 // createAction receives a signed action in a POST request, validates it,
 // and write it into the scheduler spool
 func createAction(respWriter http.ResponseWriter, request *http.Request) {
+	var err error
 	opid := mig.GenID()
 	var action mig.Action
 	resource := cljs.New(request.URL.Path)
@@ -264,16 +265,13 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	}()
 
 	// parse the POST body into a mig action
-	data, err := ioutil.ReadAll(request.Body)
+	request.ParseForm()
+	postAction := request.FormValue("action")
+	err = json.Unmarshal([]byte(postAction), &action)
 	if err != nil {
 		panic(err)
 	}
-
-	err = json.Unmarshal([]byte(data), &action)
-	if err != nil {
-		panic(err)
-	}
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "Received action for creation"}.Debug()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received action for creation '%s'", action)}.Debug()
 
 	// load keyring and validate action
 	keyring, err := os.Open(ctx.OpenPGP.PubRing)
@@ -301,6 +299,13 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "Action committed to spool"}
 
+	err = resource.AddItem(cljs.Item{
+		Href: "/api/action?actionid=" + fmt.Sprintf("%d", action.ID),
+		Data: []cljs.Data{{Name: "action ID " + fmt.Sprintf("%d", action.ID), Value: action}},
+	})
+	if err != nil {
+		panic(err)
+	}
 	respond(201, resource, respWriter, request, opid)
 }
 
