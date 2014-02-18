@@ -249,9 +249,15 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 	ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("loaded %d keys", keycount)}.Debug()
 
 	// Check the action syntax and signature
-	err = cmd.Action.Validate(keyring)
+	err = cmd.Action.Validate()
 	if err != nil {
 		desc := fmt.Sprintf("action validation failed: %v", err)
+		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: desc}.Err()
+		panic(desc)
+	}
+	err = cmd.Action.VerifySignature(keyring)
+	if err != nil {
+		desc := fmt.Sprintf("action signature verification failed: %v", err)
 		ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: desc}.Err()
 		panic(desc)
 	}

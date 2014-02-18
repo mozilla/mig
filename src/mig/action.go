@@ -158,9 +158,9 @@ func GenB32ID() string {
 	return strconv.FormatUint(id, 32)
 }
 
-// checkAction verifies that the Action received contained all the
+// Validate verifies that the Action received contained all the
 // necessary fields, and returns an error when it doesn't.
-func (a Action) Validate(keyring io.Reader) (err error) {
+func (a Action) Validate() (err error) {
 	if a.Name == "" {
 		return errors.New("Action.Name is empty. Expecting string.")
 	}
@@ -188,7 +188,12 @@ func (a Action) Validate(keyring io.Reader) (err error) {
 	if a.PGPSignature == "" {
 		return errors.New("Action.PGPSignature is empty. Expecting string.")
 	}
+	return
+}
 
+// Validate verifies that the Action received contained all the
+// necessary fields, and returns an error when it doesn't.
+func (a Action) VerifySignature(keyring io.Reader) (err error) {
 	// Verify the signature
 	astr, err := a.String()
 	if err != nil {

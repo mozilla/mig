@@ -280,7 +280,11 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	defer keyring.Close()
 
-	err = action.Validate(keyring)
+	err = action.Validate()
+	if err != nil {
+		panic(err)
+	}
+	err = action.VerifySignature(keyring)
 	if err != nil {
 		panic(err)
 	}

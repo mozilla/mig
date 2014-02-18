@@ -157,11 +157,16 @@ func main() {
 	defer keyring.Close()
 
 	// syntax checking
-	err = a.Validate(keyring)
+	err = a.Validate()
 	if err != nil {
 		panic(err)
 	}
 
+	// syntax checking
+	err = a.VerifySignature(keyring)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func getActionFromTerminal() (a mig.Action, err error) {
