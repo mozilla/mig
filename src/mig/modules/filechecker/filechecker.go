@@ -154,13 +154,13 @@ func (p Parameters) Validate() (err error) {
 - Totalhits is the total number of checklist hits
 */
 type statistics struct {
-	Checkcount  int
-	Filescount  int
-	Openfailed  int
-	Checksmatch int
-	Uniquefiles int
-	Totalhits   int
-	Exectime    string
+	Checkcount  int    `json:"checkcount"`
+	Filescount  int    `json:"filescount"`
+	Openfailed  int    `json:"openfailed"`
+	Checksmatch int    `json:"checksmatch"`
+	Uniquefiles int    `json:"uniquefiles"`
+	Totalhits   int    `json:"totalhits"`
+	Exectime    string `json:"exectime"`
 }
 
 // stats is a global variable
@@ -187,20 +187,21 @@ type filecheck struct {
 
 // Response is a struct that formats the data returned to the caller
 type Results struct {
-	FoundAnything bool
-	Elements      map[string]map[string]map[string]map[string]singleresult
-	Extra         extraresults
+	FoundAnything bool                                                     `json:"foundanything"`
+	Elements      map[string]map[string]map[string]map[string]singleresult `json:"elements"`
+	Extra         extraresults                                             `json:"extra"`
 }
 
 // singleresult contains information on the result of a single test
 type singleresult struct {
-	Filecount, Matchcount int
-	Files                 map[string]int
+	Filecount  int            `json:"filecount"`
+	Matchcount int            `json:"matchcount"`
+	Files      map[string]int `json:"files"`
 }
 
 // extraresult contains additional data, this is optional but nice to have
 type extraresults struct {
-	Statistics statistics
+	Statistics statistics `json:"statistics"`
 }
 
 // NewResponse constructs a Response

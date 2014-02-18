@@ -1,20 +1,20 @@
 {
-    "Name": "test action to demonstrate the syntax",
-    "Description": {
-        "Author": "Julien Vehent",
-        "Email": "jvehent@mozilla.com",
-        "URL": "https://example.net/url_to_something#useful",
-        "Revision": 201402041000
+    "name": "test action to demonstrate the syntax",
+    "description": {
+        "author": "Julien Vehent",
+        "email": "jvehent@mozilla.com",
+        "url": "https://example.net/url_to_something#useful",
+        "revision": 201402041000
     },
-    "Target": "linux",
-    "Threat": {
-        "Level": "alert",
-        "Family": "malware"
+    "target": "linux",
+    "threat": {
+        "level": "alert",
+        "family": "malware"
     },
-    "Operations": [
+    "operations": [
         {
-            "Module": "filechecker",
-            "Parameters": {
+            "module": "filechecker",
+            "parameters": {
                 "/etc/passwd": {
                     "regex": {
                         "test the presence of some users": [
@@ -90,8 +90,8 @@
             }
         },
         {
-            "Module": "process",
-            "Parameters": {
+            "module": "process",
+            "parameters": {
                 "look for running process that belongs to rootkit (not implemented)": [
                     "/usr/libexec/rootkitd",
                     "/opt/rootkit/stealth_dangerous"
@@ -99,8 +99,8 @@
             }
         },
         {
-            "Module": "connected_ip",
-            "Parameters": {
+            "module": "connected_ip",
+            "parameters": {
                 "check for connected IPs (not implemented)": [
                     "98.143.145.80",
                     "96.46.4.237"
@@ -108,5 +108,5 @@
             }
         }
     ],
-    "SyntaxVersion": 1
+    "syntaxversion": 1
 }

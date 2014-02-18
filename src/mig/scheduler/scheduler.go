@@ -65,11 +65,12 @@ func main() {
 
 	// The context initialization takes care of parsing the configuration,
 	// and creating connections to database, message broker, syslog, ...
-	fmt.Fprintf(os.Stderr, "Initializing Scheduler context\n")
+	fmt.Fprintf(os.Stderr, "Initializing Scheduler context...")
 	ctx, err := Init(*config)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Fprintf(os.Stderr, "OK\n")
 
 	// Goroutine that handles events, such as logs and panics,
 	// and decides what to do with them
@@ -291,7 +292,7 @@ func watchDirectories(watcher *fsnotify.Watcher, ctx Context) {
 // the action from the directory, parse it, retrieve a list of targets from
 // the backend database, and create individual command for each target.
 func processNewAction(actionPath string, ctx Context) (err error) {
-	var ea mig.MetaAction
+	var ea mig.ExtendedAction
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("processNewAction() -> %v", e)
@@ -309,7 +310,9 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	ea.StartTime = time.Now()
 
 	// generate an action id
-	ea.Action.ID = mig.GenID()
+	if ea.Action.ID < 1 {
+		ea.Action.ID = mig.GenID()
+	}
 
 	desc := fmt.Sprintf("new action received: Name='%s' Target='%s' ValidFrom='%s' ExpireAfter='%s'",
 		ea.Action.Name, ea.Action.Target, ea.Action.ValidFrom, ea.Action.ExpireAfter)
@@ -335,6 +338,8 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	}
 
 	// move action to Fly-ing state
+	ea.Status = "inflight"
+	ea.Counters.Sent = len(ea.CommandIDs)
 	err = flyAction(ctx, ea, actionPath)
 	if err != nil {
 		panic(err)
@@ -581,7 +586,7 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	}
 
 	// use the action ID from the command file to get the action from the database
-	var eas []mig.MetaAction
+	var eas []mig.ExtendedAction
 	actionCursor := ctx.DB.Col.Action.Find(bson.M{"action.id": cmd.Action.ID}).Iter()
 	err = actionCursor.All(&eas)
 	if err != nil {
@@ -596,25 +601,28 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	ea := eas[0]
 	switch cmd.Status {
 	case "succeeded":
-		ea.CmdSucceeded++
+		ea.Counters.Succeeded++
 	case "cancelled":
-		ea.CmdCancelled++
+		ea.Counters.Cancelled++
 	case "failed":
-		ea.CmdFailed++
+		ea.Counters.Failed++
 	case "timeout":
-		ea.CmdTimeOut++
+		ea.Counters.TimeOut++
 	default:
 		err = fmt.Errorf("unknown command status: %s", cmd.Status)
 		panic(err)
 	}
 	// regardless of returned status, increase completion counter
-	ea.CmdCompleted++
-	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, succeeded=%d, cancelled=%d, failed=%d, timeout=%d",
-		ea.Action.Name, ea.CmdCompleted, len(ea.CommandIDs), ea.CmdSucceeded, ea.CmdCancelled, ea.CmdFailed, ea.CmdTimeOut)
+	ea.Counters.Completed++
+	ea.LastUpdateTime = time.Now().UTC()
+
+	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, succeeded=%d, cancelled=%d, failed=%d, timeout=%d. duration=",
+		ea.Action.Name, ea.Counters.Completed, ea.Counters.Sent, ea.Counters.Succeeded,
+		ea.Counters.Cancelled, ea.Counters.Failed, ea.Counters.TimeOut, ea.LastUpdateTime.Sub(ea.StartTime))
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, CommandID: cmd.ID, Desc: desc}
 
 	// Has the action completed?
-	if ea.CmdCompleted == len(ea.CommandIDs) {
+	if ea.Counters.Completed == ea.Counters.Sent {
 		// update status and timestamps
 		ea.Status = "completed"
 		ea.FinishTime = time.Now().UTC()
@@ -633,7 +641,6 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	}
 
 	// store updated action in database
-	ea.LastUpdateTime = time.Now().UTC()
 	err = ctx.DB.Col.Action.Update(bson.M{"action.id": ea.Action.ID}, ea)
 	if err != nil {
 		panic(err)

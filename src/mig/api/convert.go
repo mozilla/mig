@@ -1,4 +1,4 @@
-/* Mozilla InvestiGator
+/* Mozilla InvestiGator API
 
 Version: MPL 1.1/GPL 2.0/LGPL 2.1
 
@@ -14,7 +14,7 @@ License.
 
 The Initial Developer of the Original Code is
 Mozilla Corporation
-Portions created by the Initial Developer are Copyright (C) 2014
+Portions created by the Initial Developer are Copyright (C) 2013
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -33,62 +33,45 @@ the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
 */
 
-package mig
+package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
-	"time"
+	"github.com/jvehent/cljs"
+	"mig"
 )
 
-type Command struct {
-	ID            uint64        `json:"id"`
-	Action        Action        `json:"action"`
-	AgentName     string        `json:"agentname"`
-	AgentQueueLoc string        `json:"agentqueueloc"`
-	Status        string        `json:"status"`
-	Results       []interface{} `json:"results"`
-	StartTime     time.Time     `json:"starttime"`
-	FinishTime    time.Time     `json:"finishtime"`
-}
-
-// FromFile reads a command from a local file on the file system
-// and return the mig.Command structure
-func CmdFromFile(path string) (cmd Command, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("mig.CmdFromFile()-> %v", e)
+// extendedActionToItem receives an ExtendedAction and return an Item
+// in the Collection+JSON format
+func extendedActionToItem(ea mig.ExtendedAction) (item cljs.Item, err error) {
+	item.Href = "/api/action?actionid=" + fmt.Sprintf("%d", ea.Action.ID)
+	links := make([]cljs.Link, 0)
+	for _, cmdid := range ea.CommandIDs {
+		link := cljs.Link{
+			Rel:  "command",
+			Href: "/api/command?actionid=" + fmt.Sprintf("%d", ea.Action.ID) + "&commandid=" + fmt.Sprintf("%d", cmdid),
 		}
-	}()
-	jsonCmd, err := ioutil.ReadFile(path)
-	if err != nil {
-		panic(err)
+		links = append(links, link)
 	}
-	err = json.Unmarshal(jsonCmd, &cmd)
-	if err != nil {
-		panic(err)
-	}
-	// Syntax Check
-	err = checkCmd(cmd)
-	if err != nil {
-		panic(err)
+	item.Links = links
+	item.Data = []cljs.Data{
+		{Name: "action", Value: ea},
 	}
 	return
 }
 
-// CheckCmd verifies that the Command received contained all the
-// necessary fields, and returns an error when it doesn't.
-func checkCmd(cmd Command) error {
-	if cmd.AgentName == "" {
-		return errors.New("cmd.AgentName is empty. Expecting string.")
+// commandToItem receives a command and returns an Item in Collection+JSON
+func commandToItem(cmd mig.Command) (item cljs.Item, err error) {
+	item.Href = "/api/command?actionid=" + fmt.Sprintf("%d", cmd.Action.ID) + "&commandid=" + fmt.Sprintf("%d", cmd.ID)
+	links := make([]cljs.Link, 0)
+	link := cljs.Link{
+		Rel:  "action",
+		Href: "/api/action?actionid=" + fmt.Sprintf("%d", cmd.Action.ID),
 	}
-	if cmd.AgentQueueLoc == "" {
-		return errors.New("cmd.AgentQueueLoc is empty. Expecting string.")
+	links = append(links, link)
+	item.Links = links
+	item.Data = []cljs.Data{
+		{Name: "command", Value: cmd},
 	}
-	if cmd.Status == "" {
-		return errors.New("cmd.Status is empty. Expecting string.")
-	}
-	return nil
+	return
 }

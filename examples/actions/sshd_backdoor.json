@@ -1,20 +1,20 @@
 {
-    "Name": "Verify SSHD signature against Backdoor:Linux/SSHDoor.A",
-    "Description": {
-        "Author": "Julien Vehent",
-        "Email": "jvehent@mozilla.com",
-        "URL": "http://blog.sucuri.net/2013/02/linux-based-sshd-rootkit-floating-the-interwebs.html",
-        "Revision": 201402071130
+    "name": "Verify SSHD signature against Backdoor:Linux/SSHDoor.A",
+    "description": {
+        "author": "Julien Vehent",
+        "email": "jvehent@mozilla.com",
+        "url": "http://blog.sucuri.net/2013/02/linux-based-sshd-rootkit-floating-the-interwebs.html",
+        "revision": 201402071130
     },
-    "Target": "linux",
-    "Threat": {
-        "Level": "alert",
-        "Family": "backdoor"
+    "target": "linux",
+    "threat": {
+        "level": "alert",
+        "family": "backdoor"
     },
-    "Operations": [
+    "operations": [
         {
-            "Module": "filechecker",
-            "Parameters": {
+            "module": "filechecker",
+            "parameters": {
                 "/usr/sbin/": {
                     "sha256": {
                         "look for backdoored sshd in entire sbin directory": [
@@ -25,5 +25,5 @@
             }
         }
     ],
-    "SyntaxVersion": 1
+    "syntaxversion": 1
 }

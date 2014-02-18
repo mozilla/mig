@@ -51,52 +51,69 @@ import (
 // a MetaAction is a json object that extends an Action with
 // additional parameters. It is used to track the completion
 // of an action on agents.
-type MetaAction struct {
-	Action                                                          Action
-	Status                                                          string
-	StartTime, FinishTime, LastUpdateTime                           time.Time
-	CommandIDs                                                      []uint64
-	CmdCompleted, CmdSucceeded, CmdCancelled, CmdFailed, CmdTimeOut int
+type ExtendedAction struct {
+	Action         Action    `json:"action"`
+	Status         string    `json:"status"`
+	StartTime      time.Time `json:"starttime"`
+	FinishTime     time.Time `json:"finishtime"`
+	LastUpdateTime time.Time `json:"lastupdatetime"`
+	CommandIDs     []uint64  `json:"commandids"`
+	Counters       counters  `json:"counters"`
+}
+
+// Some counters used to track the completion of an action
+type counters struct {
+	Sent      int `json:"sent"`
+	Completed int `json:"completed"`
+	Succeeded int `json:"succeeded"`
+	Cancelled int `json:"cancelled"`
+	Failed    int `json:"failed"`
+	TimeOut   int `json:"timeout"`
 }
 
 // an Action is the json object that is created by an investigator
 // and provided to the MIG platform. It must be PGP signed.
 type Action struct {
 	// meta
-	ID           uint64
-	Name, Target string
-	Description  description
-	Threat       threat
+	ID          uint64      `json:"id"`
+	Name        string      `json:"name"`
+	Target      string      `json:"target"`
+	Description description `json:"description"`
+	Threat      threat      `json:"threat"`
 	// time window
-	ValidFrom, ExpireAfter time.Time
+	ValidFrom   time.Time `json:"validfrom"`
+	ExpireAfter time.Time `json:"expireafter"`
 	// operation to perform
-	Operations []operation
+	Operations []operation `json:"operations"`
 	// action signature
-	PGPSignature     string
-	PGPSignatureDate time.Time
+	PGPSignature     string    `json:"pgpsignature"`
+	PGPSignatureDate time.Time `json:"pgpsignaturedate"`
 	// action syntax version
-	SyntaxVersion int
+	SyntaxVersion int `json:"syntaxversion"`
 }
 
 // a description is a simple object that contains detail about the
 // action's author, and it's revision.
 type description struct {
-	Author, Email, URL string
-	Revision           int
+	Author   string `json:"author"`
+	Email    string `json:"email"`
+	URL      string `json:"url"`
+	Revision int    `json:"revision"`
 }
 
 // a threat provides the investigator with an idea of how dangerous
 // a the compromission might be, if the indicators return positive
 type threat struct {
-	Level, Family string
+	Level  string `json:"level"`
+	Family string `json:"family"`
 }
 
 // an operation is an object that map to an agent module.
 // the parameters of the operation are passed to the module as argument,
 // and thus their format depend on the module itself.
 type operation struct {
-	Module     string
-	Parameters interface{}
+	Module     string      `json:"module"`
+	Parameters interface{} `json:"parameters"`
 }
 
 // ActionFromFile() reads an action from a local file on the file system

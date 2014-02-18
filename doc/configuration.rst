@@ -28,8 +28,7 @@ format.
 .. code:: bash
 
    git clone git@github.com:mozilla/mig.git
-   cd mig/conf
-   cp mig-agent-conf.go.inc mig-agent-conf.go
+   cp conf/mig-agent-conf.go{.inc,}
    vim mig-agent-conf.go
 
 Later on, when you run 'make mig-agent', the Makefile will copy the agent
@@ -80,6 +79,16 @@ run 'make'.
 
 Built binaries will be placed in **bin/linux/amd64/** (or in a similar directory
 if you are building on a different platform).
+
+Build agent with specific configuration file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use the AGTCONF make variable to specify a different path than
+'conf/mig-agent-conf.go'.
+
+.. code:: bash
+
+	make mig-agent AGTCONF=conf/mig-agent-conf.dev.go
 
 Scheduler Configuration
 -----------------------
@@ -287,3 +296,40 @@ iptables to redirect the port on the rabbitmq server.
 .. code:: bash
 
 	iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 5671 -m comment --comment "Serve RabbitMQ on HTTPS port"
+
+API configuration
+-----------------
+
+The REST API exposes functions to create, delete and query actions remotely. It
+is the primary interface to the Scheduler.
+
+GnuPG pubring
+~~~~~~~~~~~~~
+
+The API uses a gnupg pubring to validate incoming actions. The pubring can be
+created as a single file, without other gnupg files, and provided to the API in
+the configuration file.
+
+To create a pubring, use the following command:
+
+.. code:: bash
+
+	$ mkdir /tmp/api-gpg
+
+	# export the public keys into a file
+	$ gpg --export -a bob@example.net john@example.com > /tmp/api-gpg/pubkeys.pem
+
+	# import the public keys into a new pubring
+	$ gpg --homedir /tmp/api-gpg/ --import /tmp/api-gpg/pubkeys.pem
+	gpg: key AF67CB21: public key "Bob Kelso <bob@example.net>" imported
+	gpg: key DEF98214: public key "John Smith <john@example.com>" imported
+	gpg: Total number processed: 2
+	gpg:               imported: 2  (RSA: 2)
+
+The file in /tmp/api-gpg/pubring.gpg can be passed to the API
+
+ ::
+
+	[openpgp]
+	    pubring = "/tmp/api-gpg/pubring.gpg"
+

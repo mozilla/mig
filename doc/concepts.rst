@@ -70,22 +70,22 @@ and salted on linux systems, would use the following action:
 .. code:: json
 
 	{
-		"Name": "Compliance check for Auditd",
-		"Description": {
-			"Author": "Julien Vehent",
-			"Email": "ulfr@mozilla.com",
-			"URL": "https://some_example_url/with_details",
-			"Revision": 201402071200
+		"name": "Compliance check for Auditd",
+		"description": {
+			"author": "Julien Vehent",
+			"email": "ulfr@mozilla.com",
+			"url": "https://some_example_url/with_details",
+			"revision": 201402071200
 		},
-		"Target": "linux",
-		"Threat": {
-			"Level": "info",
-			"Family": "compliance"
+		"target": "linux",
+		"threat": {
+			"level": "info",
+			"family": "compliance"
 		},
-		"Operations": [
+		"operations": [
 			{
-				"Module": "filechecker",
-				"Parameters": {
+				"module": "filechecker",
+				"parameters": {
 					"/etc/shadow": {
 						"regex": {
 							"root password strongly hashed and salted": [
@@ -96,7 +96,7 @@ and salted on linux systems, would use the following action:
 				}
 			}
 		],
-		"SyntaxVersion": 1
+		"syntaxversion": 1
 	}
 
 The parameters are:
@@ -140,14 +140,14 @@ example of the previous action ran against the agent named
 .. code:: json
 
 	{
-		"Action":        { ... signed copy of action ... }
-		"AgentName":     "myserver1234.test.example.net",
-		"AgentQueueLoc": "linux.myserver1234.test.example.net.55tjippis7s4t",
-		"FinishTime":    "2014-02-10T15:28:34.687949847Z",
-		"ID":            5978792535962156489,
-		"Results": [
+		"action":        { ... signed copy of action ... }
+		"agentname":     "myserver1234.test.example.net",
+		"agentqueueloc": "linux.myserver1234.test.example.net.55tjippis7s4t",
+		"finishtime":    "2014-02-10T15:28:34.687949847Z",
+		"id":            5978792535962156489,
+		"results": [
 			{
-				"Elements": {
+				"elements": {
 					"/etc/shadow": {
 						"regex": {
 							"root password strongly hashed and salted": {
@@ -160,22 +160,22 @@ example of the previous action ran against the agent named
 						}
 					}
 				},
-				"Extra": {
-					"Statistics": {
-						"Checkcount": 1,
-						"Checksmatch": 0,
-						"Exectime": "183.237us",
-						"Filescount": 1,
-						"Openfailed": 0,
-						"Totalhits": 0,
-						"Uniquefiles": 0
+				"extra": {
+					"statistics": {
+						"checkcount": 1,
+						"checksmatch": 0,
+						"exectime": "183.237us",
+						"filescount": 1,
+						"openfailed": 0,
+						"totalhits": 0,
+						"uniquefiles": 0
 					}
 				},
-				"FoundAnything": false
+				"foundanything": false
 			}
 		],
-		"StartTime": "2014-02-10T15:28:34.118926659Z",
-		"Status": "succeeded"
+		"starttime": "2014-02-10T15:28:34.118926659Z",
+		"status": "succeeded"
 	}
 
 

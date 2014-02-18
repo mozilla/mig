@@ -44,6 +44,7 @@ import (
 	"mig"
 	//"mig/modules/filechecker"
 	"mig/pgp/sign"
+	"net/url"
 	"os"
 	"os/user"
 	"time"
@@ -64,6 +65,8 @@ func main() {
 
 	// command line options
 	var key = flag.String("k", "key identifier", "Key identifier used to sign the action (ex: B75C2346)")
+	var pretty = flag.Bool("p", false, "Print signed action in pretty JSON format")
+	var urlencode = flag.Bool("urlencode", false, "URL Encode marshalled JSON before output")
 	var file = flag.String("i", "/path/to/file", "Load action from file")
 	var validfrom = flag.String("validfrom", "now", "(optional) set an ISO8601 date the action will be valid from. If unset, use 'now'.")
 	var expireafter = flag.String("expireafter", "30m", "(optional) set a validity duration for the action. If unset, use '30m'.")
@@ -116,12 +119,24 @@ func main() {
 
 	a.PGPSignatureDate = time.Now().UTC()
 
-	jsonAction, err := json.MarshalIndent(a, "", "\t")
+	var jsonAction []byte
+	if *pretty {
+		jsonAction, err = json.MarshalIndent(a, "", "\t")
+	} else {
+		jsonAction, err = json.Marshal(a)
+	}
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("%s\n", jsonAction)
+	// if asked, url encode the action before marshaling it
+	if *urlencode {
+		strJsonAction := string(jsonAction)
+		urlEncodedAction := url.QueryEscape(strJsonAction)
+		fmt.Printf("%s\n", urlEncodedAction)
+	} else {
+		fmt.Printf("%s\n", jsonAction)
+	}
 
 	// find keyring in default location
 	u, err := user.Current()
