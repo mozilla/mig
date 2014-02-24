@@ -1,0 +1,29 @@
+{
+    "name": "Action to check for IOC 1234",
+    "description": {
+        "author": "Bob Smith",
+        "email": "bsmith@example.net",
+        "url": "http://bob.smith.example.net/blog/ioc1234.html",
+        "revision": 201402231700
+    },
+    "target": "linux",
+    "threat": {
+        "level": "alert",
+        "family": "backdoor"
+    },
+    "operations": [
+        {
+            "module": "filechecker",
+            "parameters": {
+                "/usr/bin": {
+                    "sha256": {
+                        "compromised vim": [
+                            "ebfd9354ed83635ed38bd117b"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "syntaxversion": 1
+}
