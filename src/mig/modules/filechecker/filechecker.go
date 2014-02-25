@@ -260,7 +260,9 @@ func Run(Args []byte) string {
 		var activechecks []int
 		err = pathWalk(check.path, activechecks, 0, checklist, todolist)
 		if err != nil {
-			panic("pathWalk failed")
+			if DEBUG {
+				fmt.Printf("pathWalk failed with error '%v'\n", err)
+			}
 		}
 	}
 
@@ -348,6 +350,7 @@ func pathWalk(path string, activechecks []int, checkBitmask int, checklist, todo
 	target, err := os.Open(path)
 	if err != nil {
 		log.Println("filechecker failed to open", path, ":", err)
+		stats.Openfailed++
 		return err
 	}
 	targetMode, _ := target.Stat()
