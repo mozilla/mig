@@ -45,6 +45,7 @@ import (
 	"fmt"
 	"github.com/streadway/amqp"
 	"mig"
+	"mig/modules/connected"
 	"mig/modules/filechecker"
 	"mig/pgp"
 	"os"
@@ -118,6 +119,9 @@ func main() {
 // runModuleDirectly executes a module and displays the results on stdout
 func runModuleDirectly(mode string, args []byte) (err error) {
 	switch mode {
+	case "connected":
+		fmt.Println(connected.Run(args))
+		os.Exit(0)
 	case "filechecker":
 		fmt.Println(filechecker.Run(args))
 		os.Exit(0)
@@ -285,7 +289,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 		// pass the module operation object to the proper channel
 		switch operation.Module {
-		case "filechecker":
+		case "connected", "filechecker":
 			// send the operation to the module
 			ctx.Channels.RunAgentCommand <- currentOp
 			opsCounter++
