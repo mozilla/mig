@@ -87,8 +87,9 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/", getHome).Methods("GET")
 
+	r.HandleFunc("/api/search", search).Methods("GET")
+
 	r.HandleFunc("/api/action", getAction).Methods("GET")
-	r.HandleFunc("/api/action/search", getAction).Methods("GET")
 
 	r.HandleFunc("/api/action/create/", describeCreateAction).Methods("GET")
 	r.HandleFunc("/api/action/create/", createAction).Methods("POST")
@@ -97,7 +98,6 @@ func main() {
 	r.HandleFunc("/api/action/cancel/", cancelAction).Methods("POST")
 
 	r.HandleFunc("/api/command", getCommand).Methods("GET")
-	r.HandleFunc("/api/command/search", getCommand).Methods("GET")
 
 	r.HandleFunc("/api/command/cancel", describeCancelCommand).Methods("GET")
 	r.HandleFunc("/api/command/cancel", cancelCommand).Methods("POST")
@@ -222,6 +222,45 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	}
 
 	respond(200, resource, respWriter, request, opid)
+}
+
+// search is a generic function to run queries against mongodb
+func search(respWriter http.ResponseWriter, request *http.Request) {
+	opid := mig.GenID()
+	resource := cljs.New(request.URL.Path)
+	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			respond(500, resource, respWriter, request, opid)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCreateAction()"}.Debug()
+	}()
+
+	search := request.URL.Query()["search"][0]
+	switch search {
+	case "positiveresults":
+		actionID, err := strconv.Atoi(request.URL.Query()["actionid"][0])
+		if err != nil {
+			panic(err)
+		}
+		cmds, err := findPositiveResults(actionID)
+		if err != nil {
+			panic(err)
+		}
+		// store the results in the resource
+		for _, cmd := range cmds {
+			commandItem, err := commandToItem(cmd)
+			if err != nil {
+				panic(err)
+			}
+			resource.AddItem(commandItem)
+		}
+		respond(200, resource, respWriter, request, opid)
+
+	default:
+		panic("unknown search method")
+	}
 }
 
 // describeCreateAction returns a resource that describes how to POST new actions
