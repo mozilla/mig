@@ -140,7 +140,7 @@ func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, 
 func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
 	opid := mig.GenID()
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -227,7 +227,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 // search is a generic function to run queries against mongodb
 func search(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -266,7 +266,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 // describeCreateAction returns a resource that describes how to POST new actions
 func describeCreateAction(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -293,7 +293,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
 	opid := mig.GenID()
 	var action mig.Action
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -355,7 +355,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 // describeCancelAction returns a resource that describes how to cancel an action
 func describeCancelAction(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -379,7 +379,7 @@ func describeCancelAction(respWriter http.ResponseWriter, request *http.Request)
 // cancelAction receives an action ID and issue a cancellation order
 func cancelAction(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -395,7 +395,7 @@ func cancelAction(respWriter http.ResponseWriter, request *http.Request) {
 func getAction(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
 	opid := mig.GenID()
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -436,7 +436,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
 	opid := mig.GenID()
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -496,7 +496,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 // describeCancelCommand returns a resource that describes how to cancel a command
 func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -523,7 +523,7 @@ func cancelCommand(respWriter http.ResponseWriter, request *http.Request) {
 
 func getAgentsDashboard(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -537,7 +537,7 @@ func getAgentsDashboard(respWriter http.ResponseWriter, request *http.Request) {
 
 func searchAgents(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
-	resource := cljs.New(request.URL.Path)
+	resource := cljs.New(request.URL.String())
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
