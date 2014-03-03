@@ -298,6 +298,105 @@ Agent registration process
 
 Agent upgrade process
 ---------------------
+MIG supports upgrading agents in the wild. The upgrade protocol is designed with
+security in mind. The flow diagram below presents a high-level view:
+
+ ::
+
+	Investigator          Scheduler             Agent             NewAgent           FileServer
+	+-----------+         +-------+             +---+             +------+           +--------+
+		  |                   |                   |                   |                   |
+		  |    1.initiate     |                   |                   |                   |
+		  |------------------>|                   |                   |                   |
+		  |                   |  2.send command   |                   |                   |
+		  |                   |------------------>| 3.verify          |                   |
+		  |                   |                   |--------+          |                   |
+		  |                   |                   |        |          |                   |
+		  |                   |                   |        |          |                   |
+		  |                   |                   |<-------+          |                   |
+		  |                   |                   |                   |                   |
+		  |                   |                   |    4.download     |                   |
+		  |                   |                   |-------------------------------------->|
+		  |                   |                   |                   |                   |
+		  |                   |                   | 5.checksum        |                   |
+		  |                   |                   |--------+          |                   |
+		  |                   |                   |        |          |                   |
+		  |                   |                   |        |          |                   |
+		  |                   |                   |<-------+          |                   |
+		  |                   |                   |                   |                   |
+		  |                   |                   |      6.exec       |                   |
+		  |                   |                   |------------------>|                   |
+		  |                   |  7.return own PID |                   |                   |
+		  |                   |<------------------|                   |                   |
+		  |                   |                   |                   |                   |
+		  |                   |------+ 8.mark     |                   |                   |
+		  |                   |      | agent as   |                   |                   |
+		  |                   |      | upgraded   |                   |                   |
+		  |                   |<-----+            |                   |                   |
+		  |                   |                   |                   |                   |
+		  |                   |    9.register     |                   |                   |
+		  |                   |<--------------------------------------|                   |
+		  |                   |                   |                   |                   |
+		  |                   |------+10.find dup |                   |                   |
+		  |                   |      |agents in   |                   |                   |
+		  |                   |      |registrations                   |                   |
+		  |                   |<-----+            |                   |                   |
+		  |                   |                   |                   |                   |
+		  |                   |    11.send command to kill PID old agt|                   |
+		  |                   |-------------------------------------->|                   |
+		  |                   |                   |                   |                   |
+		  |                   |  12.acknowledge   |                   |                   |
+		  |                   |<--------------------------------------|                   |
+
+All upgrade operations are initiated by an investigator (1). The upgrade is
+triggered by an action to the upgrade module with the following parameters:
+
+.. code:: json
+
+    "Operations": [
+        {
+            "Module": "upgrade",
+            "Parameters": {
+                "linux/amd64": {
+                    "to_version": "16eb58b-201404021544",
+                    "location": "http://localhost/mig/bin/linux/amd64/mig-agent",
+                    "checksum": "31fccc576635a29e0a27bbf7416d4f32a0ebaee892475e14708641c0a3620b03"
+                }
+            }
+        }
+    ],
+
+* Each OS family and architecture have their own parameters (ex: "linux/amd64",
+  "darwin/amd64", "windows/386", ...). Then, in each OS/Arch group, we have:
+* to_version is the version an agent should upgrade to
+* location points to a HTTPS address that contains the agent binary
+* checksum is a SHA256 hash of the agent binary to be verified after download
+
+The parameters above are signed using a standard PGP action signature.
+
+The upgrade action is forwarded to agents (2) like any other action. The action
+signature is verified by the agent (3), and the upgrade module is called. The
+module downloads the new binary (4), verifies the version and checksum (5) and
+installs itself on the system.
+
+Assuming everything checks in, the old agent executes the binary of the new
+agent (6). At that point, two agents are running on the same machine, and the
+rest of the protocol is designed to shut down the old agent, and clean up.
+
+After executing the new agent, the old agent returns a successful result to the
+scheduler, and includes its own PID in the results.
+The new agent starts by registering with the scheduler (7). This tells the
+scheduler that two agents are running on the same node, and one of them must
+terminate. The scheduler sends a kill action to both agents with the PID of the
+old agent (8). The kill action may be executed twice, but that doesn't matter.
+When the scheduler receives the kill results (9), it sends a new action to check
+for `mig-agent` processes (10). Only one should be found in the results (11),
+and if that is the case, the scheduler tells the agent to remove the binary of
+the old agent (12). When the agent returns (13), the upgrade protocol is done.
+
+If the PID of the old agent lingers on the system, an error is logged for the
+investigator to decide what to do next. The scheduler does not attempt to clean
+up the situation.
 
 Agent command execution flow
 ----------------------------

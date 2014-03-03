@@ -500,4 +500,19 @@ heartbeat.
 	database123.example.com   linux.database123.example.com.55tjdn0fsrdaf  Wed Feb 12 2014 15:49:43 GMT+0000 (UTC)
 	firewall55.example.net    linux.firewall55.example.net.55ub9eh81igbi   Wed Feb 12 2014 15:48:29 GMT+0000 (UTC)
 
+List active agents by version
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We list the agents in the **registrations** collections and print the details,
+sorted by version number.
+
+.. code:: javascript
+
+	> var agents = db.registrations.find({ heartbeatts: {$gt: new Date(ISODate().getTime() - 1000 * 60 * 10)}}).sort({ version: 1});
+
+	> agents.forEach( function(agent) { print(agent.version, "\t", agent.name); } )
+	8e73e69-201404171134	agt1
+	8e73e69-201404171239	agt58
+	...
+
 See MongoDB reference documentation for a full explanation of the query language.
