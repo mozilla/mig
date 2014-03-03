@@ -44,6 +44,7 @@ import (
 	"mig"
 	//"mig/modules/filechecker"
 	"mig/pgp/sign"
+	"net/http"
 	"net/url"
 	"os"
 	"os/user"
@@ -67,6 +68,7 @@ func main() {
 	var key = flag.String("k", "key identifier", "Key identifier used to sign the action (ex: B75C2346)")
 	var pretty = flag.Bool("p", false, "Print signed action in pretty JSON format")
 	var urlencode = flag.Bool("urlencode", false, "URL Encode marshalled JSON before output")
+	var posturl = flag.String("posturl", "", "POST action to <url> (enforces urlencode)")
 	var file = flag.String("i", "/path/to/file", "Load action from file")
 	var validfrom = flag.String("validfrom", "now", "(optional) set an ISO8601 date the action will be valid from. If unset, use 'now'.")
 	var expireafter = flag.String("expireafter", "30m", "(optional) set a validity duration for the action. If unset, use '30m'.")
@@ -130,14 +132,27 @@ func main() {
 	}
 
 	// if asked, url encode the action before marshaling it
+	actionstr := string(jsonAction)
 	if *urlencode {
 		strJsonAction := string(jsonAction)
-		urlEncodedAction := url.QueryEscape(strJsonAction)
-		fmt.Printf("%s\n", urlEncodedAction)
-	} else {
-		fmt.Printf("%s\n", jsonAction)
+		actionstr = url.QueryEscape(strJsonAction)
 	}
 
+	if *posturl != "" {
+		resp, err := http.PostForm(*posturl, url.Values{"action": {actionstr}})
+		if err != nil {
+			panic(err)
+		}
+		var buf [512]byte
+		reader := resp.Body
+		for {
+			n, err := reader.Read(buf[0:])
+			if err != nil {
+				os.Exit(0)
+			}
+			fmt.Print(string(buf[0:n]))
+		}
+	}
 	// find keyring in default location
 	u, err := user.Current()
 	if err != nil {
