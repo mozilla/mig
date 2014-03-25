@@ -65,6 +65,9 @@ type Context struct {
 		Log                                                                              chan mig.Log
 		NewAction, ActionDone, CommandReady, UpdateCommand, CommandReturned, CommandDone chan string
 	}
+	Collector struct {
+		Freq string
+	}
 	Directories struct {
 		// configuration
 		Spool string

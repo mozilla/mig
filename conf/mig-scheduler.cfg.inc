@@ -4,6 +4,10 @@
     timeout = "20m"
     whitelist = "/var/cache/mig/agents_whitelist.txt"
 
+[collector]
+; frequency at which the job collector runs
+    freq = "60s"
+
 [directories]
     spool = "/var/cache/mig/"
     tmp = "/var/tmp/"

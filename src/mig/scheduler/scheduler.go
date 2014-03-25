@@ -181,13 +181,17 @@ func main() {
 
 	// launch the routine that regularly walks through the local directories
 	go func() {
+		collectorSleeper, err := time.ParseDuration(ctx.Collector.Freq)
+		if err != nil {
+			panic(err)
+		}
 		for {
 			ctx.OpID = mig.GenID()
 			err := spoolInspection(ctx)
 			if err != nil {
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
 			}
-			time.Sleep(60 * time.Second)
+			time.Sleep(collectorSleeper)
 		}
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "spoolInspection() routine started"}
