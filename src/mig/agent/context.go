@@ -296,7 +296,6 @@ func initMQ(orig_ctx Context) (ctx Context, err error) {
 
 	// create an AMQP configuration with specific timers
 	var dialConfig amqp.Config
-	dialConfig.ConnectionTimeout = 10 * ctx.Sleeper
 	dialConfig.Heartbeat = 2 * ctx.Sleeper
 
 	if ctx.MQ.UseTLS {

@@ -288,7 +288,6 @@ func initBroker(orig_ctx Context) (ctx Context, err error) {
 
 	// create an AMQP configuration with specific timers
 	var dialConfig amqp.Config
-	dialConfig.ConnectionTimeout = timeout
 	dialConfig.Heartbeat = timeout
 
 	// create the TLS configuration
