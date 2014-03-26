@@ -546,10 +546,6 @@ func terminateCommand(cmdPath string, ctx Context) (err error) {
 
 	cmd.FinishTime = time.Now().UTC()
 
-	// remove command from inflight dir
-	inflightPath := fmt.Sprintf("%s/%d-%d.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
-	os.Remove(inflightPath)
-
 	// update command in database
 	err = ctx.DB.Col.Cmd.Update(bson.M{"id": cmd.ID}, cmd)
 	if err != nil {
@@ -567,6 +563,13 @@ func terminateCommand(cmdPath string, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
+
+	// remove command from inflight dir
+	inflightPath := fmt.Sprintf("%s/%d-%d.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
+	os.Remove(inflightPath)
+
+	// remove command from Returned dir
+	os.Remove(cmdPath)
 
 	return
 }
