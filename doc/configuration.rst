@@ -140,6 +140,23 @@ recommended. To enable it, generate a client certificate and set the
 Make sure to use **fully qualified paths** otherwise the scheduler will fail to
 load them after going in the background.
 
+Collector
+~~~~~~~~~
+
+The Collector is a routine ran periodically by the scheduler to inspect the
+content of its spool. It will load files that may have been missed by the file
+notification routine, and delete old files after a grace period.
+
+ ::
+
+	[collector]
+		; frequency at which the collector runs
+		freq = "60s"
+
+		; period during which done actions and commands,
+		; and invalid actions are kept
+		deleteafter = "3d"
+
 RabbitMQ Configuration
 ----------------------
 

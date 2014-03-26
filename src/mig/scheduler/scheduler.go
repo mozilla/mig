@@ -653,66 +653,6 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	return
 }
 
-// spoolInspection walks through the local directories and performs the following
-// * load actions that are sitting in the new action directory, and are passed their scheduleddate
-//
-func spoolInspection(ctx Context) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("spoolInspection() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving spoolInspection()"}.Debug()
-	}()
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "initiating spool inspection"}.Debug()
-
-	err = checkNewActions(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	return
-}
-
-// loadScheduledActions walks through the new actions directories and load the actions
-// that are passed their scheduled date. It also delete expired actions.
-func checkNewActions(ctx Context) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("checkNewActions() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving checkNewActions()"}.Debug()
-	}()
-	dir, err := os.Open(ctx.Directories.Action.New)
-	dirContent, err := dir.Readdir(-1)
-	if err != nil {
-		panic(err)
-	}
-	// loop over the content of the directory
-	for _, DirEntry := range dirContent {
-		if !DirEntry.Mode().IsRegular() {
-			// ignore non file
-			continue
-		}
-		filename := ctx.Directories.Action.New + "/" + DirEntry.Name()
-		a, err := mig.ActionFromFile(filename)
-		if err != nil {
-			panic(err)
-		}
-		if time.Now().After(a.ValidFrom) {
-			// queue new action
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: fmt.Sprintf("scheduling action '%s'", a.Name)}
-			ctx.Channels.NewAction <- filename
-		}
-		if time.Now().After(a.ExpireAfter) {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: fmt.Sprintf("removing expired action '%s'", a.Name)}
-			// delete expired action
-			os.Remove(filename)
-		}
-	}
-	dir.Close()
-	return
-}
-
 func fileHasSizeZero(filepath string) bool {
 	fd, _ := os.Open(filepath)
 	defer fd.Close()
