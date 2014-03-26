@@ -8,7 +8,7 @@
 ; frequency at which the job collector runs
     freq = "60s"
 ; period during which done actions and commands, and invalid actions are kept
-    deleteafter = "3d"
+    deleteafter = "72h"
 
 [directories]
     spool = "/var/cache/mig/"

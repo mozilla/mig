@@ -155,7 +155,7 @@ notification routine, and delete old files after a grace period.
 
 		; period during which done actions and commands,
 		; and invalid actions are kept
-		deleteafter = "3d"
+		deleteafter = "72h"
 
 RabbitMQ Configuration
 ----------------------
