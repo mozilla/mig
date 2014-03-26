@@ -24,28 +24,30 @@ do
         make mig-action-generator && \
         make mig-action-verifier && \
         make mig-api && \
-        make mig-scheduler
+        make mig-scheduler && \
+        echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ agent && "$file" != "configuration.go" ]] ; then
-        make mig-agent
+        make mig-agent && echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ api ]] ; then
-        make mig-api
+        make mig-api && echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ generator ]] ; then
-        make mig-action-generator
+        make mig-action-generator && echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ verifier ]] ; then
-        make mig-action-verifier
+        make mig-action-verifier && echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ pgp ]] ; then
         make mig-agent && \
         make mig-action-generator && \
         make mig-action-verifier && \
-        make mig-api
+        make mig-api && \
+        echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ scheduler ]] ; then
-        make mig-scheduler
+        make mig-scheduler && echo success $(date +%H:%M:%S)
 
     fi
 done
