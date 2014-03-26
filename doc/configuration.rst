@@ -2,6 +2,7 @@ Mozilla InvestiGator Configuration Documentation
 ================================================
 :Author: Julien Vehent <jvehent@mozilla.com>
 
+.. sectnum::
 .. contents:: Table of Contents
 
 This document describes the steps to build and configure a complete MIG

@@ -3,6 +3,7 @@ Mozilla InvestiGator Concepts & Internal Components
 ===================================================
 :Author: Julien Vehent <jvehent@mozilla.com>
 
+.. sectnum::
 .. contents:: Table of Contents
 
 MIG is a platform to perform remote forensic on endpoints. It is composed of:
