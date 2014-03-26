@@ -653,6 +653,9 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 		panic(err)
 	}
 
+	// remove the command from the spool
+	os.Remove(cmdPath)
+
 	return
 }
 
