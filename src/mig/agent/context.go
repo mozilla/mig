@@ -44,6 +44,7 @@ import (
 	"github.com/streadway/amqp"
 	"io/ioutil"
 	"mig"
+	"net"
 	"os"
 	"runtime"
 	"strings"
@@ -297,6 +298,9 @@ func initMQ(orig_ctx Context) (ctx Context, err error) {
 	// create an AMQP configuration with specific timers
 	var dialConfig amqp.Config
 	dialConfig.Heartbeat = 2 * ctx.Sleeper
+	dialConfig.Dial = func(network, addr string) (net.Conn, error) {
+		return net.DialTimeout(network, addr, 2 * ctx.Sleeper)
+	}
 
 	if ctx.MQ.UseTLS {
 		// import the client certificates

@@ -46,6 +46,7 @@ import (
 	"io/ioutil"
 	"labix.org/v2/mgo"
 	"mig"
+	"net"
 	"os"
 	"time"
 )
@@ -289,7 +290,9 @@ func initBroker(orig_ctx Context) (ctx Context, err error) {
 	// create an AMQP configuration with specific timers
 	var dialConfig amqp.Config
 	dialConfig.Heartbeat = timeout
-
+	dialConfig.Dial = func(network, addr string) (net.Conn, error) {
+		return net.DialTimeout(network, addr, timeout)
+	}
 	// create the TLS configuration
 	if ctx.MQ.UseTLS {
 		// import the client certificates
