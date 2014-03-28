@@ -67,7 +67,7 @@ type Context struct {
 		NewAction, ActionDone, CommandReady, UpdateCommand, CommandReturned, CommandDone chan string
 	}
 	Collector struct {
-		Freq string
+		Freq, DeleteAfter string
 	}
 	Directories struct {
 		// configuration

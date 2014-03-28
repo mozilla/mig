@@ -3,6 +3,7 @@ MIG Modules
 ===========
 :Author: Julien Vehent <jvehent@mozilla.com>
 
+.. sectnum::
 .. contents:: Table of Contents
 
 The MIG Agent does not execute operations by itself. It relies on modules, that
