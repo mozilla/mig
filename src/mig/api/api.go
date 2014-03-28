@@ -91,18 +91,18 @@ func main() {
 
 	r.HandleFunc("/api/action", getAction).Methods("GET")
 
-	r.HandleFunc("/api/action/create/", describeCreateAction).Methods("GET")
+	r.HandleFunc("/api/action/create", describeCreateAction).Methods("GET")
 	r.HandleFunc("/api/action/create/", createAction).Methods("POST")
 
-	r.HandleFunc("/api/action/cancel/", describeCancelAction).Methods("GET")
+	r.HandleFunc("/api/action/cancel", describeCancelAction).Methods("GET")
 	r.HandleFunc("/api/action/cancel/", cancelAction).Methods("POST")
 
 	r.HandleFunc("/api/command", getCommand).Methods("GET")
 
 	r.HandleFunc("/api/command/cancel", describeCancelCommand).Methods("GET")
-	r.HandleFunc("/api/command/cancel", cancelCommand).Methods("POST")
+	r.HandleFunc("/api/command/cancel/", cancelCommand).Methods("POST")
 
-	r.HandleFunc("/api/agent/dashboard/", getAgentsDashboard).Methods("GET")
+	r.HandleFunc("/api/agent/dashboard", getAgentsDashboard).Methods("GET")
 
 	r.HandleFunc("/api/agent/search", searchAgents).Methods("GET")
 
@@ -177,9 +177,9 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 
 	// Describe the queries that are exposed to the client
 	err = resource.AddQuery(cljs.Query{
-		Rel:    "search action per id",
-		Href:   "/api/action/search",
-		Prompt: "Query action ID",
+		Rel:    "Query action by ID",
+		Href:   "/api/action",
+		Prompt: "Query action by ID",
 		Data: []cljs.Data{
 			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
 		},
@@ -189,9 +189,9 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	}
 
 	resource.AddQuery(cljs.Query{
-		Rel:    "search command per id",
-		Href:   "/api/command/search",
-		Prompt: "Query command ID",
+		Rel:    "Query command by ID",
+		Href:   "/api/command",
+		Prompt: "Query command by ID",
 		Data: []cljs.Data{
 			{Name: "commandid", Value: "[0-9]{1,20}", Prompt: "Command ID"},
 			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
@@ -202,9 +202,9 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	}
 
 	resource.AddQuery(cljs.Query{
-		Rel:    "search agent per name",
+		Rel:    "Search agent by name",
 		Href:   "/api/agent/search",
-		Prompt: "Query agent name",
+		Prompt: "Search agent by name",
 		Data: []cljs.Data{
 			{Name: "name", Value: "agent123.example.net", Prompt: "Agent Name"},
 		},
@@ -213,9 +213,22 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
+	err = resource.AddQuery(cljs.Query{
+		Rel:    "Query MIG data",
+		Href:   "/api/search",
+		Prompt: "Query MIG data",
+		Data: []cljs.Data{
+			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
+			{Name: "search", Value: "positiveresults, ...", Prompt: "Name of search query"},
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	resource.AddQuery(cljs.Query{
-		Rel:  "get agent dashboard",
-		Href: "/api/agent/dashboard/",
+		Rel:  "Get agent dashboard",
+		Href: "/api/agent/dashboard",
 	})
 	if err != nil {
 		panic(err)
@@ -278,7 +291,7 @@ func describeCreateAction(respWriter http.ResponseWriter, request *http.Request)
 
 	err := resource.SetTemplate(cljs.Template{
 		Data: []cljs.Data{
-			{Name: "action", Value: "", Prompt: "Signed MIG Action"},
+			{Name: "action", Value: "URL encoded signed MIG action", Prompt: "Signed MIG Action"},
 		},
 	})
 	if err != nil {
@@ -367,7 +380,7 @@ func describeCancelAction(respWriter http.ResponseWriter, request *http.Request)
 
 	err := resource.SetTemplate(cljs.Template{
 		Data: []cljs.Data{
-			{Name: "id", Value: "", Prompt: "Action ID"},
+			{Name: "id", Value: "[0-9]{1,20}", Prompt: "Action ID"},
 		},
 	})
 	if err != nil {
@@ -507,8 +520,8 @@ func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request
 	}()
 	err := resource.SetTemplate(cljs.Template{
 		Data: []cljs.Data{
-			{Name: "actionid", Value: "", Prompt: "Action ID"},
-			{Name: "commandid", Value: "", Prompt: "Command ID"},
+			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
+			{Name: "commandid", Value: "[0-9]{1,20}", Prompt: "Command ID"},
 		},
 	})
 	if err != nil {
