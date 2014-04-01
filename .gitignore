@@ -7,6 +7,7 @@ conf/*
 src/mig/agent/configuration.go
 doc/*
 !doc/*.rst
+!doc/.files
 *.a
 *.so
 *.o

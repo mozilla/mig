@@ -6,6 +6,8 @@ platform that allows investigators to send actions to pools of agents, and check
 for indicator of compromision, verify the state of a configuration, block an
 account, create a firewall rule or update a blacklist.
 
+![MIG logo](doc/.files/MIG-logo-CC-small.jpg)
+
 For example: an investigator launches an action to search for an apache module
 that matches a given md5 value. MIG will register the action, find all the
 relevant targets and send commands to each target with the detail of the
