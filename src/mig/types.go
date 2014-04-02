@@ -41,6 +41,7 @@ import (
 
 type KeepAlive struct {
 	Name, QueueLoc, OS, Version string
+	PID                         int
 	StartTime, HeartBeatTS      time.Time
 }
 
