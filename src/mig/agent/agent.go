@@ -76,7 +76,13 @@ func main() {
 	var mode = flag.String("m", "agent", "Module to run (eg. agent, filechecker).")
 	var file = flag.String("i", "/path/to/file", "Load action from file")
 	var foreground = flag.Bool("f", false, "Agent will run in background by default. Except if this flag is set, or if LOGGING.Mode is stdout. All other modules run in foreground by default.")
+	var showversion = flag.Bool("V", false, "Print Agent version and exit.")
 	flag.Parse()
+
+	if *showversion {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	// run the agent, and exit when done
 	if *mode == "agent" && *file == "/path/to/file" {
