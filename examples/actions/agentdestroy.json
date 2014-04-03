@@ -1,0 +1,19 @@
+{
+    "Name": "Kill and remove an agent at the end of the Upgrade protocol",
+    "Description": {
+        "Author": "Julien Vehent",
+        "Email": "jvehent@mozilla.com",
+        "Revision": 201404151300
+    },
+    "Target": "linux",
+    "Operations": [
+        {
+            "Module": "agentdestroy",
+            "Parameters": {
+                "pid": 28803,
+                "version": "16eb58b-201404021544"
+            }
+        }
+    ],
+    "SyntaxVersion": 1
+}

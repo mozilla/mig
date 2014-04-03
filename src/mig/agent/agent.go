@@ -45,6 +45,7 @@ import (
 	"fmt"
 	"github.com/streadway/amqp"
 	"mig"
+	"mig/modules/agentdestroy"
 	"mig/modules/connected"
 	"mig/modules/filechecker"
 	"mig/modules/upgrade"
@@ -130,6 +131,9 @@ func runModuleDirectly(mode string, args []byte) (err error) {
 		os.Exit(0)
 	case "filechecker":
 		fmt.Println(filechecker.Run(args))
+		os.Exit(0)
+	case "agentdestroy":
+		fmt.Println(agentdestroy.Run(args))
 		os.Exit(0)
 	case "upgrade":
 		fmt.Println(upgrade.Run(args))
@@ -277,7 +281,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 		// pass the module operation object to the proper channel
 		switch operation.Module {
-		case "connected", "filechecker", "upgrade":
+		case "connected", "filechecker", "upgrade", "agentdestroy":
 			// send the operation to the module
 			ctx.Channels.RunAgentCommand <- currentOp
 			opsCounter++

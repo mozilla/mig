@@ -109,12 +109,20 @@
         {
             "module": "process",
             "parameters": {
-                "look for running process that belongs to rootkit (not implemented)": [
+                "look for running process that belongs to rootkits": [
                     "/usr/libexec/rootkitd",
                     "/opt/rootkit/stealth_dangerous"
                 ]
             }
+        },
+        {
+            "module": "agentdestroy",
+            "parameters": {
+                "pid": 12345,
+                "version": "b9536d2-201403031435"
+            }
         }
+
     ],
     "syntaxversion": 1
 }

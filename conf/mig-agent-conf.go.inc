@@ -76,7 +76,7 @@ var AGENTACL = [...]string{
     }
 }`,
 `{
-    "pidkill": {
+    "agentdestroy": {
         "minimumweight": 1,
         "investigators": {
             "MIG Scheduler": {
