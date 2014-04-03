@@ -47,6 +47,7 @@ import (
 	"mig"
 	"mig/modules/connected"
 	"mig/modules/filechecker"
+	"mig/modules/upgrade"
 	"os"
 	"os/exec"
 	"strings"
@@ -129,6 +130,9 @@ func runModuleDirectly(mode string, args []byte) (err error) {
 		os.Exit(0)
 	case "filechecker":
 		fmt.Println(filechecker.Run(args))
+		os.Exit(0)
+	case "upgrade":
+		fmt.Println(upgrade.Run(args))
 		os.Exit(0)
 	default:
 		fmt.Println("Module", mode, "is not implemented")
@@ -273,7 +277,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 		// pass the module operation object to the proper channel
 		switch operation.Module {
-		case "connected", "filechecker":
+		case "connected", "filechecker", "upgrade":
 			// send the operation to the module
 			ctx.Channels.RunAgentCommand <- currentOp
 			opsCounter++
