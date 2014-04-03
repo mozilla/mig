@@ -44,9 +44,9 @@ type ACL []Permission
 
 type Permission map[string]struct {
 	MinimumWeight int
-	Investigators map[string]struct{
+	Investigators map[string]struct {
 		Fingerprint string
-		Weight int
+		Weight      int
 	}
 }
 
