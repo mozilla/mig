@@ -125,10 +125,10 @@ recommended. To enable it, generate a client certificate and set the
  ::
 
 	[mq]
-		host = "relay1.mig.allizom.org"
+		host = "relay1.mig.example.net"
 		port = 5671
 		user = "scheduler"
-		pass = "Hsiuhdq&1huiaosd080uaf_091asdhfofqe"
+		pass = "secretrabbitmqpassword"
 		vhost = "mig"
 
 	; TLS options
