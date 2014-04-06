@@ -58,6 +58,40 @@ var HEARTBEATFREQ time.Duration = 300 * time.Second
 // timeout after which a module run is killed
 var MODULETIMEOUT time.Duration = 300 * time.Second
 
+// Control modules permissions by PGP keys
+var AGENTACL = [...]string{
+`{
+    "all": {
+        "requiredsignatures": 1,
+        "authoritativesigners": [
+            "E60892BB9BD89A69F759A1A0A3D652173B763E8F"
+        ]
+    }
+}`,
+`{
+    "filechecker": {
+        "requiredsignatures": 2,
+        "requiredauthoritativesigners": 1,
+        "authoritativesigners": [
+            "9AFE3B91FD11A49071B20D7F6359A4A9B75C2346"
+        ],
+        "nonauthoritativesigners": [
+            "D8ACF275FD11A49071B20D7F6359A4A9B75C2346"
+        ]
+    }
+}`,
+`{
+    "upgrade": {
+        "requiredsignatures": 1,
+        "requiredauthoritativesigners": 1,
+        "authoritativesigners": [
+            "9AFE3B91FD11A49071B20D7F6359A4A9B75C2346"
+        ]
+    }
+}`,
+}
+
+
 // PGP public keys that are authorized to sign actions
 // this is an array of strings, put each public key block
 // into its own array entry, as shown below

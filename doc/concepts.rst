@@ -112,20 +112,19 @@ The parameters are:
 
 Upon generation, additional fields are appended to the action:
 
-* PGPSignature: all of the parameters above are concatenated into a string and
+* PGPSignatures: all of the parameters above are concatenated into a string and
   signed with the investigator's private GPG key. The signature is part of the
   action, and used by agents to verify that an action comes from a trusted
-  investigator.
-* PGPSignatureDate: is the date of the PGP signature, used as a timestamp of
-  the action creation.
+  investigator. `PGPSignatures` is an array that contains one or more signature
+  from authorized investigators.
 * ValidFrom and ExpireAt: two dates that constrains the validity of the action
-  to a time window.
+  to a UTC time window.
 
-Actions files are submitted to the API or the Scheduler directly. Eventually,
-the PGP signature will be verified by intermediary components, and in any case
-by each agent before execution.
+Actions files are submitted to the API or the Scheduler directly. The PGP
+Signatures are always verified by the agents, and can optionally be verified by
+other components along the way.
 Additional attributes are added to the action by the scheduler. Those are
-defined as "MetaAction" and are used to track the action status.
+defined as `ExtendedAction` and are used to track the action status.
 
 Commands
 ~~~~~~~~
@@ -185,6 +184,113 @@ and thus "FoundAnything" returned "false.
 While the result is negative, the command itself has succeeded. Had a failure
 happened on the agent, the scheduler would have been notified and the status
 would be one of "failed", "timeout" or "cancelled".
+
+Access Control Lists
+--------------------
+
+Not all keys can perform all actions. The scheduler, for example, sometimes need
+to issue specific actions to agents (such as during the upgrade protocol) but
+shouldn't be able to perform more dangerous actions. This is enforced by
+an Access Control List, or ACL, stored on the agents. An ACL describes who can
+access what function of which module. It can be used to require multiple
+signatures on specific actions, and limit the list of investigators allowed to
+perform an action.
+
+An ACL is composed of permissions, which are JSON documents hardwired into
+the agent configuration. In the future, MIG will dynamically ship permissions
+to agents.
+
+Below is an example of a permission for the `filechecker` module:
+
+.. code:: json
+
+	{
+		"filechecker": {
+			"requiredsignatures": 1,
+			"authoritativesigners": [
+				"E60892BB9BD89A69F759A1A0A3D652173B763E8F"
+			]
+		}
+	}
+
+`authoritativesigners` contains the PGP fingerprint of the public key of an
+investigator. When an agent receives an action that calls the filechecker
+module, it will first verify the signature of the action, and then validates
+that the signer is authorized to perform the action.
+
+The default permission `default` can be used as a default for all modules. It
+has the following syntax:
+
+.. code:: json
+
+	{
+		"default": {
+			"requiredsignatures": 1,
+			"authoritativesigners": [
+				"E60892BB9BD...",
+				"9F759A1A0A3...",
+				"A69F759A1A0..."
+			]
+		}
+	}
+
+The `default` permission is overridden by module specific permissions.
+
+If a module requires multiple signatures, the `nonauthoritativesigners`
+attribute can be used to list investigators that can sign, but which signature
+isn't sufficient to launch the action. In addition, the attribute
+`requiredauthoritativesigners` controls how many signatures from
+`authoritativesigners` are required. If `requiredauthoritativesigners` is set to
+0, and `requiredsignatures` is set to 2, then two `nonauthoritativesigners` can
+sign and launch an action using this module without the approval of an
+`authoritativesigners`, as shown below in the firewall permission.
+
+.. code:: json
+
+	{
+		"firewall": {
+			"requiredsignatures": 2,
+			"requiredauthoritativesigners": 0
+			"authoritativesigners": [
+				"E60892BB9BD...",
+				"9F759A1A0A3...",
+				"A69F759A1A0..."
+			],
+			"nonauthoritativesigners": [
+				"2FC05413E11...",
+				"8AD5956347F..."
+			]
+		}
+	}
+
+The ACL is currently applied to modules. In the future, ACL will have finer
+control to authorize access to specific functions of modules. For example, an
+investigator could be authorized to call the `regex` function of filechecker
+module, but only in `/etc`. This functionality is not implemented yet.
+
+Extracting PGP fingerprints from public keys
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+On Linux, the `gpg` command can easily display the fingerprint of a key using
+`gpg --fingerprint <key id`. For example:
+
+.. code:: bash
+
+	$ gpg --fingerprint jvehent@mozilla.com
+	pub   2048R/3B763E8F 2013-04-30
+		  Key fingerprint = E608 92BB 9BD8 9A69 F759  A1A0 A3D6 5217 3B76 3E8F
+	uid                  Julien Vehent (personal) <julien@linuxwall.info>
+	uid                  Julien Vehent (ulfr) <jvehent@mozilla.com>
+	sub   2048R/8026F39F 2013-04-30
+
+We want to extract the fingerprint and remove all spaces, in order to obtain a
+40 characters hexadecimal string that can used in permissions.
+
+.. code:: bash
+
+	$ gpg --fingerprint jvehent@mozilla.com | grep fingerprint \
+	| cut -d '=' -f 2 | sed  's/ //g'
+	E60892BB9BD89A69F759A1A0A3D652173B763E8F
 
 Agent registration process
 --------------------------
