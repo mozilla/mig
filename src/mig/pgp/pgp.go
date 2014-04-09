@@ -38,8 +38,10 @@ package pgp
 import (
 	"bytes"
 	"code.google.com/p/go.crypto/openpgp"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"mig/pgp/verify"
 )
 
 // TransformArmoredPubKeysToKeyring takes a list of public PGP key in armored form and transforms
@@ -70,5 +72,21 @@ func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.Reader, keycount int,
 		}
 	}
 	keyring = bytes.NewReader(buf.Bytes())
+	return
+}
+
+// TransformArmoredPubKeysToKeyring takes a list of public PGP key in armored form and transforms
+// it into a keyring that can be used in other openpgp's functions
+func GetFingerprintFromSignature(data string, signature string, keyring io.Reader) (fingerprint string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("GetFingerprintFromSignature() -> %v", e)
+		}
+	}()
+	_, entity, err := verify.Verify(data, signature, keyring)
+	if err != nil {
+		panic(err)
+	}
+	fingerprint = hex.EncodeToString(entity.PrimaryKey.Fingerprint[:])
 	return
 }

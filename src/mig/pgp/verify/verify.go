@@ -50,7 +50,7 @@ func Verify(data string, signature string, keyring io.Reader) (valid bool, entit
 	valid = false
 
 	// re-armor signature and transform into io.Reader
-	sigReader := strings.NewReader(reArmor(signature))
+	sigReader := strings.NewReader(reArmorSignature(signature))
 
 	// decode armor
 	sigBlock, err := armor.Decode(sigReader)
@@ -82,9 +82,9 @@ func Verify(data string, signature string, keyring io.Reader) (valid bool, entit
 	return
 }
 
-// reArmor takes a single line armor and turns it back into an PGP-style
+// reArmorSignature takes a single line armor and turns it back into an PGP-style
 // multi-line armored string (thank you, camlistore folks)
-func reArmor(line string) string {
+func reArmorSignature(line string) string {
 	lastEq := strings.LastIndex(line, "=")
 	if lastEq == -1 {
 		return ""
