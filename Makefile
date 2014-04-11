@@ -54,6 +54,16 @@ mig-action-verifier: gpgme
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig/clients/verifier
 
+go_get_deps_into_system:
+	go get -u code.google.com/p/go.crypto/openpgp
+	go get -u github.com/streadway/amqp
+	go get -u github.com/howeyc/fsnotify
+	go get -u labix.org/v2/mgo
+	go get -u labix.org/v2/mgo/bson
+	go get -u code.google.com/p/gcfg
+	go get -u github.com/VividCortex/godaemon
+	go get -u github.com/gorilla/mux
+	go get -u github.com/jvehent/cljs
 
 go_get_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
