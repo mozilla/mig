@@ -204,19 +204,39 @@ Below is an example of a permission for the `filechecker` module:
 
 .. code:: json
 
-	{
-		"filechecker": {
-			"requiredsignatures": 1,
-			"authoritativesigners": [
-				"E60892BB9BD89A69F759A1A0A3D652173B763E8F"
-			]
-		}
-	}
+    {
+        "filechecker": {
+            "minimumweight": 2,
+            "investigators": {
+                "Bob Kelso": {
+                    "fingerprint": "E60892BB9BD...",
+                    "weight": 2
+                },
+                "John Smith": {
+                    "fingerprint": "9F759A1A0A3...",
+                    "weight": 1
+                }
+            }
+        }
+    }
 
-`authoritativesigners` contains the PGP fingerprint of the public key of an
-investigator. When an agent receives an action that calls the filechecker
-module, it will first verify the signature of the action, and then validates
-that the signer is authorized to perform the action.
+`investigators` contains a list of users with their PGP fingerprints, and their
+weight, an integer that represents their access level.
+When an agent receives an action that calls the filechecker module, it will
+first verify the signatures of the action, and then validates that the signers
+are authorized to perform the action. This is done by counting the weights of
+the signatures, and verifying that they equal or exceed the minimum required
+weight.
+
+Thus, in the example above, investigator John Smith cannot issue a filechecker
+action alone. His weight of 1 doesn't satisfy the minimum weight of 2 required
+by the filechecker permission. Therefore, John will need to ask investigator Bob
+Kelso to sign his action as well. The weight of both investigators are then
+added, giving a total of 3, which satisfies the minimum weight of 2.
+
+This method gives ample flexibility to require multiple signatures on modules,
+and ensure that one investigator cannot perform sensitive actions on remote
+endpoints without the permissions of others.
 
 The default permission `default` can be used as a default for all modules. It
 has the following syntax:
@@ -225,43 +245,13 @@ has the following syntax:
 
 	{
 		"default": {
-			"requiredsignatures": 1,
-			"authoritativesigners": [
-				"E60892BB9BD...",
-				"9F759A1A0A3...",
-				"A69F759A1A0..."
+			"minimumweight": 2,
+			"investigators": { ... }
 			]
 		}
 	}
 
 The `default` permission is overridden by module specific permissions.
-
-If a module requires multiple signatures, the `nonauthoritativesigners`
-attribute can be used to list investigators that can sign, but which signature
-isn't sufficient to launch the action. In addition, the attribute
-`requiredauthoritativesigners` controls how many signatures from
-`authoritativesigners` are required. If `requiredauthoritativesigners` is set to
-0, and `requiredsignatures` is set to 2, then two `nonauthoritativesigners` can
-sign and launch an action using this module without the approval of an
-`authoritativesigners`, as shown below in the firewall permission.
-
-.. code:: json
-
-	{
-		"firewall": {
-			"requiredsignatures": 2,
-			"requiredauthoritativesigners": 0
-			"authoritativesigners": [
-				"E60892BB9BD...",
-				"9F759A1A0A3...",
-				"A69F759A1A0..."
-			],
-			"nonauthoritativesigners": [
-				"2FC05413E11...",
-				"8AD5956347F..."
-			]
-		}
-	}
 
 The ACL is currently applied to modules. In the future, ACL will have finer
 control to authorize access to specific functions of modules. For example, an
@@ -272,7 +262,7 @@ Extracting PGP fingerprints from public keys
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 On Linux, the `gpg` command can easily display the fingerprint of a key using
-`gpg --fingerprint <key id`. For example:
+`gpg --fingerprint <key id>`. For example:
 
 .. code:: bash
 
@@ -283,13 +273,24 @@ On Linux, the `gpg` command can easily display the fingerprint of a key using
 	uid                  Julien Vehent (ulfr) <jvehent@mozilla.com>
 	sub   2048R/8026F39F 2013-04-30
 
-We want to extract the fingerprint and remove all spaces, in order to obtain a
-40 characters hexadecimal string that can used in permissions.
+
+You should always verify the trustworthiness of a key before using it:
 
 .. code:: bash
 
-	$ gpg --fingerprint jvehent@mozilla.com | grep fingerprint \
-	| cut -d '=' -f 2 | sed  's/ //g'
+	$ gpg --list-sigs jvehent@mozilla.com
+	pub   2048R/3B763E8F 2013-04-30
+	uid                  Julien Vehent (personal) <julien@linuxwall.info>
+	sig 3        3B763E8F 2013-06-23  Julien Vehent (personal) <julien@linuxwall.info>
+	sig 3        28A860CE 2013-10-04  Curtis Koenig <ckoenig@mozilla.com>
+	.....
+
+We want to extract the fingerprint, and obtain a 40 characters hexadecimal
+string that can used in permissions.
+
+.. code:: bash
+
+	$gpg --fingerprint --with-colons jvehent@mozilla.com |grep '^fpr'|cut -f 10 -d ':'
 	E60892BB9BD89A69F759A1A0A3D652173B763E8F
 
 Agent registration process

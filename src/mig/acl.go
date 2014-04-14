@@ -43,41 +43,31 @@ import (
 type ACL []Permission
 
 type Permission map[string]struct {
-	RequiredSignatures           int
-	RequiredAuthoritativeSigners int
-	AuthoritativeSigners         []string
-	NonAuthoritativeSigners      []string
+	MinimumWeight int
+	Investigators map[string]struct{
+		Fingerprint string
+		Weight int
+	}
 }
 
 // verifyPermission controls that the PGP keys, identified by their fingerprints, that
 // signed an operation are sufficient to allow this operation to run
 func verifyPermission(operation operation, permName string, perm Permission, fingerprints []string) (err error) {
-	if perm[permName].RequiredSignatures < 1 {
+	if perm[permName].MinimumWeight < 1 {
 		return fmt.Errorf("Invalid permission '%s'. Must require at least 1 signature, has %d",
-			permName, perm[permName].RequiredSignatures)
+			permName, perm[permName].MinimumWeight)
 	}
-	countSignatures := 0
-	countAuthoritativeSignatures := 0
+	signaturesWeight := 0
 	for _, fp := range fingerprints {
-		for _, vfp := range perm[permName].AuthoritativeSigners {
-			if strings.ToUpper(fp) == strings.ToUpper(vfp) {
-				countSignatures++
-				countAuthoritativeSignatures++
-			}
-		}
-		for _, vfp := range perm[permName].NonAuthoritativeSigners {
-			if strings.ToUpper(fp) == strings.ToUpper(vfp) {
-				countSignatures++
+		for _, signer := range perm[permName].Investigators {
+			if strings.ToUpper(fp) == strings.ToUpper(signer.Fingerprint) {
+				signaturesWeight += signer.Weight
 			}
 		}
 	}
-	if countAuthoritativeSignatures < perm[permName].RequiredAuthoritativeSigners {
-		return fmt.Errorf("Permission denied for operation '%s'. Insufficient number of Authoritative signatures. Need %d, got %d",
-			operation.Module, perm[permName].RequiredAuthoritativeSigners, countAuthoritativeSignatures)
-	}
-	if countSignatures < perm[permName].RequiredSignatures {
-		return fmt.Errorf("Permission denied for operation '%s'. Insufficient number of signatures. Need %d, got %d",
-			operation.Module, perm[permName].RequiredSignatures, countSignatures)
+	if signaturesWeight < perm[permName].MinimumWeight {
+		return fmt.Errorf("Permission denied for operation '%s'. Insufficient signatures weight. Need %d, got %d",
+			operation.Module, perm[permName].MinimumWeight, signaturesWeight)
 	}
 	return
 }

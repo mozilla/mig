@@ -61,32 +61,29 @@ var MODULETIMEOUT time.Duration = 300 * time.Second
 // Control modules permissions by PGP keys
 var AGENTACL = [...]string{
 `{
-    "all": {
-        "requiredsignatures": 1,
-        "authoritativesigners": [
-            "E60892BB9BD89A69F759A1A0A3D652173B763E8F"
-        ]
+    "default": {
+        "minimumweight": 2,
+        "investigators": {
+            "Bob Kelso": {
+                "fingerprint": "E60892BB....",
+                "weight": 2
+            },
+            "Morpheus": {
+                "fingerprint": "AD595634....",
+                "weight": 3
+            }
+        }
     }
 }`,
 `{
-    "filechecker": {
-        "requiredsignatures": 2,
-        "requiredauthoritativesigners": 1,
-        "authoritativesigners": [
-            "9AFE3B91FD11A49071B20D7F6359A4A9B75C2346"
-        ],
-        "nonauthoritativesigners": [
-            "D8ACF275FD11A49071B20D7F6359A4A9B75C2346"
-        ]
-    }
-}`,
-`{
-    "upgrade": {
-        "requiredsignatures": 1,
-        "requiredauthoritativesigners": 1,
-        "authoritativesigners": [
-            "9AFE3B91FD11A49071B20D7F6359A4A9B75C2346"
-        ]
+    "pidkill": {
+        "minimumweight": 1,
+        "investigators": {
+            "MIG Scheduler": {
+                "fingerprint": "E60892BB...",
+                "weight": 1
+            }
+        }
     }
 }`,
 }
