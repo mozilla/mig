@@ -224,7 +224,7 @@ Below is an example of a permission for the `filechecker` module:
 weight, an integer that represents their access level.
 When an agent receives an action that calls the filechecker module, it will
 first verify the signatures of the action, and then validates that the signers
-are authorized to perform the action. This is done by counting the weights of
+are authorized to perform the action. This is done by summing up the weights of
 the signatures, and verifying that they equal or exceed the minimum required
 weight.
 
