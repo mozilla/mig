@@ -336,7 +336,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	err = action.VerifySignature(keyring)
+	err = action.VerifySignatures(keyring)
 	if err != nil {
 		panic(err)
 	}

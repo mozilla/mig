@@ -119,7 +119,7 @@ func main() {
 	defer keyring.Close()
 
 	// syntax checking
-	err = a.VerifySignature(keyring)
+	err = a.VerifySignatures(keyring)
 	if err != nil {
 		panic(err)
 	}

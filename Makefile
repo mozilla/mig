@@ -54,6 +54,8 @@ mig-action-verifier: gpgme
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig/clients/verifier
 
+go_get_deps_into_system:
+	make GOGETTER="go get -u" go_get_deps
 
 go_get_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
@@ -123,4 +125,4 @@ clean:
 clean-all: clean
 	rm -rf pkg
 
-.PHONY: clean clean-all gpgme
+.PHONY: clean clean-all gpgme go_get_deps_into_system

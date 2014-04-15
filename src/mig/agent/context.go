@@ -39,6 +39,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"github.com/VividCortex/godaemon"
 	"github.com/streadway/amqp"
@@ -55,7 +56,7 @@ import (
 // logs and channels
 // Context is intended as a single structure that can be passed around easily.
 type Context struct {
-	OpID  uint64 // ID of the current operation, used for tracking
+	ACL   mig.ACL
 	Agent struct {
 		Hostname, OS, QueueLoc, UID, BinPath string
 	}
@@ -77,6 +78,7 @@ type Context struct {
 		Chan   *amqp.Channel
 		Bind   mig.Binding
 	}
+	OpID    uint64        // ID of the current operation, used for tracking
 	Sleeper time.Duration // timer used when the agent has to sleep for a while
 	Stats   struct {
 	}
@@ -142,6 +144,12 @@ func Init(foreground bool) (ctx Context, err error) {
 
 	// retrieve information on agent environment
 	ctx, err = initAgentEnv(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// parse the ACLs
+	ctx, err = initACL(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -274,6 +282,30 @@ func createIDFile(loc string) (id []byte, err error) {
 		panic(err)
 	}
 
+	return
+}
+
+// parse the permissions from the configuration into an ACL structure
+func initACL(orig_ctx Context) (ctx Context, err error) {
+	ctx = orig_ctx
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("initACL() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving initACL()"}.Debug()
+	}()
+	for _, jsonPermission := range AGENTACL {
+		var parsedPermission mig.Permission
+		err = json.Unmarshal([]byte(jsonPermission), &parsedPermission)
+		if err != nil {
+			panic(err)
+		}
+		for permName, _ := range parsedPermission {
+			desc := fmt.Sprintf("Loading permission named '%s'", permName)
+			ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
+		}
+		ctx.ACL = append(ctx.ACL, parsedPermission)
+	}
 	return
 }
 

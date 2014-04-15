@@ -58,6 +58,37 @@ var HEARTBEATFREQ time.Duration = 300 * time.Second
 // timeout after which a module run is killed
 var MODULETIMEOUT time.Duration = 300 * time.Second
 
+// Control modules permissions by PGP keys
+var AGENTACL = [...]string{
+`{
+    "default": {
+        "minimumweight": 2,
+        "investigators": {
+            "Bob Kelso": {
+                "fingerprint": "E60892BB....",
+                "weight": 2
+            },
+            "Morpheus": {
+                "fingerprint": "AD595634....",
+                "weight": 3
+            }
+        }
+    }
+}`,
+`{
+    "pidkill": {
+        "minimumweight": 1,
+        "investigators": {
+            "MIG Scheduler": {
+                "fingerprint": "E60892BB...",
+                "weight": 1
+            }
+        }
+    }
+}`,
+}
+
+
 // PGP public keys that are authorized to sign actions
 // this is an array of strings, put each public key block
 // into its own array entry, as shown below

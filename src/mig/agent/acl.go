@@ -1,4 +1,4 @@
-/* Mozilla InvestiGator PGP
+/* Mozilla InvestiGator Agent
 
 Version: MPL 1.1/GPL 2.0/LGPL 2.1
 
@@ -19,6 +19,7 @@ the Initial Developer. All Rights Reserved.
 
 Contributor(s):
 Julien Vehent jvehent@mozilla.com [:ulfr]
+Guillaume Destuynder <kang@mozilla.com>
 
 Alternatively, the contents of this file may be used under the terms of
 either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -33,60 +34,53 @@ the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
 */
 
-package pgp
+package main
 
 import (
-	"bytes"
-	"code.google.com/p/go.crypto/openpgp"
-	"encoding/hex"
 	"fmt"
-	"io"
-	"mig/pgp/verify"
+	"mig"
+	"mig/pgp"
+	"time"
 )
 
-// TransformArmoredPubKeysToKeyring takes a list of public PGP key in armored form and transforms
-// it into a keyring that can be used in other openpgp's functions
-func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.Reader, keycount int, err error) {
+// checkActionAuthorization verifies the PGP signatures of a given action
+// against the Access Control List of the agent.
+func checkActionAuthorization(a mig.Action, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("ArmoredePubKeysToKeyRing() -> %v", e)
+			err = fmt.Errorf("checkActionAuthorization() -> %v", e)
 		}
+		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: "leaving checkActionAuthorization()"}.Debug()
 	}()
-	var buf bytes.Buffer
-	// iterate over the keys, and load them into an io.Reader keyring
-	for _, key := range pubkeys {
-		// Load PGP public key
-		el, err := openpgp.ReadArmoredKeyRing(bytes.NewBufferString(key))
-		if err != nil {
-			panic(err)
-		}
-		keycount += 1
-		if len(el) != 1 {
-			err = fmt.Errorf("Public GPG Key contains %d entities, wanted 1\n", len(el))
-			panic(err)
-		}
-		// serialize entities into io.Reader
-		err = el[0].Serialize(&buf)
-		if err != nil {
-			panic(err)
-		}
-	}
-	keyring = bytes.NewReader(buf.Bytes())
-	return
-}
-
-// TransformArmoredPubKeysToKeyring takes a list of public PGP key in armored form and transforms
-// it into a keyring that can be used in other openpgp's functions
-func GetFingerprintFromSignature(data string, signature string, keyring io.Reader) (fingerprint string, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("GetFingerprintFromSignature() -> %v", e)
-		}
-	}()
-	_, entity, err := verify.Verify(data, signature, keyring)
+	// get an io.Reader from the public pgp key
+	keyring, keycount, err := pgp.ArmoredPubKeysToKeyring(PUBLICPGPKEYS[0:])
 	if err != nil {
 		panic(err)
 	}
-	fingerprint = hex.EncodeToString(entity.PrimaryKey.Fingerprint[:])
+	ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: fmt.Sprintf("loaded %d keys", keycount)}.Debug()
+
+	// Check the action syntax and signature
+	err = a.Validate()
+	if err != nil {
+		desc := fmt.Sprintf("action validation failed: %v", err)
+		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: desc}.Err()
+		panic(desc)
+	}
+	// Validate() checks that the action hasn't expired, but we need to
+	// check the start time ourselves
+	if time.Now().Before(a.ValidFrom) {
+		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: "action is scheduled for later"}.Err()
+		panic("Action ValidFrom date is in the future")
+	}
+
+	// check ACLs, includes verifying signatures
+	err = a.VerifyACL(ctx.ACL, keyring)
+	if err != nil {
+		desc := fmt.Sprintf("action ACL verification failed: %v", err)
+		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: desc}.Err()
+		panic(desc)
+	}
+
+	ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: "ACL verification succeeded."}.Debug()
 	return
 }

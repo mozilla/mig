@@ -43,6 +43,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"mig/pgp"
 	"mig/pgp/verify"
 	"strconv"
 	"time"
@@ -74,22 +75,16 @@ type counters struct {
 // an Action is the json object that is created by an investigator
 // and provided to the MIG platform. It must be PGP signed.
 type Action struct {
-	// meta
-	ID          uint64      `json:"id"`
-	Name        string      `json:"name"`
-	Target      string      `json:"target"`
-	Description description `json:"description"`
-	Threat      threat      `json:"threat"`
-	// time window
-	ValidFrom   time.Time `json:"validfrom"`
-	ExpireAfter time.Time `json:"expireafter"`
-	// operation to perform
-	Operations []operation `json:"operations"`
-	// action signature
-	PGPSignature     string    `json:"pgpsignature"`
-	PGPSignatureDate time.Time `json:"pgpsignaturedate"`
-	// action syntax version
-	SyntaxVersion int `json:"syntaxversion"`
+	ID            uint64      `json:"id"`
+	Name          string      `json:"name"`
+	Target        string      `json:"target"`
+	Description   description `json:"description"`
+	Threat        threat      `json:"threat"`
+	ValidFrom     time.Time   `json:"validfrom"`
+	ExpireAfter   time.Time   `json:"expireafter"`
+	Operations    []operation `json:"operations"`
+	PGPSignatures []string    `json:"pgpsignatures"`
+	SyntaxVersion int         `json:"syntaxversion"`
 }
 
 // a description is a simple object that contains detail about the
@@ -185,29 +180,29 @@ func (a Action) Validate() (err error) {
 	if a.Operations == nil {
 		return errors.New("Action.Operations is nil. Expecting string.")
 	}
-	if a.PGPSignature == "" {
-		return errors.New("Action.PGPSignature is empty. Expecting string.")
+	if len(a.PGPSignatures) < 1 {
+		return errors.New("Action.PGPSignatures is empty. Expecting array of strings.")
 	}
 	return
 }
 
-// Validate verifies that the Action received contained all the
-// necessary fields, and returns an error when it doesn't.
-func (a Action) VerifySignature(keyring io.Reader) (err error) {
-	// Verify the signature
+// VerifySignatures verifies that the Action contains valid signatures from
+// known investigators. It does not verify permissions.
+func (a Action) VerifySignatures(keyring io.Reader) (err error) {
 	astr, err := a.String()
 	if err != nil {
 		return errors.New("Failed to stringify action")
 	}
-	valid, _, err := verify.Verify(astr, a.PGPSignature, keyring)
-	if err != nil {
-		return errors.New("Failed to verify PGP Signature")
+	for _, sig := range a.PGPSignatures {
+		valid, _, err := verify.Verify(astr, sig, keyring)
+		if err != nil {
+			return errors.New("Failed to verify PGP Signature")
+		}
+		if !valid {
+			return errors.New("Invalid PGP Signature")
+		}
 	}
-	if !valid {
-		return errors.New("Invalid PGP Signature")
-	}
-
-	return nil
+	return
 }
 
 //  concatenates Action components into a string
@@ -220,5 +215,53 @@ func (a Action) String() (str string, err error) {
 	args, err := json.Marshal(a.Operations)
 	str += "operations='" + fmt.Sprintf("%s", args) + "';"
 
+	return
+}
+
+// VerifyACL controls that an action has been issued by investigators
+// that have the right permissions. This function looks at each operation
+// listed in the action, and find the corresponding permission. If no
+// permission is found, the default one `default` is used.
+// The first permission that is found to apply to an operation, but
+// doesn't allow the operation to run, will fail the verification globally
+func (a Action) VerifyACL(acl ACL, keyring io.Reader) (err error) {
+	// first, verify all signatures and get a list of PGP
+	// fingerprints of the signers
+	var fingerprints []string
+	astr, err := a.String()
+	if err != nil {
+		return errors.New("Failed to stringify action")
+	}
+	for _, sig := range a.PGPSignatures {
+		fp, err := pgp.GetFingerprintFromSignature(astr, sig, keyring)
+		if err != nil {
+			return fmt.Errorf("Failed to retrieve fingerprint from signatures: %v", err)
+		}
+		fingerprints = append(fingerprints, fp)
+	}
+
+	// Then, for each operation contained in the action, look for
+	// a permission that apply to it, by comparing the operation name
+	// with permission name. If none is found, use the default permission.
+	for _, operation := range a.Operations {
+		for _, permission := range acl {
+			for permName, _ := range permission {
+				if permName == operation.Module {
+					return verifyPermission(operation, permName, permission, fingerprints)
+				}
+			}
+		}
+		// no specific permission found, apply the default permission
+		var defaultPerm Permission
+		for _, permission := range acl {
+			for permName, _ := range permission {
+				if permName == "default" {
+					defaultPerm = permission
+					break
+				}
+			}
+		}
+		return verifyPermission(operation, "default", defaultPerm, fingerprints)
+	}
 	return
 }

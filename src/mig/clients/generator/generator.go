@@ -115,16 +115,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	a.PGPSignature, err = sign.Sign(str, *key)
+	pgpsig, err := sign.Sign(str, *key)
 	if err != nil {
 		panic(err)
 	}
-
-	a.PGPSignatureDate = time.Now().UTC()
-
+	a.PGPSignatures = append(a.PGPSignatures, pgpsig)
 	var jsonAction []byte
 	if *pretty {
 		jsonAction, err = json.MarshalIndent(a, "", "\t")
+		fmt.Printf("%s\n", jsonAction)
 	} else {
 		jsonAction, err = json.Marshal(a)
 	}
@@ -179,7 +178,7 @@ func main() {
 	}
 
 	// syntax checking
-	err = a.VerifySignature(keyring)
+	err = a.VerifySignatures(keyring)
 	if err != nil {
 		panic(err)
 	}
