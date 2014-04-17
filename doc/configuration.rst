@@ -157,6 +157,67 @@ notification routine, and delete old files after a grace period.
 		; and invalid actions are kept
 		deleteafter = "72h"
 
+PGP
+~~~
+
+The scheduler uses a PGP key to sign agent destruction actions during the agent
+upgrade protocol. Therefore, when deployed a scheduler, a key must be generated
+with the command `gpg --gen-key`.
+
+The fingerprint of the key must then be added in two places:
+
+1. In the scheduler configuration file `mig-scheduler.cfg`.
+
+First, obtain the fingerprint using the `gpg` command line.
+
+.. code:: bash
+
+	$ gpg --fingerprint --with-colons 'MIG scheduler stage1 (NOT PRODUCTION)' |grep '^fpr'|cut -f 10 -d ':'
+	1E644752FB76B77245B1694E556CDD7B07E9D5D6
+
+Then add the fingerprint in the scheduler configuration file.
+
+ ::
+
+	[pgp]
+		keyid = "1E644752FB76B77245B1694E556CDD7B07E9D5D6"
+
+2. In the ACL of the agent configuration file `conf/mig-agent-conf.go`:
+
+ ::
+
+	var AGENTACL = [...]string{
+	`{
+		"agentdestroy": {
+			"minimumweight": 1,
+			"investigators": {
+				"MIG Scheduler": {
+					"fingerprint": "1E644752FB76B77245B1694E556CDD7B07E9D5D6",
+					"weight": 1
+				}
+			}
+		}
+	}`,
+	}
+
+And add the public PGP key of the scheduler as well:
+
+ ::
+
+	// PGP public keys that are authorized to sign actions
+	var PUBLICPGPKEYS = [...]string{
+	`
+	-----BEGIN PGP PUBLIC KEY BLOCK-----
+	Version: GnuPG v1. Name: MIG Scheduler
+
+	mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
+	QPFOPgu3O3iij6UOVh+LOkqccjJ8gZVLYMJzUQC+2RJ3jvXhti8xZ1hs2iEr65Rj
+	zUklHVZguf2Zv2X9Er8rnlW5xzplsVXNWnVvMDXyzx0ufC00dDbCwahLQnv6Vqq8
+	BdUCSrvo/r7oAims8SyWE+ZObC+rw7u01Sut0ctnYrvklaM10+zkwGNOTszrduUy
+	.....
+	`
+	}
+
 RabbitMQ Configuration
 ----------------------
 

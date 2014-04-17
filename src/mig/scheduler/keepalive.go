@@ -44,6 +44,11 @@ import (
 	"time"
 )
 
+// agentRegId is used to retrieve the internal mongodb ID of an agen'ts registration
+type agentRegId struct {
+	Id bson.ObjectId `bson:"_id,omitempty"`
+}
+
 // pickUpAliveAgents lists agents that have recent keepalive in the
 // database, and start listening queues for them
 func pickUpAliveAgents(ctx Context) (err error) {
@@ -172,17 +177,42 @@ func getKeepAlives(msg amqp.Delivery, ctx Context) (err error) {
 
 	// try to find an existing entry to update, or create a new one
 	// and save registration in database
-	_, err = ctx.DB.Col.Reg.Upsert(
-		// search string
-		bson.M{"name": ka.Name, "os": ka.OS, "queueloc": ka.QueueLoc},
-		// update string
-		bson.M{"name": ka.Name, "os": ka.OS, "queueloc": ka.QueueLoc,
-			"heartbeatts": ka.HeartBeatTS, "starttime": ka.StartTime})
+	var ids []agentRegId
+	iter := ctx.DB.Col.Reg.Find(bson.M{"name": ka.Name, "os": ka.OS, "queueloc": ka.QueueLoc, "pid": ka.PID, "version": ka.Version}).Iter()
+	err = iter.All(&ids)
 	if err != nil {
 		panic(err)
 	}
+	switch {
+	case len(ids) == 0:
+		// no registration for this agent in database, create one
+		err = ctx.DB.Col.Reg.Insert(bson.M{"name": ka.Name, "os": ka.OS, "queueloc": ka.QueueLoc,
+			"pid": ka.PID, "version": ka.Version, "heartbeatts": ka.HeartBeatTS, "starttime": ka.StartTime})
+		if err != nil {
+			panic(err)
+		}
+	case len(ids) == 1:
+		// update existing registration for this agent
+		mgoId := ids[0].Id
+		err := ctx.DB.Col.Reg.Update(bson.M{"_id": mgoId}, bson.M{"$set": bson.M{"heartbeatts": ka.HeartBeatTS}})
+		if err != nil {
+			panic(err)
+		}
+	case len(ids) > 1:
+		// more than one registration is a problem !
+		desc := fmt.Sprintf("%d agents match this registration in database. That's a problem!", len(ids))
+		panic(desc)
+	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("getKeepAlives() KeepAlive for Agent '%s' updated in DB", ka.Name)}.Debug()
 
+	// If multiple agents are listening on the same queue, alert the cleanup routine
+	agtCnt, _, err := findDupAgents(ka.QueueLoc, ctx)
+	if err != nil {
+		panic(err)
+	}
+	if agtCnt > 1 {
+		ctx.Channels.DetectDupAgents <- ka.QueueLoc
+	}
 	return
 }
 
@@ -240,4 +270,31 @@ func startAgentListener(reg mig.KeepAlive, ctx Context) (err error) {
 	activeAgentsList = append(activeAgentsList, reg.QueueLoc)
 
 	return
+}
+
+// findDupAgents counts agents that are listening on a given queue and
+// have sent a heartbeat in recent times, to detect systems that are running
+// two or more agents
+func findDupAgents(queueLoc string, ctx Context) (count int, agents []mig.KeepAlive, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("findDupAgents() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving findDupAgents()"}.Debug()
+	}()
+	// retrieve agents that have sent in heartbeat in twice their heartbeat time
+	period, err := time.ParseDuration(ctx.Agent.HeartbeatFreq)
+	if err != nil {
+		panic(err)
+	}
+	since := time.Now().Add(-period * 2)
+	iter := ctx.DB.Col.Reg.Find(
+		bson.M{"heartbeatts": bson.M{"$gte": since}, "queueloc": queueLoc},
+	).Iter()
+	agents = []mig.KeepAlive{}
+	err = iter.All(&agents)
+	if err != nil {
+		panic(err)
+	}
+	return len(agents), agents, err
 }

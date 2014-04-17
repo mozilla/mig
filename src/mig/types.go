@@ -40,9 +40,10 @@ import (
 )
 
 type KeepAlive struct {
-	Name, QueueLoc, OS, Version string
-	PID                         int
-	StartTime, HeartBeatTS      time.Time
+	Name, QueueLoc, OS, Version             string
+	PID                                     int
+	StartTime, DestructionTime, HeartBeatTS time.Time
+	Status                                  string
 }
 
 type Binding struct {

@@ -58,13 +58,14 @@ type Context struct {
 	OpID  uint64 // ID of the current operation, used for tracking
 	Agent struct {
 		// configuration
-		TimeOut, Whitelist string
+		TimeOut, HeartbeatFreq, Whitelist string
 	}
 	Channels struct {
 		// internal
 		Terminate                                                                        chan error
 		Log                                                                              chan mig.Log
 		NewAction, ActionDone, CommandReady, UpdateCommand, CommandReturned, CommandDone chan string
+		DetectDupAgents                                                                  chan string
 	}
 	Collector struct {
 		Freq, DeleteAfter string
@@ -102,6 +103,9 @@ type Context struct {
 		// internal
 		conn *amqp.Connection
 		Chan *amqp.Channel
+	}
+	PGP struct {
+		KeyID string
 	}
 	Stats struct {
 	}
@@ -345,6 +349,7 @@ func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx.Channels.UpdateCommand = make(chan string, 599)
 	ctx.Channels.CommandReturned = make(chan string, 271)
 	ctx.Channels.CommandDone = make(chan string, 641)
+	ctx.Channels.DetectDupAgents = make(chan string, 29)
 	ctx.Channels.Log = make(chan mig.Log, 601)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
 	return
