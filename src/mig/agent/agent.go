@@ -45,8 +45,10 @@ import (
 	"fmt"
 	"github.com/streadway/amqp"
 	"mig"
+	"mig/modules/agentdestroy"
 	"mig/modules/connected"
 	"mig/modules/filechecker"
+	"mig/modules/upgrade"
 	"os"
 	"os/exec"
 	"strings"
@@ -76,7 +78,13 @@ func main() {
 	var mode = flag.String("m", "agent", "Module to run (eg. agent, filechecker).")
 	var file = flag.String("i", "/path/to/file", "Load action from file")
 	var foreground = flag.Bool("f", false, "Agent will run in background by default. Except if this flag is set, or if LOGGING.Mode is stdout. All other modules run in foreground by default.")
+	var showversion = flag.Bool("V", false, "Print Agent version and exit.")
 	flag.Parse()
+
+	if *showversion {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	// run the agent, and exit when done
 	if *mode == "agent" && *file == "/path/to/file" {
@@ -123,6 +131,12 @@ func runModuleDirectly(mode string, args []byte) (err error) {
 		os.Exit(0)
 	case "filechecker":
 		fmt.Println(filechecker.Run(args))
+		os.Exit(0)
+	case "agentdestroy":
+		fmt.Println(agentdestroy.Run(args))
+		os.Exit(0)
+	case "upgrade":
+		fmt.Println(upgrade.Run(args))
 		os.Exit(0)
 	default:
 		fmt.Println("Module", mode, "is not implemented")
@@ -267,7 +281,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 		// pass the module operation object to the proper channel
 		switch operation.Module {
-		case "connected", "filechecker":
+		case "connected", "filechecker", "upgrade", "agentdestroy":
 			// send the operation to the module
 			ctx.Channels.RunAgentCommand <- currentOp
 			opsCounter++
@@ -435,6 +449,7 @@ func keepAliveAgent(ctx Context) (err error) {
 		Name:      ctx.Agent.Hostname,
 		OS:        ctx.Agent.OS,
 		Version:   version,
+		PID:       os.Getpid(),
 		QueueLoc:  ctx.Agent.QueueLoc,
 		StartTime: time.Now(),
 	}

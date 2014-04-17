@@ -28,6 +28,7 @@ GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install
 
+
 all: mig-agent mig-scheduler mig-action-generator mig-action-verifier
 
 mig-agent:
@@ -81,14 +82,27 @@ rpm-agent: mig-agent
 # Bonus FPM options
 #       --rpm-digest sha512 --rpm-sign
 	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent tmp/sbin/mig-agent
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/cache/mig
-# Agent auto install startup scripts, so we just need to execute it once as priviligied user
-	echo -en "#!/bin/sh\n/sbin/mig-agent" > tmp/agent_install.sh
+# Agent auto install startup scripts, so we just need to execute it once as priviliged user
+	echo -en "#!/bin/sh\nrm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		-s dir -t rpm .
+
+deb-agent: mig-agent
+# Bonus FPM options
+#       --rpm-digest sha512 --rpm-sign
+	rm -fr tmp
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent tmp/sbin/mig-agent-$(BUILDREV)
+	$(MKDIR) -p tmp/var/cache/mig
+# Agent auto install startup scripts, so we just need to execute it once as priviliged user
+	echo -en "#!/bin/sh\nrm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
+	chmod 0755 tmp/agent_install.sh
+	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
+		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
+		-s dir -t deb .
 
 rpm-scheduler: mig-scheduler
 	rm -rf tmp

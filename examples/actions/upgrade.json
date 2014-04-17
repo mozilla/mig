@@ -1,0 +1,22 @@
+{
+    "Name": "Upgrade a specific agent",
+    "Description": {
+        "Author": "Julien Vehent",
+        "Email": "jvehent@mozilla.com",
+        "Revision": 201404021600
+    },
+    "Target": "linux",
+    "Operations": [
+        {
+            "Module": "upgrade",
+            "Parameters": {
+                "linux/amd64": {
+                    "to_version": "16eb58b-201404021544",
+                    "location": "http://localhost/mig/bin/linux/amd64/mig-agent",
+                    "checksum": "31fccc576635a29e0a27bbf7416d4f32a0ebaee892475e14708641c0a3620b03"
+                }
+            }
+        }
+    ],
+    "SyntaxVersion": 1
+}

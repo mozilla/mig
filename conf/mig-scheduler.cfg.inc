@@ -2,6 +2,7 @@
 
 [agent]
     timeout = "20m"
+    heartbeatfreq = "5m"
     whitelist = "/var/cache/mig/agents_whitelist.txt"
 
 [collector]
@@ -47,3 +48,6 @@
 ;    host = "localhost"
 ;    port = 514
 ;    protocol = "udp"
+
+[pgp]
+    keyid = "1E644752FB76B77245B1694E556CDD7B07E9D5D6"

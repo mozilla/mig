@@ -53,7 +53,7 @@ import (
 var version string
 
 // the list of active agents is shared globally
-// TODO: wrap this around mutexes for safety
+// TODO: make this a database thing to work with scheduler clusters
 var activeAgentsList []string
 
 // main initializes the mongodb connection, the directory watchers and the
@@ -195,6 +195,18 @@ func main() {
 		}
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "spoolInspection() routine started"}
+
+	// launch the routine that handles multi agents on same queue
+	go func() {
+		for queueLoc := range ctx.Channels.DetectDupAgents {
+			ctx.OpID = mig.GenID()
+			err = inspectMultiAgents(queueLoc, ctx)
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+			}
+		}
+	}()
+	ctx.Channels.Log <- mig.Log{Desc: "inspectMultiAgents() routine started"}
 
 	// won't exit until this chan received something
 	exitReason := <-ctx.Channels.Terminate
@@ -391,13 +403,25 @@ func prepareCommands(action mig.Action, ctx Context) (cmdIDs []uint64, err error
 		panic("0 targets found in database")
 	}
 
-	// loop over the list of targets and create a command for each
+	// loop over the list of targets and create one command for each agent queue
+	var targetedAgents []string
 	for _, target := range targets {
+		skip := false
+		for _, q := range targetedAgents {
+			if q == target.QueueLoc {
+				// if already done this agent, skip it
+				skip = true
+			}
+		}
+		if skip {
+			continue
+		}
 		cmdid, err := createCommand(ctx, action, target)
 		if err != nil {
 			panic(err)
 		}
 		cmdIDs = append(cmdIDs, cmdid)
+		targetedAgents = append(targetedAgents, target.QueueLoc)
 	}
 	return
 }
@@ -651,6 +675,15 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	err = ctx.DB.Col.Action.Update(bson.M{"action.id": ea.Action.ID}, ea)
 	if err != nil {
 		panic(err)
+	}
+
+	// in case the action is related to upgrading agents, do stuff
+	if cmd.Status == "succeeded" {
+		// this can fail for many reason, do not panic on err return
+		err = markUpgradedAgents(cmd, ctx)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, CommandID: cmd.ID, Desc: fmt.Sprintf("%v", err)}.Err()
+		}
 	}
 
 	// remove the command from the spool

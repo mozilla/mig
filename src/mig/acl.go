@@ -44,15 +44,15 @@ type ACL []Permission
 
 type Permission map[string]struct {
 	MinimumWeight int
-	Investigators map[string]struct{
+	Investigators map[string]struct {
 		Fingerprint string
-		Weight int
+		Weight      int
 	}
 }
 
 // verifyPermission controls that the PGP keys, identified by their fingerprints, that
 // signed an operation are sufficient to allow this operation to run
-func verifyPermission(operation operation, permName string, perm Permission, fingerprints []string) (err error) {
+func verifyPermission(operation Operation, permName string, perm Permission, fingerprints []string) (err error) {
 	if perm[permName].MinimumWeight < 1 {
 		return fmt.Errorf("Invalid permission '%s'. Must require at least 1 signature, has %d",
 			permName, perm[permName].MinimumWeight)

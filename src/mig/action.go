@@ -78,18 +78,18 @@ type Action struct {
 	ID            uint64      `json:"id"`
 	Name          string      `json:"name"`
 	Target        string      `json:"target"`
-	Description   description `json:"description"`
-	Threat        threat      `json:"threat"`
+	Description   Description `json:"description"`
+	Threat        Threat      `json:"threat"`
 	ValidFrom     time.Time   `json:"validfrom"`
 	ExpireAfter   time.Time   `json:"expireafter"`
-	Operations    []operation `json:"operations"`
+	Operations    []Operation `json:"operations"`
 	PGPSignatures []string    `json:"pgpsignatures"`
 	SyntaxVersion int         `json:"syntaxversion"`
 }
 
 // a description is a simple object that contains detail about the
 // action's author, and it's revision.
-type description struct {
+type Description struct {
 	Author   string `json:"author"`
 	Email    string `json:"email"`
 	URL      string `json:"url"`
@@ -98,7 +98,7 @@ type description struct {
 
 // a threat provides the investigator with an idea of how dangerous
 // a the compromission might be, if the indicators return positive
-type threat struct {
+type Threat struct {
 	Level  string `json:"level"`
 	Family string `json:"family"`
 }
@@ -106,7 +106,7 @@ type threat struct {
 // an operation is an object that map to an agent module.
 // the parameters of the operation are passed to the module as argument,
 // and thus their format depend on the module itself.
-type operation struct {
+type Operation struct {
 	Module     string      `json:"module"`
 	Parameters interface{} `json:"parameters"`
 }

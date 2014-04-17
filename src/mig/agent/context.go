@@ -331,7 +331,7 @@ func initMQ(orig_ctx Context) (ctx Context, err error) {
 	var dialConfig amqp.Config
 	dialConfig.Heartbeat = 2 * ctx.Sleeper
 	dialConfig.Dial = func(network, addr string) (net.Conn, error) {
-		return net.DialTimeout(network, addr, 2 * ctx.Sleeper)
+		return net.DialTimeout(network, addr, 2*ctx.Sleeper)
 	}
 
 	if ctx.MQ.UseTLS {
