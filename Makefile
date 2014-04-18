@@ -35,7 +35,7 @@ mig-agent:
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
 	cp $(AGTCONF) src/mig/agent/configuration.go
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent $(GOLDFLAGS) mig/agent
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV) $(GOLDFLAGS) mig/agent
 
 mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
@@ -82,7 +82,7 @@ rpm-agent: mig-agent
 # Bonus FPM options
 #       --rpm-digest sha512 --rpm-sign
 	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent tmp/sbin/mig-agent-$(BUILDREV)
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/cache/mig
 # Agent auto install startup scripts, so we just need to execute it once as priviliged user
 	echo -en "#!/bin/sh\nrm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
@@ -95,7 +95,7 @@ deb-agent: mig-agent
 # Bonus FPM options
 #       --rpm-digest sha512 --rpm-sign
 	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent tmp/sbin/mig-agent-$(BUILDREV)
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/cache/mig
 # Agent auto install startup scripts, so we just need to execute it once as priviliged user
 	echo -en "#!/bin/sh\nrm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
