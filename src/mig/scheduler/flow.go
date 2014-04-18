@@ -116,7 +116,7 @@ func flyAction(ctx Context, ea mig.ExtendedAction, origin string) (err error) {
 	}
 
 	desc := fmt.Sprintf("Fly(): Action '%s' is in flight", ea.Action.Name)
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: desc}
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: desc}.Debug()
 
 	return
 }
