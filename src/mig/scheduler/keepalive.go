@@ -253,8 +253,12 @@ func startAgentListener(reg mig.KeepAlive, ctx Context) (err error) {
 
 	// start a goroutine for this queue
 	go func() {
+		desc := fmt.Sprintf("Starting listener for agent '%s' on '%s'.", reg.Name, reg.QueueLoc)
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
 		for msg := range agentChan {
 			ctx.OpID = mig.GenID()
+			desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", reg.Name, reg.QueueLoc)
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
 			err = recvAgentResults(msg, ctx)
 			if err != nil {
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
