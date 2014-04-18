@@ -134,6 +134,7 @@ clean:
 	rm -rf bin
 	rm -rf tmp
 	rm *.rpm
+	rm *.deb
 	find src/ -maxdepth 1 -mindepth 1 ! -name mig -exec rm -rf {} \;
 
 clean-all: clean
