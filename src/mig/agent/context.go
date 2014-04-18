@@ -97,9 +97,14 @@ func Init(foreground bool) (ctx Context, err error) {
 
 	// find out current working dir and build the bin path
 	// it's important to do that before we daemonize, other the cwd will be /
-	cdir, err := os.Getwd()
-	if err != nil {
-		panic(err)
+	cdir := ""
+	char := fmt.Sprintf("%c", os.Args[0][0])
+	if char == "." {
+		// command start with a dot, prepend the current dir
+		cdir, err = os.Getwd()
+		if err != nil {
+			panic(err)
+		}
 	}
 	ctx.Agent.BinPath = cdir + "/" + os.Args[0]
 
