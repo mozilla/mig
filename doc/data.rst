@@ -188,19 +188,19 @@ to parse, so the generic mongodb query below will do it for you:
 
 .. code:: javascript
 
-	> var actionFoundSomething = db.commands.find({'action.id': 5978800913477866376,'results.0.FoundAnything': true});
+	> var actionFoundSomething = db.commands.find({'action.id': 5978800913477866376,'results.0.foundanything': true});
 
 	> actionFoundSomething.forEach(
 		function(currentcommand){
 			currentcommand.results.forEach(
 				function(results) {
-					for (path in results["Elements"]) {
-						for (method in results["Elements"][path]) {
-							for (testid in results["Elements"][path][method]) {
-								for (test in results["Elements"][path][method][testid]) {
-									if ( results["Elements"][path][method][testid][test]["Matchcount"] > 0 ) {
-										for (file in results["Elements"][path][method][testid][test]["Files"]) {
-											print(testid + ":", method, "'" + test + "'", "matched", results["Elements"][path][method][testid][test]["Files"][file], "times in '" + file + "'", "on agent", currentcommand.agentname);
+					for (path in results["elements"]) {
+						for (method in results["elements"][path]) {
+							for (testid in results["elements"][path][method]) {
+								for (test in results["elements"][path][method][testid]) {
+									if ( results["elements"][path][method][testid][test]["matchcount"] > 0 ) {
+										for (file in results["elements"][path][method][testid][test]["files"]) {
+											print(testid + ":", method, "'" + test + "'", "matched", results["elements"][path][method][testid][test]["files"][file], "times in '" + file + "'", "on agent", currentcommand.agentname);
 										}
 									}
 								}
@@ -217,6 +217,36 @@ to parse, so the generic mongodb query below will do it for you:
 	...
 
 	{            test identifier           }  {mode} {   test value  }       {counter}     {   file   }           {agent name}
+
+Find filechecker results that have not matched
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code:: javascript
+
+	> var actionFoundSomething = db.commands.find({'action.id': 5978800913477866376});
+
+	> print("Agent Name, Result, Test Name, Test Method, Test, File"); actionFoundSomething.forEach(
+		function(currentcommand){
+			currentcommand.results.forEach(
+				function(results) {
+					for (path in results["elements"]) {
+						for (method in results["elements"][path]) {
+							for (testid in results["elements"][path][method]) {
+								for (test in results["elements"][path][method][testid]) {
+									if ( results["elements"][path][method][testid][test]["matchcount"] < 1 ) {
+										var res = "failed"
+									} else {
+										var res = "passed"
+									}
+									print(currentcommand.agentname + "," + res + "," + testid + "," + method + "," + test + "," + file);
+								}
+							}
+						}
+					}
+				}
+			);
+		}
+	);
 
 Find the agents where a given action has not completed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
