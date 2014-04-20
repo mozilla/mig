@@ -36,6 +36,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
+	"bitbucket.org/kardianos/osext"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
@@ -95,18 +96,10 @@ func Init(foreground bool) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
 	}()
 
-	// find out current working dir and build the bin path
-	// it's important to do that before we daemonize, other the cwd will be /
-	cdir := ""
-	char := fmt.Sprintf("%c", os.Args[0][0])
-	if char == "." {
-		// command start with a dot, prepend the current dir
-		cdir, err = os.Getwd()
-		if err != nil {
-			panic(err)
-		}
+	ctx.Agent.BinPath, err = osext.Executable()
+	if err != nil {
+		panic(err)
 	}
-	ctx.Agent.BinPath = cdir + "/" + os.Args[0]
 
 	// daemonize, and force logging to stdout
 	if !foreground && LOGGINGCONF.Mode != "stdout" {
