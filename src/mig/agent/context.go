@@ -110,7 +110,6 @@ func Init(foreground bool) (ctx Context, err error) {
 
 	// daemonize, and force logging to stdout
 	if !foreground && LOGGINGCONF.Mode != "stdout" {
-		LOGGINGCONF.Mode = "stdout"
 		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
 	}
 
