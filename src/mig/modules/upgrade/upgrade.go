@@ -115,7 +115,6 @@ func Run(Args []byte) string {
 	if err != nil {
 		return buildResults(p, fmt.Sprintf("%v", err))
 	}
-	fmt.Println(cversion)
 	if cversion == el["to_version"] {
 		return buildResults(p, fmt.Sprintf("Agent is already running version '%s'", cversion))
 	}
