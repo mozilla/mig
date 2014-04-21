@@ -37,6 +37,7 @@ package main
 
 import (
 	"bitbucket.org/kardianos/osext"
+	"bitbucket.org/jvehent/service"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
@@ -101,7 +102,23 @@ func Init(foreground bool) (ctx Context, err error) {
 		panic(err)
 	}
 
-	// daemonize, and force logging to stdout
+	// install the service
+	if MUSTINSTALLSERVICE {
+		svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to initialize service installation. err='%v'. Continuing...\n", err)
+		}
+		err = svc.Remove()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to remove service. err='%v'. Continuing...\n", err)
+		}
+		err = svc.Install()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to install service. err='%v'. Continuing...\n", err)
+		}
+	}
+
+	// daemonize
 	if !foreground && LOGGINGCONF.Mode != "stdout" {
 		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
 	}

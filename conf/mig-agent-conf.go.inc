@@ -40,6 +40,8 @@ import(
 	"time"
 )
 
+var MUSTINSTALLSERVICE bool = true
+
 var LOGGINGCONF = mig.Logging{
 	Mode:	"stdout",	// stdout | file | syslog
 	Level:	"debug",	// debug | info | ...
