@@ -36,6 +36,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package upgrade
 
 import (
+	"bitbucket.org/kardianos/osext"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -163,12 +164,22 @@ func Run(Args []byte) string {
 
 // Run the agent binary to obtain the current version
 func getCurrentVersion() (cversion string, err error) {
-	cdir, err := os.Getwd()
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("getCurrentVersion() -> %v", e)
+		}
+	}()
+	bin, err := osext.Executable()
 	if err != nil {
 		panic(err)
 	}
-	bin := cdir + "/" + os.Args[0]
 	out, err := exec.Command(bin, "-V").Output()
+	if err != nil {
+		panic(err)
+	}
+	if len(out) < 2 {
+		panic("Failed to retrieve agent version.")
+	}
 	cversion = string(out[:len(out)-1])
 	return
 }

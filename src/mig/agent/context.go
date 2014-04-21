@@ -36,8 +36,8 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
-	"bitbucket.org/kardianos/osext"
 	"bitbucket.org/jvehent/service"
+	"bitbucket.org/kardianos/osext"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
