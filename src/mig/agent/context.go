@@ -36,6 +36,8 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
+	"bitbucket.org/jvehent/service"
+	"bitbucket.org/kardianos/osext"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
@@ -95,22 +97,29 @@ func Init(foreground bool) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
 	}()
 
-	// find out current working dir and build the bin path
-	// it's important to do that before we daemonize, other the cwd will be /
-	cdir := ""
-	char := fmt.Sprintf("%c", os.Args[0][0])
-	if char == "." {
-		// command start with a dot, prepend the current dir
-		cdir, err = os.Getwd()
+	ctx.Agent.BinPath, err = osext.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	// install the service
+	if MUSTINSTALLSERVICE {
+		svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
 		if err != nil {
-			panic(err)
+			fmt.Fprintf(os.Stderr, "Failed to initialize service installation. err='%v'. Continuing...\n", err)
+		}
+		err = svc.Remove()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to remove service. err='%v'. Continuing...\n", err)
+		}
+		err = svc.Install()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to install service. err='%v'. Continuing...\n", err)
 		}
 	}
-	ctx.Agent.BinPath = cdir + "/" + os.Args[0]
 
-	// daemonize, and force logging to stdout
+	// daemonize
 	if !foreground && LOGGINGCONF.Mode != "stdout" {
-		LOGGINGCONF.Mode = "stdout"
 		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
 	}
 

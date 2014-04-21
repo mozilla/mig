@@ -68,6 +68,8 @@ go_get_deps:
 	$(GOGETTER) github.com/VividCortex/godaemon
 	$(GOGETTER) github.com/gorilla/mux
 	$(GOGETTER) github.com/jvehent/cljs
+	$(GOGETTER) bitbucket.org/kardianos/osext
+	$(GOGETTER) bitbucket.org/jvehent/service
 
 install: gpgme mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
