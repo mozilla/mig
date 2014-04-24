@@ -45,6 +45,7 @@ import (
 	"labix.org/v2/mgo/bson"
 	"mig"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -59,6 +60,9 @@ var activeAgentsList []string
 // main initializes the mongodb connection, the directory watchers and the
 // AMQP ctx.MQ.Chan. It also launches the goroutines.
 func main() {
+	cpus := runtime.NumCPU()
+	runtime.GOMAXPROCS(cpus)
+
 	// command line options
 	var config = flag.String("c", "/etc/mig/scheduler.cfg", "Load configuration from file")
 	flag.Parse()
