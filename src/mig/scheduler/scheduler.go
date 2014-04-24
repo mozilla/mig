@@ -305,7 +305,6 @@ func watchDirectories(watcher *fsnotify.Watcher, ctx Context) {
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("watchDirectories(): %v", err)}.Emerg()
 		}
 	}
-	return
 }
 
 // processNewAction is called when a new action is available. It pulls
