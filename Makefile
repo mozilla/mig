@@ -32,10 +32,15 @@ INSTALL		:= install
 all: mig-agent mig-scheduler mig-action-generator mig-action-verifier
 
 mig-agent:
+	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
 	cp $(AGTCONF) src/mig/agent/configuration.go
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV) $(GOLDFLAGS) mig/agent
+	[ -x $(BINDIR)/mig-agent-$(BUILDREV) ] && echo SUCCESS && exit 0
+
+mig-agent-cross:
+	for os in linux darwin windows; do for arch in 386 amd64; do make mig-agent OS=$$os ARCH=$$arch; [ $$? -gt 0 ] && exit $$?; done; done
 
 mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
@@ -142,4 +147,4 @@ clean:
 clean-all: clean
 	rm -rf pkg
 
-.PHONY: clean clean-all gpgme go_get_deps_into_system
+.PHONY: clean clean-all gpgme go_get_deps_into_system mig-agent-cross
