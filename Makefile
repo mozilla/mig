@@ -70,7 +70,6 @@ go_get_deps:
 	$(GOGETTER) labix.org/v2/mgo
 	$(GOGETTER) labix.org/v2/mgo/bson
 	$(GOGETTER) code.google.com/p/gcfg
-	$(GOGETTER) github.com/VividCortex/godaemon
 	$(GOGETTER) github.com/gorilla/mux
 	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) bitbucket.org/kardianos/osext

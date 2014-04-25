@@ -43,12 +43,12 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/VividCortex/godaemon"
 	"github.com/streadway/amqp"
 	"io/ioutil"
 	"mig"
 	"net"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 	"time"
@@ -120,7 +120,10 @@ func Init(foreground bool) (ctx Context, err error) {
 
 	// daemonize
 	if !foreground && LOGGINGCONF.Mode != "stdout" {
-		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
+		// run the agent again, and exit
+		cmd := exec.Command(ctx.Agent.BinPath, "-f")
+		_ = cmd.Start()
+		os.Exit(0)
 	}
 
 	// store heartbeat frequency
