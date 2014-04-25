@@ -32,10 +32,22 @@ INSTALL		:= install
 all: mig-agent mig-scheduler mig-action-generator mig-action-verifier
 
 mig-agent:
+	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
 	cp $(AGTCONF) src/mig/agent/configuration.go
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV) $(GOLDFLAGS) mig/agent
+	[ -x $(BINDIR)/mig-agent-$(BUILDREV) ] && echo SUCCESS && exit 0
+
+mig-agent-all: mig-agent-386 mig-agent-amd64
+
+mig-agent-386:
+	OS=linux ARCH=386 make mig-agent
+	OS=darwin ARCH=386 make mig-agent
+
+mig-agent-amd64:
+	OS=linux ARCH=amd64 make mig-agent
+	OS=darwin ARCH=amd64 make mig-agent
 
 mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
@@ -65,7 +77,6 @@ go_get_deps:
 	$(GOGETTER) labix.org/v2/mgo
 	$(GOGETTER) labix.org/v2/mgo/bson
 	$(GOGETTER) code.google.com/p/gcfg
-	$(GOGETTER) github.com/VividCortex/godaemon
 	$(GOGETTER) github.com/gorilla/mux
 	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) bitbucket.org/kardianos/osext
@@ -142,4 +153,4 @@ clean:
 clean-all: clean
 	rm -rf pkg
 
-.PHONY: clean clean-all gpgme go_get_deps_into_system
+.PHONY: clean clean-all gpgme go_get_deps_into_system mig-agent-386 mig-agent-amd64
