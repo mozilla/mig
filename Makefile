@@ -39,8 +39,15 @@ mig-agent:
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV) $(GOLDFLAGS) mig/agent
 	[ -x $(BINDIR)/mig-agent-$(BUILDREV) ] && echo SUCCESS && exit 0
 
-mig-agent-cross:
-	for os in linux darwin windows; do for arch in 386 amd64; do make mig-agent OS=$$os ARCH=$$arch; [ $$? -gt 0 ] && exit $$?; done; done
+mig-agent-all: mig-agent-386 mig-agent-amd64
+
+mig-agent-386:
+	OS=linux ARCH=386 make mig-agent
+	OS=darwin ARCH=386 make mig-agent
+
+mig-agent-amd64:
+	OS=linux ARCH=amd64 make mig-agent
+	OS=darwin ARCH=amd64 make mig-agent
 
 mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
@@ -146,4 +153,4 @@ clean:
 clean-all: clean
 	rm -rf pkg
 
-.PHONY: clean clean-all gpgme go_get_deps_into_system mig-agent-cross
+.PHONY: clean clean-all gpgme go_get_deps_into_system mig-agent-386 mig-agent-amd64
