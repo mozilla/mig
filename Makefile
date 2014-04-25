@@ -42,12 +42,12 @@ mig-agent:
 mig-agent-all: mig-agent-386 mig-agent-amd64
 
 mig-agent-386:
-	OS=linux ARCH=386 make mig-agent
-	OS=darwin ARCH=386 make mig-agent
+	make OS=linux ARCH=386 mig-agent
+	make OS=darwin ARCH=386 mig-agent
 
 mig-agent-amd64:
-	OS=linux ARCH=amd64 make mig-agent
-	OS=darwin ARCH=amd64 make mig-agent
+	make OS=linux ARCH=amd64 mig-agent
+	make OS=darwin ARCH=amd64 mig-agent
 
 mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
