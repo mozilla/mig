@@ -65,8 +65,8 @@ type ExtendedAction struct {
 // Some counters used to track the completion of an action
 type counters struct {
 	Sent      int `json:"sent"`
-	Completed int `json:"completed"`
-	Succeeded int `json:"succeeded"`
+	Returned  int `json:"returned"`
+	Done      int `json:"done"`
 	Cancelled int `json:"cancelled"`
 	Failed    int `json:"failed"`
 	TimeOut   int `json:"timeout"`

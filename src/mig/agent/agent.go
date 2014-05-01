@@ -370,13 +370,13 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 			panic(err)
 
 		} else {
-			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command succeeded."}
+			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command done."}
 			err = json.Unmarshal(out.Bytes(), &result.output)
 			if err != nil {
 				panic(err)
 			}
 			// mark command status as successfully completed
-			result.status = "succeeded"
+			result.status = "done"
 			// send the results
 			op.resultChan <- result
 		}

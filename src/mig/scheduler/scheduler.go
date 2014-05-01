@@ -634,8 +634,8 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	// there is only one entry in the slice, so take the first entry from
 	ea := eas[0]
 	switch cmd.Status {
-	case "succeeded":
-		ea.Counters.Succeeded++
+	case "done":
+		ea.Counters.Done++
 	case "cancelled":
 		ea.Counters.Cancelled++
 	case "failed":
@@ -647,16 +647,16 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 		panic(err)
 	}
 	// regardless of returned status, increase completion counter
-	ea.Counters.Completed++
+	ea.Counters.Returned++
 	ea.LastUpdateTime = time.Now().UTC()
 
-	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, succeeded=%d, cancelled=%d, failed=%d, timeout=%d. duration=%s",
-		ea.Action.Name, ea.Counters.Completed, ea.Counters.Sent, ea.Counters.Succeeded,
+	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, done=%d, cancelled=%d, failed=%d, timeout=%d. duration=%s",
+		ea.Action.Name, ea.Counters.Returned, ea.Counters.Sent, ea.Counters.Done,
 		ea.Counters.Cancelled, ea.Counters.Failed, ea.Counters.TimeOut, ea.LastUpdateTime.Sub(ea.StartTime).String())
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, CommandID: cmd.ID, Desc: desc}
 
 	// Has the action completed?
-	if ea.Counters.Completed == ea.Counters.Sent {
+	if ea.Counters.Returned == ea.Counters.Sent {
 		// update status and timestamps
 		ea.Status = "completed"
 		ea.FinishTime = time.Now().UTC()
@@ -681,7 +681,7 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	}
 
 	// in case the action is related to upgrading agents, do stuff
-	if cmd.Status == "succeeded" {
+	if cmd.Status == "done" {
 		// this can fail for many reason, do not panic on err return
 		err = markUpgradedAgents(cmd, ctx)
 		if err != nil {
