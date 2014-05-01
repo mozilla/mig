@@ -119,6 +119,9 @@ that signed the action.
 		investigatorid numeric references investigators(id) NOT NULL,
 		pgpsignature varchar(4096) NOT NULL
 	);
+	CREATE UNIQUE INDEX ON signatures (actionid, investigatorid);
+	CREATE INDEX ON signatures (actionid);
+	CREATE INDEX ON signatures (investigatorid);
 
 Agents modules are registered in the `modules` table.
 
@@ -140,6 +143,9 @@ agent.
 		agentid numeric references agents(id) NOT NULL,
 		minimumweight integer NOT NULL
 	);
+	CREATE UNIQUE INDEX ON agtmodreq (moduleid, agentid);
+	CREATE INDEX ON agtmodreq (moduleid);
+	CREATE INDEX ON agtmodreq (agentid);
 
 Second, the `invagtmodperm` table give a weight to an investigator for a module
 on an agent. This model allows for very fine grained permissions management.
@@ -152,6 +158,9 @@ on an agent. This model allows for very fine grained permissions management.
 		moduleid numeric references modules(id) NOT NULL,
 		weight integer NOT NULL
 	);
-
+	CREATE UNIQUE INDEX ON invagtmodperm (investigatorid, agentid, moduleid);
+	CREATE INDEX ON invagtmodperm (investigatorid);
+	CREATE INDEX ON invagtmodperm (agentid);
+	CREATE INDEX ON invagtmodperm (moduleid);
 
 .. image:: .files/ER-diagram.png
