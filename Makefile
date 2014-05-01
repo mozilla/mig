@@ -49,8 +49,9 @@ mig-agent-amd64:
 	make OS=linux ARCH=amd64 mig-agent
 	make OS=darwin ARCH=amd64 mig-agent
 
-mig-scheduler:
+mig-scheduler: gpgme
 	$(MKDIR) -p $(BINDIR)
+	ln -sf src/mig/pgp/sign/libmig_gpgme.a ./
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig/scheduler
 
 mig-api:
