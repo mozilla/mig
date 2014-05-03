@@ -253,26 +253,11 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 	search := request.URL.Query()["search"][0]
 	switch search {
 	case "positiveresults":
-		actionID, err := strconv.Atoi(request.URL.Query()["actionid"][0])
-		if err != nil {
-			panic(err)
-		}
-		cmds, err := findPositiveResults(actionID)
-		if err != nil {
-			panic(err)
-		}
-		// store the results in the resource
-		for _, cmd := range cmds {
-			commandItem, err := commandToItem(cmd)
-			if err != nil {
-				panic(err)
-			}
-			resource.AddItem(commandItem)
-		}
-		respond(200, resource, respWriter, request, opid)
-
+		resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: "Not implemented"})
+		respond(401, resource, respWriter, request, opid)
 	default:
-		panic("unknown search method")
+		resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: "Not implemented"})
+		respond(401, resource, respWriter, request, opid)
 	}
 }
 
