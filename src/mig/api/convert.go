@@ -44,12 +44,12 @@ import (
 // extendedActionToItem receives an ExtendedAction and return an Item
 // in the Collection+JSON format
 func extendedActionToItem(ea mig.ExtendedAction) (item cljs.Item, err error) {
-	item.Href = "/api/action?actionid=" + fmt.Sprintf("%d", ea.Action.ID)
+	item.Href = fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, a.ID)
 	links := make([]cljs.Link, 0)
 	for _, cmdid := range ea.CommandIDs {
 		link := cljs.Link{
 			Rel:  "command",
-			Href: "/api/command?actionid=" + fmt.Sprintf("%d", ea.Action.ID) + "&commandid=" + fmt.Sprintf("%d", cmdid),
+			Href: fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmdid),
 		}
 		links = append(links, link)
 	}
@@ -62,11 +62,11 @@ func extendedActionToItem(ea mig.ExtendedAction) (item cljs.Item, err error) {
 
 // commandToItem receives a command and returns an Item in Collection+JSON
 func commandToItem(cmd mig.Command) (item cljs.Item, err error) {
-	item.Href = "/api/command?actionid=" + fmt.Sprintf("%d", cmd.Action.ID) + "&commandid=" + fmt.Sprintf("%d", cmd.ID)
+	item.Href = fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmd.ID)
 	links := make([]cljs.Link, 0)
 	link := cljs.Link{
 		Rel:  "action",
-		Href: "/api/action?actionid=" + fmt.Sprintf("%d", cmd.Action.ID),
+		Href: fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, cmd.Action.ID),
 	}
 	links = append(links, link)
 	item.Links = links

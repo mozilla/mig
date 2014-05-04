@@ -88,26 +88,19 @@ func main() {
 
 	// register routes
 	r := mux.NewRouter()
-	r.HandleFunc("/api/", getHome).Methods("GET")
-
-	r.HandleFunc("/api/search", search).Methods("GET")
-
-	r.HandleFunc("/api/action", getAction).Methods("GET")
-
-	r.HandleFunc("/api/action/create", describeCreateAction).Methods("GET")
-	r.HandleFunc("/api/action/create/", createAction).Methods("POST")
-
-	r.HandleFunc("/api/action/cancel", describeCancelAction).Methods("GET")
-	r.HandleFunc("/api/action/cancel/", cancelAction).Methods("POST")
-
-	r.HandleFunc("/api/command", getCommand).Methods("GET")
-
-	r.HandleFunc("/api/command/cancel", describeCancelCommand).Methods("GET")
-	r.HandleFunc("/api/command/cancel/", cancelCommand).Methods("POST")
-
-	r.HandleFunc("/api/agent/dashboard", getAgentsDashboard).Methods("GET")
-
-	r.HandleFunc("/api/agent/search", searchAgents).Methods("GET")
+	s := r.PathPrefix(ctx.Server.BaseRoute).Subrouter()
+	s.HandleFunc("/", getHome).Methods("GET")
+	s.HandleFunc("/search", search).Methods("GET")
+	s.HandleFunc("/action", getAction).Methods("GET")
+	s.HandleFunc("/action/create/", describeCreateAction).Methods("GET")
+	s.HandleFunc("/action/create/", createAction).Methods("POST")
+	s.HandleFunc("/action/cancel/", describeCancelAction).Methods("GET")
+	s.HandleFunc("/action/cancel/", cancelAction).Methods("POST")
+	s.HandleFunc("/command", getCommand).Methods("GET")
+	s.HandleFunc("/command/cancel/", describeCancelCommand).Methods("GET")
+	s.HandleFunc("/command/cancel/", cancelCommand).Methods("POST")
+	s.HandleFunc("/agent/dashboard", getAgentsDashboard).Methods("GET")
+	s.HandleFunc("/agent/search", searchAgents).Methods("GET")
 
 	// all set, start the http handler
 	http.Handle("/", r)
@@ -131,7 +124,7 @@ func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, 
 		panic(err)
 	}
 
-	respWriter.Header().Set("Content-Type", cljs.ContentType)
+	respWriter.Header().Set("Content-Type", "application/json")
 	respWriter.WriteHeader(code)
 	respWriter.Write(body)
 
@@ -156,7 +149,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	// List the creation URL. Those can be GET-ed to retrieve the creation templates
 	err = resource.AddLink(cljs.Link{
 		Rel:  "create action",
-		Href: "/api/action/create/",
+		Href: fmt.Sprintf("%s/action/create/", ctx.Server.BaseURL),
 		Name: "Create an action"})
 	if err != nil {
 		panic(err)
@@ -164,7 +157,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 
 	err = resource.AddLink(cljs.Link{
 		Rel:  "cancel action",
-		Href: "/api/action/cancel/",
+		Href: fmt.Sprintf("%s/action/cancel/", ctx.Server.BaseURL),
 		Name: "Cancel an action"})
 	if err != nil {
 		panic(err)
@@ -172,7 +165,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 
 	err = resource.AddLink(cljs.Link{
 		Rel:  "cancel command",
-		Href: "/api/command/cancel/",
+		Href: fmt.Sprintf("%s/command/cancel/", ctx.Server.BaseURL),
 		Name: "Cancel a command"})
 	if err != nil {
 		panic(err)
@@ -181,7 +174,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	// Describe the queries that are exposed to the client
 	err = resource.AddQuery(cljs.Query{
 		Rel:    "Query action by ID",
-		Href:   "/api/action",
+		Href:   fmt.Sprintf("%s/action", ctx.Server.BaseURL),
 		Prompt: "Query action by ID",
 		Data: []cljs.Data{
 			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
@@ -193,7 +186,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 
 	resource.AddQuery(cljs.Query{
 		Rel:    "Query command by ID",
-		Href:   "/api/command",
+		Href:   fmt.Sprintf("%s/command", ctx.Server.BaseURL),
 		Prompt: "Query command by ID",
 		Data: []cljs.Data{
 			{Name: "commandid", Value: "[0-9]{1,20}", Prompt: "Command ID"},
@@ -206,7 +199,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 
 	resource.AddQuery(cljs.Query{
 		Rel:    "Search agent by name",
-		Href:   "/api/agent/search",
+		Href:   fmt.Sprintf("%s/agent/search", ctx.Server.BaseURL),
 		Prompt: "Search agent by name",
 		Data: []cljs.Data{
 			{Name: "name", Value: "agent123.example.net", Prompt: "Agent Name"},
@@ -218,7 +211,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 
 	err = resource.AddQuery(cljs.Query{
 		Rel:    "Query MIG data",
-		Href:   "/api/search",
+		Href:   fmt.Sprintf("%s/search", ctx.Server.BaseURL),
 		Prompt: "Query MIG data",
 		Data: []cljs.Data{
 			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
@@ -231,7 +224,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 
 	resource.AddQuery(cljs.Query{
 		Rel:  "Get agent dashboard",
-		Href: "/api/agent/dashboard",
+		Href: fmt.Sprintf("%s/agent/dashboard", ctx.Server.BaseURL),
 	})
 	if err != nil {
 		panic(err)
