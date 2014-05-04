@@ -53,6 +53,9 @@ import (
 var ctx Context
 
 func main() {
+	cpus := runtime.NumCPU()
+	runtime.GOMAXPROCS(cpus)
+
 	// command line options
 	var config = flag.String("c", "/etc/mig/api.cfg", "Load configuration from file")
 	flag.Parse()
