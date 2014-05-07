@@ -1,4 +1,4 @@
-/* Mozilla InvestiGator API
+/* Mozilla InvestiGator humans
 
 Version: MPL 1.1/GPL 2.0/LGPL 2.1
 
@@ -32,47 +32,10 @@ and other provisions required by the GPL or the LGPL. If you do not delete
 the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
 */
+package mig
 
-package main
-
-import (
-	"fmt"
-	"mig"
-
-	"github.com/jvehent/cljs"
-)
-
-// ActionToItem receives an Action and returns an Item
-// in the Collection+JSON format
-func ActionToItem(a mig.Action) (item cljs.Item, err error) {
-	item.Href = fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, a.ID)
-	links := make([]cljs.Link, 0)
-	for _, cmdid := range a.CommandIDs {
-		link := cljs.Link{
-			Rel:  "command",
-			Href: fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmdid),
-		}
-		links = append(links, link)
-	}
-	item.Links = links
-	item.Data = []cljs.Data{
-		{Name: "action", Value: a},
-	}
-	return
-}
-
-// commandToItem receives a command and returns an Item in Collection+JSON
-func commandToItem(cmd mig.Command) (item cljs.Item, err error) {
-	item.Href = fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmd.ID)
-	links := make([]cljs.Link, 0)
-	link := cljs.Link{
-		Rel:  "action",
-		Href: fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, cmd.Action.ID),
-	}
-	links = append(links, link)
-	item.Links = links
-	item.Data = []cljs.Data{
-		{Name: "command", Value: cmd},
-	}
-	return
+type Investigator struct {
+	ID                   uint64
+	Name, PGPFingerprint string
+	PublicKey            []byte
 }

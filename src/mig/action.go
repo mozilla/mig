@@ -49,17 +49,26 @@ import (
 	"time"
 )
 
-// a MetaAction is a json object that extends an Action with
-// additional parameters. It is used to track the completion
-// of an action on agents.
-type ExtendedAction struct {
-	Action         Action    `json:"action"`
-	Status         string    `json:"status"`
-	StartTime      time.Time `json:"starttime"`
-	FinishTime     time.Time `json:"finishtime"`
-	LastUpdateTime time.Time `json:"lastupdatetime"`
-	CommandIDs     []uint64  `json:"commandids"`
-	Counters       counters  `json:"counters"`
+// an Action is the json object that is created by an investigator
+// and provided to the MIG platform. It must be PGP signed.
+type Action struct {
+	ID             uint64         `json:"id"`
+	Name           string         `json:"name"`
+	Target         string         `json:"target"`
+	Description    Description    `json:"description,omitempty"`
+	Threat         Threat         `json:"threat,omitempty"`
+	ValidFrom      time.Time      `json:"validfrom"`
+	ExpireAfter    time.Time      `json:"expireafter"`
+	Operations     []Operation    `json:"operations"`
+	PGPSignatures  []string       `json:"pgpsignatures"`
+	Investigators  []Investigator `json:"investigators,omitempty"`
+	Status         string         `json:"status,omitempty"`
+	StartTime      time.Time      `json:"starttime,omitempty"`
+	FinishTime     time.Time      `json:"finishtime,omitempty"`
+	LastUpdateTime time.Time      `json:"lastupdatetime,omitempty"`
+	CommandIDs     []uint64       `json:"commandids,omitempty"`
+	Counters       counters       `json:"counters,omitempty"`
+	SyntaxVersion  int            `json:"syntaxversion,omitempty"`
 }
 
 // Some counters used to track the completion of an action
@@ -70,21 +79,6 @@ type counters struct {
 	Cancelled int `json:"cancelled"`
 	Failed    int `json:"failed"`
 	TimeOut   int `json:"timeout"`
-}
-
-// an Action is the json object that is created by an investigator
-// and provided to the MIG platform. It must be PGP signed.
-type Action struct {
-	ID            uint64      `json:"id"`
-	Name          string      `json:"name"`
-	Target        string      `json:"target"`
-	Description   Description `json:"description"`
-	Threat        Threat      `json:"threat"`
-	ValidFrom     time.Time   `json:"validfrom"`
-	ExpireAfter   time.Time   `json:"expireafter"`
-	Operations    []Operation `json:"operations"`
-	PGPSignatures []string    `json:"pgpsignatures"`
-	SyntaxVersion int         `json:"syntaxversion"`
 }
 
 // a description is a simple object that contains detail about the
@@ -112,24 +106,26 @@ type Operation struct {
 }
 
 // ActionFromFile() reads an action from a local file on the file system
-// and returns a mig.ExtendedAction structure
-func ActionFromFile(path string) (a Action, err error) {
+// and returns a mig.Action structure
+func ActionFromFile(path string) (Action, error) {
+	var err error
+	var a Action
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("mig.ActionFromFile(): %v", e)
 		}
 	}()
-	// parse the json of the action into a mig.ExtendedAction
+	// parse the json of the action into a mig.Action
 	fd, err := ioutil.ReadFile(path)
 	if err != nil {
-		panic(err)
+		return a, err
 	}
 	err = json.Unmarshal(fd, &a)
 	if err != nil {
-		panic(err)
+		return a, err
 	}
 
-	return
+	return a, err
 }
 
 // GenID returns an ID composed of a unix timestamp and a random CRC32

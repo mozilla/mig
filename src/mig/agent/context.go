@@ -36,14 +36,11 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
-	"bitbucket.org/jvehent/service"
-	"bitbucket.org/kardianos/osext"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/streadway/amqp"
 	"io/ioutil"
 	"mig"
 	"net"
@@ -52,6 +49,10 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"bitbucket.org/jvehent/service"
+	"bitbucket.org/kardianos/osext"
+	"github.com/streadway/amqp"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -78,7 +79,10 @@ type Context struct {
 		UseTLS bool
 		conn   *amqp.Connection
 		Chan   *amqp.Channel
-		Bind   mig.Binding
+		Bind   struct {
+			Queue, Key string
+			Chan       <-chan amqp.Delivery
+		}
 	}
 	OpID    uint64        // ID of the current operation, used for tracking
 	Sleeper time.Duration // timer used when the agent has to sleep for a while

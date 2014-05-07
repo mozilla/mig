@@ -105,9 +105,10 @@ used when verifying signatures and generating ACLs.
 	CREATE TABLE IF NOT EXISTS investigators (
 		id numeric PRIMARY KEY NOT NULL,
 		name varchar(1024) NOT NULL,
-		pgpfingerprint varchar(128),
+		pgpfingerprint varchar(128) NOT NULL,
 		publickey varchar(65536)
 	);
+	CREATE UNIQUE INDEX ON investigators (pgpfingerprint);
 
 The `signatures` table is a junction between an action and the investigators
 that signed the action.

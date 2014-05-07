@@ -43,7 +43,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/streadway/amqp"
 	"mig"
 	"mig/modules/agentdestroy"
 	"mig/modules/connected"
@@ -53,6 +52,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/streadway/amqp"
 )
 
 // build version
@@ -198,8 +199,8 @@ func runAgent(foreground bool) (err error) {
 		}
 	}()
 
-	// GoRoutine that sends keepAlive messages to scheduler
-	go keepAliveAgent(ctx)
+	// GoRoutine that sends heartbeat messages to scheduler
+	go heartbeat(ctx)
 
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.QueueLoc)}
 
@@ -427,7 +428,7 @@ func sendResults(ctx Context, result mig.Command) (err error) {
 	}()
 
 	ctx.Channels.Log <- mig.Log{CommandID: result.ID, ActionID: result.Action.ID, Desc: "sending command results"}
-	result.AgentQueueLoc = ctx.Agent.QueueLoc
+	result.Agent.QueueLoc = ctx.Agent.QueueLoc
 	body, err := json.Marshal(result)
 	if err != nil {
 		panic(err)
@@ -442,10 +443,10 @@ func sendResults(ctx Context, result mig.Command) (err error) {
 	return
 }
 
-// keepAliveAgent will send heartbeats messages to the scheduler at regular intervals
-func keepAliveAgent(ctx Context) (err error) {
-	// declare a keepalive message
-	HeartBeat := mig.KeepAlive{
+// hearbeat will send heartbeats messages to the scheduler at regular intervals
+func heartbeat(ctx Context) (err error) {
+	// declare an Agent registration message
+	HeartBeat := mig.Agent{
 		Name:      ctx.Agent.Hostname,
 		OS:        ctx.Agent.OS,
 		Version:   version,
@@ -459,12 +460,12 @@ func keepAliveAgent(ctx Context) (err error) {
 		HeartBeat.HeartBeatTS = time.Now()
 		body, err := json.Marshal(HeartBeat)
 		if err != nil {
-			desc := fmt.Sprintf("keepAliveAgent failed with error '%v'", err)
+			desc := fmt.Sprintf("heartbeat failed with error '%v'", err)
 			ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
 		}
 		desc := fmt.Sprintf("heartbeat '%s'", body)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
-		publish(ctx, "mig", "mig.keepalive", body)
+		publish(ctx, "mig", "mig.heartbeat", body)
 		time.Sleep(ctx.Sleeper)
 	}
 	return

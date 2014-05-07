@@ -80,44 +80,81 @@ import (
 	"io/ioutil"
 	"mig"
 	"os"
+	"time"
 )
 
-// Fly moves an action file to the InFlight directory and
+// flyAction moves an action file to the InFlight directory and
 // write it to database
-func flyAction(ctx Context, ea mig.ExtendedAction, origin string) (err error) {
+func flyAction(ctx Context, a mig.Action, origin string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("flyAction() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{ActionID: ea.Action.ID, Desc: "leaving flyAction()"}.Debug()
+		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: "leaving flyAction()"}.Debug()
 	}()
-
 	// move action to inflight dir
-	jsonEA, err := json.Marshal(ea)
+	jsonA, err := json.Marshal(a)
 	if err != nil {
 		panic(err)
 	}
-	dest := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.InFlight, ea.Action.ID)
-	err = ioutil.WriteFile(dest, jsonEA, 0640)
+	dest := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.InFlight, a.ID)
+	err = safeWrite(ctx, dest, jsonA)
 	if err != nil {
 		panic(err)
 	}
-
 	// remove the action from its origin
 	os.Remove(origin)
 	if err != nil {
 		panic(err)
 	}
-
-	// The extended action is stored in database
-	err = ctx.DB.Col.Action.Insert(ea)
+	a.Status = "inflight"
+	err = ctx.DB.InsertOrUpdateAction(a)
 	if err != nil {
 		panic(err)
 	}
+	desc := fmt.Sprintf("flyAction(): Action '%s' is in flight", a.Name)
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: desc}.Debug()
+	return
+}
 
-	desc := fmt.Sprintf("Fly(): Action '%s' is in flight", ea.Action.Name)
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: ea.Action.ID, Desc: desc}.Debug()
-
+// landAction moves an action file to the Done directory and
+// updates it in database
+func landAction(ctx Context, a mig.Action) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("landAction() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: "leaving landAction()"}.Debug()
+	}()
+	// update status and timestamps
+	a.Status = "done"
+	a.FinishTime = time.Now().UTC()
+	duration := a.FinishTime.Sub(a.StartTime)
+	// log
+	desc := fmt.Sprintf("action has completed in %s", duration.String())
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: desc}
+	// move action to done dir
+	jsonA, err := json.Marshal(a)
+	if err != nil {
+		panic(err)
+	}
+	dest := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.Done, a.ID)
+	err = safeWrite(ctx, dest, jsonA)
+	if err != nil {
+		panic(err)
+	}
+	// remove the action from its origin
+	origin := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.InFlight, a.ID)
+	os.Remove(origin)
+	if err != nil {
+		panic(err)
+	}
+	err = ctx.DB.FinishAction(a)
+	if err != nil {
+		panic(err)
+	}
+	desc = fmt.Sprintf("landAction(): Action '%s' has landed", a.Name)
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: desc}.Debug()
 	return
 }
 
@@ -132,19 +169,16 @@ func safeWrite(ctx Context, destination string, data []byte) (err error) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving safeWrite()"}.Debug()
 	}()
-
 	// write the file temp dir
 	tmp := fmt.Sprintf("%s/%d", ctx.Directories.Tmp, mig.GenID())
 	err = ioutil.WriteFile(tmp, data, 0640)
 	if err != nil {
 		panic(err)
 	}
-
 	// move to destination
 	err = os.Rename(tmp, destination)
 	if err != nil {
 		panic(err)
 	}
-
 	return
 }

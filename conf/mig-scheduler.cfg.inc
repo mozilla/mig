@@ -15,9 +15,13 @@
     spool = "/var/cache/mig/"
     tmp = "/var/tmp/"
 
-[db]
+[postgres]
     host = "127.0.0.1"
     port = 27017
+    dbname = "mig"
+    user = "mig-scheduler"
+    password = "123456"
+    sslmode = "disable"
 
 [mq]
     host  = "127.0.0.1"

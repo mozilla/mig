@@ -124,7 +124,7 @@ Actions files are submitted to the API or the Scheduler directly. The PGP
 Signatures are always verified by the agents, and can optionally be verified by
 other components along the way.
 Additional attributes are added to the action by the scheduler. Those are
-defined as `ExtendedAction` and are used to track the action status.
+defined in the database schema and are used to track the action status.
 
 Commands
 ~~~~~~~~

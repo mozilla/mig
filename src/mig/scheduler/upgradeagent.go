@@ -38,7 +38,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"labix.org/v2/mgo/bson"
 	"mig"
 	"mig/pgp/sign"
 	"reflect"
@@ -80,30 +79,25 @@ func markUpgradedAgents(cmd mig.Command, ctx Context) (err error) {
 					panic(err)
 				}
 				oldpid := reflect.ValueOf(resultMap["oldpid"])
-				if oldpid.Float() < 2 {
+				if oldpid.Int() < 2 {
 					desc := fmt.Sprintf("Successfully found upgraded action on agent '%s', but with PID '%s'. That's not right...",
-						cmd.AgentName, oldpid)
+						cmd.Agent.Name, oldpid)
 					ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
 					panic(desc)
 				}
 
 				// update the agent's registration to mark it as upgraded
-				var ids []agentRegId
-				iter := ctx.DB.Col.Reg.Find(bson.M{"queueloc": cmd.AgentQueueLoc, "pid": oldpid.Float()}).Iter()
-				err = iter.All(&ids)
+				agent, err := ctx.DB.AgentByQueueAndPID(cmd.Agent.QueueLoc, int(oldpid.Int()))
 				if err != nil {
 					panic(err)
 				}
-				if len(ids) == 0 {
-					panic("No agent found in database")
-				}
-				mgoId := ids[0].Id
-				err := ctx.DB.Col.Reg.Update(bson.M{"_id": mgoId}, bson.M{"$set": bson.M{"status": "upgraded"}})
+				agent.Status = "upgraded"
+				err = ctx.DB.InsertOrUpdateAgent(agent)
 				if err != nil {
 					panic(err)
 				}
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID,
-					Desc: fmt.Sprintf("Agent '%s' marked as upgraded", cmd.AgentName)}.Info()
+					Desc: fmt.Sprintf("Agent '%s' marked as upgraded", cmd.Agent.Name)}.Info()
 			}
 		}
 	}
@@ -112,7 +106,7 @@ func markUpgradedAgents(cmd mig.Command, ctx Context) (err error) {
 
 // destroyAgent issues an `agentdestroy` action targetted to a specific agent
 // and updates the status of the agent in the database
-func destroyAgent(agent mig.KeepAlive, ctx Context) (err error) {
+func destroyAgent(agent mig.Agent, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("destroyAgent() -> %v", e)
@@ -164,22 +158,10 @@ func destroyAgent(agent mig.KeepAlive, ctx Context) (err error) {
 	}
 
 	// mark the agent as `destroyed` in the database
-	var ids []agentRegId
-	iter := ctx.DB.Col.Reg.Find(bson.M{"queueloc": agent.QueueLoc, "pid": agent.PID}).Iter()
-	err = iter.All(&ids)
-	if err != nil {
-		panic(err)
-	}
-	if len(ids) == 0 {
-		panic("No agent found in database")
-	}
-	mgoId := ids[0].Id
-	err = ctx.DB.Col.Reg.Update(bson.M{"_id": mgoId},
-		bson.M{"$set": bson.M{"status": "destroyed", "destructiontime": time.Now().UTC()}})
+	err = ctx.DB.MarkAgentDestroyed(agent)
 	if err != nil {
 		panic(err)
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Requested destruction of agent '%s' with PID '%d'", agent.Name, agent.PID)}.Info()
-
 	return
 }

@@ -39,15 +39,17 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/jvehent/cljs"
 	"io/ioutil"
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
 	"mig"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
+	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/jvehent/cljs"
+	"github.com/mozilla/mig/src/mig/pgp"
 )
 
 var ctx Context
@@ -190,7 +192,6 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 		Prompt: "Query command by ID",
 		Data: []cljs.Data{
 			{Name: "commandid", Value: "[0-9]{1,20}", Prompt: "Command ID"},
-			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
 		},
 	})
 	if err != nil {
@@ -306,6 +307,14 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received action for creation '%s'", action)}.Debug()
 
+	// Init action fields
+	action.ID = mig.GenID()
+	date0 := time.Date(11, time.January, 11, 11, 11, 11, 11, time.UTC)
+	action.StartTime = date0
+	action.FinishTime = date0
+	action.LastUpdateTime = date0
+	action.Status = "init"
+
 	// load keyring and validate action
 	keyring, err := os.Open(ctx.OpenPGP.PubRing)
 	if err != nil {
@@ -321,8 +330,39 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	action.ID = mig.GenID()
 	ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "Received new action with valid signature"}
+
+	// write action to database
+	err = ctx.DB.InsertAction(action)
+	if err != nil {
+		panic(err)
+	}
+	// write signatures to database
+	astr, err := action.String()
+	if err != nil {
+		panic(err)
+	}
+	for _, sig := range action.PGPSignatures {
+		// TODO: opening the keyring in a loop is really ugly. rewind!
+		k, err := os.Open(ctx.OpenPGP.PubRing)
+		if err != nil {
+			panic(err)
+		}
+		defer k.Close()
+		fp, err := pgp.GetFingerprintFromSignature(astr, sig, k)
+		if err != nil {
+			panic(err)
+		}
+		iid, err := ctx.DB.InvestigatorByFingerprint(fp)
+		if err != nil {
+			panic(err)
+		}
+		err = ctx.DB.InsertSignature(action.ID, iid, sig)
+		if err != nil {
+			panic(err)
+		}
+	}
+	ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "Action written to database"}
 
 	// write action to disk
 	destdir := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.New, action.ID)
@@ -337,7 +377,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "Action committed to spool"}
 
 	err = resource.AddItem(cljs.Item{
-		Href: "/api/action?actionid=" + fmt.Sprintf("%d", action.ID),
+		Href: fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, action.ID),
 		Data: []cljs.Data{{Name: "action ID " + fmt.Sprintf("%d", action.ID), Value: action}},
 	})
 	if err != nil {
@@ -398,31 +438,27 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAction()"}.Debug()
 	}()
-	actionID, err := strconv.Atoi(request.URL.Query()["actionid"][0])
+	actionID, err := strconv.ParseUint(request.URL.Query()["actionid"][0], 10, 64)
 	if err != nil {
 		panic(err)
 	}
 
 	// retrieve the action
-	eas := []mig.ExtendedAction{}
-	iter := ctx.DB.Col.Action.Find(bson.M{"action.id": actionID}).Iter()
-	err = iter.All(&eas)
+	a, err := ctx.DB.ActionByID(actionID)
 	if err != nil {
 		panic(err)
 	}
-	if len(eas) == 0 {
-		resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: "Action not found"})
-		respond(404, resource, respWriter, request, opid)
+	// retrieve investigators
+	a.Investigators, err = ctx.DB.InvestigatorByActionID(a.ID)
+	if err != nil {
+		panic(err)
 	}
 	// store the results in the resource
-	for _, ea := range eas {
-		actionItem, err := extendedActionToItem(ea)
-		if err != nil {
-			panic(err)
-		}
-		resource.AddItem(actionItem)
+	actionItem, err := ActionToItem(a)
+	if err != nil {
+		panic(err)
 	}
-
+	resource.AddItem(actionItem)
 	respond(200, resource, respWriter, request, opid)
 }
 
@@ -439,51 +475,31 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getCommand()"}.Debug()
 	}()
-	var actionID, commandID int
-	aid := request.URL.Query()["actionid"][0]
-	if aid != "" {
-		actionID, err = strconv.Atoi(aid)
-		if err != nil {
-			panic(err)
-		}
-	}
+	var commandID uint64
 	cmdid := request.URL.Query()["commandid"][0]
 	if cmdid != "" {
-		commandID, err = strconv.Atoi(cmdid)
+		commandID, err = strconv.ParseUint(cmdid, 10, 64)
 		if err != nil {
 			panic(err)
 		}
 	}
-
 	// retrieve the action
-	cmds := []mig.Command{}
-	var iter *mgo.Iter
+	var cmd mig.Command
 	if commandID > 0 {
-		if actionID > 0 {
-			iter = ctx.DB.Col.Cmd.Find(bson.M{"id": commandID, "action.id": actionID}).Iter()
-		} else {
-			iter = ctx.DB.Col.Cmd.Find(bson.M{"id": commandID}).Iter()
-		}
+		cmd, err = ctx.DB.CommandByID(commandID)
 	} else {
-		// nothing to search for, return empty resource
-		respond(200, resource, respWriter, request, opid)
+		// nothing to search for, return 404
+		resource.SetError(cljs.Error{
+			Code:    fmt.Sprintf("%d", opid),
+			Message: fmt.Sprintf("Invalid Command ID '%d'", commandID)})
+		respond(400, resource, respWriter, request, opid)
 	}
-	err = iter.All(&cmds)
+	// store the results in the resource
+	commandItem, err := commandToItem(cmd)
 	if err != nil {
 		panic(err)
 	}
-	if len(cmds) == 0 {
-		resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: "No command found"})
-		respond(404, resource, respWriter, request, opid)
-	}
-	// store the results in the resource
-	for _, cmd := range cmds {
-		commandItem, err := commandToItem(cmd)
-		if err != nil {
-			panic(err)
-		}
-		resource.AddItem(commandItem)
-	}
+	resource.AddItem(commandItem)
 	respond(200, resource, respWriter, request, opid)
 }
 

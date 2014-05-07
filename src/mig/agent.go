@@ -34,20 +34,18 @@ the terms of any one of the MPL, the GPL or the LGPL.
 */
 package mig
 
-import (
-	"github.com/streadway/amqp"
-	"time"
-)
+import "time"
 
-type KeepAlive struct {
-	Name, QueueLoc, OS, Version             string
-	PID                                     int
-	StartTime, DestructionTime, HeartBeatTS time.Time
-	Status                                  string
-}
-
-type Binding struct {
-	Queue string
-	Key   string
-	Chan  <-chan amqp.Delivery
+type Agent struct {
+	ID              uint64    `json:"id,omitempty"`
+	Name            string    `json:"name"`
+	QueueLoc        string    `json:"queueloc"`
+	OS              string    `json:"os,omitempty"`
+	Version         string    `json:"version,omitempty"`
+	PID             int       `json:"pid,omitempty"`
+	StartTime       time.Time `json:"starttime,omitempty"`
+	DestructionTime time.Time `json:"destructiontime,omitempty"`
+	HeartBeatTS     time.Time `json:"heartbeatts,omitempty"`
+	Status          string    `json:"status,omitempty"`
+	Authorized      bool      `json:"authorized,omitempty"`
 }
