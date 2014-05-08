@@ -62,6 +62,59 @@ func (db *DB) Close() {
 }
 
 // ActionByID retrieves an action from the database using its ID
+func (db *DB) Last10Actions() (actions []mig.Action, err error) {
+	rows, err := db.c.Query(`SELECT id, name, target, description, threat, operations,
+		validfrom, expireafter, starttime, finishtime, lastupdatetime,
+		status, sentctr, returnedctr, donectr, cancelledctr, failedctr,
+		timeoutctr, pgpsignatures, syntaxversion
+		FROM actions ORDER BY starttime LIMIT 10`)
+	if err != nil && err != sql.ErrNoRows {
+		rows.Close()
+		err = fmt.Errorf("Error while listing actions: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows {
+		rows.Close()
+		return
+	}
+	for rows.Next() {
+		var jDesc, jThreat, jOps, jSig []byte
+		var a mig.Action
+		err = rows.Scan(&a.ID, &a.Name, &a.Target,
+			&jDesc, &jThreat, &jOps, &a.ValidFrom, &a.ExpireAfter,
+			&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status, &a.Counters.Sent,
+			&a.Counters.Returned, &a.Counters.Done, &a.Counters.Cancelled,
+			&a.Counters.Failed, &a.Counters.TimeOut, &jSig, &a.SyntaxVersion)
+		if err != nil {
+			err = fmt.Errorf("Error while retrieving action: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jDesc, &a.Description)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jThreat, &a.Threat)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jOps, &a.Operations)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jSig, &a.PGPSignatures)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+			return
+		}
+		actions = append(actions, a)
+	}
+	return
+}
+
+// ActionByID retrieves an action from the database using its ID
 func (db *DB) ActionByID(id uint64) (a mig.Action, err error) {
 	var jDesc, jThreat, jOps, jSig []byte
 	err = db.c.QueryRow(`SELECT id, name, target, description, threat, operations,
@@ -83,18 +136,22 @@ func (db *DB) ActionByID(id uint64) (a mig.Action, err error) {
 	err = json.Unmarshal(jDesc, &a.Description)
 	if err != nil {
 		err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
+		return
 	}
 	err = json.Unmarshal(jThreat, &a.Threat)
 	if err != nil {
 		err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
+		return
 	}
 	err = json.Unmarshal(jOps, &a.Operations)
 	if err != nil {
 		err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
+		return
 	}
 	err = json.Unmarshal(jSig, &a.PGPSignatures)
 	if err != nil {
 		err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+		return
 	}
 	return
 }
@@ -213,7 +270,6 @@ func (db *DB) InvestigatorByActionID(aid uint64) (ivgts []mig.Investigator, err 
 		AND signatures.investigatorid=investigators.id`, aid)
 	if err != nil && err != sql.ErrNoRows {
 		rows.Close()
-		return
 		err = fmt.Errorf("Error while finding investigator: '%v'", err)
 		return
 	}
@@ -259,14 +315,17 @@ func (db *DB) CommandByID(id uint64) (cmd mig.Command, err error) {
 	err = json.Unmarshal(jRes, &cmd.Results)
 	if err != nil {
 		err = fmt.Errorf("Failed to unmarshal command results: '%v'", err)
+		return
 	}
 	err = json.Unmarshal(jOps, &cmd.Action.Operations)
 	if err != nil {
 		err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
+		return
 	}
 	err = json.Unmarshal(jSig, &cmd.Action.PGPSignatures)
 	if err != nil {
 		err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+		return
 	}
 	return
 }
@@ -296,14 +355,17 @@ func (db *DB) CommandsByActionID(actionid uint64) (commands []mig.Command, err e
 		err = json.Unmarshal(jRes, &cmd.Results)
 		if err != nil {
 			err = fmt.Errorf("Failed to unmarshal command results: '%v'", err)
+			return
 		}
 		err = json.Unmarshal(jOps, &cmd.Action.Operations)
 		if err != nil {
 			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
+			return
 		}
 		err = json.Unmarshal(jSig, &cmd.Action.PGPSignatures)
 		if err != nil {
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+			return
 		}
 		commands = append(commands, cmd)
 	}
