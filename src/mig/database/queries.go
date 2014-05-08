@@ -237,16 +237,17 @@ func (db *DB) InvestigatorByActionID(aid uint64) (ivgts []mig.Investigator, err 
 
 // CommandByID retrieves a command from the database using its ID
 func (db *DB) CommandByID(id uint64) (cmd mig.Command, err error) {
-	err = db.c.QueryRow(`SELECT commands.id, commands.status, command.results, commands.starttime, commands.finishtime,
+	var jRes, jOps, jSig []byte
+	err = db.c.QueryRow(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
 		actions.id, actions.name, actions.target, actions.operations, actions.validfrom, actions.expireafter,
 		actions.pgpsignatures, actions.syntaxversion,
 		agents.id, agents.name, agents.queueloc, agents.os, agents.version
 		FROM commands, actions, agents
 		WHERE commands.id=$1
 		AND commands.actionid = actions.id AND commands.agentid = agents.id`, id).Scan(
-		&cmd.ID, &cmd.Status, &cmd.Results, &cmd.StartTime, &cmd.FinishTime,
-		&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &cmd.Action.Operations,
-		&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &cmd.Action.PGPSignatures, &cmd.Action.SyntaxVersion,
+		&cmd.ID, &cmd.Status, &jRes, &cmd.StartTime, &cmd.FinishTime,
+		&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jOps,
+		&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
 		&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.OS, &cmd.Agent.Version)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving command: '%v'", err)
@@ -255,6 +256,58 @@ func (db *DB) CommandByID(id uint64) (cmd mig.Command, err error) {
 	if err == sql.ErrNoRows {
 		return
 	}
+	err = json.Unmarshal(jRes, &cmd.Results)
+	if err != nil {
+		err = fmt.Errorf("Failed to unmarshal command results: '%v'", err)
+	}
+	err = json.Unmarshal(jOps, &cmd.Action.Operations)
+	if err != nil {
+		err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
+	}
+	err = json.Unmarshal(jSig, &cmd.Action.PGPSignatures)
+	if err != nil {
+		err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+	}
+	return
+}
+
+func (db *DB) CommandsByActionID(actionid uint64) (commands []mig.Command, err error) {
+	rows, err := db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
+		actions.id, actions.name, actions.target, actions.operations, actions.validfrom, actions.expireafter,
+		actions.pgpsignatures, actions.syntaxversion,
+		agents.id, agents.name, agents.queueloc, agents.os, agents.version
+		FROM commands, actions, agents
+		WHERE commands.actionid=actions.id AND commands.agentid=agents.id AND actions.id=$1`, actionid)
+	if err != nil {
+		err = fmt.Errorf("Error while finding commands: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var jRes, jOps, jSig []byte
+		var cmd mig.Command
+		err = rows.Scan(&cmd.ID, &cmd.Status, &jRes, &cmd.StartTime, &cmd.FinishTime,
+			&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jOps,
+			&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
+			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.OS, &cmd.Agent.Version)
+		if err != nil {
+			err = fmt.Errorf("Failed to retrieve command: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jRes, &cmd.Results)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal command results: '%v'", err)
+		}
+		err = json.Unmarshal(jOps, &cmd.Action.Operations)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
+		}
+		err = json.Unmarshal(jSig, &cmd.Action.PGPSignatures)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+		}
+		commands = append(commands, cmd)
+	}
+	rows.Close()
 	return
 }
 

@@ -66,7 +66,6 @@ type Action struct {
 	StartTime      time.Time      `json:"starttime,omitempty"`
 	FinishTime     time.Time      `json:"finishtime,omitempty"`
 	LastUpdateTime time.Time      `json:"lastupdatetime,omitempty"`
-	CommandIDs     []uint64       `json:"commandids,omitempty"`
 	Counters       counters       `json:"counters,omitempty"`
 	SyntaxVersion  uint16         `json:"syntaxversion,omitempty"`
 }

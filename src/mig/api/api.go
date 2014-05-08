@@ -454,11 +454,12 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	// store the results in the resource
-	actionItem, err := ActionToItem(a)
+	actionItem, err := ActionToItem(a, ctx)
 	if err != nil {
 		panic(err)
 	}
 	resource.AddItem(actionItem)
+
 	respond(200, resource, respWriter, request, opid)
 }
 

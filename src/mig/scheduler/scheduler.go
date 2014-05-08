@@ -380,12 +380,12 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "Action written to database"}.Debug()
 
 	// expand the action in one command per agent
-	action.CommandIDs, err = prepareCommands(action, ctx)
+	cmdids, err := prepareCommands(action, ctx)
 	if err != nil {
 		panic(err)
 	}
 	// move action to flying state
-	action.Counters.Sent = len(action.CommandIDs)
+	action.Counters.Sent = len(cmdids)
 	err = flyAction(ctx, action, actionPath)
 	if err != nil {
 		panic(err)

@@ -44,20 +44,25 @@ import (
 
 // ActionToItem receives an Action and returns an Item
 // in the Collection+JSON format
-func ActionToItem(a mig.Action) (item cljs.Item, err error) {
+func ActionToItem(a mig.Action, ctx Context) (item cljs.Item, err error) {
 	item.Href = fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, a.ID)
+	item.Data = []cljs.Data{
+		{Name: "action", Value: a},
+	}
 	links := make([]cljs.Link, 0)
-	for _, cmdid := range a.CommandIDs {
+	commands, err := ctx.DB.CommandsByActionID(a.ID)
+	if err != nil {
+		err = fmt.Errorf("ActionToItem() -> '%v'", err)
+		return
+	}
+	for _, cmd := range commands {
 		link := cljs.Link{
-			Rel:  "command",
-			Href: fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmdid),
+			Rel:  fmt.Sprintf("Command ID %d on agent %s", cmd.ID, cmd.Agent.Name),
+			Href: fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmd.ID),
 		}
 		links = append(links, link)
 	}
 	item.Links = links
-	item.Data = []cljs.Data{
-		{Name: "action", Value: a},
-	}
 	return
 }
 
