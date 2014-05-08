@@ -6,7 +6,7 @@
     host = "http://localhost:12345"
     baseroute = "/api/v1"
 
-[openpgp]
+[pgp]
     pubring = "/var/cache/mig/.gnupg/pubring.gpg"
 
 [directories]

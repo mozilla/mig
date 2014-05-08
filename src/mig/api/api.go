@@ -309,14 +309,14 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 
 	// Init action fields
 	action.ID = mig.GenID()
-	date0 := time.Date(11, time.January, 11, 11, 11, 11, 11, time.UTC)
+	date0 := time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
 	action.StartTime = date0
 	action.FinishTime = date0
 	action.LastUpdateTime = date0
 	action.Status = "init"
 
 	// load keyring and validate action
-	keyring, err := os.Open(ctx.OpenPGP.PubRing)
+	keyring, err := os.Open(ctx.PGP.PubRing)
 	if err != nil {
 		panic(err)
 	}
@@ -344,7 +344,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	for _, sig := range action.PGPSignatures {
 		// TODO: opening the keyring in a loop is really ugly. rewind!
-		k, err := os.Open(ctx.OpenPGP.PubRing)
+		k, err := os.Open(ctx.PGP.PubRing)
 		if err != nil {
 			panic(err)
 		}

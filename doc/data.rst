@@ -33,7 +33,12 @@ the scheduler, each action and command are stored individually in a text file in
 Postgresql database
 -------------------
 
-Database structure
+Entity-Relationship Diagram
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. image:: .files/ER-diagram.png
+
+Structure & Tables
 ~~~~~~~~~~~~~~~~~~
 
 The `actions` table contains the detail of each action ran by the MIG platform.
@@ -164,4 +169,23 @@ on an agent. This model allows for very fine grained permissions management.
 	CREATE INDEX ON invagtmodperm (agentid);
 	CREATE INDEX ON invagtmodperm (moduleid);
 
-.. image:: .files/ER-diagram.png
+Database creation script
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. include:: .files/createdb.sh
+	:code: bash
+
+Adding Investigators
+~~~~~~~~~~~~~~~~~~~~
+
+In the future, this will probably be automated via the API. But for now, and
+until we have a strong authentication mechanism for API calls, it must be done
+manually in the database.
+
+Adapt the query below to add a new investigator.
+
+.. code:: sql
+
+	INSERT INTO investigators (name, pgpfingerprint)
+	VALUES ('Bob Kelso', 'E608......');
+

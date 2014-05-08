@@ -79,20 +79,18 @@ func markUpgradedAgents(cmd mig.Command, ctx Context) (err error) {
 					panic(err)
 				}
 				oldpid := reflect.ValueOf(resultMap["oldpid"])
-				if oldpid.Int() < 2 {
+				if oldpid.Float() < 2 || oldpid.Float() > 65535 {
 					desc := fmt.Sprintf("Successfully found upgraded action on agent '%s', but with PID '%s'. That's not right...",
 						cmd.Agent.Name, oldpid)
 					ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
 					panic(desc)
 				}
-
 				// update the agent's registration to mark it as upgraded
-				agent, err := ctx.DB.AgentByQueueAndPID(cmd.Agent.QueueLoc, int(oldpid.Int()))
+				agent, err := ctx.DB.AgentByQueueAndPID(cmd.Agent.QueueLoc, int(oldpid.Float()))
 				if err != nil {
 					panic(err)
 				}
-				agent.Status = "upgraded"
-				err = ctx.DB.InsertOrUpdateAgent(agent)
+				err = ctx.DB.MarkAgentUpgraded(agent)
 				if err != nil {
 					panic(err)
 				}
@@ -100,6 +98,66 @@ func markUpgradedAgents(cmd mig.Command, ctx Context) (err error) {
 					Desc: fmt.Sprintf("Agent '%s' marked as upgraded", cmd.Agent.Name)}.Info()
 			}
 		}
+	}
+	return
+}
+
+// inspectMultiAgents takes a number of actions when several agents are found
+// to be listening on the same queue. It will trigger an agentdestroy action
+// for agents that are flagged as upgraded, and log alerts for agents that
+// are not, such that an investigator can look at them.
+func inspectMultiAgents(queueLoc string, ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("inspectMultiAgents() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving inspectMultiAgents()"}.Debug()
+	}()
+	agentsCount, agents, err := findDupAgents(queueLoc, ctx)
+	if agentsCount < 2 {
+		return
+	}
+	destroyedAgents := 0
+	leftAloneAgents := 0
+	for _, agent := range agents {
+		switch agent.Status {
+		case "upgraded":
+			// upgraded agents must die
+			err = destroyAgent(agent, ctx)
+			if err != nil {
+				panic(err)
+			}
+			destroyedAgents++
+			desc := fmt.Sprintf("Agent '%s' with PID '%d' has been upgraded and will be destroyed.", agent.Name, agent.PID)
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+		case "destroyed":
+			// if the agent has already been marked as destroyed, check if
+			// that was done longer than 3 heartbeats ago. If it did, the
+			// destruction failed, and we need to reissue a destruction order
+			hbFreq, err := time.ParseDuration(ctx.Agent.HeartbeatFreq)
+			if err != nil {
+				panic(err)
+			}
+			pointInTime := time.Now().Add(-hbFreq * 3)
+			if agent.DestructionTime.Before(pointInTime) {
+				err = destroyAgent(agent, ctx)
+				if err != nil {
+					panic(err)
+				}
+				destroyedAgents++
+				desc := fmt.Sprintf("Re-issuing destruction action for agent '%s' with PID '%d'.", agent.Name, agent.PID)
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+			} else {
+				leftAloneAgents++
+			}
+		}
+	}
+
+	remainingAgents := agentsCount - destroyedAgents - leftAloneAgents
+	if remainingAgents > 1 {
+		// there's still some agents left, raise errors for these
+		desc := fmt.Sprintf("Found '%d' agents running on '%s'. Require manual inspection.", remainingAgents, queueLoc)
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Warning()
 	}
 	return
 }
@@ -151,7 +209,7 @@ func destroyAgent(agent mig.Agent, ctx Context) (err error) {
 	}
 
 	// write the action to the spool for scheduling
-	dest := fmt.Sprintf("%s/%s", ctx.Directories.Action.New, mig.GenID())
+	dest := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.New, killAction.ID)
 	err = safeWrite(ctx, dest, jsonAction)
 	if err != nil {
 		panic(err)

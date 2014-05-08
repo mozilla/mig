@@ -68,7 +68,7 @@ type Action struct {
 	LastUpdateTime time.Time      `json:"lastupdatetime,omitempty"`
 	CommandIDs     []uint64       `json:"commandids,omitempty"`
 	Counters       counters       `json:"counters,omitempty"`
-	SyntaxVersion  int            `json:"syntaxversion,omitempty"`
+	SyntaxVersion  uint16         `json:"syntaxversion,omitempty"`
 }
 
 // Some counters used to track the completion of an action

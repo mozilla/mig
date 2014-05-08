@@ -65,8 +65,8 @@ type Context struct {
 			Ready, InFlight, Returned, Done string
 		}
 	}
-	DB      migdb.DB
-	OpenPGP struct {
+	DB  migdb.DB
+	PGP struct {
 		PubRing string
 	}
 	Postgres struct {

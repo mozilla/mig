@@ -41,6 +41,7 @@ import (
 	"flag"
 	"fmt"
 	"mig"
+	"mig/pgp"
 	"os"
 	"runtime"
 	"strings"
@@ -114,7 +115,7 @@ func main() {
 				// move action to INVALID folder and log
 				dest := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.Invalid, time.Now().UTC().UnixNano())
 				os.Rename(actionPath, dest)
-				reason := fmt.Sprintf("%v. %s moved to %s", err, actionPath, dest)
+				reason := fmt.Sprintf("%v. '%s' moved to '%s'", err, actionPath, dest)
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: reason}.Warning()
 			}
 		}
@@ -344,10 +345,40 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 		return
 	}
 	action.Status = "preparing"
-	err = ctx.DB.InsertOrUpdateAction(action)
+	inserted, err := ctx.DB.InsertOrUpdateAction(action)
 	if err != nil {
 		panic(err)
 	}
+	if inserted {
+		// action was inserted, and not updated, so we need to insert
+		// the signatures as well
+		astr, err := action.String()
+		if err != nil {
+			panic(err)
+		}
+		for _, sig := range action.PGPSignatures {
+			// TODO: opening the keyring in a loop is really ugly. rewind!
+			k, err := os.Open(ctx.PGP.PubRing)
+			if err != nil {
+				panic(err)
+			}
+			defer k.Close()
+			fp, err := pgp.GetFingerprintFromSignature(astr, sig, k)
+			if err != nil {
+				panic(err)
+			}
+			iid, err := ctx.DB.InvestigatorByFingerprint(fp)
+			if err != nil {
+				panic(err)
+			}
+			err = ctx.DB.InsertSignature(action.ID, iid, sig)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "Action written to database"}.Debug()
+
 	// expand the action in one command per agent
 	action.CommandIDs, err = prepareCommands(action, ctx)
 	if err != nil {

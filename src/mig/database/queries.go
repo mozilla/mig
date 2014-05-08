@@ -150,16 +150,17 @@ func (db *DB) UpdateAction(a mig.Action) (err error) {
 
 // InsertOrUpdateAction looks for an existing action in DB and update it,
 // or insert a new one if none is found
-func (db *DB) InsertOrUpdateAction(a mig.Action) (err error) {
+func (db *DB) InsertOrUpdateAction(a mig.Action) (inserted bool, err error) {
 	var id uint64
 	err = db.c.QueryRow(`SELECT id FROM actions WHERE id=$1`, a.ID).Scan(&id)
-	if err != nil {
-		return fmt.Errorf("Error while retrieving action: '%v'", err)
+	if err != nil && err != sql.ErrNoRows {
+		return inserted, fmt.Errorf("Error while retrieving action: '%v'", err)
 	}
 	if err == sql.ErrNoRows {
-		return db.InsertAction(a)
+		inserted = true
+		return inserted, db.InsertAction(a)
 	} else {
-		return db.UpdateAction(a)
+		return inserted, db.UpdateAction(a)
 	}
 }
 
@@ -192,12 +193,13 @@ func (db *DB) InsertSignature(aid, iid uint64, sig string) (err error) {
 // FindInvestigatorByFingerprint searches the database for an investigator that
 // has a given fingerprint
 func (db *DB) InvestigatorByFingerprint(fp string) (iid uint64, err error) {
-	err = db.c.QueryRow("SELECT id FROM investigators WHERE pgpfingerprint=$1", fp).Scan(&iid)
+	err = db.c.QueryRow("SELECT id FROM investigators WHERE LOWER(pgpfingerprint)=LOWER($1)", fp).Scan(&iid)
 	if err != nil && err != sql.ErrNoRows {
 		err = fmt.Errorf("Error while finding investigator: '%v'", err)
 		return
 	}
 	if err == sql.ErrNoRows {
+		err = fmt.Errorf("InvestigatorByFingerprint: no investigator found for fingerprint '%s'", fp)
 		return
 	}
 	return
@@ -367,11 +369,8 @@ func (db *DB) UpdateAgentHeartbeat(agt mig.Agent) (err error) {
 // if it exists, or insert it if it doesn't
 func (db *DB) InsertOrUpdateAgent(agt mig.Agent) (err error) {
 	agent, err := db.AgentByQueueAndPID(agt.QueueLoc, agt.PID)
-	if err != nil && err != sql.ErrNoRows {
-		return fmt.Errorf("Error while searching for agent: '%v'", err)
-	}
-	if err == sql.ErrNoRows {
-		agt.DestructionTime = time.Date(11, time.January, 11, 11, 11, 11, 11, time.UTC)
+	if err != nil {
+		agt.DestructionTime = time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
 		agt.Status = "heartbeating"
 		// create a new agent
 		return db.InsertAgent(agt)
@@ -439,12 +438,22 @@ func (db *DB) ActiveAgentsByTarget(target string, pointInTime time.Time) (agents
 	return
 }
 
+// MarkAgentUpgraded updated the status of an agent in the database
+func (db *DB) MarkAgentUpgraded(agent mig.Agent) (err error) {
+	_, err = db.c.Exec(`UPDATE agents SET status='upgraded' WHERE id=$1`,
+		agent.ID)
+	if err != nil {
+		return fmt.Errorf("Failed to mark agent as upgraded in database: '%v'", err)
+	}
+	return
+}
+
 // MarkAgentDestroyed updated the status and destructiontime of an agent in the database
 func (db *DB) MarkAgentDestroyed(agent mig.Agent) (err error) {
 	agent.Status = "destroyed"
 	agent.DestructionTime = time.Now()
 	_, err = db.c.Exec(`UPDATE agents
-		SET heartbeattime=$1, status=$2 WHERE id=$3`,
+		SET destructiontime=$1, status=$2 WHERE id=$3`,
 		agent.DestructionTime, agent.Status, agent.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to mark agent as destroyed in database: '%v'", err)

@@ -108,7 +108,7 @@ func flyAction(ctx Context, a mig.Action, origin string) (err error) {
 		panic(err)
 	}
 	a.Status = "inflight"
-	err = ctx.DB.InsertOrUpdateAction(a)
+	err = ctx.DB.UpdateAction(a)
 	if err != nil {
 		panic(err)
 	}
