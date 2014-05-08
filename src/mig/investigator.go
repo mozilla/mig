@@ -1,4 +1,4 @@
-/* Mozilla InvestiGator message types
+/* Mozilla InvestiGator humans
 
 Version: MPL 1.1/GPL 2.0/LGPL 2.1
 
@@ -34,20 +34,9 @@ the terms of any one of the MPL, the GPL or the LGPL.
 */
 package mig
 
-import (
-	"github.com/streadway/amqp"
-	"time"
-)
-
-type KeepAlive struct {
-	Name, QueueLoc, OS, Version             string
-	PID                                     int
-	StartTime, DestructionTime, HeartBeatTS time.Time
-	Status                                  string
-}
-
-type Binding struct {
-	Queue string
-	Key   string
-	Chan  <-chan amqp.Delivery
+type Investigator struct {
+	ID             uint64 `json:"id,omitempty"`
+	Name           string `json:"name"`
+	PGPFingerprint string `json:"pgpfingerprint"`
+	PublicKey      []byte `json:"publickey,omitempty"`
 }

@@ -1,4 +1,4 @@
-/* Mozilla InvestiGator API search queries
+/* Mozilla InvestiGator message types
 
 Version: MPL 1.1/GPL 2.0/LGPL 2.1
 
@@ -32,21 +32,20 @@ and other provisions required by the GPL or the LGPL. If you do not delete
 the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
 */
+package mig
 
-package main
+import "time"
 
-import (
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
-	"mig"
-)
-
-// get an action ID and returns a list of commands that have positive results
-func findPositiveResults(actionID int) (cmds []mig.Command, err error) {
-	// retrieve the commands that have positive results
-	cmds = []mig.Command{}
-	var iter *mgo.Iter
-	iter = ctx.DB.Col.Cmd.Find(bson.M{"action.id": actionID, "results.0.foundanything": true}).Iter()
-	err = iter.All(&cmds)
-	return
+type Agent struct {
+	ID              uint64    `json:"id,omitempty"`
+	Name            string    `json:"name"`
+	QueueLoc        string    `json:"queueloc"`
+	OS              string    `json:"os,omitempty"`
+	Version         string    `json:"version,omitempty"`
+	PID             int       `json:"pid,omitempty"`
+	StartTime       time.Time `json:"starttime,omitempty"`
+	DestructionTime time.Time `json:"destructiontime,omitempty"`
+	HeartBeatTS     time.Time `json:"heartbeatts,omitempty"`
+	Status          string    `json:"status,omitempty"`
+	Authorized      bool      `json:"authorized,omitempty"`
 }

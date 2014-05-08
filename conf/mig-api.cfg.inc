@@ -1,19 +1,25 @@
 ; Sample MIG API configuration file
 
 [server]
-    listening_ip = "127.0.0.1"
-    listening_port = 12345
+    ip = "127.0.0.1"
+    port = 12345
+    host = "http://localhost:12345"
+    baseroute = "/api/v1"
 
-[openpgp]
+[pgp]
     pubring = "/var/cache/mig/.gnupg/pubring.gpg"
 
 [directories]
     spool = "/var/cache/mig/"
     tmp = "/var/tmp/"
 
-[db]
+[postgres]
     host = "127.0.0.1"
     port = 27017
+    dbname = "mig"
+    user = "mig-scheduler"
+    password = "123456"
+    sslmode = "disable"
 
 [logging]
     mode = "stdout" ; stdout | file | syslog

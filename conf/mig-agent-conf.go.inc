@@ -54,7 +54,7 @@ var LOGGINGCONF = mig.Logging{
 // location of the rabbitmq server
 var AMQPBROKER string = "amqp://guest:guest@localhost:5672/"
 
-// frequency at which the agent sends keepalive messages
+// frequency at which the agent sends heartbeat messages
 var HEARTBEATFREQ time.Duration = 300 * time.Second
 
 // timeout after which a module run is killed

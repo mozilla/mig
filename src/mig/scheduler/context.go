@@ -36,19 +36,20 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
-	"code.google.com/p/gcfg"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/VividCortex/godaemon"
-	"github.com/streadway/amqp"
 	"io/ioutil"
-	"labix.org/v2/mgo"
 	"mig"
+	migdb "mig/database"
 	"net"
 	"os"
 	"time"
+
+	"code.google.com/p/gcfg"
+	"github.com/VividCortex/godaemon"
+	"github.com/streadway/amqp"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -82,17 +83,7 @@ type Context struct {
 			Ready, InFlight, Returned, Done string
 		}
 	}
-	DB struct {
-		// configuration
-		Host, User, Pass string
-		Port             int
-		UseTLS           bool
-		// internal
-		session *mgo.Session
-		Col     struct {
-			Reg, Action, Cmd *mgo.Collection
-		}
-	}
+	DB migdb.DB
 	MQ struct {
 		// configuration
 		Host, User, Pass, Vhost string
@@ -105,7 +96,11 @@ type Context struct {
 		Chan *amqp.Channel
 	}
 	PGP struct {
-		KeyID string
+		KeyID, PubRing string
+	}
+	Postgres struct {
+		Host, User, Password, DBName, SSLMode string
+		Port                                  int
 	}
 	Stats struct {
 	}
@@ -221,7 +216,7 @@ func initDirectories(orig_ctx Context) (ctx Context, err error) {
 	return
 }
 
-// initDB() sets up the connection to the MongoDB backend database
+// initDB sets up the connection to the Postgres backend database
 func initDB(orig_ctx Context) (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -231,19 +226,12 @@ func initDB(orig_ctx Context) (ctx Context, err error) {
 	}()
 
 	ctx = orig_ctx
-	ctx.DB.session, err = mgo.Dial(ctx.DB.Host)
+	ctx.DB, err = migdb.Open(ctx.Postgres.DBName, ctx.Postgres.User, ctx.Postgres.Password,
+		ctx.Postgres.Host, ctx.Postgres.Port, ctx.Postgres.SSLMode)
 	if err != nil {
 		panic(err)
 	}
-
-	ctx.DB.session.SetSafe(&mgo.Safe{}) // make safe writes only
-
-	// create handlers to collections
-	ctx.DB.Col.Reg = ctx.DB.session.DB("mig").C("registrations")
-	ctx.DB.Col.Action = ctx.DB.session.DB("mig").C("actions")
-	ctx.DB.Col.Cmd = ctx.DB.session.DB("mig").C("commands")
-
-	ctx.Channels.Log <- mig.Log{Sev: "info", Desc: "MongoDB connection opened"}
+	ctx.Channels.Log <- mig.Log{Desc: "Database connection opened"}
 	return
 }
 
@@ -360,8 +348,8 @@ func Destroy(ctx Context) {
 	// close rabbitmq
 	ctx.MQ.conn.Close()
 	ctx.Channels.Log <- mig.Log{Sev: "info", Desc: "AMQP connection closed"}
-	// close mongodb
-	ctx.DB.session.Close()
+	// close database
+	ctx.DB.Close()
 	ctx.Channels.Log <- mig.Log{Sev: "info", Desc: "MongoDB connection closed"}
 	// close syslog
 	ctx.Logging.Destroy()

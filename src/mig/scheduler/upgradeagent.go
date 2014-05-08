@@ -38,7 +38,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"labix.org/v2/mgo/bson"
 	"mig"
 	"mig/pgp/sign"
 	"reflect"
@@ -80,39 +79,92 @@ func markUpgradedAgents(cmd mig.Command, ctx Context) (err error) {
 					panic(err)
 				}
 				oldpid := reflect.ValueOf(resultMap["oldpid"])
-				if oldpid.Float() < 2 {
+				if oldpid.Float() < 2 || oldpid.Float() > 65535 {
 					desc := fmt.Sprintf("Successfully found upgraded action on agent '%s', but with PID '%s'. That's not right...",
-						cmd.AgentName, oldpid)
+						cmd.Agent.Name, oldpid)
 					ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
 					panic(desc)
 				}
-
 				// update the agent's registration to mark it as upgraded
-				var ids []agentRegId
-				iter := ctx.DB.Col.Reg.Find(bson.M{"queueloc": cmd.AgentQueueLoc, "pid": oldpid.Float()}).Iter()
-				err = iter.All(&ids)
+				agent, err := ctx.DB.AgentByQueueAndPID(cmd.Agent.QueueLoc, int(oldpid.Float()))
 				if err != nil {
 					panic(err)
 				}
-				if len(ids) == 0 {
-					panic("No agent found in database")
-				}
-				mgoId := ids[0].Id
-				err := ctx.DB.Col.Reg.Update(bson.M{"_id": mgoId}, bson.M{"$set": bson.M{"status": "upgraded"}})
+				err = ctx.DB.MarkAgentUpgraded(agent)
 				if err != nil {
 					panic(err)
 				}
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID,
-					Desc: fmt.Sprintf("Agent '%s' marked as upgraded", cmd.AgentName)}.Info()
+					Desc: fmt.Sprintf("Agent '%s' marked as upgraded", cmd.Agent.Name)}.Info()
 			}
 		}
 	}
 	return
 }
 
+// inspectMultiAgents takes a number of actions when several agents are found
+// to be listening on the same queue. It will trigger an agentdestroy action
+// for agents that are flagged as upgraded, and log alerts for agents that
+// are not, such that an investigator can look at them.
+func inspectMultiAgents(queueLoc string, ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("inspectMultiAgents() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving inspectMultiAgents()"}.Debug()
+	}()
+	agentsCount, agents, err := findDupAgents(queueLoc, ctx)
+	if agentsCount < 2 {
+		return
+	}
+	destroyedAgents := 0
+	leftAloneAgents := 0
+	for _, agent := range agents {
+		switch agent.Status {
+		case "upgraded":
+			// upgraded agents must die
+			err = destroyAgent(agent, ctx)
+			if err != nil {
+				panic(err)
+			}
+			destroyedAgents++
+			desc := fmt.Sprintf("Agent '%s' with PID '%d' has been upgraded and will be destroyed.", agent.Name, agent.PID)
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+		case "destroyed":
+			// if the agent has already been marked as destroyed, check if
+			// that was done longer than 3 heartbeats ago. If it did, the
+			// destruction failed, and we need to reissue a destruction order
+			hbFreq, err := time.ParseDuration(ctx.Agent.HeartbeatFreq)
+			if err != nil {
+				panic(err)
+			}
+			pointInTime := time.Now().Add(-hbFreq * 3)
+			if agent.DestructionTime.Before(pointInTime) {
+				err = destroyAgent(agent, ctx)
+				if err != nil {
+					panic(err)
+				}
+				destroyedAgents++
+				desc := fmt.Sprintf("Re-issuing destruction action for agent '%s' with PID '%d'.", agent.Name, agent.PID)
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+			} else {
+				leftAloneAgents++
+			}
+		}
+	}
+
+	remainingAgents := agentsCount - destroyedAgents - leftAloneAgents
+	if remainingAgents > 1 {
+		// there's still some agents left, raise errors for these
+		desc := fmt.Sprintf("Found '%d' agents running on '%s'. Require manual inspection.", remainingAgents, queueLoc)
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Warning()
+	}
+	return
+}
+
 // destroyAgent issues an `agentdestroy` action targetted to a specific agent
 // and updates the status of the agent in the database
-func destroyAgent(agent mig.KeepAlive, ctx Context) (err error) {
+func destroyAgent(agent mig.Agent, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("destroyAgent() -> %v", e)
@@ -157,29 +209,17 @@ func destroyAgent(agent mig.KeepAlive, ctx Context) (err error) {
 	}
 
 	// write the action to the spool for scheduling
-	dest := fmt.Sprintf("%s/%s", ctx.Directories.Action.New, mig.GenID())
+	dest := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.New, killAction.ID)
 	err = safeWrite(ctx, dest, jsonAction)
 	if err != nil {
 		panic(err)
 	}
 
 	// mark the agent as `destroyed` in the database
-	var ids []agentRegId
-	iter := ctx.DB.Col.Reg.Find(bson.M{"queueloc": agent.QueueLoc, "pid": agent.PID}).Iter()
-	err = iter.All(&ids)
-	if err != nil {
-		panic(err)
-	}
-	if len(ids) == 0 {
-		panic("No agent found in database")
-	}
-	mgoId := ids[0].Id
-	err = ctx.DB.Col.Reg.Update(bson.M{"_id": mgoId},
-		bson.M{"$set": bson.M{"status": "destroyed", "destructiontime": time.Now().UTC()}})
+	err = ctx.DB.MarkAgentDestroyed(agent)
 	if err != nil {
 		panic(err)
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Requested destruction of agent '%s' with PID '%d'", agent.Name, agent.PID)}.Info()
-
 	return
 }

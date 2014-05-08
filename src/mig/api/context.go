@@ -36,17 +36,13 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
-	"code.google.com/p/gcfg"
-	//"crypto/rand"
-	//"crypto/tls"
-	//"crypto/x509"
 	"fmt"
-	"github.com/VividCortex/godaemon"
-	//"io/ioutil"
-	"labix.org/v2/mgo"
 	"mig"
+	migdb "mig/database"
 	"os"
-	//"time"
+
+	"code.google.com/p/gcfg"
+	"github.com/VividCortex/godaemon"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -69,23 +65,18 @@ type Context struct {
 			Ready, InFlight, Returned, Done string
 		}
 	}
-	DB struct {
-		// configuration
-		Host, User, Pass string
-		Port             int
-		UseTLS           bool
-		// internal
-		session *mgo.Session
-		Col     struct {
-			Reg, Action, Cmd *mgo.Collection
-		}
-	}
-	OpenPGP struct {
+	DB  migdb.DB
+	PGP struct {
 		PubRing string
 	}
+	Postgres struct {
+		Host, User, Password, DBName, SSLMode string
+		Port                                  int
+	}
 	Server struct {
-		IP   string
-		Port int
+		IP                       string
+		Port                     int
+		Host, BaseRoute, BaseURL string
 	}
 	Stats struct {
 	}
@@ -108,6 +99,8 @@ func Init(path string) (ctx Context, err error) {
 	}
 
 	ctx.Channels.Log = make(chan mig.Log, 37)
+
+	ctx.Server.BaseURL = ctx.Server.Host + ctx.Server.BaseRoute
 
 	// daemonize unless logging is set to stdout
 	if ctx.Logging.Mode != "stdout" {
@@ -203,18 +196,11 @@ func initDB(orig_ctx Context) (ctx Context, err error) {
 	}()
 
 	ctx = orig_ctx
-	ctx.DB.session, err = mgo.Dial(ctx.DB.Host)
+	ctx.DB, err = migdb.Open(ctx.Postgres.DBName, ctx.Postgres.User, ctx.Postgres.Password,
+		ctx.Postgres.Host, ctx.Postgres.Port, ctx.Postgres.SSLMode)
 	if err != nil {
 		panic(err)
 	}
-
-	ctx.DB.session.SetSafe(&mgo.Safe{}) // make safe writes only
-
-	// create handlers to collections
-	ctx.DB.Col.Reg = ctx.DB.session.DB("mig").C("registrations")
-	ctx.DB.Col.Action = ctx.DB.session.DB("mig").C("actions")
-	ctx.DB.Col.Cmd = ctx.DB.session.DB("mig").C("commands")
-
-	ctx.Channels.Log <- mig.Log{Sev: "info", Desc: "MongoDB connection opened"}
+	ctx.Channels.Log <- mig.Log{Desc: "Database connection opened"}
 	return
 }

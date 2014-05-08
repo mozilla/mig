@@ -37,36 +37,42 @@ package main
 
 import (
 	"fmt"
-	"github.com/jvehent/cljs"
 	"mig"
+
+	"github.com/jvehent/cljs"
 )
 
-// extendedActionToItem receives an ExtendedAction and return an Item
+// ActionToItem receives an Action and returns an Item
 // in the Collection+JSON format
-func extendedActionToItem(ea mig.ExtendedAction) (item cljs.Item, err error) {
-	item.Href = "/api/action?actionid=" + fmt.Sprintf("%d", ea.Action.ID)
+func ActionToItem(a mig.Action, ctx Context) (item cljs.Item, err error) {
+	item.Href = fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, a.ID)
+	item.Data = []cljs.Data{
+		{Name: "action", Value: a},
+	}
 	links := make([]cljs.Link, 0)
-	for _, cmdid := range ea.CommandIDs {
+	commands, err := ctx.DB.CommandsByActionID(a.ID)
+	if err != nil {
+		err = fmt.Errorf("ActionToItem() -> '%v'", err)
+		return
+	}
+	for _, cmd := range commands {
 		link := cljs.Link{
-			Rel:  "command",
-			Href: "/api/command?actionid=" + fmt.Sprintf("%d", ea.Action.ID) + "&commandid=" + fmt.Sprintf("%d", cmdid),
+			Rel:  fmt.Sprintf("Command ID %d on agent %s", cmd.ID, cmd.Agent.Name),
+			Href: fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmd.ID),
 		}
 		links = append(links, link)
 	}
 	item.Links = links
-	item.Data = []cljs.Data{
-		{Name: "action", Value: ea},
-	}
 	return
 }
 
 // commandToItem receives a command and returns an Item in Collection+JSON
 func commandToItem(cmd mig.Command) (item cljs.Item, err error) {
-	item.Href = "/api/command?actionid=" + fmt.Sprintf("%d", cmd.Action.ID) + "&commandid=" + fmt.Sprintf("%d", cmd.ID)
+	item.Href = fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmd.ID)
 	links := make([]cljs.Link, 0)
 	link := cljs.Link{
 		Rel:  "action",
-		Href: "/api/action?actionid=" + fmt.Sprintf("%d", cmd.Action.ID),
+		Href: fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, cmd.Action.ID),
 	}
 	links = append(links, link)
 	item.Links = links

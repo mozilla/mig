@@ -274,11 +274,11 @@ RabbitMQ Permissions
 
 3. Create permissions for the scheduler user. The scheduler is allowed to
    publish message (write) to the mig exchange. It can also configure and read
-   from the keepalive and sched queues. The command below sets those permissions.
+   from the heartbeat and sched queues. The command below sets those permissions.
 
 .. code:: bash
 
-   rabbitmqctl set_permissions -p mig scheduler '^mig(|\.(keepalive|sched\..*))' '^mig.*' '^mig(|\.(keepalive|sched\..*))'
+   rabbitmqctl set_permissions -p mig scheduler '^mig(|\.(heartbeat|sched\..*))' '^mig.*' '^mig(|\.(heartbeat|sched\..*))'
 
 4. Same thing for the agent. The agent is allowed to configure and read on the
    'mig.agt.*' resource, and write to the 'mig' exchange.
@@ -295,7 +295,7 @@ RabbitMQ Permissions
    rabbitmqctl list_permissions -p mig
                 CONFIGURE                           WRITE       READ
    agent        ^mig\\.agt\\.*                      ^mig*       ^mig(|\\.agt\\..*)
-   scheduler    ^mig(|\\.(keepalive|sched\\..*))    ^mig.*      ^mig(|\\.(keepalive|sched\\..*))
+   scheduler    ^mig(|\\.(heartbeat|sched\\..*))    ^mig.*      ^mig(|\\.(heartbeat|sched\\..*))
 
 
 RabbitMQ TLS configuration
