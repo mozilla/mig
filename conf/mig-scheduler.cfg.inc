@@ -17,9 +17,9 @@
 
 [postgres]
     host = "127.0.0.1"
-    port = 27017
+    port = 5432
     dbname = "mig"
-    user = "mig-scheduler"
+    user = "migscheduler"
     password = "123456"
     sslmode = "disable"
 

@@ -97,6 +97,88 @@ Scheduler Configuration
 The scheduler template configuration is in 'conf/mig-scheduler.cfg.inc'. It must
 be copied to a location of your choice, and edited.
 
+Spool directories
+~~~~~~~~~~~~~~~~~
+
+The scheduler and the API share a spool for actions and commands that are
+active in the MIG platform. You need to create that spool on your server, the
+recommended location is `/var/cache/mig`, but feel free to update that to your
+needs.
+
+.. code:: bash
+
+	sudo mkdir -p /var/cache/mig/{action/new,action/done,action/inflight,action/invalid,command/done,command/inflight,command/ready,command/returned}
+
+	sudo chown mig-user /var/cache/mig -R
+
+Whitelist
+~~~~~~~~~
+
+Agents' names must be listed in a whitelist file for the scheduler to accept
+their registrations. The location of the whitelist is configurable, but a good
+place for it is in `/var/cache/mig/agents_whitelist.txt`. The file contains one
+agent name on each line. The agent name is taken from the hostname the agent
+runs on.
+
+  ::
+	agent123.example.net
+	db4.sub.example.com
+	...
+
+Database creation
+~~~~~~~~~~~~~~~~~
+
+The dabase for MIG is PostgreSQL. If you are using a local postgres database,
+you can run the script in `doc/.files/createdb.sh`, which will create the
+database and 3 users: `migadmin`, `migscheduler` and `migapi`. Each user has
+different permissions on the database.
+
+If you are using a remote database, create the database `mig` and user
+`migadmin`, the run the script from `doc/.files/createremotedb.sh` that will
+create the tables, users and permissions. This approach works well with Amazon
+RDS.
+
+Edit the variables in the script `createremotedb.sh`:
+
+.. code:: bash
+
+	$ vim createremotedb.sh
+
+	PGDATABASE='mig'
+	PGUSER='migadmin'
+	PGPASS='MYDATABASEPASSWORD'
+	PGHOST='192.168.0.1'
+	PGPORT=5432
+
+Then run it against your database server.
+
+.. code:: bash
+
+	$ which psql
+	/usr/bin/psql
+
+	$ bash createremotedb.sh
+
+	[... bunch of sql queries ...]
+
+	created users: migscheduler/4NvQFdwdQ8UOU4ekEOgWDWi3gzG5cg2X migapi/xcJyJhLg1cldIp7eXcxv0U-UqV80tMb-
+
+The `migscheduler` and `migapi` users can now be added to the configuration
+files or the scheduler and the api.
+
+  ::
+
+	[postgres]
+		host = "192.168.0.1"
+		port = 5432
+		dbname = "mig"
+		user = "migapi"
+		password = "xcJyJhLg1cldIp7eXcxv0U-UqV80tMb-"
+		sslmode = "verify-full"
+
+Note that `sslmode` can take the values `disable`, `require` (no cert
+verification) and `verify-full` (requires cert verification).
+
 Logging
 ~~~~~~~
 
@@ -180,7 +262,11 @@ Then add the fingerprint in the scheduler configuration file.
  ::
 
 	[pgp]
-		keyid = "1E644752FB76B77245B1694E556CDD7B07E9D5D6"
+		keyid = "1E644752FB76B77245B1694E556CDD7B07E9D5D6i
+	    pubring = "/tmp/api-gpg/pubring.gpg"
+
+Note: the `pubring` creation is described in the API configuration section
+below.
 
 2. In the ACL of the agent configuration file `conf/mig-agent-conf.go`:
 
@@ -225,12 +311,12 @@ All communications between scheduler and agents rely on RabbitMQ's AMQP
 protocol. While MIG does not rely on the security of RabbitMQ to pass orders to
 agents, an attacker that gains control to the message broker would be able to
 listen to all message, or shut down MIG entirely. To prevent this, RabbitMQ must
-provide a reasonable level of protection, at two levels:
+provide a reasonable amount of protection, at two levels:
 
-* All communications on the public internet are authentication using client and
+* All communications on the public internet are authenticated using client and
   server certificates. Since all agents share a single client certificate, this
   provides minimal security, and should only be used to make it harder for
-  attacker to establish an AMQP connection to rabbitmq.
+  attackers to establish an AMQP connection with rabbitmq.
 
 * A given agent can listen and write to its own queue, and no other. We
   accomplish this by adding a random number to the queue ID, which is generated
@@ -239,6 +325,12 @@ provide a reasonable level of protection, at two levels:
 Note that, even if a random agent manages to connect to the relay, the scheduler
 will accept its registration only if it is present in the scheduler's whitelist.
 
+Installation
+~~~~~~~~~~~~
+
+Install the RabbitMQ server from your distribution's packaging system. If your
+distribution does not provide a RabbitMQ package, install `erlang` from yum or
+apt, and then install RabbitMQ using the packages from rabbitmq.com
 
 RabbitMQ Permissions
 ~~~~~~~~~~~~~~~~~~~~
@@ -248,29 +340,39 @@ RabbitMQ Permissions
 	* **admin**, with the tag 'administrator'
 	* **scheduler** and **agent**, with no tag
 
-   All three should have strong passwords. The scheduler password goes into the
-   configuration file 'conf/mig-scheduler.cfg', in '[mq] password'. The agent
-   password goes into 'conf/mig-agent-conf.go', in the agent 'AMQPBROKER' dial
-   string. The admin password is, of course, for yourself.
+All three should have strong passwords. The scheduler password goes into the
+configuration file `conf/mig-scheduler.cfg`, in `[mq] password`. The agent
+password goes into `conf/mig-agent-conf.go`, in the agent `AMQPBROKER` dial
+string. The admin password is, of course, for yourself.
 
 .. code:: bash
 
-   rabbitmqctl add_user admin SomeRandomPassword
-   rabbitmqctl set_user_tags admin administrator
+   sudo rabbitmqctl add_user admin SomeRandomPassword
+   sudo rabbitmqctl set_user_tags admin administrator
 
-   rabbitmqctl add_user scheduler SomeRandomPassword
+   sudo rabbitmqctl add_user scheduler SomeRandomPassword
 
-   rabbitmqctl add_user agent SomeRandomPassword
+   sudo rabbitmqctl add_user agent SomeRandomPassword
 
-   rabbitmqctl list_users
-
-2. Create a 'mig' virtual host and assign permissions for the scheduler and
-   agent users
+You can list the users with the following command:
 
 .. code:: bash
 
-   rabbitmqctl add_vhost mig
-   rabbitmqctl list_vhosts
+   sudo rabbitmqctl list_users
+
+On fresh installation, rabbitmq comes with a `guest` user that as password
+`guest` and admin privileges. You may you to delete that account.
+
+.. code:: bash
+
+	sudo rabbitmqctl delete_user guest
+
+2. Create a 'mig' virtual host.
+
+.. code:: bash
+
+   sudo rabbitmqctl add_vhost mig
+   sudo rabbitmqctl list_vhosts
 
 3. Create permissions for the scheduler user. The scheduler is allowed to
    publish message (write) to the mig exchange. It can also configure and read
@@ -278,21 +380,27 @@ RabbitMQ Permissions
 
 .. code:: bash
 
-   rabbitmqctl set_permissions -p mig scheduler '^mig(|\.(heartbeat|sched\..*))' '^mig.*' '^mig(|\.(heartbeat|sched\..*))'
+	sudo rabbitmqctl set_permissions -p mig scheduler \
+	'^mig(|\.(heartbeat|sched\..*))' \
+	'^mig.*' \
+	'^mig(|\.(heartbeat|sched\..*))'
 
 4. Same thing for the agent. The agent is allowed to configure and read on the
    'mig.agt.*' resource, and write to the 'mig' exchange.
 
 .. code:: bash
 
-   rabbitmqctl set_permissions -p mig agent "^mig\.agt\.*" "^mig*" "^mig(|\.agt\..*)"
+	sudo rabbitmqctl set_permissions -p mig agent \
+	"^mig\.agt\.*" \
+	"^mig*" \
+	"^mig(|\.agt\..*)"
 
 5. Start the scheduler, it shouldn't return any ACCESS error. You can also list
    the permissions with the command:
 
 .. code:: bash
 
-   rabbitmqctl list_permissions -p mig
+   sudo rabbitmqctl list_permissions -p mig
                 CONFIGURE                           WRITE       READ
    agent        ^mig\\.agt\\.*                      ^mig*       ^mig(|\\.agt\\..*)
    scheduler    ^mig(|\\.(heartbeat|sched\\..*))    ^mig.*      ^mig(|\\.(heartbeat|sched\\..*))
@@ -335,7 +443,7 @@ certificates.
 						{certfile,"/etc/rabbitmq/certs/migrelay1.example.net.pem"},
 						{keyfile,"/etc/rabbitmq/certs/migrelay1.example.net.key"},
 						{verify,verify_peer},
-						{fail_if_no_peer_cert,false},
+						{fail_if_no_peer_cert,true},
 						{ciphers, [{dhe_rsa,aes_128_cbc,sha},
 								   {dhe_rsa,aes_256_cbc,sha},
 								   {dhe_rsa,'3des_ede_cbc',sha},
@@ -382,6 +490,31 @@ API configuration
 The REST API exposes functions to create, delete and query actions remotely. It
 is the primary interface to the Scheduler.
 
+Location
+~~~~~~~~
+
+Most likely, the API will be deployed behind some form of reverse proxy. The
+API doesn't attempt to guess its location. Instead, you can configure it in
+`mig-api.cfg`, as follow:
+
+  ::
+
+	[server]
+    ip = "127.0.0.1"
+    port = 12345
+    host = "http://localhost:12345"
+    baseroute = "/api/v1"
+
+`ip` and `port` define the socket the API will be listening on. `host` is the
+public URL of the API, that clients will be connecting to. `baseroute` is the
+location of the base of the API, without the trailing slash.
+
+In this example, to reach the home of the API, we would point our browser to
+`http://localhost:12345/api/v1/`.
+
+Note that the API does not support SSL, or authentication (for now). This need
+to be configured on a reverse proxy in front of it.
+
 GnuPG pubring
 ~~~~~~~~~~~~~
 
@@ -409,6 +542,6 @@ The file in /tmp/api-gpg/pubring.gpg can be passed to the API
 
  ::
 
-	[openpgp]
+	[pgp]
 	    pubring = "/tmp/api-gpg/pubring.gpg"
 
