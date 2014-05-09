@@ -150,7 +150,22 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getHome()"}.Debug()
 	}()
 
-	// List the creation URL. Those can be GET-ed to retrieve the creation templates
+	resource.AddQuery(cljs.Query{
+		Rel:  "Get dashboard",
+		Href: fmt.Sprintf("%s/dashboard", ctx.Server.BaseURL),
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	resource.AddQuery(cljs.Query{
+		Rel:  "Get agent dashboard",
+		Href: fmt.Sprintf("%s/agent/dashboard", ctx.Server.BaseURL),
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	err = resource.AddLink(cljs.Link{
 		Rel:  "create action",
 		Href: fmt.Sprintf("%s/action/create/", ctx.Server.BaseURL),
@@ -220,14 +235,6 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
 			{Name: "search", Value: "positiveresults, ...", Prompt: "Name of search query"},
 		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	resource.AddQuery(cljs.Query{
-		Rel:  "Get agent dashboard",
-		Href: fmt.Sprintf("%s/agent/dashboard", ctx.Server.BaseURL),
 	})
 	if err != nil {
 		panic(err)
