@@ -67,7 +67,7 @@ func (db *DB) Last10Actions() (actions []mig.Action, err error) {
 		validfrom, expireafter, starttime, finishtime, lastupdatetime,
 		status, sentctr, returnedctr, donectr, cancelledctr, failedctr,
 		timeoutctr, pgpsignatures, syntaxversion
-		FROM actions ORDER BY starttime LIMIT 10`)
+		FROM actions ORDER BY starttime DESC LIMIT 10`)
 	if err != nil && err != sql.ErrNoRows {
 		rows.Close()
 		err = fmt.Errorf("Error while listing actions: '%v'", err)
