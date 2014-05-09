@@ -4,6 +4,7 @@
     timeout = "20m"
     heartbeatfreq = "5m"
     whitelist = "/var/cache/mig/agents_whitelist.txt"
+    detectmultiagents = true
 
 [collector]
 ; frequency at which the job collector runs

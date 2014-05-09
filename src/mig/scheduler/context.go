@@ -60,6 +60,7 @@ type Context struct {
 	Agent struct {
 		// configuration
 		TimeOut, HeartbeatFreq, Whitelist string
+		DetectMultiAgents                 bool
 	}
 	Channels struct {
 		// internal

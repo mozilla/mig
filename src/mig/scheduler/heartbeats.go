@@ -166,12 +166,14 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 	}
 
 	// If multiple agents are listening on the same queue, alert the cleanup routine
-	agtCnt, _, err := findDupAgents(agt.QueueLoc, ctx)
-	if err != nil {
-		panic(err)
-	}
-	if agtCnt > 1 {
-		ctx.Channels.DetectDupAgents <- agt.QueueLoc
+	if ctx.Agent.DetectMultiAgents {
+		agtCnt, _, err := findDupAgents(agt.QueueLoc, ctx)
+		if err != nil {
+			panic(err)
+		}
+		if agtCnt > 1 {
+			ctx.Channels.DetectDupAgents <- agt.QueueLoc
+		}
 	}
 	return
 }
