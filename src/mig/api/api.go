@@ -102,7 +102,6 @@ func main() {
 	s.HandleFunc("/command/cancel/", describeCancelCommand).Methods("GET")
 	s.HandleFunc("/command/cancel/", cancelCommand).Methods("POST")
 	s.HandleFunc("/agent/dashboard", getAgentsDashboard).Methods("GET")
-	s.HandleFunc("/agent/search", searchAgents).Methods("GET")
 	s.HandleFunc("/dashboard", getDashboard).Methods("GET")
 
 	// all set, start the http handler
@@ -216,24 +215,19 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	}
 
 	resource.AddQuery(cljs.Query{
-		Rel:    "Search agent by name",
-		Href:   fmt.Sprintf("%s/agent/search", ctx.Server.BaseURL),
-		Prompt: "GET endpoint to search agent by name, using url parameter ?name=<string>",
-		Data: []cljs.Data{
-			{Name: "name", Value: "agent123.example.net", Prompt: "Agent Name"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	err = resource.AddQuery(cljs.Query{
-		Rel:    "Query MIG data",
+		Rel:    "Search stuff",
 		Href:   fmt.Sprintf("%s/search", ctx.Server.BaseURL),
-		Prompt: "GET endpoint to search for stuff, using the url parameters describes in the data.",
+		Prompt: "GET endpoint to search for stuff",
 		Data: []cljs.Data{
-			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
-			{Name: "search", Value: "positiveresults, ...", Prompt: "Name of search query"},
+			{Name: "before", Value: "9998-01-01 12:12:12.686438508-04:00", Prompt: "return results recorded before this RFC3339 date"},
+			{Name: "after", Value: "11-01-01 12:12:12.686438508-04:00", Prompt: "return results recorded after this RFC3339 date"},
+			{Name: "type", Value: "(command|action|agent|investigator)", Prompt: "type defines what the search is looking for"},
+			{Name: "report", Value: "(compliancesummary|complianceitems)", Prompt: "if set, return results in the given report format"},
+			{Name: "agentname", Value: "agent123.example.net", Prompt: "filter results on the agent name"},
+			{Name: "actionname", Value: "some action name", Prompt: "filter results on the action name"},
+			{Name: "status", Value: "(done|destroyed|cancelled|timeout|...)", Prompt: "filter commands or agents results on their status"},
+			{Name: "threatfamily", Value: "(compliance|backdoor|...)", Prompt: "filter results of the threat family"},
+			{Name: "limit", Value: "10", Prompt: "limit the number of results to 10 by default"},
 		},
 	})
 	if err != nil {
@@ -241,31 +235,6 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	}
 
 	respond(200, resource, respWriter, request, opid)
-}
-
-// search is a generic function to run queries against mongodb
-func search(respWriter http.ResponseWriter, request *http.Request) {
-	opid := mig.GenID()
-	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
-	resource := cljs.New(loc)
-	defer func() {
-		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request, opid)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCreateAction()"}.Debug()
-	}()
-
-	search := request.URL.Query()["search"][0]
-	switch search {
-	case "positiveresults":
-		resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: "Not implemented"})
-		respond(401, resource, respWriter, request, opid)
-	default:
-		resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: "Not implemented"})
-		respond(401, resource, respWriter, request, opid)
-	}
 }
 
 // describeCreateAction returns a resource that describes how to POST new actions
@@ -455,6 +424,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 	}()
 	actionID, err := strconv.ParseUint(request.URL.Query()["actionid"][0], 10, 64)
 	if err != nil {
+		err = fmt.Errorf("Wrong parameters 'actionid': '%v'", err)
 		panic(err)
 	}
 
@@ -469,12 +439,11 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	// store the results in the resource
-	actionItem, err := ActionToItem(a, ctx)
+	actionItem, err := actionToItem(a, ctx)
 	if err != nil {
 		panic(err)
 	}
 	resource.AddItem(actionItem)
-
 	respond(200, resource, respWriter, request, opid)
 }
 
@@ -492,15 +461,13 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getCommand()"}.Debug()
 	}()
-	var commandID uint64
-	cmdid := request.URL.Query()["commandid"][0]
-	if cmdid != "" {
-		commandID, err = strconv.ParseUint(cmdid, 10, 64)
-		if err != nil {
-			panic(err)
-		}
+	commandID, err := strconv.ParseUint(request.URL.Query()["commandid"][0], 10, 64)
+	if err != nil {
+		err = fmt.Errorf("Wrong parameters 'commandid': '%v'", err)
+		panic(err)
 	}
-	// retrieve the action
+
+	// retrieve the command
 	var cmd mig.Command
 	if commandID > 0 {
 		cmd, err = ctx.DB.CommandByID(commandID)
@@ -547,6 +514,18 @@ func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request
 
 // cancelCommand receives an action ID and a command ID and issues a cancellation order
 func cancelCommand(respWriter http.ResponseWriter, request *http.Request) {
+	opid := mig.GenID()
+	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
+	resource := cljs.New(loc)
+	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			respond(500, resource, respWriter, request, opid)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving cancelCommand()"}.Debug()
+	}()
+	respond(501, resource, respWriter, request, opid)
 }
 
 func getAgentsDashboard(respWriter http.ResponseWriter, request *http.Request) {
@@ -560,21 +539,6 @@ func getAgentsDashboard(respWriter http.ResponseWriter, request *http.Request) {
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAgentsDashboard()"}.Debug()
-	}()
-	respond(501, resource, respWriter, request, opid)
-}
-
-func searchAgents(respWriter http.ResponseWriter, request *http.Request) {
-	opid := mig.GenID()
-	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
-	resource := cljs.New(loc)
-	defer func() {
-		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request, opid)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving searchAgents()"}.Debug()
 	}()
 	respond(501, resource, respWriter, request, opid)
 }
@@ -603,7 +567,7 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 			panic(err)
 		}
 		// store the results in the resource
-		actionItem, err := ActionToItem(action, ctx)
+		actionItem, err := actionToItem(action, ctx)
 		if err != nil {
 			panic(err)
 		}

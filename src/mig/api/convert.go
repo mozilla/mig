@@ -42,9 +42,9 @@ import (
 	"github.com/jvehent/cljs"
 )
 
-// ActionToItem receives an Action and returns an Item
+// actionToItem receives an Action and returns an Item
 // in the Collection+JSON format
-func ActionToItem(a mig.Action, ctx Context) (item cljs.Item, err error) {
+func actionToItem(a mig.Action, ctx Context) (item cljs.Item, err error) {
 	item.Href = fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, a.ID)
 	item.Data = []cljs.Data{
 		{Name: "action", Value: a},
