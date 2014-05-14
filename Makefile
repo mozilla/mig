@@ -74,14 +74,14 @@ go_get_deps_into_system:
 go_get_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
 	$(GOGETTER) github.com/streadway/amqp
+	$(GOGETTER) github.com/lib/pq
 	$(GOGETTER) github.com/howeyc/fsnotify
-	$(GOGETTER) labix.org/v2/mgo
-	$(GOGETTER) labix.org/v2/mgo/bson
 	$(GOGETTER) code.google.com/p/gcfg
 	$(GOGETTER) github.com/gorilla/mux
 	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) bitbucket.org/kardianos/osext
-	$(GOGETTER) bitbucket.org/jvehent/service
+	$(GOGETTER) bitbucket.org/kardianos/service
+	
 
 install: gpgme mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
