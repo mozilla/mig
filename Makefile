@@ -8,7 +8,7 @@ BUILDREV	:= $(BUILDREF)-$(BUILDDATE)
 
 # Supported OSes: linux darwin freebsd windows
 # Supported ARCHes: 386 amd64
-OS			:= linux
+OS		:= linux
 ARCH		:= amd64
 
 PREFIX		:= /usr/local/
@@ -17,11 +17,11 @@ GPGMEDIR	:= src/mig/pgp/sign
 BINDIR		:= bin/$(OS)/$(ARCH)
 AGTCONF		:= conf/mig-agent-conf.go
 
-GCC			:= gcc
+GCC		:= gcc
 CFLAGS		:=
 LDFLAGS		:=
 GOOPTS		:=
-GO			:= GOPATH=$(shell go env GOROOT)/bin:$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go
+GO		:= GOPATH=$(shell go env GOROOT)/bin:$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go
 GOGETTER	:= GOPATH=$(shell pwd) go get -u
 GOLDFLAGS	:= -ldflags "-X main.version $(BUILDREV)"
 GOCFLAGS	:=
