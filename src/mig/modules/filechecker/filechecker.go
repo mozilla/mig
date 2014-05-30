@@ -36,7 +36,6 @@ package filechecker
 
 import (
 	"bufio"
-	"code.google.com/p/go.crypto/sha3"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -49,25 +48,11 @@ import (
 	"os"
 	"regexp"
 	"time"
+
+	"code.google.com/p/go.crypto/sha3"
 )
 
-var DEBUG bool = false
-
-// BitMask for the type of check to apply to a given file
-// see documentation about iota for more info
-const (
-	CheckRegex = 1 << iota
-	CheckFileName
-	CheckMD5
-	CheckSHA1
-	CheckSHA256
-	CheckSHA384
-	CheckSHA512
-	CheckSHA3_224
-	CheckSHA3_256
-	CheckSHA3_384
-	CheckSHA3_512
-)
+var DEBUG bool = true
 
 // A checklist is an object that has the following representation:
 // Parameters {
@@ -268,6 +253,22 @@ func Run(Args []byte) string {
 
 	return buildResults(checklist, t0)
 }
+
+// BitMask for the type of check to apply to a given file
+// see documentation about iota for more info
+const (
+	CheckRegex = 1 << iota
+	CheckFileName
+	CheckMD5
+	CheckSHA1
+	CheckSHA256
+	CheckSHA384
+	CheckSHA512
+	CheckSHA3_224
+	CheckSHA3_256
+	CheckSHA3_384
+	CheckSHA3_512
+)
 
 // createCheck creates a new filecheck
 func createCheck(path, method, identifier, test string) (check filecheck) {
@@ -742,7 +743,7 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) string {
 			stats.Checksmatch, stats.Uniquefiles,
 			stats.Totalhits, stats.Exectime)
 	}
-	JsonResults, err := json.MarshalIndent(res, "", "\t")
+	JsonResults, err := json.Marshal(res)
 	if err != nil {
 		panic(err)
 	}

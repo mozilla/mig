@@ -72,28 +72,29 @@ type Action struct {
 
 // Some counters used to track the completion of an action
 type counters struct {
-	Sent      int `json:"sent"`
-	Returned  int `json:"returned"`
-	Done      int `json:"done"`
-	Cancelled int `json:"cancelled"`
-	Failed    int `json:"failed"`
-	TimeOut   int `json:"timeout"`
+	Sent      int `json:"sent,omitempty"`
+	Returned  int `json:"returned,omitempty"`
+	Done      int `json:"done,omitempty"`
+	Cancelled int `json:"cancelled,omitempty"`
+	Failed    int `json:"failed,omitempty"`
+	TimeOut   int `json:"timeout,omitempty"`
 }
 
 // a description is a simple object that contains detail about the
 // action's author, and it's revision.
 type Description struct {
-	Author   string `json:"author"`
-	Email    string `json:"email"`
-	URL      string `json:"url"`
-	Revision int    `json:"revision"`
+	Author   string `json:"author,omitempty"`
+	Email    string `json:"email,omitempty"`
+	URL      string `json:"url,omitempty"`
+	Revision int    `json:"revision,omitempty"`
 }
 
 // a threat provides the investigator with an idea of how dangerous
 // a the compromission might be, if the indicators return positive
 type Threat struct {
-	Level  string `json:"level"`
-	Family string `json:"family"`
+	Level  string `json:"level,omitempty"`
+	Family string `json:"family,omitempty"`
+	Type   string `json:"type,omitempty"`
 }
 
 // an operation is an object that map to an agent module.

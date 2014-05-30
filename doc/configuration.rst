@@ -178,14 +178,18 @@ Database creation
 ~~~~~~~~~~~~~~~~~
 
 The dabase for MIG is PostgreSQL. If you are using a local postgres database,
-you can run the script in `doc/.files/createdb.sh`, which will create the
+you can run the script in `doc/.files/createdb.sh`_, which will create the
 database and 3 users: `migadmin`, `migscheduler` and `migapi`. Each user has
 different permissions on the database.
 
+.. _`doc/.files/createdb.sh`: .files/createdb.sh
+
 If you are using a remote database, create the database `mig` and user
-`migadmin`, the run the script from `doc/.files/createremotedb.sh` that will
+`migadmin`, the run the script from `doc/.files/createremotedb.sh`_ that will
 create the tables, users and permissions. This approach works well with Amazon
 RDS.
+
+.. _`doc/.files/createremotedb.sh`: .files/createremotedb.sh
 
 Edit the variables in the script `createremotedb.sh`:
 

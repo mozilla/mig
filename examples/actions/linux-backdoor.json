@@ -8,6 +8,7 @@
     "target": "linux",
     "threat": {
         "level": "alert",
+        "type": "system",
         "family": "backdoor"
     },
     "operations": [

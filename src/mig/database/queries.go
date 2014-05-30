@@ -61,6 +61,177 @@ func (db *DB) Close() {
 	db.c.Close()
 }
 
+// SearchParameters contains fields used to perform database searches
+type SearchParameters struct {
+	Before       time.Time `json:"before"`
+	After        time.Time `json:"after"`
+	Type         string    `json:"type"`
+	Report       string    `json:"report"`
+	AgentName    string    `json:"agentname"`
+	ActionName   string    `json:"actionname"`
+	ThreatFamily string    `json:"threatfamily"`
+	Status       string    `json:"status"`
+	Limit        uint64    `json:"limit"`
+}
+
+// NewSearchParameters initializes search parameters
+func NewSearchParameters() (p SearchParameters) {
+	p.Before = time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
+	p.After = time.Date(11, time.January, 11, 11, 11, 11, 11, time.UTC)
+	p.AgentName = "%"
+	p.ActionName = "%"
+	p.ThreatFamily = "%"
+	p.Status = "%"
+	p.Limit = 10
+	return
+}
+
+// SearchCommands returns an array of commands that match search parameters
+func (db *DB) SearchCommands(p SearchParameters) (commands []mig.Command, err error) {
+	rows, err := db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
+		actions.id, actions.name, actions.target, actions.description, actions.threat,
+		actions.operations, actions.validfrom, actions.expireafter,
+		actions.pgpsignatures, actions.syntaxversion,
+		agents.id, agents.name, agents.queueloc, agents.os, agents.version
+		FROM commands, actions, agents
+		WHERE commands.actionid=actions.id AND commands.agentid=agents.id
+		AND commands.starttime <= $1 AND commands.starttime >= $2
+		AND actions.name LIKE $3
+		AND agents.name LIKE $4
+		AND actions.threat->>'family' LIKE $5
+		AND commands.status LIKE $6
+		ORDER BY commands.id DESC LIMIT $7`,
+		p.Before, p.After, p.ActionName, p.AgentName, p.ThreatFamily, p.Status, p.Limit)
+	if err != nil {
+		err = fmt.Errorf("Error while finding commands: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var jRes, jDesc, jThreat, jOps, jSig []byte
+		var cmd mig.Command
+		err = rows.Scan(&cmd.ID, &cmd.Status, &jRes, &cmd.StartTime, &cmd.FinishTime,
+			&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jDesc, &jThreat, &jOps,
+			&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
+			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.OS, &cmd.Agent.Version)
+		if err != nil {
+			err = fmt.Errorf("Failed to retrieve command: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jRes, &cmd.Results)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal command results: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jDesc, &cmd.Action.Description)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jThreat, &cmd.Action.Threat)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jOps, &cmd.Action.Operations)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jSig, &cmd.Action.PGPSignatures)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+			return
+		}
+		commands = append(commands, cmd)
+	}
+	rows.Close()
+	return
+}
+
+// SearchActions returns an array of actions that match search parameters
+func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error) {
+	rows, err := db.c.Query(`SELECT id, name, target, description, threat, operations,
+		validfrom, expireafter, starttime, finishtime, lastupdatetime,
+		status, sentctr, returnedctr, donectr, cancelledctr, failedctr,
+		timeoutctr, pgpsignatures, syntaxversion
+		FROM actions
+		WHERE actions.starttime <= $1 AND actions.starttime >= $2
+		AND actions.name LIKE $3
+		AND actions.threat->>'family' LIKE $4
+		ORDER BY actions.id DESC LIMIT $5`,
+		p.Before, p.After, p.ActionName, p.ThreatFamily, p.Limit)
+	if err != nil {
+		err = fmt.Errorf("Error while finding actions: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var jDesc, jThreat, jOps, jSig []byte
+		var a mig.Action
+		err = rows.Scan(&a.ID, &a.Name, &a.Target,
+			&jDesc, &jThreat, &jOps, &a.ValidFrom, &a.ExpireAfter,
+			&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status, &a.Counters.Sent,
+			&a.Counters.Returned, &a.Counters.Done, &a.Counters.Cancelled,
+			&a.Counters.Failed, &a.Counters.TimeOut, &jSig, &a.SyntaxVersion)
+		if err != nil {
+			err = fmt.Errorf("Error while retrieving action: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jDesc, &a.Description)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jThreat, &a.Threat)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jOps, &a.Operations)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jSig, &a.PGPSignatures)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+			return
+		}
+		actions = append(actions, a)
+	}
+	rows.Close()
+	return
+}
+
+// SearchAgents returns an array of agents that match search parameters
+func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
+	rows, err := db.c.Query(`SELECT agents.id, agents.name, agents.queueloc, agents.os,
+		agents.version, agents.pid, agents.starttime, agents.destructiontime,
+		agents.heartbeattime, agents.status
+		FROM agents
+		WHERE agents.heartbeattime <= $1 AND agents.heartbeattime >= $2
+		AND agents.name LIKE $3
+		AND agents.status LIKE $4
+		ORDER BY agents.heartbeattime LIMIT $5`,
+		p.Before, p.After, p.AgentName, p.Status, p.Limit)
+	if err != nil {
+		err = fmt.Errorf("Error while finding agents: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var agent mig.Agent
+		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.OS, &agent.Version,
+			&agent.PID, &agent.StartTime, &agent.DestructionTime, &agent.HeartBeatTS,
+			&agent.Status)
+		if err != nil {
+			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
+			return
+		}
+		agents = append(agents, agent)
+	}
+	rows.Close()
+	return
+}
+
 // ActionByID retrieves an action from the database using its ID
 func (db *DB) Last10Actions() (actions []mig.Action, err error) {
 	rows, err := db.c.Query(`SELECT id, name, target, description, threat, operations,
@@ -293,16 +464,17 @@ func (db *DB) InvestigatorByActionID(aid uint64) (ivgts []mig.Investigator, err 
 
 // CommandByID retrieves a command from the database using its ID
 func (db *DB) CommandByID(id uint64) (cmd mig.Command, err error) {
-	var jRes, jOps, jSig []byte
+	var jRes, jDesc, jThreat, jOps, jSig []byte
 	err = db.c.QueryRow(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
-		actions.id, actions.name, actions.target, actions.operations, actions.validfrom, actions.expireafter,
+		actions.id, actions.name, actions.target, actions.description, actions.threat,
+		actions.operations, actions.validfrom, actions.expireafter,
 		actions.pgpsignatures, actions.syntaxversion,
 		agents.id, agents.name, agents.queueloc, agents.os, agents.version
 		FROM commands, actions, agents
 		WHERE commands.id=$1
 		AND commands.actionid = actions.id AND commands.agentid = agents.id`, id).Scan(
 		&cmd.ID, &cmd.Status, &jRes, &cmd.StartTime, &cmd.FinishTime,
-		&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jOps,
+		&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jDesc, &jThreat, &jOps,
 		&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
 		&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.OS, &cmd.Agent.Version)
 	if err != nil {
@@ -315,6 +487,16 @@ func (db *DB) CommandByID(id uint64) (cmd mig.Command, err error) {
 	err = json.Unmarshal(jRes, &cmd.Results)
 	if err != nil {
 		err = fmt.Errorf("Failed to unmarshal command results: '%v'", err)
+		return
+	}
+	err = json.Unmarshal(jDesc, &cmd.Action.Description)
+	if err != nil {
+		err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
+		return
+	}
+	err = json.Unmarshal(jThreat, &cmd.Action.Threat)
+	if err != nil {
+		err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 		return
 	}
 	err = json.Unmarshal(jOps, &cmd.Action.Operations)
@@ -332,7 +514,8 @@ func (db *DB) CommandByID(id uint64) (cmd mig.Command, err error) {
 
 func (db *DB) CommandsByActionID(actionid uint64) (commands []mig.Command, err error) {
 	rows, err := db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
-		actions.id, actions.name, actions.target, actions.operations, actions.validfrom, actions.expireafter,
+		actions.id, actions.name, actions.target, actions.description, actions.threat,
+		actions.operations, actions.validfrom, actions.expireafter,
 		actions.pgpsignatures, actions.syntaxversion,
 		agents.id, agents.name, agents.queueloc, agents.os, agents.version
 		FROM commands, actions, agents
@@ -342,10 +525,10 @@ func (db *DB) CommandsByActionID(actionid uint64) (commands []mig.Command, err e
 		return
 	}
 	for rows.Next() {
-		var jRes, jOps, jSig []byte
+		var jRes, jDesc, jThreat, jOps, jSig []byte
 		var cmd mig.Command
 		err = rows.Scan(&cmd.ID, &cmd.Status, &jRes, &cmd.StartTime, &cmd.FinishTime,
-			&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jOps,
+			&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jDesc, &jThreat, &jOps,
 			&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
 			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.OS, &cmd.Agent.Version)
 		if err != nil {
@@ -355,6 +538,16 @@ func (db *DB) CommandsByActionID(actionid uint64) (commands []mig.Command, err e
 		err = json.Unmarshal(jRes, &cmd.Results)
 		if err != nil {
 			err = fmt.Errorf("Failed to unmarshal command results: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jDesc, &cmd.Action.Description)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jThreat, &cmd.Action.Threat)
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOps, &cmd.Action.Operations)
