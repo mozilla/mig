@@ -41,6 +41,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mig"
+	"mig/pgp"
 	"net/http"
 	"os"
 	"runtime"
@@ -49,7 +50,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jvehent/cljs"
-	"github.com/mozilla/mig/src/mig/pgp"
 )
 
 var ctx Context

@@ -42,7 +42,6 @@ import (
 	"os"
 
 	"code.google.com/p/gcfg"
-	"github.com/VividCortex/godaemon"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -101,11 +100,6 @@ func Init(path string) (ctx Context, err error) {
 	ctx.Channels.Log = make(chan mig.Log, 37)
 
 	ctx.Server.BaseURL = ctx.Server.Host + ctx.Server.BaseRoute
-
-	// daemonize unless logging is set to stdout
-	if ctx.Logging.Mode != "stdout" {
-		godaemon.MakeDaemon(&godaemon.DaemonAttr{})
-	}
 
 	ctx.Logging, err = mig.InitLogger(ctx.Logging)
 	if err != nil {

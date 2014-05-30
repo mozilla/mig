@@ -8,6 +8,55 @@ Mozilla InvestiGator Configuration Documentation
 This document describes the steps to build and configure a complete MIG
 platform.
 
+The quick compilation doc
+-------------------------
+
+First, install Go:
+
+.. code:: bash
+
+    $ wget https://storage.googleapis.com/golang/go1.2.2.linux-amd64.tar.gz
+    $ tar -xzvf go1.2.2.linux-amd64.tar.gz
+    $ export GOROOT=~/go
+    $ export PATH=$PATH:$HOME/go/bin
+    $ go version
+    go version go1.2.2 linux/amd64
+
+Then, download MIG:
+
+.. code:: bash
+
+    $ git clone git@github.com:mozilla/mig.git
+
+Download the dependencies:
+
+.. code:: bash
+
+    $ make go_get_deps
+    GOPATH=/home/jvehent/mig go get -u code.google.com/p/go.crypto/openpgp
+    GOPATH=/home/jvehent/mig go get -u github.com/streadway/amqp
+    GOPATH=/home/jvehent/mig go get -u github.com/lib/pq
+    GOPATH=/home/jvehent/mig go get -u github.com/howeyc/fsnotify
+    GOPATH=/home/jvehent/mig go get -u code.google.com/p/gcfg
+    GOPATH=/home/jvehent/mig go get -u github.com/gorilla/mux
+    GOPATH=/home/jvehent/mig go get -u github.com/jvehent/cljs
+    GOPATH=/home/jvehent/mig go get -u bitbucket.org/kardianos/osext
+    GOPATH=/home/jvehent/mig go get -u bitbucket.org/kardianos/service
+
+Install `gpgme`:
+
+.. code:: bash
+
+    $ sudo yum install gpgme-devel
+
+Build the scheduler or the API:
+
+.. code:: bash
+
+    $ make mig-scheduler
+
+That's it. Now to build the agent, you need to perform some configuration first.
+
 Agent Configuration
 -------------------
 

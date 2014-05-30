@@ -70,3 +70,10 @@ Todo list:
 Documentation
 -------------
 All documentation is available in the 'doc' directory.
+
+Bug & Issue tracker
+-------------------
+We use Bugzilla to track the work on MIG.
+* List open bugs: [Bugzilla MIG](https://bugzilla.mozilla.org/showdependencytree.cgi?id=896480&hide_resolved=1)
+* Create a new bug: [Bugzilla OpSec](https://bugzilla.mozilla.org/enter_bug.cgi?product=mozilla.org&component=Security%20Assurance%3A%20Operations)
+
