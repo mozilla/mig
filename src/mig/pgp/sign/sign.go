@@ -43,7 +43,7 @@ import (
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -lgpgme libmig_gpgme.a
+#cgo LDFLAGS: -lgpgme -lgpg-error libmig_gpgme.a
 #include <libmig_gpgme.h>
 */
 import "C"
