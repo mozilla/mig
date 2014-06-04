@@ -81,7 +81,8 @@ go_get_deps:
 	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) bitbucket.org/kardianos/osext
 	$(GOGETTER) bitbucket.org/kardianos/service
-	
+	$(GOGETTER) github.com/VividCortex/godaemon
+	$(GOGETTER) github.com/mozilla/mig/src/mig/modules/filechecker
 
 install: gpgme mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
