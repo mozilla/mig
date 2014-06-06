@@ -39,18 +39,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"mig"
-	"time"
 
 	"github.com/mozilla/mig/src/mig/modules/filechecker"
 )
 
 type ComplianceItem struct {
-	Timestamp  time.Time        `json:"timestamp"`
-	Target     string           `json:"target"`
-	Policy     CompliancePolicy `json:"policy"`
-	Check      ComplianceCheck  `json:"check"`
-	Compliance bool             `json:"compliance"`
-	Link       string           `json:"link"`
+	Utctimestamp  string           `json:"utctimestamp"`
+	Target        string           `json:"target"`
+	Policy        CompliancePolicy `json:"policy"`
+	Check         ComplianceCheck  `json:"check"`
+	Compliance    bool             `json:"compliance"`
+	Link          string           `json:"link"`
 }
 
 type CompliancePolicy struct {
@@ -71,10 +70,12 @@ type ComplianceTest struct {
 	Value string `json:"value"`
 }
 
+const RFC3339Nano = "2006-01-02T15:04:05.999999999+07:00"
+
 func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, err error) {
 	for _, cmd := range commands {
 		var bitem ComplianceItem
-		bitem.Timestamp = cmd.FinishTime
+		bitem.Utctimestamp = cmd.FinishTime.Format(RFC3339Nano)
 		bitem.Target = cmd.Agent.Name
 		bitem.Policy.Name = cmd.Action.Threat.Type
 		bitem.Policy.URL = cmd.Action.Description.URL
