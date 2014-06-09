@@ -39,17 +39,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"mig"
-
-	"github.com/mozilla/mig/src/mig/modules/filechecker"
+	"mig/modules/filechecker"
 )
 
 type ComplianceItem struct {
-	Utctimestamp  string           `json:"utctimestamp"`
-	Target        string           `json:"target"`
-	Policy        CompliancePolicy `json:"policy"`
-	Check         ComplianceCheck  `json:"check"`
-	Compliance    bool             `json:"compliance"`
-	Link          string           `json:"link"`
+	Utctimestamp string           `json:"utctimestamp"`
+	Target       string           `json:"target"`
+	Policy       CompliancePolicy `json:"policy"`
+	Check        ComplianceCheck  `json:"check"`
+	Compliance   bool             `json:"compliance"`
+	Link         string           `json:"link"`
 }
 
 type CompliancePolicy struct {
