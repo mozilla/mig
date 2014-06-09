@@ -101,7 +101,7 @@ func Init(path string) (ctx Context, err error) {
 
 	ctx.Server.BaseURL = ctx.Server.Host + ctx.Server.BaseRoute
 
-	ctx.Logging, err = mig.InitLogger(ctx.Logging)
+	ctx.Logging, err = mig.InitLogger(ctx.Logging, "mig-api")
 	if err != nil {
 		panic(err)
 	}

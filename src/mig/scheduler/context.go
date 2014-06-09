@@ -127,7 +127,7 @@ func Init(path string) (ctx Context, err error) {
 		panic(err)
 	}
 
-	ctx.Logging, err = mig.InitLogger(ctx.Logging)
+	ctx.Logging, err = mig.InitLogger(ctx.Logging, "mig-scheduler")
 	if err != nil {
 		panic(err)
 	}

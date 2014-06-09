@@ -124,7 +124,7 @@ func (l Log) Debug() (mlog Log) {
 
 // InitLogger prepares the context for logging based on the configuration
 // in Logging
-func InitLogger(orig_logctx Logging) (logctx Logging, err error) {
+func InitLogger(orig_logctx Logging, progname string) (logctx Logging, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("mig.InitLogger() -> %v", e)
@@ -147,7 +147,7 @@ func InitLogger(orig_logctx Logging) (logctx Logging, err error) {
 		}
 	case "syslog":
 		logctx.logmode = MODE_SYSLOG
-		logctx, err = initSyslog(logctx)
+		logctx, err = initSyslog(logctx, progname)
 		if err != nil {
 			panic(err)
 		}
@@ -184,7 +184,7 @@ func InitLogger(orig_logctx Logging) (logctx Logging, err error) {
 }
 
 // initSyslog creates a connection to syslog and stores the handler in ctx
-func initSyslog(orig_logctx Logging) (logctx Logging, err error) {
+func initSyslog(orig_logctx Logging, progname string) (logctx Logging, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("mig.initSyslog() -> %v", e)
@@ -202,7 +202,7 @@ func initSyslog(orig_logctx Logging) (logctx Logging, err error) {
 		panic("Syslog protocol is missing")
 	}
 	dialaddr := logctx.Host + ":" + fmt.Sprintf("%d", logctx.Port)
-	logctx.syslogfd, err = syslog.Dial(logctx.Protocol, dialaddr, syslog.LOG_LOCAL3|syslog.LOG_INFO, "mig_scheduler")
+	logctx.syslogfd, err = syslog.Dial(logctx.Protocol, dialaddr, syslog.LOG_LOCAL3|syslog.LOG_INFO, progname)
 	if err != nil {
 		panic(err)
 	}
