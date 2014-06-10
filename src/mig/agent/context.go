@@ -143,7 +143,7 @@ func Init(foreground bool) (ctx Context, err error) {
 	}
 
 	// initiate logging configuration
-	ctx.Logging, err = mig.InitLogger(LOGGINGCONF)
+	ctx.Logging, err = mig.InitLogger(LOGGINGCONF, "mig-agent")
 	if err != nil {
 		panic(err)
 	}
