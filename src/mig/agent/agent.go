@@ -43,6 +43,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"mig"
 	"mig/modules/agentdestroy"
 	"mig/modules/connected"
@@ -150,16 +151,21 @@ func runModuleDirectly(mode string, args []byte) (err error) {
 // must shut down.
 func runAgent(foreground bool) (err error) {
 	var ctx Context
-
-	// if init fails, sleep for one minute and try again. forever.
-	for {
-		ctx, err = Init(foreground)
-		if err == nil {
-			break
-		}
+	// initialize the agent
+	ctx, err = Init(foreground)
+	if err != nil {
 		fmt.Println(err)
+		if foreground {
+			// if in foreground mode, don't retry, just panic
+			panic(err)
+		}
+		// if init fails, sleep for one minute and try again. forever.
 		fmt.Println("initialisation failed. sleep and retry.")
 		time.Sleep(60 * time.Second)
+		// spawn a new agent process and kill yourself
+		cmd := exec.Command(ctx.Agent.BinPath)
+		_ = cmd.Start()
+		os.Exit(0)
 	}
 
 	// Goroutine that receives messages from AMQP

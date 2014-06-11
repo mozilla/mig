@@ -101,11 +101,58 @@ func Init(foreground bool) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
 	}()
 
-	ctx.Agent.BinPath, err = osext.Executable()
+	// initiate logging configuration
+	// in foreground mode, print all logs to stdout
+	if foreground {
+		LOGGINGCONF.Level = "debug"
+		LOGGINGCONF.Mode = "stdout"
+	}
+	ctx.Logging, err = mig.InitLogger(LOGGINGCONF, "mig-agent")
 	if err != nil {
 		panic(err)
 	}
 
+	// create the go channels
+	ctx, err = initChannels(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// Logging GoRoutine,
+	go func() {
+		for event := range ctx.Channels.Log {
+			stop, err := mig.ProcessLog(ctx.Logging, event)
+			if err != nil {
+				fmt.Println("Unable to process logs")
+			}
+			// if ProcessLog says we should stop now, feed the Terminate chan
+			if stop {
+				ctx.Channels.Terminate <- fmt.Errorf(event.Desc)
+			}
+		}
+	}()
+	ctx.Channels.Log <- mig.Log{Desc: "Logging routine initialized."}.Debug()
+
+	// retrieve information on agent environment
+	ctx, err = initAgentEnv(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// daemonize if not foreground in foreground mode
+	// and parent PID isn't already 1
+	if !foreground {
+		// give one second for the caller to exit
+		time.Sleep(time.Second)
+		if os.Getppid() != 1 {
+			// spawn a new agent process and kill yourself
+			cmd := exec.Command(ctx.Agent.BinPath)
+			_ = cmd.Start()
+			os.Exit(0)
+		}
+	}
+
+	// store heartbeat frequency
 	// install the service
 	if MUSTINSTALLSERVICE {
 		svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
@@ -122,49 +169,7 @@ func Init(foreground bool) (ctx Context, err error) {
 		}
 	}
 
-	// daemonize
-	if !foreground && LOGGINGCONF.Mode != "stdout" {
-		// run the agent again, and exit
-		cmd := exec.Command(ctx.Agent.BinPath, "-f")
-		_ = cmd.Start()
-		os.Exit(0)
-	}
-
-	// store heartbeat frequency
 	ctx.Sleeper = HEARTBEATFREQ
-	if err != nil {
-		panic(err)
-	}
-
-	// create the go channels
-	ctx, err = initChannels(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// initiate logging configuration
-	ctx.Logging, err = mig.InitLogger(LOGGINGCONF, "mig-agent")
-	if err != nil {
-		panic(err)
-	}
-
-	// Goroutine that handles events, such as logs and panics,
-	// and decides what to do with them
-	go func() {
-		for event := range ctx.Channels.Log {
-			stop, err := mig.ProcessLog(ctx.Logging, event)
-			if err != nil {
-				fmt.Println("Unable to process logs")
-			}
-			// if ProcessLog says we should stop now, feed the Terminate chan
-			if stop {
-				ctx.Channels.Terminate <- fmt.Errorf(event.Desc)
-			}
-		}
-	}()
-
-	// retrieve information on agent environment
-	ctx, err = initAgentEnv(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -261,7 +266,6 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 			panic(err)
 		}
 	}
-
 	ctx.Agent.UID = fmt.Sprintf("%s", id)
 	return
 }
@@ -274,10 +278,8 @@ func createIDFile(loc string) (id []byte, err error) {
 			err = fmt.Errorf("createIDFile() -> %v", e)
 		}
 	}()
-
 	// generate an ID
 	sid := mig.GenB32ID()
-
 	// check that the storage DIR exist, or create it
 	tdir, err := os.Open(loc)
 	if err != nil {
@@ -295,13 +297,11 @@ func createIDFile(loc string) (id []byte, err error) {
 		}
 	}
 	tdir.Close()
-
 	// write the ID
 	err = ioutil.WriteFile(loc+".migagtid", []byte(sid), 400)
 	if err != nil {
 		panic(err)
 	}
-
 	// read ID from disk
 	id, err = ioutil.ReadFile(loc + ".migagtid")
 	if err != nil {
