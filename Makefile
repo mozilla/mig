@@ -4,11 +4,13 @@
 
 BUILDREF	:= $(shell git log --pretty=format:'%h' -n 1)
 BUILDDATE	:= $(shell date +%Y%m%d%H%M)
-BUILDREV	:= $(BUILDREF)-$(BUILDDATE)
+BUILDREV	:= $(BUILDDATE)_$(BUILDREF)
+BUILDENV	:= dev
+BUILDDC		:= local
 
 # Supported OSes: linux darwin freebsd windows
 # Supported ARCHes: 386 amd64
-OS		:= linux
+OS			:= linux
 ARCH		:= amd64
 
 PREFIX		:= /usr/local/
@@ -17,11 +19,11 @@ GPGMEDIR	:= src/mig/pgp/sign
 BINDIR		:= bin/$(OS)/$(ARCH)
 AGTCONF		:= conf/mig-agent-conf.go
 
-GCC		:= gcc
+GCC			:= gcc
 CFLAGS		:=
 LDFLAGS		:=
 GOOPTS		:=
-GO		:= GOPATH=$(shell go env GOROOT)/bin:$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go
+GO 			:= GOPATH=$(shell go env GOROOT)/bin:$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go
 GOGETTER	:= GOPATH=$(shell pwd) go get -u
 GOLDFLAGS	:= -ldflags "-X main.version $(BUILDREV)"
 GOCFLAGS	:=
@@ -81,7 +83,6 @@ go_get_deps:
 	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) bitbucket.org/kardianos/osext
 	$(GOGETTER) bitbucket.org/kardianos/service
-	
 
 install: gpgme mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
@@ -99,11 +100,11 @@ rpm-agent: mig-agent
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/cache/mig
 # Agent auto install startup scripts, so we just need to execute it once as priviliged user
-	echo -en "#!/bin/sh\nrm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
+	echo -en "#!/bin/sh\nset -e\n[ -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
-		-s dir -t rpm .
+		-v $(BUILDREV)_$(BUILDDC)_$(BUILDENV) -s dir -t rpm .
 
 deb-agent: mig-agent
 # Bonus FPM options
@@ -112,11 +113,11 @@ deb-agent: mig-agent
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/cache/mig
 # Agent auto install startup scripts, so we just need to execute it once as priviliged user
-	echo -en "#!/bin/sh\nrm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
+	echo -en "#!/bin/sh\nset -e\n[ -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
-		-s dir -t deb .
+		-v $(BUILDREV)_$(BUILDDC)_$(BUILDENV) -s dir -t deb .
 
 rpm-scheduler: mig-scheduler
 	rm -rf tmp
