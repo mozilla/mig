@@ -351,7 +351,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	err = safeWrite(opid, destdir, newAction)
+	err = ioutil.WriteFile(destdir, newAction, 0640)
 	if err != nil {
 		panic(err)
 	}
@@ -574,32 +574,4 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 		resource.AddItem(actionItem)
 	}
 	respond(200, resource, respWriter, request, opid)
-}
-
-// safeWrite performs a two steps write:
-// 1) a temp file is written
-// 2) the temp file is moved into the target folder
-// this prevents the dir watcher from waking up before the file is fully written
-func safeWrite(opid uint64, destination string, data []byte) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("safeWrite() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving safeWrite()"}.Debug()
-	}()
-
-	// write the file temp dir
-	tmp := fmt.Sprintf("%s/%d", ctx.Directories.Tmp, mig.GenID())
-	err = ioutil.WriteFile(tmp, data, 0640)
-	if err != nil {
-		panic(err)
-	}
-
-	// move to destination
-	err = os.Rename(tmp, destination)
-	if err != nil {
-		panic(err)
-	}
-
-	return
 }
