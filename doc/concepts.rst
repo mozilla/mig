@@ -81,7 +81,8 @@ and salted on linux systems, would use the following action:
 		"target": "linux",
 		"threat": {
 			"level": "info",
-			"family": "compliance"
+			"family": "compliance",
+			"ref": "syslowaudit1"
 		},
 		"operations": [
 			{
