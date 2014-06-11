@@ -52,7 +52,7 @@ import (
 	"code.google.com/p/go.crypto/sha3"
 )
 
-var DEBUG bool = true
+var DEBUG bool = false
 
 // A checklist is an object that has the following representation:
 // Parameters {
