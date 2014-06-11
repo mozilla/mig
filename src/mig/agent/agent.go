@@ -154,13 +154,13 @@ func runAgent(foreground bool) (err error) {
 	// initialize the agent
 	ctx, err = Init(foreground)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
 		if foreground {
 			// if in foreground mode, don't retry, just panic
 			panic(err)
 		}
 		// if init fails, sleep for one minute and try again. forever.
-		fmt.Println("initialisation failed. sleep and retry.")
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Sleep 60s and retry", err)}.Info()
 		time.Sleep(60 * time.Second)
 		// spawn a new agent process and kill yourself
 		cmd := exec.Command(ctx.Agent.BinPath)

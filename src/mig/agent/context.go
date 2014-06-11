@@ -147,25 +147,26 @@ func Init(foreground bool) (ctx Context, err error) {
 		if os.Getppid() != 1 {
 			// spawn a new agent process and kill yourself
 			cmd := exec.Command(ctx.Agent.BinPath)
-			_ = cmd.Start()
+			err = cmd.Start()
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to spawn new agent from '%s': '%v'", ctx.Agent.BinPath, err)}.Err()
+			}
 			os.Exit(0)
 		}
-	}
-
-	// store heartbeat frequency
-	// install the service
-	if MUSTINSTALLSERVICE {
-		svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to initialize service installation. err='%v'. Continuing...\n", err)
-		}
-		err = svc.Remove()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to remove service. err='%v'. Continuing...\n", err)
-		}
-		err = svc.Install()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to install service. err='%v'. Continuing...\n", err)
+		// install the service
+		if MUSTINSTALLSERVICE {
+			svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service initialization failed: '%v'", err)}.Err()
+			}
+			err = svc.Remove()
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service removal failed: '%v'", err)}.Err()
+			}
+			err = svc.Install()
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service installation failed: '%v'", err)}.Err()
+			}
 		}
 	}
 
