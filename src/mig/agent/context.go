@@ -61,7 +61,7 @@ import (
 type Context struct {
 	ACL   mig.ACL
 	Agent struct {
-		Hostname, OS, QueueLoc, UID, BinPath string
+		Hostname, OS, QueueLoc, UID, BinPath, RunDir string
 	}
 	Channels struct {
 		// internal
@@ -215,6 +215,22 @@ func initAgentEnv(orig_ctx Context) (ctx Context, err error) {
 	// get the operating system family
 	ctx.Agent.OS = runtime.GOOS
 
+	// get the path of the executable
+	ctx.Agent.BinPath, err = osext.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	// RunDir location depends on the operation system
+	switch ctx.Agent.OS {
+	case "linux":
+		ctx.Agent.RunDir = "/var/run/mig/"
+	case "windows":
+		ctx.Agent.RunDir = "%appdata%/mig/"
+	case "darwin":
+		ctx.Agent.RunDir = "/Library/Preferences/mig/"
+	}
+
 	// get the agent ID
 	ctx, err = initAgentID(ctx)
 	if err != nil {
@@ -236,19 +252,8 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgentID()"}.Debug()
 	}()
-
-	// ID file location depends on the operation system
-	loc := ""
-	switch ctx.Agent.OS {
-	case "linux":
-		loc = "/var/run/mig/"
-	case "windows":
-		loc = "%appdata%/mig/"
-	case "darwin":
-		loc = "/Library/Preferences/mig/"
-	}
-
-	id, err := ioutil.ReadFile(loc + ".migagtid")
+	loc := ctx.Agent.RunDir + ".migagtid"
+	id, err := ioutil.ReadFile(loc)
 	if err != nil {
 		// ID file doesn't exist, create it
 		id, err = createIDFile(loc)
