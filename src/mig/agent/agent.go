@@ -444,6 +444,7 @@ func sendResults(ctx Context, result mig.Command) (err error) {
 }
 
 // hearbeat will send heartbeats messages to the scheduler at regular intervals
+// and also store that heartbeat on disc
 func heartbeat(ctx Context) (err error) {
 	// declare an Agent registration message
 	HeartBeat := mig.Agent{
@@ -466,6 +467,11 @@ func heartbeat(ctx Context) (err error) {
 		desc := fmt.Sprintf("heartbeat '%s'", body)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 		publish(ctx, "mig", "mig.heartbeat", body)
+		// write the heartbeat to disk
+		err = ioutil.WriteFile(ctx.Agent.RunDir+"mig-agent.ok", body, 400)
+		if err != nil {
+			panic(err)
+		}
 		time.Sleep(ctx.Sleeper)
 	}
 	return
