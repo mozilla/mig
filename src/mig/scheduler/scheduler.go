@@ -358,12 +358,12 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 		}
 		for _, sig := range action.PGPSignatures {
 			// TODO: opening the keyring in a loop is really ugly. rewind!
-			k, err := os.Open(ctx.PGP.PubRing)
+			pubringFile, err := os.Open(ctx.PGP.Home + "/pubring.gpg")
 			if err != nil {
 				panic(err)
 			}
-			defer k.Close()
-			fp, err := pgp.GetFingerprintFromSignature(astr, sig, k)
+			defer pubringFile.Close()
+			fp, err := pgp.GetFingerprintFromSignature(astr, sig, pubringFile)
 			if err != nil {
 				panic(err)
 			}

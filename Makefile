@@ -51,22 +51,19 @@ mig-agent-amd64:
 	make OS=linux ARCH=amd64 mig-agent
 	make OS=darwin ARCH=amd64 mig-agent
 
-mig-scheduler: gpgme
+mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
-	ln -sf src/mig/pgp/sign/libmig_gpgme.a ./
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig/scheduler
 
 mig-api:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-api $(GOLDFLAGS) mig/api
 
-mig-action-generator: gpgme
+mig-action-generator:
 	$(MKDIR) -p $(BINDIR)
-# XXX this could be nicer
-	ln -sf src/mig/pgp/sign/libmig_gpgme.a ./
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/clients/generator
 
-mig-action-verifier: gpgme
+mig-action-verifier:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig/clients/verifier
 
@@ -83,8 +80,10 @@ go_get_deps:
 	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) bitbucket.org/kardianos/osext
 	$(GOGETTER) bitbucket.org/kardianos/service
+	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
+	$(GOGETTER) camlistore.org/pkg/misc/pinentry
 
-install: gpgme mig-agent mig-scheduler
+install: mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler $(DESTDIR)$(PREFIX)/sbin/mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig_action-generator $(DESTDIR)$(PREFIX)/bin/mig_action-generator
@@ -136,16 +135,11 @@ rpm-utils: mig-action-generator
 		--url https://github.com/mozilla/mig \
 		-s dir -t rpm .
 
-gpgme:
-	make -C $(GPGMEDIR)
-
 tests: mig-agent
 	$(BINDIR)/mig-agent -m=filechecker '{"/etc/passwd":{"regex":{"this is an arbitrary string to describe this check":["^ulfrhasbeenhacked", "^rootkit.+/sbin/nologin"],"another arbitrary string":["iamaregex[0-9]"]}}}' > /dev/null
 	$(BINDIR)/mig-agent -m=filechecker -i=checks/policy_system_auditd_exec.json
 
 clean:
-	make -C $(GPGMEDIR) clean
-	rm -f libmig_gpgme.a
 	rm -rf bin
 	rm -rf tmp
 	rm *.rpm
@@ -155,4 +149,4 @@ clean:
 clean-all: clean
 	rm -rf pkg
 
-.PHONY: clean clean-all gpgme go_get_deps_into_system mig-agent-386 mig-agent-amd64
+.PHONY: clean clean-all go_get_deps_into_system mig-agent-386 mig-agent-amd64

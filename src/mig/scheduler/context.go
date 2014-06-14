@@ -96,7 +96,7 @@ type Context struct {
 		Chan *amqp.Channel
 	}
 	PGP struct {
-		KeyID, PubRing string
+		KeyID, Home string
 	}
 	Postgres struct {
 		Host, User, Password, DBName, SSLMode string
