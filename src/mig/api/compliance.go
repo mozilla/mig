@@ -58,6 +58,7 @@ type CompliancePolicy struct {
 }
 
 type ComplianceCheck struct {
+	Ref         string         `json:"ref"`
 	Description string         `json:"description"`
 	Name        string         `json:"name"`
 	Location    string         `json:"location"`
@@ -79,6 +80,7 @@ func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, 
 		bitem.Policy.Name = cmd.Action.Threat.Type
 		bitem.Policy.URL = cmd.Action.Description.URL
 		bitem.Policy.Level = cmd.Action.Threat.Level
+		bitem.Check.Ref = cmd.Action.Threat.Ref
 		bitem.Check.Description = cmd.Action.Name
 		bitem.Link = fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmd.ID)
 		for i, result := range cmd.Results {

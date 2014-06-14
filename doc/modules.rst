@@ -250,7 +250,8 @@ The following action will invoke the module named "mymodule".
         "Target": "linux",
         "Threat": {
             "Level": "info",
-            "Family": "test"
+            "Family": "test",
+            "Ref": test1"
         },
         "Operations": [
             {
