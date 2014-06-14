@@ -476,7 +476,7 @@ func heartbeat(ctx Context) (err error) {
 		// write the heartbeat to disk
 		err = ioutil.WriteFile(ctx.Agent.RunDir+"mig-agent.ok", body, 400)
 		if err != nil {
-			panic(err)
+			ctx.Channels.Log <- mig.Log{Desc: "Failed to write mig-agent.ok to disk"}.Err()
 		}
 		time.Sleep(ctx.Sleeper)
 	}
@@ -491,21 +491,31 @@ func publish(ctx Context, exchange, routingKey string, body []byte) (err error) 
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving publish()"}.Debug()
 	}()
-
 	msg := amqp.Publishing{
 		DeliveryMode: amqp.Persistent,
 		Timestamp:    time.Now(),
 		ContentType:  "text/plain",
 		Body:         []byte(body),
 	}
-	err = ctx.MQ.Chan.Publish(exchange, routingKey,
-		true,  // is mandatory
-		false, // is immediate
-		msg)   // AMQP message
-	if err != nil {
-		panic(err)
+	for tries := 0; tries < 2; tries++ {
+		err = ctx.MQ.Chan.Publish(exchange, routingKey,
+			true,  // is mandatory
+			false, // is immediate
+			msg)   // AMQP message
+		if err == nil { // success! exit the function
+			desc := fmt.Sprintf("Message published to exchange '%s' with routing key '%s' and body '%s'", exchange, routingKey, msg.Body)
+			ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
+			return
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "Publishing failed. Retrying..."}.Err()
+		time.Sleep(10 * time.Second)
 	}
-	desc := fmt.Sprintf("Message published to exchange '%s' with routing key '%s' and body '%s'", exchange, routingKey, msg.Body)
-	ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
+	// if we're here, it mean publishing failed 3 times. we most likely
+	// lost the connection with the relay, best is to die and restart
+	ctx.Channels.Log <- mig.Log{Desc: "Publishing failed 3 times. Starting a new agent and exiting."}.Err()
+	cmd := exec.Command(ctx.Agent.BinPath)
+	_ = cmd.Start()
+	os.Exit(0)
+
 	return
 }
