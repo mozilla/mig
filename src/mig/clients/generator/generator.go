@@ -47,6 +47,7 @@ import (
 	"net/url"
 	"os"
 	"os/user"
+	"runtime"
 	"time"
 )
 
@@ -107,26 +108,32 @@ func main() {
 	}
 	a.ExpireAfter = a.ValidFrom.Add(period)
 
-	// find keyring in default location
-	u, err := user.Current()
-	if err != nil {
-		panic(err)
+	// find homedir
+	var homedir string
+	if runtime.GOOS == "darwin" {
+		homedir = os.Getenv("HOME")
+	} else {
+		// find keyring in default location
+		u, err := user.Current()
+		if err != nil {
+			panic(err)
+		}
+		homedir = u.HomeDir
 	}
-
 	// load keyrings
 	var gnupghome string
 	gnupghome = os.Getenv("GNUPGHOME")
 	if gnupghome == "" {
 		gnupghome = "/.gnupg"
 	}
-	pubringFile, err := os.Open(u.HomeDir + gnupghome + "/pubring.gpg")
+	pubringFile, err := os.Open(homedir + gnupghome + "/pubring.gpg")
 
 	if err != nil {
 		panic(err)
 	}
 	defer pubringFile.Close()
 
-	secringFile, err := os.Open(u.HomeDir + gnupghome + "/secring.gpg")
+	secringFile, err := os.Open(homedir + gnupghome + "/secring.gpg")
 	if err != nil {
 		panic(err)
 	}
