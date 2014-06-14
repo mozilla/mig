@@ -36,7 +36,6 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package upgrade
 
 import (
-	"bitbucket.org/kardianos/osext"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -49,6 +48,8 @@ import (
 	"regexp"
 	"runtime"
 	"time"
+
+	"bitbucket.org/kardianos/osext"
 )
 
 type Parameters struct {
@@ -244,7 +245,7 @@ func verifyVersion(binPath, expectedVersion string) (err error) {
 			err = fmt.Errorf("verifyVersion() -> %v", e)
 		}
 	}()
-	os.Chmod(binPath, 0750)
+	os.Chmod(binPath, 0500)
 	out, err := exec.Command(binPath, "-V").Output()
 	if err != nil {
 		panic(err)
