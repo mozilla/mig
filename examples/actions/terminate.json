@@ -9,7 +9,8 @@
     "Target": "linux",
     "Threat": {
         "Level": "info",
-        "Family": ""
+        "Family": "",
+        "Ref": ""
     },
     "Operations": [
         {

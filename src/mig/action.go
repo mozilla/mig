@@ -92,6 +92,7 @@ type Description struct {
 // a threat provides the investigator with an idea of how dangerous
 // a the compromission might be, if the indicators return positive
 type Threat struct {
+	Ref    string `json:"ref,omitempty"`
 	Level  string `json:"level,omitempty"`
 	Family string `json:"family,omitempty"`
 	Type   string `json:"type,omitempty"`
