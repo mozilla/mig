@@ -7,7 +7,7 @@
     baseroute = "/api/v1"
 
 [pgp]
-    pubring = "/var/cache/mig/.gnupg/pubring.gpg"
+    home = "/var/cache/mig/.gnupg/"
 
 [directories]
     spool = "/var/cache/mig/"

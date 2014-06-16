@@ -40,6 +40,7 @@ import (
 	"fmt"
 	"mig"
 	"mig/pgp/sign"
+	"os"
 	"reflect"
 	"time"
 )
@@ -197,7 +198,9 @@ func destroyAgent(agent mig.Agent, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	pgpsig, err := sign.Sign(str, ctx.PGP.KeyID)
+	secringFile, err := os.Open(ctx.PGP.Home + "/secring.gpg")
+	defer secringFile.Close()
+	pgpsig, err := sign.Sign(str, ctx.PGP.KeyID, secringFile)
 	if err != nil {
 		panic(err)
 	}

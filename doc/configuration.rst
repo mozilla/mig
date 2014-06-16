@@ -43,12 +43,6 @@ Download the dependencies:
     GOPATH=/home/jvehent/mig go get -u bitbucket.org/kardianos/osext
     GOPATH=/home/jvehent/mig go get -u bitbucket.org/kardianos/service
 
-Install `gpgme`:
-
-.. code:: bash
-
-    $ sudo yum install gpgme-devel
-
 Build the scheduler or the API:
 
 .. code:: bash
@@ -107,10 +101,8 @@ the regular amqp mode. You probably also want to change the port from 5672
 Build instructions
 ------------------
 
-To build MIG, you need Go version 1.2 or superior. The PGP signature also
-requires GPGME (called 'gpgme-devel' on fedora, and 'libgpgme' on debian).
-
-Several Go dependencies can be resolved by running:
+To build MIG, you need Go version 1.2 or superior.
+External Go dependencies can be resolved by running `make go_get_deps`:
 
 .. code:: bash
 

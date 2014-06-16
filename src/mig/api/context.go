@@ -66,7 +66,7 @@ type Context struct {
 	}
 	DB  migdb.DB
 	PGP struct {
-		PubRing string
+		Home string
 	}
 	Postgres struct {
 		Host, User, Password, DBName, SSLMode string

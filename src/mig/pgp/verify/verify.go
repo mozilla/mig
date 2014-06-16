@@ -37,11 +37,12 @@ package verify
 
 import (
 	"bytes"
-	"code.google.com/p/go.crypto/openpgp"
-	"code.google.com/p/go.crypto/openpgp/armor"
 	"fmt"
 	"io"
 	"strings"
+
+	"code.google.com/p/go.crypto/openpgp"
+	"code.google.com/p/go.crypto/openpgp/armor"
 )
 
 // Verify() checks the validity of a signature for some data,
@@ -50,7 +51,8 @@ func Verify(data string, signature string, keyring io.Reader) (valid bool, entit
 	valid = false
 
 	// re-armor signature and transform into io.Reader
-	sigReader := strings.NewReader(reArmorSignature(signature))
+	sig := reArmorSignature(signature)
+	sigReader := strings.NewReader(sig)
 
 	// decode armor
 	sigBlock, err := armor.Decode(sigReader)
@@ -95,12 +97,12 @@ func reArmorSignature(line string) string {
 	crc := line[lastEq:]
 	for len(payload) > 0 {
 		chunkLen := len(payload)
-		if chunkLen > 60 {
-			chunkLen = 60
+		if chunkLen > 64 {
+			chunkLen = 64
 		}
 		fmt.Fprintf(buf, "%s\n", payload[0:chunkLen])
 		payload = payload[chunkLen:]
 	}
-	fmt.Fprintf(buf, "%s\n-----BEGIN PGP SIGNATURE-----\n", crc)
+	fmt.Fprintf(buf, "%s\n-----END PGP SIGNATURE-----", crc)
 	return buf.String()
 }

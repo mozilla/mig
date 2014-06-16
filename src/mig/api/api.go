@@ -297,7 +297,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	action.Status = "init"
 
 	// load keyring and validate action
-	keyring, err := os.Open(ctx.PGP.PubRing)
+	keyring, err := os.Open(ctx.PGP.Home + "/pubring.gpg")
 	if err != nil {
 		panic(err)
 	}
@@ -325,7 +325,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	for _, sig := range action.PGPSignatures {
 		// TODO: opening the keyring in a loop is really ugly. rewind!
-		k, err := os.Open(ctx.PGP.PubRing)
+		k, err := os.Open(ctx.PGP.Home + "/pubring.gpg")
 		if err != nil {
 			panic(err)
 		}

@@ -42,12 +42,12 @@ import (
 	"fmt"
 	"log"
 	"mig"
-	//"mig/modules/filechecker"
 	"mig/pgp/sign"
 	"net/http"
 	"net/url"
 	"os"
 	"os/user"
+	"runtime"
 	"time"
 )
 
@@ -108,16 +108,63 @@ func main() {
 	}
 	a.ExpireAfter = a.ValidFrom.Add(period)
 
+	// find homedir
+	var homedir string
+	if runtime.GOOS == "darwin" {
+		homedir = os.Getenv("HOME")
+	} else {
+		// find keyring in default location
+		u, err := user.Current()
+		if err != nil {
+			panic(err)
+		}
+		homedir = u.HomeDir
+	}
+	// load keyrings
+	var gnupghome string
+	gnupghome = os.Getenv("GNUPGHOME")
+	if gnupghome == "" {
+		gnupghome = "/.gnupg"
+	}
+	pubringFile, err := os.Open(homedir + gnupghome + "/pubring.gpg")
+
+	if err != nil {
+		panic(err)
+	}
+	defer pubringFile.Close()
+
+	secringFile, err := os.Open(homedir + gnupghome + "/secring.gpg")
+	if err != nil {
+		panic(err)
+	}
+	defer secringFile.Close()
+
 	// compute the signature
 	str, err := a.String()
 	if err != nil {
 		panic(err)
 	}
-	pgpsig, err := sign.Sign(str, *key)
+	pgpsig, err := sign.Sign(str, *key, secringFile)
 	if err != nil {
 		panic(err)
 	}
+
+	// store the signature in the action signature array
 	a.PGPSignatures = append(a.PGPSignatures, pgpsig)
+
+	// syntax checking
+	err = a.Validate()
+	if err != nil {
+		panic(err)
+	}
+
+	// signature checking
+	err = a.VerifySignatures(pubringFile)
+	if err != nil {
+		panic(err)
+	}
+
+	// if asked, pretty print the action
 	var jsonAction []byte
 	if *pretty {
 		jsonAction, err = json.MarshalIndent(a, "", "\t")
@@ -139,6 +186,7 @@ func main() {
 		}
 	}
 
+	// http post the action to the posturl endpoint
 	if *posturl != "" {
 		resp, err := http.PostForm(*posturl, url.Values{"action": {actionstr}})
 		if err != nil {
@@ -153,34 +201,5 @@ func main() {
 			}
 			fmt.Print(string(buf[0:n]))
 		}
-	}
-	// find keyring in default location
-	u, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-
-	// load keyring
-	var gnupghome string
-	gnupghome = os.Getenv("GNUPGHOME")
-	if gnupghome == "" {
-		gnupghome = "/.gnupg"
-	}
-	keyring, err := os.Open(u.HomeDir + gnupghome + "/pubring.gpg")
-	if err != nil {
-		panic(err)
-	}
-	defer keyring.Close()
-
-	// syntax checking
-	err = a.Validate()
-	if err != nil {
-		panic(err)
-	}
-
-	// syntax checking
-	err = a.VerifySignatures(keyring)
-	if err != nil {
-		panic(err)
 	}
 }
