@@ -4,14 +4,20 @@
 
 BUILDREF	:= $(shell git log --pretty=format:'%h' -n 1)
 BUILDDATE	:= $(shell date +%Y%m%d%H%M)
-BUILDREV	:= $(BUILDDATE)_$(BUILDREF)
 BUILDENV	:= dev
-BUILDDC		:= local
+BUILDREV	:= $(BUILDDATE)+$(BUILDREF).$(BUILDENV)
 
 # Supported OSes: linux darwin freebsd windows
 # Supported ARCHes: 386 amd64
 OS			:= linux
 ARCH		:= amd64
+
+ifeq ($(ARCH),amd64)
+	FPMARCH := x86_64
+endif
+ifeq ($(ARCH),386)
+	FPMARCH := i686
+endif
 
 PREFIX		:= /usr/local/
 DESTDIR		:= /
@@ -98,12 +104,12 @@ rpm-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/cache/mig
-# Agent auto install startup scripts, so we just need to execute it once as priviliged user
+# Agent auto install startup scripts, so we just need to execute it once as privileged user
 	echo -en "#!/bin/sh\nset -e\n[ -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
-		-v $(BUILDREV)_$(BUILDDC)_$(BUILDENV) -s dir -t rpm .
+		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
 
 deb-agent: mig-agent
 # Bonus FPM options
@@ -111,12 +117,12 @@ deb-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/cache/mig
-# Agent auto install startup scripts, so we just need to execute it once as priviliged user
+# Agent auto install startup scripts, so we just need to execute it once as privileged user
 	echo -en "#!/bin/sh\nset -e\n[ -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
-		-v $(BUILDREV)_$(BUILDDC)_$(BUILDENV) -s dir -t deb .
+		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
 
 rpm-scheduler: mig-scheduler
 	rm -rf tmp

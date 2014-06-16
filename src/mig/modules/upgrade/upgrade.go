@@ -68,7 +68,7 @@ type Results struct {
 }
 
 func (p Parameters) Validate() (err error) {
-	versionre := regexp.MustCompile(`^[0-9]{12}_[a-z0-9]{7}$`)
+	versionre := regexp.MustCompile(`^[0-9]{12}+[a-z0-9]{7}.[a-zA-Z0-9]{50}$`)
 	locre := regexp.MustCompile(`^https?://`)
 	checksumre := regexp.MustCompile(`^[a-zA-Z0-9]{64}$`)
 	for k, el := range p.Elements {
