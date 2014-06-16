@@ -40,6 +40,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"mig"
 	"mig/pgp/sign"
@@ -189,17 +190,14 @@ func main() {
 	// http post the action to the posturl endpoint
 	if *posturl != "" {
 		resp, err := http.PostForm(*posturl, url.Values{"action": {actionstr}})
+		defer resp.Body.Close()
 		if err != nil {
 			panic(err)
 		}
-		var buf [4096]byte
-		reader := resp.Body
-		for {
-			n, err := reader.Read(buf[0:])
-			if err != nil {
-				os.Exit(0)
-			}
-			fmt.Print(string(buf[0:n]))
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
 		}
+		fmt.Printf("%s", body)
 	}
 }
