@@ -71,7 +71,7 @@ type SearchParameters struct {
 	ActionName   string    `json:"actionname"`
 	ThreatFamily string    `json:"threatfamily"`
 	Status       string    `json:"status"`
-	Limit        uint64    `json:"limit"`
+	Limit        float64   `json:"limit"`
 }
 
 // NewSearchParameters initializes search parameters
@@ -286,7 +286,7 @@ func (db *DB) Last10Actions() (actions []mig.Action, err error) {
 }
 
 // ActionByID retrieves an action from the database using its ID
-func (db *DB) ActionByID(id uint64) (a mig.Action, err error) {
+func (db *DB) ActionByID(id float64) (a mig.Action, err error) {
 	var jDesc, jThreat, jOps, jSig []byte
 	err = db.c.QueryRow(`SELECT id, name, target, description, threat, operations,
 		validfrom, expireafter, starttime, finishtime, lastupdatetime,
@@ -379,7 +379,7 @@ func (db *DB) UpdateAction(a mig.Action) (err error) {
 // InsertOrUpdateAction looks for an existing action in DB and update it,
 // or insert a new one if none is found
 func (db *DB) InsertOrUpdateAction(a mig.Action) (inserted bool, err error) {
-	var id uint64
+	var id float64
 	err = db.c.QueryRow(`SELECT id FROM actions WHERE id=$1`, a.ID).Scan(&id)
 	if err != nil && err != sql.ErrNoRows {
 		return inserted, fmt.Errorf("Error while retrieving action: '%v'", err)
@@ -409,7 +409,7 @@ func (db *DB) FinishAction(a mig.Action) (err error) {
 
 // InsertSignature create an entry in the signatures tables that map an investigator
 // to an action and a signature
-func (db *DB) InsertSignature(aid, iid uint64, sig string) (err error) {
+func (db *DB) InsertSignature(aid, iid float64, sig string) (err error) {
 	_, err = db.c.Exec(`INSERT INTO signatures(actionid, investigatorid, pgpsignature)
 		VALUES($1, $2, $3)`, aid, iid, sig)
 	if err != nil {
@@ -420,7 +420,7 @@ func (db *DB) InsertSignature(aid, iid uint64, sig string) (err error) {
 
 // FindInvestigatorByFingerprint searches the database for an investigator that
 // has a given fingerprint
-func (db *DB) InvestigatorByFingerprint(fp string) (iid uint64, err error) {
+func (db *DB) InvestigatorByFingerprint(fp string) (iid float64, err error) {
 	err = db.c.QueryRow("SELECT id FROM investigators WHERE LOWER(pgpfingerprint)=LOWER($1)", fp).Scan(&iid)
 	if err != nil && err != sql.ErrNoRows {
 		err = fmt.Errorf("Error while finding investigator: '%v'", err)
@@ -434,7 +434,7 @@ func (db *DB) InvestigatorByFingerprint(fp string) (iid uint64, err error) {
 }
 
 //InvestigatorByActionID returns the list of investigators that signed a given action
-func (db *DB) InvestigatorByActionID(aid uint64) (ivgts []mig.Investigator, err error) {
+func (db *DB) InvestigatorByActionID(aid float64) (ivgts []mig.Investigator, err error) {
 	rows, err := db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint
 		FROM investigators, signatures
 		WHERE signatures.actionid=$1
@@ -463,7 +463,7 @@ func (db *DB) InvestigatorByActionID(aid uint64) (ivgts []mig.Investigator, err 
 }
 
 // CommandByID retrieves a command from the database using its ID
-func (db *DB) CommandByID(id uint64) (cmd mig.Command, err error) {
+func (db *DB) CommandByID(id float64) (cmd mig.Command, err error) {
 	var jRes, jDesc, jThreat, jOps, jSig []byte
 	err = db.c.QueryRow(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
 		actions.id, actions.name, actions.target, actions.description, actions.threat,
@@ -512,7 +512,7 @@ func (db *DB) CommandByID(id uint64) (cmd mig.Command, err error) {
 	return
 }
 
-func (db *DB) CommandsByActionID(actionid uint64) (commands []mig.Command, err error) {
+func (db *DB) CommandsByActionID(actionid float64) (commands []mig.Command, err error) {
 	rows, err := db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
 		actions.id, actions.name, actions.target, actions.description, actions.threat,
 		actions.operations, actions.validfrom, actions.expireafter,

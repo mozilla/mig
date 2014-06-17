@@ -397,7 +397,7 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 // it retrieves a list of target agents from the database, creates one
 // command for each target agent, and stores the command into ctx.Directories.Command.Ready.
 // An array of command IDs is returned
-func prepareCommands(action mig.Action, ctx Context) (cmdIDs []uint64, err error) {
+func prepareCommands(action mig.Action, ctx Context) (cmdIDs []float64, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("prepareCommands() -> %v", e)
@@ -440,7 +440,7 @@ func prepareCommands(action mig.Action, ctx Context) (cmdIDs []uint64, err error
 	return
 }
 
-func createCommand(ctx Context, action mig.Action, agent mig.Agent) (cmdid uint64, err error) {
+func createCommand(ctx Context, action mig.Action, agent mig.Agent) (cmdid float64, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("createCommand() -> %v", e)

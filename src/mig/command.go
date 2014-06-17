@@ -44,7 +44,7 @@ import (
 )
 
 type Command struct {
-	ID         uint64        `json:"id"`
+	ID         float64       `json:"id"`
 	Action     Action        `json:"action,omitempty"`
 	Agent      Agent         `json:"agent,omitempty"`
 	Status     string        `json:"status"`

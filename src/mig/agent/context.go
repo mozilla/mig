@@ -84,7 +84,7 @@ type Context struct {
 			Chan       <-chan amqp.Delivery
 		}
 	}
-	OpID    uint64        // ID of the current operation, used for tracking
+	OpID    float64       // ID of the current operation, used for tracking
 	Sleeper time.Duration // timer used when the agent has to sleep for a while
 	Stats   struct {
 	}

@@ -35,8 +35,8 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package mig
 
 type Investigator struct {
-	ID             uint64 `json:"id,omitempty"`
-	Name           string `json:"name"`
-	PGPFingerprint string `json:"pgpfingerprint"`
-	PublicKey      []byte `json:"publickey,omitempty"`
+	ID             float64 `json:"id,omitempty"`
+	Name           string  `json:"name"`
+	PGPFingerprint string  `json:"pgpfingerprint"`
+	PublicKey      []byte  `json:"publickey,omitempty"`
 }

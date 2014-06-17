@@ -61,7 +61,7 @@ type Logging struct {
 
 // Log defines a log entry
 type Log struct {
-	OpID, ActionID, CommandID uint64
+	OpID, ActionID, CommandID float64
 	Sev, Desc                 string
 	Priority                  syslog.Priority
 }

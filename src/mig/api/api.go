@@ -114,7 +114,7 @@ func main() {
 }
 
 // respond builds a Collection+JSON body and sends it to the client
-func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, request *http.Request, opid uint64) (err error) {
+func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, request *http.Request, opid float64) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -422,7 +422,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAction()"}.Debug()
 	}()
-	actionID, err := strconv.ParseUint(request.URL.Query()["actionid"][0], 10, 64)
+	actionID, err := strconv.ParseFloat(request.URL.Query()["actionid"][0], 64)
 	if err != nil {
 		err = fmt.Errorf("Wrong parameters 'actionid': '%v'", err)
 		panic(err)
@@ -461,7 +461,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getCommand()"}.Debug()
 	}()
-	commandID, err := strconv.ParseUint(request.URL.Query()["commandid"][0], 10, 64)
+	commandID, err := strconv.ParseFloat(request.URL.Query()["commandid"][0], 64)
 	if err != nil {
 		err = fmt.Errorf("Wrong parameters 'commandid': '%v'", err)
 		panic(err)

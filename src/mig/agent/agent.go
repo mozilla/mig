@@ -61,14 +61,14 @@ import (
 var version string
 
 type moduleResult struct {
-	id     uint64
+	id     float64
 	err    error
 	status string
 	output interface{}
 }
 
 type moduleOp struct {
-	id         uint64
+	id         float64
 	mode       string
 	params     interface{}
 	resultChan chan moduleResult

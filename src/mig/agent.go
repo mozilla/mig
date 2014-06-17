@@ -37,7 +37,7 @@ package mig
 import "time"
 
 type Agent struct {
-	ID              uint64    `json:"id,omitempty"`
+	ID              float64   `json:"id,omitempty"`
 	Name            string    `json:"name"`
 	QueueLoc        string    `json:"queueloc"`
 	OS              string    `json:"os,omitempty"`

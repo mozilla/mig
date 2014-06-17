@@ -91,7 +91,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				panic("report not implemented")
 			}
 		case "limit":
-			p.Limit, err = strconv.ParseUint(request.URL.Query()["limit"][0], 10, 64)
+			p.Limit, err = strconv.ParseFloat(request.URL.Query()["limit"][0], 64)
 			if err != nil {
 				panic("invalid limit parameter")
 			}

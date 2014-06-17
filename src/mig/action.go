@@ -52,7 +52,7 @@ import (
 // an Action is the json object that is created by an investigator
 // and provided to the MIG platform. It must be PGP signed.
 type Action struct {
-	ID             uint64         `json:"id"`
+	ID             float64        `json:"id"`
 	Name           string         `json:"name"`
 	Target         string         `json:"target"`
 	Description    Description    `json:"description,omitempty"`
@@ -83,10 +83,10 @@ type counters struct {
 // a description is a simple object that contains detail about the
 // action's author, and it's revision.
 type Description struct {
-	Author   string `json:"author,omitempty"`
-	Email    string `json:"email,omitempty"`
-	URL      string `json:"url,omitempty"`
-	Revision int    `json:"revision,omitempty"`
+	Author   string  `json:"author,omitempty"`
+	Email    string  `json:"email,omitempty"`
+	URL      string  `json:"url,omitempty"`
+	Revision float64 `json:"revision,omitempty"`
 }
 
 // a threat provides the investigator with an idea of how dangerous
@@ -130,7 +130,7 @@ func ActionFromFile(path string) (Action, error) {
 }
 
 // GenID returns an ID composed of a unix timestamp and a random CRC32
-func GenID() uint64 {
+func GenID() float64 {
 	h := crc32.NewIEEE()
 	t := time.Now().UTC().Format(time.RFC3339Nano)
 	r := rand.New(rand.NewSource(65537))
@@ -138,16 +138,17 @@ func GenID() uint64 {
 	h.Write([]byte(t + rand))
 	// concatenate timestamp and hash into 64 bits ID
 	// id = <32 bits unix ts><32 bits CRC hash>
-	id := uint64(time.Now().Unix())
-	id = id << 32
-	id += uint64(h.Sum32())
+	uid := uint64(time.Now().Unix())
+	uid = uid << 32
+	sum := float64(h.Sum32())
+	id := float64(uid) + sum
 	return id
 }
 
 // GenHexID returns a string with an hexadecimal encoded ID
 func GenB32ID() string {
 	id := GenID()
-	return strconv.FormatUint(id, 32)
+	return strconv.FormatFloat(id, 'f', 6, 64)
 }
 
 // Validate verifies that the Action received contained all the
