@@ -81,7 +81,7 @@ ALTER TABLE ONLY commands
     ADD CONSTRAINT commands_pkey PRIMARY KEY (id);
 
 CREATE TABLE invagtmodperm (
-    investigatorid bigint NOT NULL,
+    investigatorid numeric NOT NULL,
     agentid numeric NOT NULL,
     moduleid numeric NOT NULL,
     weight integer NOT NULL
@@ -113,7 +113,7 @@ ALTER TABLE ONLY modules
 
 CREATE TABLE signatures (
     actionid numeric NOT NULL,
-    investigatorid bigint NOT NULL,
+    investigatorid numeric NOT NULL,
     pgpsignature character varying(4096) NOT NULL
 );
 ALTER TABLE public.signatures OWNER TO migadmin;

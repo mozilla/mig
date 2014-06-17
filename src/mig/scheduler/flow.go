@@ -97,7 +97,7 @@ func flyAction(ctx Context, a mig.Action, origin string) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	dest := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.InFlight, a.ID)
+	dest := fmt.Sprintf("%s/%.0f.json", ctx.Directories.Action.InFlight, a.ID)
 	err = safeWrite(ctx, dest, jsonA)
 	if err != nil {
 		panic(err)
@@ -138,13 +138,13 @@ func landAction(ctx Context, a mig.Action) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	dest := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.Done, a.ID)
+	dest := fmt.Sprintf("%s/%.0f.json", ctx.Directories.Action.Done, a.ID)
 	err = safeWrite(ctx, dest, jsonA)
 	if err != nil {
 		panic(err)
 	}
 	// remove the action from its origin
-	origin := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.InFlight, a.ID)
+	origin := fmt.Sprintf("%s/%.0f.json", ctx.Directories.Action.InFlight, a.ID)
 	os.Remove(origin)
 	if err != nil {
 		panic(err)
@@ -170,7 +170,7 @@ func safeWrite(ctx Context, destination string, data []byte) (err error) {
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving safeWrite()"}.Debug()
 	}()
 	// write the file temp dir
-	tmp := fmt.Sprintf("%s/%d", ctx.Directories.Tmp, mig.GenID())
+	tmp := fmt.Sprintf("%s/%.0f", ctx.Directories.Tmp, mig.GenID())
 	err = ioutil.WriteFile(tmp, data, 0640)
 	if err != nil {
 		panic(err)

@@ -45,7 +45,7 @@ import (
 // actionToItem receives an Action and returns an Item
 // in the Collection+JSON format
 func actionToItem(a mig.Action, ctx Context) (item cljs.Item, err error) {
-	item.Href = fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, a.ID)
+	item.Href = fmt.Sprintf("%s/action?actionid=%.0f", ctx.Server.BaseURL, a.ID)
 	item.Data = []cljs.Data{
 		{Name: "action", Value: a},
 	}
@@ -57,8 +57,8 @@ func actionToItem(a mig.Action, ctx Context) (item cljs.Item, err error) {
 	}
 	for _, cmd := range commands {
 		link := cljs.Link{
-			Rel:  fmt.Sprintf("Command ID %d on agent %s", cmd.ID, cmd.Agent.Name),
-			Href: fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmd.ID),
+			Rel:  fmt.Sprintf("Command ID %.0f on agent %s", cmd.ID, cmd.Agent.Name),
+			Href: fmt.Sprintf("%s/command?commandid=%.0f", ctx.Server.BaseURL, cmd.ID),
 		}
 		links = append(links, link)
 	}
@@ -68,11 +68,11 @@ func actionToItem(a mig.Action, ctx Context) (item cljs.Item, err error) {
 
 // commandToItem receives a command and returns an Item in Collection+JSON
 func commandToItem(cmd mig.Command) (item cljs.Item, err error) {
-	item.Href = fmt.Sprintf("%s/command?commandid=%d", ctx.Server.BaseURL, cmd.ID)
+	item.Href = fmt.Sprintf("%s/command?commandid=%.0f", ctx.Server.BaseURL, cmd.ID)
 	links := make([]cljs.Link, 0)
 	link := cljs.Link{
 		Rel:  "action",
-		Href: fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, cmd.Action.ID),
+		Href: fmt.Sprintf("%s/action?actionid=%.0f", ctx.Server.BaseURL, cmd.Action.ID),
 	}
 	links = append(links, link)
 	item.Links = links

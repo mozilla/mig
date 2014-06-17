@@ -460,7 +460,7 @@ func createCommand(ctx Context, action mig.Action, agent mig.Agent) (cmdid float
 	if err != nil {
 		panic(err)
 	}
-	dest := fmt.Sprintf("%s/%d-%d.json", ctx.Directories.Command.Ready, action.ID, cmdid)
+	dest := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.Ready, action.ID, cmdid)
 	err = safeWrite(ctx, dest, data)
 	if err != nil {
 		panic(err)
@@ -510,7 +510,7 @@ func sendCommand(cmdPath string, ctx Context) (err error) {
 	}
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command sent to agent queue"}.Debug()
 	// write command to InFlight directory
-	dest := fmt.Sprintf("%s/%d-%d.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
+	dest := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
 	err = safeWrite(ctx, dest, data)
 	if err != nil {
 		panic(err)
@@ -540,7 +540,7 @@ func recvAgentResults(msg amqp.Delivery, ctx Context) (err error) {
 	}()
 
 	// write to disk Returned directory
-	dest := fmt.Sprintf("%s/%d", ctx.Directories.Command.Returned, mig.GenID())
+	dest := fmt.Sprintf("%s/%.0f", ctx.Directories.Command.Returned, mig.GenID())
 	err = safeWrite(ctx, dest, msg.Body)
 	if err != nil {
 		panic(err)
@@ -580,13 +580,13 @@ func terminateCommand(cmdPath string, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	dest := fmt.Sprintf("%s/%d-%d.json", ctx.Directories.Command.Done, cmd.Action.ID, cmd.ID)
+	dest := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.Done, cmd.Action.ID, cmd.ID)
 	err = safeWrite(ctx, dest, data)
 	if err != nil {
 		panic(err)
 	}
 	// remove command from inflight dir
-	inflightPath := fmt.Sprintf("%s/%d-%d.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
+	inflightPath := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
 	os.Remove(inflightPath)
 	// remove command from Returned dir
 	os.Remove(cmdPath)
@@ -647,7 +647,7 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 			panic(err)
 		}
 		// delete Action from ctx.Directories.Action.InFlight
-		actFile := fmt.Sprintf("%d.json", a.ID)
+		actFile := fmt.Sprintf("%.0f.json", a.ID)
 		os.Rename(ctx.Directories.Action.InFlight+"/"+actFile, ctx.Directories.Action.Done+"/"+actFile)
 	} else {
 		// store updated action in database

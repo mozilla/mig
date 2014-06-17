@@ -61,7 +61,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				Href: loc,
 				Data: []cljs.Data{{Name: "search parameters", Value: p}},
 			})
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving search()"}.Debug()

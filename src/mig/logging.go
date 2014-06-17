@@ -260,19 +260,19 @@ func ProcessLog(logctx Logging, l Log) (stop bool, err error) {
 	}
 
 	if l.OpID > 0 {
-		logline += fmt.Sprintf("%d ", l.OpID)
+		logline += fmt.Sprintf("%.0f ", l.OpID)
 	} else {
 		logline += "- "
 	}
 
 	if l.ActionID > 0 {
-		logline += fmt.Sprintf("%d ", l.ActionID)
+		logline += fmt.Sprintf("%.0f ", l.ActionID)
 	} else {
 		logline += "- "
 	}
 
 	if l.CommandID > 0 {
-		logline += fmt.Sprintf("%d ", l.CommandID)
+		logline += fmt.Sprintf("%.0f ", l.CommandID)
 	} else {
 		logline += "- "
 	}

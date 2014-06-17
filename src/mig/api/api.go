@@ -143,7 +143,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getHome()"}.Debug()
@@ -245,7 +245,7 @@ func describeCreateAction(respWriter http.ResponseWriter, request *http.Request)
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCreateAction()"}.Debug()
@@ -273,7 +273,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "leaving createAction()"}.Debug()
@@ -346,7 +346,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "Action written to database"}
 
 	// write action to disk
-	destdir := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.New, action.ID)
+	destdir := fmt.Sprintf("%s/%.0f.json", ctx.Directories.Action.New, action.ID)
 	newAction, err := json.Marshal(action)
 	if err != nil {
 		panic(err)
@@ -358,8 +358,8 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "Action committed to spool"}
 
 	err = resource.AddItem(cljs.Item{
-		Href: fmt.Sprintf("%s/action?actionid=%d", ctx.Server.BaseURL, action.ID),
-		Data: []cljs.Data{{Name: "action ID " + fmt.Sprintf("%d", action.ID), Value: action}},
+		Href: fmt.Sprintf("%s/action?actionid=%.0f", ctx.Server.BaseURL, action.ID),
+		Data: []cljs.Data{{Name: "action ID " + fmt.Sprintf("%.0f", action.ID), Value: action}},
 	})
 	if err != nil {
 		panic(err)
@@ -375,7 +375,7 @@ func describeCancelAction(respWriter http.ResponseWriter, request *http.Request)
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCancelAction()"}.Debug()
@@ -400,7 +400,7 @@ func cancelAction(respWriter http.ResponseWriter, request *http.Request) {
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving cancelAction()"}.Debug()
@@ -417,7 +417,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAction()"}.Debug()
@@ -456,7 +456,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getCommand()"}.Debug()
@@ -474,8 +474,8 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 	} else {
 		// nothing to search for, return 404
 		resource.SetError(cljs.Error{
-			Code:    fmt.Sprintf("%d", opid),
-			Message: fmt.Sprintf("Invalid Command ID '%d'", commandID)})
+			Code:    fmt.Sprintf("%.0f", opid),
+			Message: fmt.Sprintf("Invalid Command ID '%.0f'", commandID)})
 		respond(400, resource, respWriter, request, opid)
 	}
 	// store the results in the resource
@@ -495,7 +495,7 @@ func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCancelCommand()"}.Debug()
@@ -520,7 +520,7 @@ func cancelCommand(respWriter http.ResponseWriter, request *http.Request) {
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving cancelCommand()"}.Debug()
@@ -535,7 +535,7 @@ func getAgentsDashboard(respWriter http.ResponseWriter, request *http.Request) {
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAgentsDashboard()"}.Debug()
@@ -550,7 +550,7 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%d", opid), Message: fmt.Sprintf("%v", e)})
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getDashboard()"}.Debug()

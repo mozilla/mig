@@ -212,7 +212,7 @@ func destroyAgent(agent mig.Agent, ctx Context) (err error) {
 	}
 
 	// write the action to the spool for scheduling
-	dest := fmt.Sprintf("%s/%d.json", ctx.Directories.Action.New, killAction.ID)
+	dest := fmt.Sprintf("%s/%.0f.json", ctx.Directories.Action.New, killAction.ID)
 	err = safeWrite(ctx, dest, jsonAction)
 	if err != nil {
 		panic(err)
