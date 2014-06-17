@@ -101,7 +101,7 @@ func (db *DB) SearchCommands(p SearchParameters) (commands []mig.Command, err er
 		AND actions.threat->>'family' LIKE $5
 		AND commands.status LIKE $6
 		ORDER BY commands.id DESC LIMIT $7`,
-		p.Before, p.After, p.ActionName, p.AgentName, p.ThreatFamily, p.Status, p.Limit)
+		p.Before, p.After, p.ActionName, p.AgentName, p.ThreatFamily, p.Status, uint64(p.Limit))
 	if err != nil {
 		err = fmt.Errorf("Error while finding commands: '%v'", err)
 		return
@@ -159,7 +159,7 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 		AND actions.name LIKE $3
 		AND actions.threat->>'family' LIKE $4
 		ORDER BY actions.id DESC LIMIT $5`,
-		p.Before, p.After, p.ActionName, p.ThreatFamily, p.Limit)
+		p.Before, p.After, p.ActionName, p.ThreatFamily, uint64(p.Limit))
 	if err != nil {
 		err = fmt.Errorf("Error while finding actions: '%v'", err)
 		return
@@ -212,7 +212,7 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 		AND agents.name LIKE $3
 		AND agents.status LIKE $4
 		ORDER BY agents.heartbeattime LIMIT $5`,
-		p.Before, p.After, p.AgentName, p.Status, p.Limit)
+		p.Before, p.After, p.AgentName, p.Status, uint64(p.Limit))
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
