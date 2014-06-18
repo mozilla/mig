@@ -768,3 +768,45 @@ func (db *DB) MarkAgentDestroyed(agent mig.Agent) (err error) {
 	}
 	return
 }
+
+type AgentsSum struct {
+	Version string  `json:"version"`
+	Count   float64 `json:"count"`
+}
+
+// SumAgentsByVersion retrieves a sum of agents grouped by version
+func (db *DB) SumAgentsByVersion(pointInTime time.Time) (sum []AgentsSum, err error) {
+	rows, err := db.c.Query(`SELECT COUNT(*), version FROM agents
+		WHERE agents.heartbeattime >= $1 AND agents.heartbeattime <= NOW()
+		GROUP BY version`, pointInTime)
+	if err != nil {
+		err = fmt.Errorf("Error while counting agents: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var asum AgentsSum
+		err = rows.Scan(&asum.Count, &asum.Version)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to retrieve summary data: '%v'", err)
+			return
+		}
+		sum = append(sum, asum)
+	}
+	rows.Close()
+	return
+}
+
+// NewAgents retrieves a count of agents that started after `pointInTime`
+func (db *DB) CountNewAgents(pointInTime time.Time) (sum float64, err error) {
+	err = db.c.QueryRow(`SELECT COUNT(name) FROM agents
+		WHERE starttime >= $1 AND starttime <= NOW()`, pointInTime).Scan(&sum)
+	if err != nil {
+		err = fmt.Errorf("Error while counting agents: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows {
+		return
+	}
+	return
+}

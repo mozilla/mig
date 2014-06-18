@@ -38,6 +38,7 @@ package main
 import (
 	"fmt"
 	"mig"
+	migdb "mig/database"
 
 	"github.com/jvehent/cljs"
 )
@@ -79,5 +80,28 @@ func commandToItem(cmd mig.Command) (item cljs.Item, err error) {
 	item.Data = []cljs.Data{
 		{Name: "command", Value: cmd},
 	}
+	return
+}
+
+// agentsSumToItem receives an AgentsSum and returns an Item
+// in the Collection+JSON format
+func agentsSummaryToItem(sum []migdb.AgentsSum, count float64, ctx Context) (item cljs.Item, err error) {
+	item.Href = fmt.Sprintf("%s/dashboard", ctx.Server.BaseURL)
+	var total float64 = 0
+	for _, asum := range sum {
+		total += asum.Count
+	}
+	item.Data = []cljs.Data{
+		{Name: "active agents", Value: total},
+		{Name: "agents versions count", Value: sum},
+		{Name: "agents started in the last 24 hours", Value: count},
+	}
+	links := make([]cljs.Link, 0)
+	link := cljs.Link{
+		Rel:  "agents dashboard",
+		Href: fmt.Sprintf("%s/agents/dashboard", ctx.Server.BaseURL),
+	}
+	links = append(links, link)
+	item.Links = links
 	return
 }
