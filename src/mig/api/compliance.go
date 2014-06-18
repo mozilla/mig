@@ -40,6 +40,7 @@ import (
 	"fmt"
 	"mig"
 	"mig/modules/filechecker"
+	"time"
 )
 
 type ComplianceItem struct {
@@ -70,12 +71,10 @@ type ComplianceTest struct {
 	Value string `json:"value"`
 }
 
-const RFC3339Nano = "2006-01-02T15:04:05.999999999+07:00"
-
 func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, err error) {
 	for _, cmd := range commands {
 		var bitem ComplianceItem
-		bitem.Utctimestamp = cmd.FinishTime.Format(RFC3339Nano)
+		bitem.Utctimestamp = cmd.FinishTime.UTC().Format(time.RFC3339Nano)
 		bitem.Target = cmd.Agent.Name
 		bitem.Policy.Name = cmd.Action.Threat.Type
 		bitem.Policy.URL = cmd.Action.Description.URL
