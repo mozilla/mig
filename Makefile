@@ -106,23 +106,19 @@ rpm-agent: mig-agent
 # Bonus FPM options
 #       --rpm-digest sha512 --rpm-sign
 	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
-# Agent auto install startup scripts, so we just need to execute it once as privileged user
-	echo -en "#!/bin/sh\nset -e\n[ -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
+	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\n[ -h /sbin/mig-agent -o -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDENV) /sbin/mig-agent\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
 
 deb-agent: mig-agent
-# Bonus FPM options
-#       --rpm-digest sha512 --rpm-sign
 	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
-# Agent auto install startup scripts, so we just need to execute it once as privileged user
-	echo -en "#!/bin/sh\nset -e\n[ -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent\n/sbin/mig-agent" > tmp/agent_install.sh
+	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\n[ -h /sbin/mig-agent -o -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDENV) /sbin/mig-agent\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
