@@ -258,6 +258,7 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgentID()"}.Debug()
 	}()
+	os.Chmod(ctx.Agent.RunDir, 0755)
 	loc := ctx.Agent.RunDir + ".migagtid"
 	id, err := ioutil.ReadFile(loc)
 	if err != nil {
@@ -284,7 +285,7 @@ func createIDFile(loc string) (id []byte, err error) {
 	// check that the storage DIR exist, or create it
 	tdir, err := os.Open(loc)
 	if err != nil {
-		err = os.MkdirAll(loc, 0x400)
+		err = os.MkdirAll(loc, 0755)
 		if err != nil {
 			panic(err)
 		}
