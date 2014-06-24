@@ -50,8 +50,8 @@ import (
 	"strings"
 	"time"
 
-	"bitbucket.org/kardianos/service"
 	"bitbucket.org/kardianos/osext"
+	"bitbucket.org/kardianos/service"
 	"github.com/streadway/amqp"
 )
 
@@ -263,7 +263,7 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 	id, err := ioutil.ReadFile(loc)
 	if err != nil {
 		// ID file doesn't exist, create it
-		id, err = createIDFile(loc)
+		id, err = createIDFile(loc, ctx)
 		if err != nil {
 			panic(err)
 		}
@@ -274,7 +274,7 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 
 // createIDFile will generate a new ID for this agent and store it on disk
 // the location depends on the operating system
-func createIDFile(loc string) (id []byte, err error) {
+func createIDFile(loc string, ctx Context) (id []byte, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("createIDFile() -> %v", e)
@@ -285,7 +285,7 @@ func createIDFile(loc string) (id []byte, err error) {
 	// check that the storage DIR exist, or create it
 	tdir, err := os.Open(loc)
 	if err != nil {
-		err = os.MkdirAll(loc, 0755)
+		err = os.MkdirAll(ctx.Agent.RunDir, 0755)
 		if err != nil {
 			panic(err)
 		}

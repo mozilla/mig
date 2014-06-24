@@ -148,7 +148,7 @@ func GenID() float64 {
 // GenHexID returns a string with an hexadecimal encoded ID
 func GenB32ID() string {
 	id := GenID()
-	return strconv.FormatFloat(id, 'f', 6, 64)
+	return strconv.FormatUint(uint64(id), 32)
 }
 
 // Validate verifies that the Action received contained all the
