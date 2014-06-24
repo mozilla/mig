@@ -263,7 +263,7 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 	id, err := ioutil.ReadFile(loc)
 	if err != nil {
 		// ID file doesn't exist, create it
-		id, err = createIDFile(loc, ctx)
+		id, err = createIDFile(ctx)
 		if err != nil {
 			panic(err)
 		}
@@ -274,7 +274,7 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 
 // createIDFile will generate a new ID for this agent and store it on disk
 // the location depends on the operating system
-func createIDFile(loc string, ctx Context) (id []byte, err error) {
+func createIDFile(ctx Context) (id []byte, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("createIDFile() -> %v", e)
@@ -283,7 +283,7 @@ func createIDFile(loc string, ctx Context) (id []byte, err error) {
 	// generate an ID
 	sid := mig.GenB32ID()
 	// check that the storage DIR exist, or create it
-	tdir, err := os.Open(loc)
+	tdir, err := os.Open(ctx.Agent.RunDir + ".migagtid")
 	if err != nil {
 		err = os.MkdirAll(ctx.Agent.RunDir, 0755)
 		if err != nil {
@@ -300,12 +300,12 @@ func createIDFile(loc string, ctx Context) (id []byte, err error) {
 	}
 	tdir.Close()
 	// write the ID
-	err = ioutil.WriteFile(loc+".migagtid", []byte(sid), 400)
+	err = ioutil.WriteFile(ctx.Agent.RunDir+".migagtid", []byte(sid), 400)
 	if err != nil {
 		panic(err)
 	}
 	// read ID from disk
-	id, err = ioutil.ReadFile(loc + ".migagtid")
+	id, err = ioutil.ReadFile(ctx.Agent.RunDir + ".migagtid")
 	if err != nil {
 		panic(err)
 	}
