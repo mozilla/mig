@@ -50,7 +50,7 @@ import (
 	"strings"
 	"time"
 
-	"bitbucket.org/jvehent/service"
+	"bitbucket.org/kardianos/service"
 	"bitbucket.org/kardianos/osext"
 	"github.com/streadway/amqp"
 )
