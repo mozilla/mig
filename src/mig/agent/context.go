@@ -282,23 +282,33 @@ func createIDFile(ctx Context) (id []byte, err error) {
 	}()
 	// generate an ID
 	sid := mig.GenB32ID()
-	// check that the storage DIR exist, or create it
-	tdir, err := os.Open(ctx.Agent.RunDir + ".migagtid")
+	// check that the storage DIR exist, and that it's a dir
+	tdir, err := os.Open(ctx.Agent.RunDir)
+	defer tdir.Close()
 	if err != nil {
+		// dir doesn't exist, create it
 		err = os.MkdirAll(ctx.Agent.RunDir, 0755)
 		if err != nil {
 			panic(err)
 		}
 	} else {
+		// open worked, verify that it's a dir
 		tdirMode, err := tdir.Stat()
 		if err != nil {
 			panic(err)
 		}
 		if !tdirMode.Mode().IsDir() {
-			panic("Not a valid directory")
+			// not a valid dir. destroy whatever it is, and recreate
+			err = os.Remove(ctx.Agent.RunDir)
+			if err != nil {
+				panic(err)
+			}
+			err = os.MkdirAll(ctx.Agent.RunDir, 0755)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
-	tdir.Close()
 	// write the ID
 	err = ioutil.WriteFile(ctx.Agent.RunDir+".migagtid", []byte(sid), 400)
 	if err != nil {
@@ -309,7 +319,6 @@ func createIDFile(ctx Context) (id []byte, err error) {
 	if err != nil {
 		panic(err)
 	}
-
 	return
 }
 
