@@ -442,7 +442,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	// store the results in the resource
-	actionItem, err := actionToItem(a, ctx)
+	actionItem, err := actionToItem(a, true, ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -583,7 +583,7 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 			panic(err)
 		}
 		// store the results in the resource
-		actionItem, err := actionToItem(action, ctx)
+		actionItem, err := actionToItem(action, false, ctx)
 		if err != nil {
 			panic(err)
 		}
