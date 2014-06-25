@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,12 +10,22 @@ import (
 	migdb "mig/database"
 	"net/http"
 	"os"
+	"os/signal"
 	"os/user"
 	"runtime"
+	"syscall"
 
 	"code.google.com/p/gcfg"
 	"github.com/jvehent/cljs"
 )
+
+type Context struct {
+	API struct {
+		URL string
+	}
+}
+
+var ctx Context
 
 func main() {
 	fmt.Println("\x1b[32;1m" + `
@@ -42,14 +53,31 @@ func main() {
 		panic(err)
 	}
 
+	// create a channel that receives signals, and capture
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for signal := range c {
+			switch signal {
+			case syscall.SIGINT:
+				// signal is a ^C, handle it
+				fmt.Printf("\nGators are going back underwater. KThksBye.\n")
+				os.Exit(0)
+			}
+		}
+	}()
+
 	printStatus()
-}
-
-var ctx Context
-
-type Context struct {
-	API struct {
-		URL string
+	fmt.Printf("\nConnected to %s. Use ctrl+c to exit.\n", ctx.API.URL)
+	for {
+		fmt.Printf("mig> ")
+		r := bufio.NewReader(os.Stdin)
+		// read command line input, split on newlines
+		input, err := r.ReadString(0x0A)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(input)
 	}
 }
 
@@ -68,27 +96,36 @@ func findHomedir() string {
 
 func printStatus() {
 	resp, err := http.Get(ctx.API.URL + "dashboard")
-	perror(err)
+	if err != nil {
+		panic(err)
+	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	perror(err)
+	if err != nil {
+		panic(err)
+	}
 	st := cljs.New("")
 	err = json.Unmarshal(body, &st)
-	perror(err)
-	agtout := make([]string, 4)
-	agtout[0] = "~~~ Agents Summary ~~~"
-	actout := make([]string, 11)
-	actout[0] = "~~~ Actions Summary ~~~"
-	actctr := 0
+	if err != nil {
+		panic(err)
+	}
+	agtout := make([]string, 3)
+	agtout[0] = "Agents Summary:"
+	actout := make([]string, 1)
+	actout[0] = "Latest Actions:"
 	for _, item := range st.Collection.Items {
 		for _, data := range item.Data {
 			switch data.Name {
 			case "action":
 				bData, err := json.Marshal(data.Value)
-				perror(err)
+				if err != nil {
+					panic(err)
+				}
 				var a mig.Action
 				err = json.Unmarshal(bData, &a)
-				perror(err)
+				if err != nil {
+					panic(err)
+				}
 				var investigators string
 				for ctr, i := range a.Investigators {
 					if ctr > 0 {
@@ -102,38 +139,42 @@ func printStatus() {
 				if len(a.Name) > 30 {
 					a.Name = a.Name[0:27] + "..."
 				}
-				actout[actctr+1] = fmt.Sprintf("%s, %s launched '%s' with id %.0f on target '%s'",
+				str := fmt.Sprintf("* %s, %s launched '%s' with id %.0f on target '%s'",
 					a.LastUpdateTime.Format("On Mon Jan 2 at 3:04pm (MST)"),
 					investigators, a.Name, a.ID, a.Target)
-				actctr++
+				actout = append(actout, str)
 			case "active agents":
-				agtout[1] = fmt.Sprintf("%.0f agents have checked in during the last 5 minutes", data.Value)
+				agtout[1] = fmt.Sprintf("* %.0f agents have checked in during the last 5 minutes", data.Value)
 			case "agents versions count":
 				bData, err := json.Marshal(data.Value)
-				perror(err)
+				if err != nil {
+					panic(err)
+				}
 				var sum []migdb.AgentsSum
 				err = json.Unmarshal(bData, &sum)
-				perror(err)
-				agtout[3] = "count by version:"
+				if err != nil {
+					panic(err)
+				}
 				for _, asum := range sum {
-					s := fmt.Sprintf("\t%.0f agents run version %s", asum.Count, asum.Version)
+					s := fmt.Sprintf("* %.0f agents run version %s", asum.Count, asum.Version)
 					agtout = append(agtout, s)
 				}
 			case "agents started in the last 24 hours":
-				agtout[2] = fmt.Sprintf("%.0f agents started in the last 24 hours", data.Value)
+				agtout[2] = fmt.Sprintf("* %.0f agents (re)started in the last 24 hours", data.Value)
 			}
 		}
 	}
+	fmt.Println("\x1b[31;1m+------\x1b[0m")
 	for _, s := range agtout {
-		fmt.Println(s)
+		fmt.Println("\x1b[31;1m|\x1b[0m " + s)
 	}
+	fmt.Println("\x1b[31;1m|\x1b[0m")
 	for _, s := range actout {
-		fmt.Println(s)
+		fmt.Println("\x1b[31;1m|\x1b[0m " + s)
+		if len(actout) < 2 {
+			fmt.Println("\x1b[31;1m|\x1b[0m * None")
+			break
+		}
 	}
-}
-
-func perror(err error) {
-	if err != nil {
-		panic(err)
-	}
+	fmt.Println("\x1b[31;1m+------\x1b[0m")
 }
