@@ -100,10 +100,17 @@ func main() {
 	}
 
 	go watchDirectories(watcher, ctx)
-	err = initWatchers(watcher, ctx)
-	if err != nil {
-		panic(err)
-	}
+	// TODO: looks like the watchers are lost after a while. the (ugly) loop
+	// below reinits the watchers every 137 seconds to prevent that from happening
+	go func() {
+		for {
+			err = initWatchers(watcher, ctx)
+			if err != nil {
+				panic(err)
+			}
+			time.Sleep(137 * time.Second)
+		}
+	}()
 
 	// Goroutine that loads actions dropped into ctx.Directories.Action.New
 	go func() {
