@@ -228,6 +228,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 			{Name: "status", Value: "(done|destroyed|cancelled|timeout|...)", Prompt: "filter commands or agents results on their status"},
 			{Name: "threatfamily", Value: "(compliance|backdoor|...)", Prompt: "filter results of the threat family"},
 			{Name: "limit", Value: "10", Prompt: "limit the number of results to 10 by default"},
+			{Name: "foundanything", Value: "(true|false)", Prompt: "return commands that have results with foundanything flag set to true or false"},
 		},
 	})
 	if err != nil {

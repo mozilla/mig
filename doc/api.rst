@@ -69,6 +69,8 @@ GET /search
 	- `status`: filter on internal status (valid for `command` and `agent` only)
 	- `threatfamily`: filter results of the threat family of the action
 	- `limit`: limit the number of results to 10 by default
+	- `foundanything`: filter commands on the `foundanything` boolean of their
+	  results (valid for `command` type only)
 
 * Examples:
 
