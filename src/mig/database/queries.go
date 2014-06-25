@@ -40,6 +40,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mig"
+	"strconv"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -63,15 +64,18 @@ func (db *DB) Close() {
 
 // SearchParameters contains fields used to perform database searches
 type SearchParameters struct {
-	Before       time.Time `json:"before"`
-	After        time.Time `json:"after"`
-	Type         string    `json:"type"`
-	Report       string    `json:"report"`
-	AgentName    string    `json:"agentname"`
-	ActionName   string    `json:"actionname"`
-	ThreatFamily string    `json:"threatfamily"`
-	Status       string    `json:"status"`
-	Limit        float64   `json:"limit"`
+	Before        time.Time `json:"before"`
+	After         time.Time `json:"after"`
+	Type          string    `json:"type"`
+	Report        string    `json:"report"`
+	AgentName     string    `json:"agentname"`
+	ActionName    string    `json:"actionname"`
+	ActionID      string    `json:"actionid"`
+	CommandID     string    `json:"commandid"`
+	ThreatFamily  string    `json:"threatfamily"`
+	Status        string    `json:"status"`
+	Limit         float64   `json:"limit"`
+	FoundAnything bool      `json:"foundanything"`
 }
 
 // NewSearchParameters initializes search parameters
@@ -80,6 +84,8 @@ func NewSearchParameters() (p SearchParameters) {
 	p.After = time.Date(11, time.January, 11, 11, 11, 11, 11, time.UTC)
 	p.AgentName = "%"
 	p.ActionName = "%"
+	p.ActionID = "∞"
+	p.CommandID = "∞"
 	p.ThreatFamily = "%"
 	p.Status = "%"
 	p.Limit = 10
@@ -88,6 +94,30 @@ func NewSearchParameters() (p SearchParameters) {
 
 // SearchCommands returns an array of commands that match search parameters
 func (db *DB) SearchCommands(p SearchParameters) (commands []mig.Command, err error) {
+	var minActionID float64 = 0
+	var maxActionID float64 = 18446744073709551616 //2^64
+	if p.ActionID != "∞" {
+		minActionID, err = strconv.ParseFloat(p.ActionID, 64)
+		if err != nil {
+			return
+		}
+		maxActionID, err = strconv.ParseFloat(p.ActionID, 64)
+		if err != nil {
+			return
+		}
+	}
+	var minCommandID float64 = 0
+	var maxCommandID float64 = 18446744073709551616 //2^64
+	if p.CommandID != "∞" {
+		minCommandID, err = strconv.ParseFloat(p.CommandID, 64)
+		if err != nil {
+			return
+		}
+		maxCommandID, err = strconv.ParseFloat(p.CommandID, 64)
+		if err != nil {
+			return
+		}
+	}
 	rows, err := db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
 		actions.id, actions.name, actions.target, actions.description, actions.threat,
 		actions.operations, actions.validfrom, actions.expireafter,
@@ -96,12 +126,15 @@ func (db *DB) SearchCommands(p SearchParameters) (commands []mig.Command, err er
 		FROM commands, actions, agents
 		WHERE commands.actionid=actions.id AND commands.agentid=agents.id
 		AND commands.starttime <= $1 AND commands.starttime >= $2
-		AND actions.name LIKE $3
-		AND agents.name LIKE $4
-		AND actions.threat->>'family' LIKE $5
-		AND commands.status LIKE $6
-		ORDER BY commands.id DESC LIMIT $7`,
-		p.Before, p.After, p.ActionName, p.AgentName, p.ThreatFamily, p.Status, uint64(p.Limit))
+		AND commands.id >= $3 AND commands.id <= $4
+		AND actions.name LIKE $5
+		AND actions.id >= $6 AND actions.id <= $7
+		AND agents.name LIKE $8
+		AND actions.threat->>'family' LIKE $9
+		AND commands.status LIKE $10
+		ORDER BY commands.id DESC LIMIT $11`,
+		p.Before, p.After, minCommandID, maxCommandID, p.ActionName, minActionID, maxActionID,
+		p.AgentName, p.ThreatFamily, p.Status, uint64(p.Limit))
 	if err != nil {
 		err = fmt.Errorf("Error while finding commands: '%v'", err)
 		return
@@ -150,6 +183,18 @@ func (db *DB) SearchCommands(p SearchParameters) (commands []mig.Command, err er
 
 // SearchActions returns an array of actions that match search parameters
 func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error) {
+	var minActionID float64 = 0
+	var maxActionID float64 = 18446744073709551616 //2^64
+	if p.ActionID != "∞" {
+		minActionID, err = strconv.ParseFloat(p.ActionID, 64)
+		if err != nil {
+			return
+		}
+		maxActionID, err = strconv.ParseFloat(p.ActionID, 64)
+		if err != nil {
+			return
+		}
+	}
 	rows, err := db.c.Query(`SELECT id, name, target, description, threat, operations,
 		validfrom, expireafter, starttime, finishtime, lastupdatetime,
 		status, sentctr, returnedctr, donectr, cancelledctr, failedctr,
@@ -157,9 +202,10 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 		FROM actions
 		WHERE actions.starttime <= $1 AND actions.starttime >= $2
 		AND actions.name LIKE $3
-		AND actions.threat->>'family' LIKE $4
-		ORDER BY actions.id DESC LIMIT $5`,
-		p.Before, p.After, p.ActionName, p.ThreatFamily, uint64(p.Limit))
+		AND actions.id >= $4 AND actions.id <= $5
+		AND actions.threat->>'family' LIKE $6
+		ORDER BY actions.id DESC LIMIT $7`,
+		p.Before, p.After, p.ActionName, minActionID, maxActionID, p.ThreatFamily, uint64(p.Limit))
 	if err != nil {
 		err = fmt.Errorf("Error while finding actions: '%v'", err)
 		return

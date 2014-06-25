@@ -67,12 +67,16 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving search()"}.Debug()
 	}()
-	var foundanything, doFoundAnythingFiltering bool
+	doFoundAnythingFiltering := false
 	timeLayout := time.RFC3339
 	for queryParams, _ := range request.URL.Query() {
 		switch queryParams {
 		case "actionname":
 			p.ActionName = request.URL.Query()["actionname"][0]
+		case "actionid":
+			p.ActionID = request.URL.Query()["actionid"][0]
+		case "commandid":
+			p.CommandID = request.URL.Query()["commandid"][0]
 		case "after":
 			p.After, err = time.Parse(timeLayout, request.URL.Query()["after"][0])
 			if err != nil {
@@ -88,9 +92,9 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		case "foundanything":
 			switch request.URL.Query()["foundanything"][0] {
 			case "true", "True", "TRUE":
-				foundanything = true
+				p.FoundAnything = true
 			case "false", "False", "FALSE":
-				foundanything = false
+				p.FoundAnything = false
 			default:
 				panic("foundanything parameter must be true or false")
 			}
@@ -136,7 +140,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 
 	// if requested, filter results on the foundanything flag
 	if doFoundAnythingFiltering && p.Type == "command" {
-		results, err = filterResultsOnFoundAnythingFlag(results.([]mig.Command), foundanything)
+		results, err = filterResultsOnFoundAnythingFlag(results.([]mig.Command), p.FoundAnything)
 		if err != nil {
 			panic(err)
 		}
@@ -194,6 +198,9 @@ func filterResultsOnFoundAnythingFlag(commands []mig.Command, foundanything bool
 	for _, cmd := range commands {
 		doAppend := false
 		for _, result := range cmd.Results {
+			if result == nil {
+				continue
+			}
 			reflection := reflect.ValueOf(result)
 			resultMap := reflection.Interface().(map[string]interface{})
 			if _, ok := resultMap["foundanything"]; ok {

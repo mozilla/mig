@@ -66,6 +66,9 @@ GET /search
 	- `agentname`: filter results on the agent name
 	- `actionname`: filter results on the action name (valid for `command` and
 	  `action` types only)
+	- `actionid`: filter results on the action ID (valid for `command` and
+	  `action` types only)
+	- `commandid`: filter results on the command ID (valid for `command` type only)
 	- `status`: filter on internal status (valid for `command` and `agent` only)
 	- `threatfamily`: filter results of the threat family of the action
 	- `limit`: limit the number of results to 10 by default
