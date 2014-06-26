@@ -6,20 +6,48 @@ Mozilla InvestiGator Concepts & Internal Components
 .. sectnum::
 .. contents:: Table of Contents
 
-MIG is a platform to perform remote forensic on endpoints. It is composed of:
+MIG is a platform to perform investigative surgery on remote endpoints.
+It enables investigators to obtain information from large numbers of systems
+in parallel, thus accelerating investigation of incidents.
 
-* Agent: a program that runs on endpoints and receives commands to run locally
-  from the MIG platform. Commands are ran by agents using modules, such as
-  'filechecker'.
-* Scheduler: a router and processor that receives orders and forward them to
-  agents
-* API: an interface to the MIG platform used by investigators
-* Clients: clients are used by investigators to interact with the MIG platform
-  via the API
-* Queue: a message queueing daemon that passes messages between the scheduler
-  and the agents
-* Database: a storage backend used by the scheduler and the api
-* Investigators: humans who use clients to investigate things on agents
+Besides scalability, MIG is designed to provide strong security primitives:
+
+* **Access control** is ensured by requiring GPG signatures on all actions. Sensitive
+  actions can also request signatures from multiple investigators. An attacker
+  who takes over the central server will be able to read non-sensitive data,
+  but will not be able to send actions to agents. The GPG keys are securely
+  kept by their investigators.
+* **Privacy** is respected by never retrieving raw data from endpoints. When MIG is
+  ran on laptops or phones, end-users can request reports on the operations
+  performed on their devices. The 2-man-rule for sensitive actions also protect
+  from rogue investigators invading privacy.
+* **Reliability** is built in. No component is critical. If an agent crashes, it
+  will attempt to recover and reconnect to the platform indefinitely. If the
+  platform crashes, a new platform can be rebuilt rapidly without backups.
+
+MIG privileges a model where requesting information from endpoints is fast and
+simple. It does not attempt to record everything all the time. Instead, it
+assumes that when an information will be needed, it will be easy to retrieve it.
+
+It's an army of Sherlock Holmes, ready to interrogate your network within
+milliseconds.
+
+Terminology:
+
+* **Investigators**: humans who use clients to investigate things on agents
+* **Agent**: a small program that runs on a remote endpoint. It receives commands
+  from the scheduler through the relays, execute those commands using modules,
+  and sends the results back to the relays.
+* **Module**: single feature Go program that does stuff, like inspecting a file
+  system, listing connected IP addresses, creating user accounts or adding
+  firewall rules
+* **Scheduler**: a messenging daemon that routes actions and commands to and from
+  agents.
+* **Relay**: a RabbitMQ server that queues messages between schedulers and agents.
+* **Database**: a storage backend used by the scheduler and the api
+* **API**: a REST api that exposes the MIG platform to clients
+* **Client**: a program used by an investigator to interface with MIG (like the
+  MIG Console, or the action generator)
 
 An investigator uses a client (such as the MIG Console) to communicate with
 the API. The API interfaces with the Database and the Scheduler.
