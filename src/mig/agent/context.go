@@ -259,8 +259,8 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgentID()"}.Debug()
 	}()
 	os.Chmod(ctx.Agent.RunDir, 0755)
-	loc := ctx.Agent.RunDir + ".migagtid"
-	id, err := ioutil.ReadFile(loc)
+	idFile := ctx.Agent.RunDir + ".migagtid"
+	id, err := ioutil.ReadFile(idFile)
 	if err != nil {
 		// ID file doesn't exist, create it
 		id, err = createIDFile(ctx)
@@ -269,6 +269,7 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 		}
 	}
 	ctx.Agent.UID = fmt.Sprintf("%s", id)
+	os.Chmod(idFile, 0644)
 	return
 }
 
@@ -309,16 +310,19 @@ func createIDFile(ctx Context) (id []byte, err error) {
 			}
 		}
 	}
+
+	idFile := ctx.Agent.RunDir + ".migagtid"
+
 	// something exists at the location of the id file, just plain remove it
-	_ = os.Remove(ctx.Agent.RunDir + ".migagtid")
+	_ = os.Remove(idFile)
 
 	// write the ID file
-	err = ioutil.WriteFile(ctx.Agent.RunDir+".migagtid", []byte(sid), 400)
+	err = ioutil.WriteFile(idFile, []byte(sid), 0644)
 	if err != nil {
 		panic(err)
 	}
 	// read ID from disk
-	id, err = ioutil.ReadFile(ctx.Agent.RunDir + ".migagtid")
+	id, err = ioutil.ReadFile(idFile)
 	if err != nil {
 		panic(err)
 	}
