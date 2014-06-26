@@ -419,8 +419,9 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 	resource := cljs.New(loc)
 	defer func() {
 		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
+			emsg := fmt.Sprintf("%v", e)
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAction()"}.Debug()
@@ -432,10 +433,30 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 	}
 
 	// retrieve the action
-	a, err := ctx.DB.ActionByID(actionID)
-	if err != nil {
-		panic(err)
+	var a mig.Action
+	if actionID > 0 {
+		a, err = ctx.DB.ActionByID(actionID)
+		if err != nil {
+			if fmt.Sprintf("%v", err) == "Error while retrieving action: 'sql: no rows in result set'" {
+				// not found, return 404
+				resource.SetError(cljs.Error{
+					Code:    fmt.Sprintf("%.0f", opid),
+					Message: fmt.Sprintf("Action ID '%.0f' not found", actionID)})
+				respond(404, resource, respWriter, request, opid)
+				return
+			} else {
+				panic(err)
+			}
+		}
+	} else {
+		// bad request, return 400
+		resource.SetError(cljs.Error{
+			Code:    fmt.Sprintf("%.0f", opid),
+			Message: fmt.Sprintf("Invalid Action ID '%.0f'", actionID)})
+		respond(400, resource, respWriter, request, opid)
+		return
 	}
+
 	// retrieve investigators
 	a.Investigators, err = ctx.DB.InvestigatorByActionID(a.ID)
 	if err != nil {
@@ -458,8 +479,9 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 	resource := cljs.New(loc)
 	defer func() {
 		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
+			emsg := fmt.Sprintf("%v", e)
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
 			respond(500, resource, respWriter, request, opid)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getCommand()"}.Debug()
@@ -474,12 +496,25 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 	var cmd mig.Command
 	if commandID > 0 {
 		cmd, err = ctx.DB.CommandByID(commandID)
+		if err != nil {
+			if fmt.Sprintf("%v", err) == "Error while retrieving command: 'sql: no rows in result set'" {
+				// not found, return 404
+				resource.SetError(cljs.Error{
+					Code:    fmt.Sprintf("%.0f", opid),
+					Message: fmt.Sprintf("Command ID '%.0f' not found", commandID)})
+				respond(404, resource, respWriter, request, opid)
+				return
+			} else {
+				panic(err)
+			}
+		}
 	} else {
-		// nothing to search for, return 404
+		// bad request, return 400
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("Invalid Command ID '%.0f'", commandID)})
 		respond(400, resource, respWriter, request, opid)
+		return
 	}
 	// store the results in the resource
 	commandItem, err := commandToItem(cmd)
