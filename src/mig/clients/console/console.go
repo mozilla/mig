@@ -41,13 +41,14 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"mig"
+	"log"
 	migdb "mig/database"
 	"net/http"
 	"os"
 	"os/signal"
 	"os/user"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"code.google.com/p/gcfg"
@@ -57,6 +58,9 @@ import (
 type Context struct {
 	API struct {
 		URL string
+	}
+	HTTP struct {
+		Client http.Client
 	}
 }
 
@@ -87,7 +91,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	// create a channel that receives signals, and capture
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -96,23 +99,53 @@ func main() {
 			switch signal {
 			case syscall.SIGINT:
 				// signal is a ^C, handle it
-				fmt.Printf("\nGators are going back underwater. KThksBye.\n")
+				fmt.Printf(`
+            .-._   _ _ _ _ _ _ _ _
+ .-''-.__.-'00  '-' ' ' ' ' ' ' ' '-.
+'.___ '    .   .--_'-' '-' '-' _'-' '._
+ V: V 'vv-'   '_   '.       .'  _..' '.'.
+   '=.____.=_.--'   :_.__.__:_   '.   : :
+           (((____.-'        '-.  /   : :
+                             (((-'\ .' /
+                           _____..'  .'
+                          '-._____.-'
+              Gators are going back underwater.
+`)
 				os.Exit(0)
 			}
 		}
 	}()
 
-	printStatus()
+	err = printStatus(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 	fmt.Printf("\nConnected to %s. Use ctrl+c to exit.\n", ctx.API.URL)
 	for {
-		fmt.Printf("mig> ")
+		fmt.Printf("\x1b[32;1mmig>\x1b[0m ")
 		r := bufio.NewReader(os.Stdin)
 		// read command line input, split on newlines
 		input, err := r.ReadString(0x0A)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(input)
+		// trim carriage return
+		input = input[0 : len(input)-1]
+		order := strings.Split(input, " ")[0]
+		switch order {
+		case "status":
+			err = printStatus(ctx)
+			if err != nil {
+				log.Println(err)
+			}
+		case "action":
+			err = actionReader(input, ctx)
+			if err != nil {
+				log.Println(err)
+			}
+		default:
+			fmt.Printf("Unknown order '%s'\n", order)
+		}
 	}
 }
 
@@ -129,18 +162,36 @@ func findHomedir() string {
 	}
 }
 
-func printStatus() {
-	resp, err := http.Get(ctx.API.URL + "dashboard")
+func getAPIResource(t string, ctx Context) (resource *cljs.Resource, err error) {
+	resp, err := ctx.HTTP.Client.Get(t)
 	if err != nil {
-		panic(err)
+		return
 	}
-	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		return
 	}
-	st := cljs.New("")
-	err = json.Unmarshal(body, &st)
+	defer resp.Body.Close()
+	resource = cljs.New("")
+	err = json.Unmarshal(body, &resource)
+	if err != nil {
+		return
+	}
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("HTTP %d: %v (code %s)", resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		return
+	}
+	return
+}
+
+func printStatus(ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("printStatus() -> %v", e)
+		}
+	}()
+	targetURL := ctx.API.URL + "dashboard"
+	st, err := getAPIResource(targetURL, ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -152,25 +203,11 @@ func printStatus() {
 		for _, data := range item.Data {
 			switch data.Name {
 			case "action":
-				bData, err := json.Marshal(data.Value)
+				a, err := valueToAction(data.Value)
 				if err != nil {
 					panic(err)
 				}
-				var a mig.Action
-				err = json.Unmarshal(bData, &a)
-				if err != nil {
-					panic(err)
-				}
-				var investigators string
-				for ctr, i := range a.Investigators {
-					if ctr > 0 {
-						investigators += "; "
-					}
-					investigators += i.Name
-				}
-				if len(investigators) > 30 {
-					investigators = investigators[0:27] + "..."
-				}
+				investigators := investigatorsStringFromAction(a.Investigators)
 				if len(a.Name) > 30 {
 					a.Name = a.Name[0:27] + "..."
 				}
@@ -191,7 +228,10 @@ func printStatus() {
 					panic(err)
 				}
 				for _, asum := range sum {
-					s := fmt.Sprintf("* %.0f agents run version %s", asum.Count, asum.Version)
+					s := fmt.Sprintf("* version %s: %.0f agent", asum.Version, asum.Count)
+					if asum.Count > 1 {
+						s += "s"
+					}
 					agtout = append(agtout, s)
 				}
 			case "agents started in the last 24 hours":
@@ -212,4 +252,5 @@ func printStatus() {
 		}
 	}
 	fmt.Println("\x1b[31;1m+------\x1b[0m")
+	return
 }
