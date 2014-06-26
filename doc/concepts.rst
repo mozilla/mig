@@ -19,6 +19,28 @@ MIG is a platform to perform remote forensic on endpoints. It is composed of:
 * Queue: a message queueing daemon that passes messages between the scheduler
   and the agents
 * Database: a storage backend used by the scheduler and the api
+* Investigators: humans who use clients to investigate things on agents
+
+An investigator uses a client (such as the MIG Console) to communicate with
+the API. The API interfaces with the Database and the Scheduler.
+When an action is created by an investigator, the API receives it and writes
+it into the spool of the scheduler (they share it via NFS). The scheduler picks
+it up, creates one command per target agent, and sends those commands to the
+relays (running RabbitMQ). Each agent is listening on its own queue on the relay.
+The agents execute their commands, and return the results through the same
+relays (same exchange, different queues). The scheduler writes the results into
+the database, where the investigator can access them through the API.
+The agents also use the relays to send heartbeat at regular intervals, such that
+the scheduler always knows how many agents are alive at a given time.
+
+The end-to-end workflow is:
+
+ ::
+
+    {investigator} -https-> {API} -nfs-> {Scheduler} -amqps-> {Relays} -amqps-> {Agents}
+                                \           /
+                              sql\         /sql
+                                 {DATABASE}
 
 Below is a high-level view of the different components:
 
@@ -54,8 +76,6 @@ Below is a high-level view of the different components:
     +--+--+     +--+--+    +-+---+          +-+---+
     |agent|     |agent|    |agent|  .....   |agent|
     +-----+     +-----+    +-----+          +-----+
-
-Actions and Commands are messages passed between the differents components.
 
 Actions and Commands
 --------------------
