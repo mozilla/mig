@@ -309,11 +309,9 @@ func createIDFile(ctx Context) (id []byte, err error) {
 			}
 		}
 	}
-	// if something exists at the location of the id file, just plain remove it
-	err = os.Remove(ctx.Agent.RunDir + ".migagtid")
-	if err != nil {
-		panic(err)
-	}
+	// something exists at the location of the id file, just plain remove it
+	_ = os.Remove(ctx.Agent.RunDir + ".migagtid")
+
 	// write the ID file
 	err = ioutil.WriteFile(ctx.Agent.RunDir+".migagtid", []byte(sid), 400)
 	if err != nil {

@@ -160,7 +160,7 @@ func runAgent(foreground bool) (err error) {
 			panic(err)
 		}
 		// if init fails, sleep for one minute and try again. forever.
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Sleep 60s and retry", err)}.Info()
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Sleep 60s and retry: '%v'", err)}.Info()
 		time.Sleep(60 * time.Second)
 		// spawn a new agent process and kill yourself
 		cmd := exec.Command(ctx.Agent.BinPath)
