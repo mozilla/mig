@@ -202,7 +202,7 @@ func initSyslog(orig_logctx Logging, progname string) (logctx Logging, err error
 		panic("Syslog protocol is missing")
 	}
 	dialaddr := logctx.Host + ":" + fmt.Sprintf("%d", logctx.Port)
-	logctx.syslogfd, err = syslog.Dial(logctx.Protocol, dialaddr, syslog.LOG_LOCAL5|syslog.LOG_INFO, progname)
+	logctx.syslogfd, err = syslog.Dial(logctx.Protocol, dialaddr, syslog.LOG_DAEMON|syslog.LOG_INFO, progname)
 	if err != nil {
 		panic(err)
 	}
