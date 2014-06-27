@@ -45,13 +45,11 @@ import (
 	"mig"
 	"net"
 	"os"
-	"os/exec"
 	"runtime"
 	"strings"
 	"time"
 
 	"bitbucket.org/kardianos/osext"
-	"bitbucket.org/kardianos/service"
 	"github.com/streadway/amqp"
 )
 
@@ -62,7 +60,7 @@ type Context struct {
 	ACL   mig.ACL
 	Agent struct {
 		Hostname, OS, QueueLoc, UID, BinPath, RunDir string
-		IsImmortal                                   bool
+		Respawn                                      bool
 	}
 	Channels struct {
 		// internal
@@ -102,18 +100,15 @@ func Init(foreground bool) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
 	}()
 
-	// initiate logging configuration
-	// in foreground mode, print all logs to stdout
-	if foreground {
-		LOGGINGCONF.Level = "debug"
-		LOGGINGCONF.Mode = "stdout"
-	}
 	ctx.Logging, err = mig.InitLogger(LOGGINGCONF, "mig-agent")
 	if err != nil {
 		panic(err)
 	}
 
-	ctx.Agent.IsImmortal = ISIMMORTAL
+	// defines whether the agent should respawn itself or not
+	// this value is overriden in the daemonize calls if the agent
+	// is controlled by systemd, upstart or launchd
+	ctx.Agent.Respawn = ISIMMORTAL
 
 	// create the go channels
 	ctx, err = initChannels(ctx)
@@ -138,34 +133,13 @@ func Init(foreground bool) (ctx Context, err error) {
 		panic(err)
 	}
 
-	// daemonize if not foreground in foreground mode
-	// and parent PID isn't already 1
+	// daemonize if not in foreground mode
 	if !foreground {
 		// give one second for the caller to exit
 		time.Sleep(time.Second)
-		if os.Getppid() != 1 {
-			// spawn a new agent process and kill yourself
-			cmd := exec.Command(ctx.Agent.BinPath)
-			err = cmd.Start()
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to spawn new agent from '%s': '%v'", ctx.Agent.BinPath, err)}.Err()
-			}
-			os.Exit(0)
-		}
-		// install the service
-		if MUSTINSTALLSERVICE {
-			svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service initialization failed: '%v'", err)}.Err()
-			}
-			err = svc.Remove()
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service removal failed: '%v'", err)}.Err()
-			}
-			err = svc.Install()
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service installation failed: '%v'", err)}.Err()
-			}
+		ctx, err = daemonize(ctx)
+		if err != nil {
+			panic(err)
 		}
 	}
 

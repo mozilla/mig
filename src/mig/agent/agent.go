@@ -77,15 +77,22 @@ type moduleOp struct {
 func main() {
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
+	var debug = flag.Bool("d", false, "Debug mode: run in foreground, log to stdout")
 	var mode = flag.String("m", "agent", "Module to run (eg. agent, filechecker).")
 	var file = flag.String("i", "/path/to/file", "Load action from file")
-	var foreground = flag.Bool("f", false, "Agent will run in background by default. Except if this flag is set, or if LOGGING.Mode is stdout. All other modules run in foreground by default.")
+	var foreground = flag.Bool("f", false, "Agent will fork into background by default. Except if this flag is set.")
 	var showversion = flag.Bool("V", false, "Print Agent version and exit.")
 	flag.Parse()
 
 	if *showversion {
 		fmt.Println(version)
 		os.Exit(0)
+	}
+
+	if *debug {
+		*foreground = true
+		LOGGINGCONF.Level = "debug"
+		LOGGINGCONF.Mode = "stdout"
 	}
 
 	// run the agent, and exit when done
@@ -159,13 +166,14 @@ func runAgent(foreground bool) (err error) {
 			// if in foreground mode, don't retry, just panic
 			panic(err)
 		}
-		// if init fails, sleep for one minute and try again. forever.
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Sleep 60s and retry: '%v'", err)}.Info()
-		time.Sleep(60 * time.Second)
-		// spawn a new agent process and kill yourself
-		cmd := exec.Command(ctx.Agent.BinPath)
-		_ = cmd.Start()
-		os.Exit(0)
+		if ctx.Agent.Respawn {
+			// if init fails, sleep for one minute and try again. forever.
+			ctx.Channels.Log <- mig.Log{Desc: "Sleep 60s and retry"}.Info()
+			time.Sleep(60 * time.Second)
+			cmd := exec.Command(ctx.Agent.BinPath)
+			_ = cmd.Start()
+			os.Exit(0)
+		}
 	}
 
 	// Goroutine that receives messages from AMQP
@@ -218,9 +226,9 @@ func runAgent(foreground bool) (err error) {
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
 
 	// I'll be back!
-	if ctx.Agent.IsImmortal {
+	if ctx.Agent.Respawn {
 		ctx.Channels.Log <- mig.Log{Desc: "Agent is immortal. Resuscitating!"}
-		cmd := exec.Command(ctx.Agent.BinPath)
+		cmd := exec.Command(ctx.Agent.BinPath, "-f")
 		_ = cmd.Start()
 		os.Exit(0)
 	}
