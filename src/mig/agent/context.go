@@ -62,6 +62,7 @@ type Context struct {
 	ACL   mig.ACL
 	Agent struct {
 		Hostname, OS, QueueLoc, UID, BinPath, RunDir string
+		IsImmortal                                   bool
 	}
 	Channels struct {
 		// internal
@@ -112,6 +113,8 @@ func Init(foreground bool) (ctx Context, err error) {
 		panic(err)
 	}
 
+	ctx.Agent.IsImmortal = ISIMMORTAL
+
 	// create the go channels
 	ctx, err = initChannels(ctx)
 	if err != nil {
@@ -121,13 +124,9 @@ func Init(foreground bool) (ctx Context, err error) {
 	// Logging GoRoutine,
 	go func() {
 		for event := range ctx.Channels.Log {
-			stop, err := mig.ProcessLog(ctx.Logging, event)
+			_, err := mig.ProcessLog(ctx.Logging, event)
 			if err != nil {
 				fmt.Println("Unable to process logs")
-			}
-			// if ProcessLog says we should stop now, feed the Terminate chan
-			if stop {
-				ctx.Channels.Terminate <- fmt.Errorf(event.Desc)
 			}
 		}
 	}()
@@ -448,6 +447,12 @@ func initMQ(orig_ctx Context) (ctx Context, err error) {
 }
 
 func Destroy(ctx Context) (err error) {
+	close(ctx.Channels.Terminate)
+	close(ctx.Channels.NewCommand)
+	close(ctx.Channels.RunAgentCommand)
+	close(ctx.Channels.RunExternalCommand)
+	close(ctx.Channels.Results)
+	close(ctx.Channels.Log)
 	ctx.MQ.conn.Close()
 	return
 }

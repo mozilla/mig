@@ -40,6 +40,10 @@ import(
 	"time"
 )
 
+// restart the agent on failures, don't let it die
+var ISIMMORTAL bool = true
+
+// request installing of a service to start the agent at boot
 var MUSTINSTALLSERVICE bool = true
 
 var LOGGINGCONF = mig.Logging{

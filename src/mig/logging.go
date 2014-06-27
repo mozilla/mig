@@ -297,29 +297,41 @@ func ProcessLog(logctx Logging, l Log) (stop bool, err error) {
 		case syslog.LOG_EMERG:
 			err = logctx.syslogfd.Emerg(logline)
 			stop = true
+			return
 		case syslog.LOG_ALERT:
 			err = logctx.syslogfd.Alert(logline)
+			return
 		case syslog.LOG_CRIT:
 			err = logctx.syslogfd.Crit(logline)
+			return
 		case syslog.LOG_ERR:
 			err = logctx.syslogfd.Err(logline)
+			return
 		case syslog.LOG_WARNING:
 			err = logctx.syslogfd.Warning(logline)
+			return
 		case syslog.LOG_NOTICE:
 			err = logctx.syslogfd.Notice(logline)
+			return
 		case syslog.LOG_INFO:
 			err = logctx.syslogfd.Info(logline)
+			return
 		case syslog.LOG_DEBUG:
 			err = logctx.syslogfd.Debug(logline)
+			return
 		default:
 			err = logctx.syslogfd.Info(logline)
+			return
 		}
 	case MODE_STDOUT:
 		log.Println(logline)
+		return
 	case MODE_FILE:
 		log.Println(logline)
+		return
 	default:
 		log.Println(logline)
+		return
 	}
 	return
 }

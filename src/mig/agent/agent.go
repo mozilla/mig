@@ -180,6 +180,7 @@ func runAgent(foreground bool) (err error) {
 				ctx.Channels.Log <- log
 			}
 		}
+		ctx.Channels.Log <- mig.Log{Desc: "closing parseCommands goroutine"}
 	}()
 
 	// GoRoutine that executes commands that run as agent modules
@@ -191,6 +192,7 @@ func runAgent(foreground bool) (err error) {
 				ctx.Channels.Log <- log
 			}
 		}
+		ctx.Channels.Log <- mig.Log{Desc: "closing runAgentModule goroutine"}
 	}()
 
 	// GoRoutine that formats results and send them to scheduler
@@ -203,6 +205,7 @@ func runAgent(foreground bool) (err error) {
 				ctx.Channels.Log <- log
 			}
 		}
+		ctx.Channels.Log <- mig.Log{Desc: "closing sendResults channel"}
 	}()
 
 	// GoRoutine that sends heartbeat messages to scheduler
@@ -210,11 +213,19 @@ func runAgent(foreground bool) (err error) {
 
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.QueueLoc)}
 
-	// won't exit until this chan received something
+	// agent won't exit until this chan receives something
 	exitReason := <-ctx.Channels.Terminate
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
-	Destroy(ctx)
 
+	// I'll be back!
+	if ctx.Agent.IsImmortal {
+		ctx.Channels.Log <- mig.Log{Desc: "Agent is immortal. Resuscitating!"}
+		cmd := exec.Command(ctx.Agent.BinPath)
+		_ = cmd.Start()
+		os.Exit(0)
+	}
+
+	Destroy(ctx)
 	return
 }
 
@@ -235,6 +246,7 @@ func getCommands(ctx Context) (err error) {
 		ctx.Channels.NewCommand <- m.Body
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("received message. queued in position %d", len(ctx.Channels.NewCommand))}
 	}
+	ctx.Channels.Log <- mig.Log{Desc: "closing getCommands goroutine"}.Emerg()
 	return
 }
 
@@ -513,10 +525,7 @@ func publish(ctx Context, exchange, routingKey string, body []byte) (err error) 
 	}
 	// if we're here, it mean publishing failed 3 times. we most likely
 	// lost the connection with the relay, best is to die and restart
-	ctx.Channels.Log <- mig.Log{Desc: "Publishing failed 3 times. Starting a new agent and exiting."}.Err()
-	cmd := exec.Command(ctx.Agent.BinPath)
-	_ = cmd.Start()
-	os.Exit(0)
-
+	ctx.Channels.Log <- mig.Log{Desc: "Publishing failed 3 times in a row. Sending agent termination order."}.Emerg()
+	ctx.Channels.Terminate <- fmt.Errorf("Publication to relay is failing")
 	return
 }
