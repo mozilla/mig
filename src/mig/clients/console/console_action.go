@@ -58,15 +58,14 @@ func actionReader(input string, ctx Context) (err error) {
 		panic("wrong order format. must be 'action <actionid>'")
 	}
 	aid := inputArr[1]
-	targetURL := ctx.API.URL + "action?actionid=" + aid
-	a, err := getAction(targetURL, ctx)
+	a, err := getAction(aid, ctx)
 	if err != nil {
 		panic(err)
 	}
 	investigators := investigatorsStringFromAction(a.Investigators)
 
-	fmt.Println("Entering action reading mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
-	fmt.Printf("Action: '%s'. Launched by '%s' on '%s'. Status '%s'.\n",
+	fmt.Println("Entering action reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
+	fmt.Printf("Action: '%s'.\nLaunched by '%s' on '%s'.\nStatus '%s'.\n",
 		a.Name, investigators, a.StartTime, a.Status)
 	for {
 		input, err := readline.String("\x1b[31;1maction>\x1b[0m ")
@@ -77,8 +76,13 @@ func actionReader(input string, ctx Context) (err error) {
 			fmt.Println("error: ", err)
 			break
 		}
-		order := strings.Split(input, " ")[0]
-		switch order {
+		orders := strings.Split(input, " ")
+		switch orders[0] {
+		case "command":
+			err = commandReader(input, ctx)
+			if err != nil {
+				panic(err)
+			}
 		case "counters":
 			fmt.Printf("Sent:\t\t%d\nReturned:\t%d\nDone:\t\t%d\n"+
 				"Cancelled:\t%d\nFailed:\t\t%d\nTimeout:\t%d\n",
@@ -86,6 +90,49 @@ func actionReader(input string, ctx Context) (err error) {
 				a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
 		case "exit":
 			goto exit
+		case "foundsomething":
+			err = searchFoundAnything(a, true, ctx)
+			if err != nil {
+				panic(err)
+			}
+		case "foundnothing":
+			err = searchFoundAnything(a, false, ctx)
+			if err != nil {
+				panic(err)
+			}
+		case "help":
+			fmt.Printf(`The following orders are available:
+command <id>	jump to command reader mode for command <id>
+counters	display the counters of the action
+exit		exit this mode
+foundsomething	list commands and agents that have found something
+foundnothing	list commands and agents that have found nothing
+help		show this help
+investigators   print the list of investigators that signed the action
+json <pretty>	show the json of the action
+meta		display the action metadata
+r		refresh the action (get latest version from upstream)
+times		show the various timestamps of the action
+`)
+		case "investigators":
+			for _, i := range a.Investigators {
+				fmt.Println(i.Name, "- Key ID:", i.PGPFingerprint)
+			}
+		case "json":
+			var ajson []byte
+			if len(orders) > 1 {
+				if orders[1] == "pretty" {
+					ajson, err = json.MarshalIndent(a, "", "  ")
+				} else {
+					fmt.Printf("Unknown option '%s'\n", orders[1])
+				}
+			} else {
+				ajson, err = json.Marshal(a)
+			}
+			if err != nil {
+				panic(err)
+			}
+			fmt.Printf("%s\n", ajson)
 		case "meta":
 			fmt.Printf("Action id %.0f named '%s'\nTarget '%s'\n"+
 				"Description: Author '%s <%s>'; Revision '%.0f'; URL '%s'\n"+
@@ -98,57 +145,33 @@ func actionReader(input string, ctx Context) (err error) {
 				fmt.Printf("%s; ", op.Module)
 			}
 			fmt.Printf("\n")
-		case "help":
-			fmt.Printf(`The following orders are available:
-counters	display the counters of the action
-exit		exit this mode
-help		show this help
-investigators   print the list of investigators that signed the action
-meta		display the action metadata
-search		run a search based on this action. type 'search help' for details
-raw		show raw action (serialized json)
-re		refresh the action (reload latest version from API)
-times		show the various timestamps of the action
-`)
-		case "investigators":
-			for _, i := range a.Investigators {
-				fmt.Println(i.Name, "- Key ID:", i.PGPFingerprint)
-			}
-		case "raw":
-			astr, err := json.Marshal(a)
+		case "r":
+			a, err = getAction(aid, ctx)
 			if err != nil {
 				panic(err)
 			}
-			fmt.Printf("%s\n", astr)
-		case "re":
-			a, err = getAction(targetURL, ctx)
-			if err != nil {
-				panic(err)
-			}
-		case "search":
-			err = runActionSearch(input, a, ctx)
-			if err != nil {
-				panic(err)
-			}
+			fmt.Println("Reload succeeded")
 		case "times":
 			fmt.Printf("Valid from   '%s' until '%s'\nStarted on   '%s'\n"+
 				"Last updated '%s'\nFinished on  '%s'\n",
 				a.ValidFrom, a.ExpireAfter, a.StartTime, a.LastUpdateTime, a.FinishTime)
 		default:
-			fmt.Printf("Unknown order '%s'. You are in action reading mode. Try `help`.\n", order)
+			fmt.Printf("Unknown order '%s'. You are in action reader mode. Try `help`.\n", orders[0])
 		}
 		readline.AddHistory(input)
 	}
 exit:
+	fmt.Printf("\n")
 	return
 }
 
-func getAction(targetURL string, ctx Context) (a mig.Action, err error) {
+func getAction(aid string, ctx Context) (a mig.Action, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("getAction() -> %v", e)
 		}
 	}()
+	targetURL := ctx.API.URL + "action?actionid=" + aid
 	resource, err := getAPIResource(targetURL, ctx)
 	if err != nil {
 		panic(err)
@@ -180,6 +203,48 @@ func valueToAction(v interface{}) (a mig.Action, err error) {
 	return
 }
 
+func searchFoundAnything(a mig.Action, wantFound bool, ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("foundAnything() -> %v", e)
+		}
+	}()
+	foundanything := "false"
+	if wantFound {
+		foundanything = "true"
+	}
+	targetURL := ctx.API.URL + "search?type=command&limit=1000000&actionid=" + fmt.Sprintf("%.0f", a.ID) + "&foundanything=" + foundanything
+	resource, err := getAPIResource(targetURL, ctx)
+	if resource.Collection.Items[0].Data[0].Name != "search results" {
+		fmt.Println(targetURL)
+		panic("API returned something that is not search results.")
+	}
+	var results []mig.Command
+	bData, err := json.Marshal(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(bData, &results)
+	if err != nil {
+		panic(err)
+	}
+	agents := make(map[float64]mig.Command)
+	for _, cmd := range results {
+		agents[cmd.Agent.ID] = cmd
+	}
+	fmt.Printf("%d agents have found ", len(agents))
+	if wantFound {
+		fmt.Printf("something\n")
+	} else {
+		fmt.Printf("nothing\n")
+	}
+	fmt.Println("---- Command ID ----\t---- Agent Name & ID----")
+	for agtid, cmd := range agents {
+		fmt.Printf("%.0f\t%s [%.0f]\n", cmd.ID, cmd.Agent.Name, agtid)
+	}
+	return
+}
+
 func investigatorsStringFromAction(invlist []mig.Investigator) (investigators string) {
 	for ctr, i := range invlist {
 		if ctr > 0 {
@@ -190,9 +255,5 @@ func investigatorsStringFromAction(invlist []mig.Investigator) (investigators st
 	if len(investigators) > 30 {
 		investigators = investigators[0:27] + "..."
 	}
-	return
-}
-
-func runActionSearch(input string, a mig.Action, ctx Context) (err error) {
 	return
 }

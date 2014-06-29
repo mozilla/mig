@@ -98,7 +98,7 @@ func main() {
 
 	fmt.Printf("\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", ctx.API.URL)
 	for {
-		input, err := readline.String("\n\x1b[32;1mmig>\x1b[0m ")
+		input, err := readline.String("\x1b[32;1mmig>\x1b[0m ")
 		if err == io.EOF {
 			break
 		}
@@ -106,10 +106,15 @@ func main() {
 			fmt.Println("error: ", err)
 			break
 		}
-		order := strings.Split(input, " ")[0]
-		switch order {
+		orders := strings.Split(input, " ")
+		switch orders[0] {
 		case "action":
 			err = actionReader(input, ctx)
+			if err != nil {
+				log.Println(err)
+			}
+		case "command":
+			err = commandReader(input, ctx)
 			if err != nil {
 				log.Println(err)
 			}
@@ -117,9 +122,11 @@ func main() {
 			goto exit
 		case "help":
 			fmt.Printf(`The following orders are available:
-action <action id>	retrieve <action id> and enter action reading mode
-help			show this help
-exit			leave
+action <id>	enter action reader mode for action <id>
+command <id>	enter command reader mode for command <id>
+help		show this help
+exit		leave
+status		display platform status: connected agents and latest actions
 `)
 		case "status":
 			err = printStatus(ctx)
@@ -127,7 +134,7 @@ exit			leave
 				log.Println(err)
 			}
 		default:
-			fmt.Printf("Unknown order '%s'\n", order)
+			fmt.Printf("Unknown order '%s'\n", orders[0])
 		}
 		readline.AddHistory(input)
 	}
