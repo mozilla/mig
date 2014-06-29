@@ -13,3 +13,5 @@ doc/*
 *.o
 src/*
 !src/mig
+*.rpm
+*.deb
