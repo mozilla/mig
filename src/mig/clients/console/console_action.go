@@ -36,12 +36,13 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"mig"
-	"os"
 	"strings"
+
+	"github.com/bobappleyard/readline"
 )
 
 // actionReader retrieves an action from the API using its numerical ID
@@ -64,19 +65,18 @@ func actionReader(input string, ctx Context) (err error) {
 	}
 	investigators := investigatorsStringFromAction(a.Investigators)
 
-	fmt.Println("Entering action reading mode. Type `exit` to leave. `help` helps.")
+	fmt.Println("Entering action reading mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Action: '%s'. Launched by '%s' on '%s'. Status '%s'.\n",
 		a.Name, investigators, a.StartTime, a.Status)
 	for {
-		fmt.Printf("\x1b[32;1maction>\x1b[0m ")
-		r := bufio.NewReader(os.Stdin)
-		// read command line input, split on newlines
-		input, err := r.ReadString(0x0A)
-		if err != nil {
-			panic(err)
+		input, err := readline.String("\x1b[31;1maction>\x1b[0m ")
+		if err == io.EOF {
+			break
 		}
-		// trim carriage return
-		input = input[0 : len(input)-1]
+		if err != nil {
+			fmt.Println("error: ", err)
+			break
+		}
 		order := strings.Split(input, " ")[0]
 		switch order {
 		case "counters":
@@ -85,7 +85,7 @@ func actionReader(input string, ctx Context) (err error) {
 				a.Counters.Sent, a.Counters.Returned, a.Counters.Done,
 				a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
 		case "exit":
-			return nil
+			goto exit
 		case "meta":
 			fmt.Printf("Action id %.0f named '%s'\nTarget '%s'\n"+
 				"Description: Author '%s <%s>'; Revision '%.0f'; URL '%s'\n"+
@@ -112,7 +112,7 @@ times		show the various timestamps of the action
 `)
 		case "investigators":
 			for _, i := range a.Investigators {
-				fmt.Println(i.ID, i.PGPFingerprint, i.Name)
+				fmt.Println(i.Name, "- Key ID:", i.PGPFingerprint)
 			}
 		case "raw":
 			astr, err := json.Marshal(a)
@@ -137,7 +137,9 @@ times		show the various timestamps of the action
 		default:
 			fmt.Printf("Unknown order '%s'. You are in action reading mode. Try `help`.\n", order)
 		}
+		readline.AddHistory(input)
 	}
+exit:
 	return
 }
 

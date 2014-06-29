@@ -36,22 +36,21 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	migdb "mig/database"
 	"net/http"
 	"os"
-	"os/signal"
 	"os/user"
 	"runtime"
 	"strings"
-	"syscall"
 
 	"code.google.com/p/gcfg"
+	"github.com/bobappleyard/readline"
 	"github.com/jvehent/cljs"
 )
 
@@ -91,15 +90,49 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// create a channel that receives signals, and capture
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for signal := range c {
-			switch signal {
-			case syscall.SIGINT:
-				// signal is a ^C, handle it
-				fmt.Printf(`
+
+	err = printStatus(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", ctx.API.URL)
+	for {
+		input, err := readline.String("\n\x1b[32;1mmig>\x1b[0m ")
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			fmt.Println("error: ", err)
+			break
+		}
+		order := strings.Split(input, " ")[0]
+		switch order {
+		case "action":
+			err = actionReader(input, ctx)
+			if err != nil {
+				log.Println(err)
+			}
+		case "exit":
+			goto exit
+		case "help":
+			fmt.Printf(`The following orders are available:
+action <action id>	retrieve <action id> and enter action reading mode
+help			show this help
+exit			leave
+`)
+		case "status":
+			err = printStatus(ctx)
+			if err != nil {
+				log.Println(err)
+			}
+		default:
+			fmt.Printf("Unknown order '%s'\n", order)
+		}
+		readline.AddHistory(input)
+	}
+exit:
+	fmt.Printf(`
             .-._   _ _ _ _ _ _ _ _
  .-''-.__.-'00  '-' ' ' ' ' ' ' ' '-.
 '.___ '    .   .--_'-' '-' '-' _'-' '._
@@ -111,42 +144,6 @@ func main() {
                           '-._____.-'
               Gators are going back underwater.
 `)
-				os.Exit(0)
-			}
-		}
-	}()
-
-	err = printStatus(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("\nConnected to %s. Use ctrl+c to exit.\n", ctx.API.URL)
-	for {
-		fmt.Printf("\x1b[32;1mmig>\x1b[0m ")
-		r := bufio.NewReader(os.Stdin)
-		// read command line input, split on newlines
-		input, err := r.ReadString(0x0A)
-		if err != nil {
-			panic(err)
-		}
-		// trim carriage return
-		input = input[0 : len(input)-1]
-		order := strings.Split(input, " ")[0]
-		switch order {
-		case "status":
-			err = printStatus(ctx)
-			if err != nil {
-				log.Println(err)
-			}
-		case "action":
-			err = actionReader(input, ctx)
-			if err != nil {
-				log.Println(err)
-			}
-		default:
-			fmt.Printf("Unknown order '%s'\n", order)
-		}
-	}
 }
 
 func findHomedir() string {

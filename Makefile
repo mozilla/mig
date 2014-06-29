@@ -92,6 +92,7 @@ go_get_deps:
 	$(GOGETTER) bitbucket.org/kardianos/service
 	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
 	$(GOGETTER) camlistore.org/pkg/misc/pinentry
+	$(GOGETTER) github.com/bobappleyard/readline
 
 install: mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
