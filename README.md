@@ -1,23 +1,28 @@
 MIG: Mozilla InvestiGator
 =========================
 
-MIG is OpSec's platform for investigative surgery of remote endpoints. It's a
-platform that allows investigators to send actions to pools of agents, and check
+MIG is OpSec's platform for investigative surgery of remote endpoints.
+
+MIG is composed of agents installed on all systems of an infrastructure. The
+agents can be queried in real-time using a messenging protocol implemented in
+the MIG Scheduler. MIG has an API, a database, RabbitMQ relays and a console
+client. It allows investigators to send actions to pools of agents, and check
 for indicator of compromision, verify the state of a configuration, block an
-account, create a firewall rule or update a blacklist.
+account, create a firewall rule, update a blacklist and so on.
 
 ![MIG logo](doc/.files/MIG-logo-CC-small.jpg)
 
 For example: an investigator launches an action to search for an apache module
 that matches a given md5 value. MIG will register the action, find all the
-relevant targets and send commands to each target with the detail of the
-action. Each agent then individually run the action using built-in modules
-locally, and sends the results back to the MIG platform.
+relevant targets and send commands to each target agent with the detail of the
+action. Each agent then individually runs the action using built-in modules,
+and sends the results back to the MIG platform.
 
 Agents are designed to be lightweight, secure, and easy to deploy. All
 parameters are built into the agent at compile time, include the list of
 investigator's public keys. The agent binary is statically compiled for a target
-platform and can be shipped without any external dependency.
+platform and can be shipped without any external dependency. Deploying an agent
+is as easy as `wget -O /sbin/mig-agent https://fileserver/mig-agent && /sbin/mig-agent`
 
 MIG is designed to be fast, and asynchronous. It uses AMQP to distribute actions
 to endpoints, and relies on Go channels to prevent components from blocking.
@@ -26,7 +31,12 @@ processes for reliability.
 
 Speed is a strong requirement. Most actions will only take a few hundreds
 milliseconds to run. Larger ones, for example when looking for a hash in a large
-directory, should run in less than a minute.
+directory, should run in less than a minute or two.
+
+Privacy and security are paramount. Agents never send raw data back to the
+platform, but only reply to questions instead. All actions are signed by GPG
+keys that are not stored in the platform, thus preventing a compromision from
+taking over the entire infrastructure.
 
 Check out this 6 minutes presentation for background:
 
@@ -38,7 +48,7 @@ Goals
 * Query a pool of endpoints to verify the presence of a specific indicators
   (similar to IOC, but we use a different format)
 * Provide response mechanisms to lock down compromised endpoints
-* Periodically verify endpoint's compliance with the Security Policies
+* Periodically verify endpoint's compliance with the security requirements
 
 Features
 --------
@@ -51,14 +61,16 @@ Features
     * file content by regex
     * file hashes: md5, sha1, sha256, sha384, sha512, sha3_224,sha3_256,
       sha3_384, sha3_512
+    * connected IPs
 * Protect data security, investigate without intruding:
     * Raw data must not be readily available to investigators
 
-Todo list:
+In the work:
 * More agent modules
     * low level devices (memory, file system blocks, network cards)
-    * established connections
-    * firewall rules
+    * firewall rules (read & write)
+    * network sniffer
+    * accounts creation & destruction
     * lots more ...
 * Provide response mechanisms, including:
     * dynamic firewall rules additions & removal
@@ -66,6 +78,9 @@ Todo list:
     * process execution (execve) & destruction (kill)
 * Input/Output IOCs, Yara, ... through the API
 * Output results in standard format for alerting
+* Investigation console
+
+![MIG Console](doc/.files/console_screenshot.png)
 
 Documentation
 -------------
