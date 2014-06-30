@@ -89,6 +89,7 @@ func actionReader(input string, ctx Context) (err error) {
 			if err != nil {
 				panic(err)
 			}
+			goto exit
 		case "counters":
 			fmt.Printf("Sent:\t\t%d\nReturned:\t%d\nDone:\t\t%d\n"+
 				"Cancelled:\t%d\nFailed:\t\t%d\nTimeout:\t%d\n",
