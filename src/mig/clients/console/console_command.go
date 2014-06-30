@@ -66,8 +66,9 @@ func commandReader(input string, ctx Context) (err error) {
 	fmt.Println("Entering command reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Command %.0f ran on agent '%s' based on action '%s'\n",
 		cmd.ID, cmd.Agent.Name, cmd.Action.Name)
+	prompt := "\x1b[36;1mcommand " + cmdid[len(cmdid)-3:len(cmdid)] + ">\x1b[0m "
 	for {
-		input, err := readline.String("\x1b[36;1mcommand>\x1b[0m ")
+		input, err := readline.String(prompt)
 		if err == io.EOF {
 			break
 		}
@@ -78,6 +79,7 @@ func commandReader(input string, ctx Context) (err error) {
 		orders := strings.Split(input, " ")
 		switch orders[0] {
 		case "exit":
+			fmt.Printf("exit\n")
 			goto exit
 		case "help":
 			fmt.Printf(`The following orders are available:

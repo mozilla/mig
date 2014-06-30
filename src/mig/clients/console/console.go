@@ -42,6 +42,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"mig"
 	migdb "mig/database"
 	"net/http"
 	"os"
@@ -61,11 +62,16 @@ type Context struct {
 	HTTP struct {
 		Client http.Client
 	}
+	Homedir string
+	GPG     struct {
+		Home, KeyID string
+	}
 }
 
 var ctx Context
 
 func main() {
+	var err error
 	fmt.Println("\x1b[32;1m" + `
 ## ##                                     _.---._     .---.
 # # # /-\ ---||  |    /\         __...---' .---. '---'-.   '.
@@ -76,17 +82,26 @@ func main() {
       # | \| \  / |- |__ | |                       -~ -._  '-.  -. '-._''--.._.--''.
      ###|  \  \/  ---__| | |                            ~ ~-.__     -._  '-.__   '. '.
           #####                                               ~~ ~---...__ _    ._ .' '.
-          #      /\  --- /-\ |--|                                        ~  ~--.....--~
-          # ### /--\  | |   ||-\
-          #####/    \ |  \_/ |  \
+          #      /\  --- /-\ |--|----                                    ~  ~--.....--~
+          # ### /--\  | |   ||-\  //
+          #####/    \ |  \_/ |  \//__
 ` + "\x1b[0m")
 
-	homedir := findHomedir()
+	ctx.Homedir = findHomedir()
 	// command line options
-	var config = flag.String("c", homedir+"/.migconsole", "Load configuration from file")
+	var config = flag.String("c", ctx.Homedir+"/.migconsole", "Load configuration from file")
+	var api = flag.String("a", "undef", "API base url (ex: http://localhost:1664/api/v1/)")
 	flag.Parse()
 
-	err := gcfg.ReadFileInto(&ctx, *config)
+	if *api != "undef" {
+		ctx.API.URL = *api
+	} else {
+		err := gcfg.ReadFileInto(&ctx, *config)
+		if err != nil {
+			panic(err)
+		}
+	}
+	ctx.GPG.Home, err = findGPGHome(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -109,9 +124,18 @@ func main() {
 		orders := strings.Split(input, " ")
 		switch orders[0] {
 		case "action":
-			err = actionReader(input, ctx)
-			if err != nil {
-				log.Println(err)
+			if len(orders) > 1 {
+				if orders[1] == "new" {
+					var a mig.Action
+					err = actionLauncher(a, ctx)
+				} else {
+					err = actionReader(input, ctx)
+				}
+				if err != nil {
+					log.Println(err)
+				}
+			} else {
+				log.Println("error: 'action' order takes one argument")
 			}
 		case "command":
 			err = commandReader(input, ctx)
@@ -119,15 +143,20 @@ func main() {
 				log.Println(err)
 			}
 		case "exit":
+			fmt.Printf("exit\n")
 			goto exit
 		case "help":
 			fmt.Printf(`The following orders are available:
-action <id>	enter action reader mode for action <id>
+action <id|new>	enter action mode. if <id> is given, go to reader mode. if "new" is given, enter launcher mode.
 command <id>	enter command reader mode for command <id>
 help		show this help
 exit		leave
+showcfg		display running configuration
 status		display platform status: connected agents and latest actions
 `)
+		case "showcfg":
+			fmt.Printf("homedir = %s\n[api]\n    url = %s\n[gpg]\n    home = %s\n    keyid = %s\n",
+				ctx.API.URL, ctx.Homedir, ctx.GPG.Home, ctx.GPG.KeyID)
 		case "status":
 			err = printStatus(ctx)
 			if err != nil {
@@ -141,7 +170,7 @@ status		display platform status: connected agents and latest actions
 exit:
 	fmt.Printf(`
             .-._   _ _ _ _ _ _ _ _
- .-''-.__.-'00  '-' ' ' ' ' ' ' ' '-.
+ .-''-.__.-'Oo  '-' ' ' ' ' ' ' ' '-.
 '.___ '    .   .--_'-' '-' '-' _'-' '._
  V: V 'vv-'   '_   '.       .'  _..' '.'.
    '=.____.=_.--'   :_.__.__:_   '.   : :
@@ -164,6 +193,27 @@ func findHomedir() string {
 		}
 		return u.HomeDir
 	}
+}
+
+// findGPGHome looks for the GnuPG home directory
+func findGPGHome(ctx Context) (home string, err error) {
+	if ctx.GPG.Home != "" {
+		home = ctx.GPG.Home
+	} else {
+		var gnupghome string
+		gnupghome = os.Getenv("GNUPGHOME")
+		if gnupghome == "" {
+			gnupghome = "/.gnupg"
+		}
+		home = ctx.Homedir + gnupghome
+	}
+	for _, loc := range [3]string{home, home + "/pubring.gpg", home + "/secring.gpg"} {
+		_, err := os.Stat(loc)
+		if err != nil {
+			log.Fatalf("'%s' not found\n", loc)
+		}
+	}
+	return
 }
 
 func getAPIResource(t string, ctx Context) (resource *cljs.Resource, err error) {

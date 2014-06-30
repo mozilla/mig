@@ -67,8 +67,9 @@ func actionReader(input string, ctx Context) (err error) {
 	fmt.Println("Entering action reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Action: '%s'.\nLaunched by '%s' on '%s'.\nStatus '%s'.\n",
 		a.Name, investigators, a.StartTime, a.Status)
+	prompt := "\x1b[31;1maction " + aid[len(aid)-3:len(aid)] + ">\x1b[0m "
 	for {
-		input, err := readline.String("\x1b[31;1maction>\x1b[0m ")
+		input, err := readline.String(prompt)
 		if err == io.EOF {
 			break
 		}
@@ -83,12 +84,18 @@ func actionReader(input string, ctx Context) (err error) {
 			if err != nil {
 				panic(err)
 			}
+		case "copy":
+			err = actionLauncher(a, ctx)
+			if err != nil {
+				panic(err)
+			}
 		case "counters":
 			fmt.Printf("Sent:\t\t%d\nReturned:\t%d\nDone:\t\t%d\n"+
 				"Cancelled:\t%d\nFailed:\t\t%d\nTimeout:\t%d\n",
 				a.Counters.Sent, a.Counters.Returned, a.Counters.Done,
 				a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
 		case "exit":
+			fmt.Printf("exit\n")
 			goto exit
 		case "foundsomething":
 			err = searchFoundAnything(a, true, ctx)
@@ -103,6 +110,7 @@ func actionReader(input string, ctx Context) (err error) {
 		case "help":
 			fmt.Printf(`The following orders are available:
 command <id>	jump to command reader mode for command <id>
+copy		enter action launcher mode using current action as template
 counters	display the counters of the action
 exit		exit this mode
 foundsomething	list commands and agents that have found something
@@ -232,15 +240,16 @@ func searchFoundAnything(a mig.Action, wantFound bool, ctx Context) (err error) 
 	for _, cmd := range results {
 		agents[cmd.Agent.ID] = cmd
 	}
-	fmt.Printf("%d agents have found ", len(agents))
 	if wantFound {
-		fmt.Printf("something\n")
+		fmt.Printf("%d agents have found things\n", len(agents))
 	} else {
-		fmt.Printf("nothing\n")
+		fmt.Printf("%d agents have not found anything\n", len(agents))
 	}
-	fmt.Println("---- Command ID ----\t---- Agent Name & ID----")
-	for agtid, cmd := range agents {
-		fmt.Printf("%.0f\t%s [%.0f]\n", cmd.ID, cmd.Agent.Name, agtid)
+	if len(agents) > 0 {
+		fmt.Println("---- Command ID ----\t---- Agent Name & ID----")
+		for agtid, cmd := range agents {
+			fmt.Printf("%.0f\t%s [%.0f]\n", cmd.ID, cmd.Agent.Name, agtid)
+		}
 	}
 	return
 }
