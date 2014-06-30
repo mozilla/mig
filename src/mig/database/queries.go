@@ -770,8 +770,8 @@ func (db *DB) ActiveAgentsByTarget(target string, pointInTime time.Time) (agents
 		starttime, destructiontime, heartbeattime, status
 		FROM agents
 		WHERE agents.heartbeattime >= $1 AND agents.heartbeattime <= NOW()
-		AND name ILIKE $2 OR queueloc ILIKE $2
-		OR os ILIKE $2 OR version ILIKE $2`, pointInTime, search)
+		AND (name ILIKE $2 OR queueloc ILIKE $2
+		OR os ILIKE $2 OR version ILIKE $2)`, pointInTime, search)
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
