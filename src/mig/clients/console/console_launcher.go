@@ -371,7 +371,7 @@ func followAction(a mig.Action, ctx Context) (err error) {
 		if a.Counters.Returned > 0 && a.Counters.Returned > previousctr {
 			if (a.Counters.Returned % tenpercent) == 0 {
 				if a.Counters.Returned == a.Counters.Sent {
-					fmt.Printf("100% - done\n")
+					fmt.Println("100% done")
 					break
 				}
 				completion += 10

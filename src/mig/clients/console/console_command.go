@@ -87,6 +87,7 @@ exit		exit this mode
 help		show this help
 json <pretty>	show the json of the command
 r		refresh the command (get latest version from upstream)
+results		display the results
 `)
 		case "json":
 			var cjson []byte
@@ -109,6 +110,13 @@ r		refresh the command (get latest version from upstream)
 				panic(err)
 			}
 			fmt.Println("Reload succeeded")
+		case "results":
+			var cjson []byte
+			cjson, err = json.MarshalIndent(cmd.Results, "", "  ")
+			if err != nil {
+				panic(err)
+			}
+			fmt.Printf("%s\n", cjson)
 		default:
 			fmt.Printf("Unknown order '%s'. You are in command reader mode. Try `help`.\n", orders[0])
 		}

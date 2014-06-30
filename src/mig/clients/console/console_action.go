@@ -119,7 +119,7 @@ foundnothing	list commands and agents that have found nothing
 help		show this help
 investigators   print the list of investigators that signed the action
 json <pretty>	show the json of the action
-meta		display the action metadata
+detail		display the details of the action, including status & times
 r		refresh the action (get latest version from upstream)
 times		show the various timestamps of the action
 `)
@@ -142,18 +142,34 @@ times		show the various timestamps of the action
 				panic(err)
 			}
 			fmt.Printf("%s\n", ajson)
-		case "meta":
-			fmt.Printf("Action id %.0f named '%s'\nTarget '%s'\n"+
-				"Description: Author '%s <%s>'; Revision '%.0f'; URL '%s'\n"+
-				"Threat: Type '%s', Level '%s', Family '%s', Reference '%s'\n",
-				a.ID, a.Name, a.Target, a.Description.Author, a.Description.Email,
-				a.Description.Revision, a.Description.URL,
-				a.Threat.Type, a.Threat.Level, a.Threat.Family, a.Threat.Ref)
-			fmt.Printf("Operations: %d -> ", len(a.Operations))
+		case "detail":
+			fmt.Printf(`
+ID             %.0f
+Name           %s
+Target         %s
+Desc           author '%s <%s>'; revision '%.0f';
+               url '%s'
+Threat         type '%s'; level '%s'; family '%s'; reference '%s'
+Status         %s
+Times          valid from %s until %s
+               started %s; last updated %s; finished %s
+               duration: %s
+`, a.ID, a.Name, a.Target, a.Description.Author, a.Description.Email, a.Description.Revision,
+				a.Description.URL, a.Threat.Type, a.Threat.Level, a.Threat.Family, a.Threat.Ref, a.Status,
+				a.ValidFrom, a.ExpireAfter, a.StartTime, a.LastUpdateTime, a.FinishTime, a.LastUpdateTime.Sub(a.StartTime).String())
+			fmt.Printf("Investigators  ")
+			for _, i := range a.Investigators {
+				fmt.Println(i.Name, "- keyid:", i.PGPFingerprint)
+			}
+			fmt.Printf("Operations     count=%d => ", len(a.Operations))
 			for _, op := range a.Operations {
 				fmt.Printf("%s; ", op.Module)
 			}
 			fmt.Printf("\n")
+			fmt.Printf("Counters       sent=%d; returned=%d; done=%d\n"+
+				"               cancelled=%d; failed=%d; timeout=%d\n",
+				a.Counters.Sent, a.Counters.Returned, a.Counters.Done,
+				a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
 		case "r":
 			a, err = getAction(aid, ctx)
 			if err != nil {
