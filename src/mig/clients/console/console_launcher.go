@@ -56,29 +56,23 @@ var defaultExpiration = "5m"
 
 // actionLauncher prepares an action for launch, either by starting with an empty
 // template, or by loading an existing action from the api or the local disk
-func actionLauncher(a mig.Action, ctx Context) (err error) {
+func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("actionLauncher() -> %v", e)
 		}
 	}()
-	var empty mig.Action
-	if a.ID == 0 {
-		// just in case, reinit the action fields
-		a = empty
+	var a mig.Action
+	if tpl.ID == 0 {
 		fmt.Println("Entering action launcher with empty template")
 	} else {
 		// reinit the fields that we don't reuse
-		a.ID = empty.ID
-		a.ValidFrom = empty.ValidFrom
-		a.ExpireAfter = empty.ExpireAfter
-		a.Counters = empty.Counters
-		a.StartTime = empty.StartTime
-		a.FinishTime = empty.FinishTime
-		a.LastUpdateTime = empty.LastUpdateTime
-		a.PGPSignatures = empty.PGPSignatures
-		a.Investigators = empty.Investigators
-		a.Status = empty.Status
+		a.Name = tpl.Name
+		a.Target = tpl.Target
+		a.Description = tpl.Description
+		a.Threat = tpl.Threat
+		a.Operations = tpl.Operations
+		a.SyntaxVersion = tpl.SyntaxVersion
 		fmt.Printf("Entering action launcher using template '%s'\n", a.Name)
 	}
 	hasTimes := false
