@@ -93,16 +93,18 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 			_ = svc.Stop()
 			err = svc.Remove()
 			if err != nil {
+				// fail but continue, the service may not exist yet
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service removal failed: '%v'", err)}.Err()
-				return ctx, err
 			}
 			err = svc.Install()
 			if err != nil {
+				// if installation fails, do not continue
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service installation failed: '%v'", err)}.Err()
 				return ctx, err
 			}
 			err = svc.Start()
 			if err != nil {
+				// if starting fails, do not continue either
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service startup failed: '%v'", err)}.Err()
 				return ctx, err
 			}
