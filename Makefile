@@ -109,7 +109,7 @@ rpm-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
-	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\n[ -h /sbin/mig-agent -o -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDENV) /sbin/mig-agent\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent" > tmp/agent_install.sh
+	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent-$(BUILDENV)" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
@@ -119,7 +119,7 @@ deb-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
-	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\n[ -h /sbin/mig-agent -o -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDENV) /sbin/mig-agent\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent" > tmp/agent_install.sh
+	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent-$(BUILDENV)" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
@@ -129,12 +129,11 @@ osxpkg-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
-	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\n[ -h /sbin/mig-agent -o -e /sbin/mig-agent ] && rm /sbin/mig-agent\nln -s /sbin/mig-agent-$(BUILDENV) /sbin/mig-agent\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent" > tmp/agent_install.sh
+	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent-$(BUILDENV)" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
-
 
 rpm-scheduler: mig-scheduler
 	rm -rf tmp
