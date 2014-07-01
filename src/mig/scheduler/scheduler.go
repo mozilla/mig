@@ -388,7 +388,16 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 
 	// expand the action in one command per agent
 	cmdids, err := prepareCommands(action, ctx)
-	if err != nil {
+	if len(cmdids) == 0 {
+		// no agents found
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "No targets found. Invalidating action."}.Info()
+		err = invalidAction(ctx, action, actionPath)
+		if err != nil {
+			panic(err)
+		}
+		return nil
+	}
+	if err != nil && len(cmdids) > 0 {
 		panic(err)
 	}
 	// move action to flying state
@@ -658,7 +667,7 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 		os.Rename(ctx.Directories.Action.InFlight+"/"+actFile, ctx.Directories.Action.Done+"/"+actFile)
 	} else {
 		// store updated action in database
-		err = ctx.DB.UpdateAction(a)
+		err = ctx.DB.UpdateRunningAction(a)
 		if err != nil {
 			panic(err)
 		}

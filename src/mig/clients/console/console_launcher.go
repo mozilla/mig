@@ -342,16 +342,27 @@ func followAction(a mig.Action, ctx Context) (err error) {
 		}
 	}()
 	fmt.Printf("Entering follower mode for action ID %.0f\n", a.ID)
-	time.Sleep(1 * time.Second)
 	sent := 0
 	tenpercent := 0
-	completion := 0
 	dotter := 0
 	previousctr := 0
+	status := ""
 	for {
 		a, err = getAction(fmt.Sprintf("%.0f", a.ID), ctx)
 		if err != nil {
 			panic(err)
+		}
+		if status == "" {
+			status = a.Status
+		}
+		if status != a.Status {
+			fmt.Printf("action status is now '%s'\n", a.Status)
+			status = a.Status
+		}
+		if status != "init" && status != "preparing" && status != "inflight" {
+			fmt.Printf("action finished with status '%s' in %s\n",
+				status, a.LastUpdateTime.Sub(a.StartTime).String())
+			break
 		}
 		// init counters
 		if sent == 0 {
@@ -374,12 +385,13 @@ func followAction(a mig.Action, ctx Context) (err error) {
 					fmt.Println("100% done")
 					break
 				}
-				completion += 10
-				fmt.Printf("%d%% done\n", completion)
+				completion := (float64(a.Counters.Returned) / float64(a.Counters.Sent)) * 100
+				fmt.Printf("%.0f%% done - %d/%d\n",
+					completion, a.Counters.Returned, a.Counters.Sent)
 			}
 			previousctr = a.Counters.Returned
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 		dotter++
 		if dotter%10 == 0 {
 			fmt.Printf("%d seconds\n", dotter)

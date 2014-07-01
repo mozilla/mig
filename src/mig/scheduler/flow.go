@@ -108,11 +108,47 @@ func flyAction(ctx Context, a mig.Action, origin string) (err error) {
 		panic(err)
 	}
 	a.Status = "inflight"
-	err = ctx.DB.UpdateAction(a)
+	err = ctx.DB.FlyAction(a)
 	if err != nil {
 		panic(err)
 	}
 	desc := fmt.Sprintf("flyAction(): Action '%s' is in flight", a.Name)
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: desc}.Debug()
+	return
+}
+
+// invalidAction marks actions that have failed to run
+func invalidAction(ctx Context, a mig.Action, origin string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("invalidAction() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: "leaving invalidAction()"}.Debug()
+	}()
+	// move action to invalid dir
+	jsonA, err := json.Marshal(a)
+	if err != nil {
+		panic(err)
+	}
+	dest := fmt.Sprintf("%s/%.0f.json", ctx.Directories.Action.Invalid, a.ID)
+	err = safeWrite(ctx, dest, jsonA)
+	if err != nil {
+		panic(err)
+	}
+	// remove the action from its origin
+	os.Remove(origin)
+	if err != nil {
+		panic(err)
+	}
+	a.Status = "invalid"
+	a.LastUpdateTime = time.Now().UTC()
+	a.FinishTime = time.Now().UTC()
+	a.Counters.Sent = 0
+	err = ctx.DB.UpdateAction(a)
+	if err != nil {
+		panic(err)
+	}
+	desc := fmt.Sprintf("invalidAction(): Action '%s' has been marked as invalid.", a.Name)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: desc}.Debug()
 	return
 }

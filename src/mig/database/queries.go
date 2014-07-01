@@ -438,6 +438,29 @@ func (db *DB) InsertOrUpdateAction(a mig.Action) (inserted bool, err error) {
 	}
 }
 
+// FlyAction updates the status and sent counters of an action
+func (db *DB) FlyAction(a mig.Action) (err error) {
+	_, err = db.c.Exec(`UPDATE actions SET (status, sentctr) = ($2, $3) WHERE id=$1`,
+		a.ID, a.Status, a.Counters.Sent)
+	if err != nil {
+		return fmt.Errorf("Failed to fly action: '%v'", err)
+	}
+	return
+}
+
+// UpdateRunningAction stores updated time and counters on a running action
+func (db *DB) UpdateRunningAction(a mig.Action) (err error) {
+	_, err = db.c.Exec(`UPDATE actions SET (lastupdatetime, returnedctr,
+		donectr, cancelledctr, failedctr, timeoutctr)
+		= ($2, $3, $4, $5, $6, $7) WHERE id=$1`,
+		a.ID, a.LastUpdateTime, a.Counters.Returned, a.Counters.Done,
+		a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
+	if err != nil {
+		return fmt.Errorf("Failed to update action: '%v'", err)
+	}
+	return
+}
+
 // FinishAction updates the action fields to mark it as done
 func (db *DB) FinishAction(a mig.Action) (err error) {
 	a.FinishTime = time.Now()
