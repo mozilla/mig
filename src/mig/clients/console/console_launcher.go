@@ -90,6 +90,18 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 		}
 		orders := strings.Split(input, " ")
 		switch orders[0] {
+		case "details":
+			fmt.Printf("Action id %.0f named '%s'\nTarget '%s'\n"+
+				"Description: Author '%s <%s>'; Revision '%.0f'; URL '%s'\n"+
+				"Threat: Type '%s', Level '%s', Family '%s', Reference '%s'\n",
+				a.ID, a.Name, a.Target, a.Description.Author, a.Description.Email,
+				a.Description.Revision, a.Description.URL,
+				a.Threat.Type, a.Threat.Level, a.Threat.Family, a.Threat.Ref)
+			fmt.Printf("Operations: %d -> ", len(a.Operations))
+			for _, op := range a.Operations {
+				fmt.Printf("%s; ", op.Module)
+			}
+			fmt.Printf("\n")
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
@@ -100,7 +112,7 @@ help			show this help
 json <pretty>		show the json of the action
 launch <follow>		launch the action. block until completion if "follow" is set
 load <path>		load an action from a file at <path>
-meta			display the action metadata
+details			display the action details
 settarget <target>	set the target
 settimes <start> <stop>	set the validity and expiration dates
 sign			PGP sign the action
@@ -164,18 +176,6 @@ times			show the various timestamps of the action
 				panic(err)
 			}
 			fmt.Printf("Loaded action '%s' from %s\n", a.Name, orders[1])
-		case "meta":
-			fmt.Printf("Action id %.0f named '%s'\nTarget '%s'\n"+
-				"Description: Author '%s <%s>'; Revision '%.0f'; URL '%s'\n"+
-				"Threat: Type '%s', Level '%s', Family '%s', Reference '%s'\n",
-				a.ID, a.Name, a.Target, a.Description.Author, a.Description.Email,
-				a.Description.Revision, a.Description.URL,
-				a.Threat.Type, a.Threat.Level, a.Threat.Family, a.Threat.Ref)
-			fmt.Printf("Operations: %d -> ", len(a.Operations))
-			for _, op := range a.Operations {
-				fmt.Printf("%s; ", op.Module)
-			}
-			fmt.Printf("\n")
 		case "sign":
 			if !hasTimes {
 				fmt.Println("Times must be set prior to signing")
@@ -228,6 +228,8 @@ settimes now +60m
 			fmt.Printf("Valid from   '%s' until '%s'\nStarted on   '%s'\n"+
 				"Last updated '%s'\nFinished on  '%s'\n",
 				a.ValidFrom, a.ExpireAfter, a.StartTime, a.LastUpdateTime, a.FinishTime)
+		case "":
+			break
 		default:
 			fmt.Printf("Unknown order '%s'. You are in action launcher mode. Try `help`.\n", orders[0])
 		}

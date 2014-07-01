@@ -62,7 +62,7 @@ func actionReader(input string, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	investigators := investigatorsStringFromAction(a.Investigators)
+	investigators := investigatorsStringFromAction(a.Investigators, 80)
 
 	fmt.Println("Entering action reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Action: '%s'.\nLaunched by '%s' on '%s'.\nStatus '%s'.\n",
@@ -119,7 +119,7 @@ foundnothing	list commands and agents that have found nothing
 help		show this help
 investigators   print the list of investigators that signed the action
 json <pretty>	show the json of the action
-detail		display the details of the action, including status & times
+details		display the details of the action, including status & times
 r		refresh the action (get latest version from upstream)
 times		show the various timestamps of the action
 `)
@@ -142,7 +142,7 @@ times		show the various timestamps of the action
 				panic(err)
 			}
 			fmt.Printf("%s\n", ajson)
-		case "detail":
+		case "details":
 			fmt.Printf(`
 ID             %.0f
 Name           %s
@@ -180,6 +180,8 @@ Times          valid from %s until %s
 			fmt.Printf("Valid from   '%s' until '%s'\nStarted on   '%s'\n"+
 				"Last updated '%s'\nFinished on  '%s'\n",
 				a.ValidFrom, a.ExpireAfter, a.StartTime, a.LastUpdateTime, a.FinishTime)
+		case "":
+			break
 		default:
 			fmt.Printf("Unknown order '%s'. You are in action reader mode. Try `help`.\n", orders[0])
 		}
@@ -271,15 +273,15 @@ func searchFoundAnything(a mig.Action, wantFound bool, ctx Context) (err error) 
 	return
 }
 
-func investigatorsStringFromAction(invlist []mig.Investigator) (investigators string) {
+func investigatorsStringFromAction(invlist []mig.Investigator, strlen int) (investigators string) {
 	for ctr, i := range invlist {
 		if ctr > 0 {
 			investigators += "; "
 		}
 		investigators += i.Name
 	}
-	if len(investigators) > 30 {
-		investigators = investigators[0:27] + "..."
+	if len(investigators) > strlen {
+		investigators = investigators[0:(strlen-3)] + "..."
 	}
 	return
 }

@@ -117,6 +117,8 @@ results		display the results
 				panic(err)
 			}
 			fmt.Printf("%s\n", cjson)
+		case "":
+			break
 		default:
 			fmt.Printf("Unknown order '%s'. You are in command reader mode. Try `help`.\n", orders[0])
 		}

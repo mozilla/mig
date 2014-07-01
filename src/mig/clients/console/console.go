@@ -124,7 +124,7 @@ func main() {
 		orders := strings.Split(input, " ")
 		switch orders[0] {
 		case "action":
-			if len(orders) > 1 {
+			if len(orders) == 2 {
 				if orders[1] == "new" {
 					var a mig.Action
 					err = actionLauncher(a, ctx)
@@ -135,7 +135,8 @@ func main() {
 					log.Println(err)
 				}
 			} else {
-				log.Println("error: 'action' order takes one argument")
+				fmt.Println("error: 'action' order takes one argument; " +
+					"either 'new' to enter launcher mode, or an action ID to enter reader mode.")
 			}
 		case "command":
 			err = commandReader(input, ctx)
@@ -162,6 +163,8 @@ status		display platform status: connected agents and latest actions
 			if err != nil {
 				log.Println(err)
 			}
+		case "":
+			break
 		default:
 			fmt.Printf("Unknown order '%s'\n", orders[0])
 		}
@@ -251,8 +254,9 @@ func printStatus(ctx Context) (err error) {
 	}
 	agtout := make([]string, 3)
 	agtout[0] = "Agents Summary:"
-	actout := make([]string, 1)
+	actout := make([]string, 2)
 	actout[0] = "Latest Actions:"
+	actout[1] = "----    ID      ---- + ----         Name         ---- + ----    Date    ---- + ---- Investigators ----"
 	for _, item := range st.Collection.Items {
 		for _, data := range item.Data {
 			switch data.Name {
@@ -261,13 +265,35 @@ func printStatus(ctx Context) (err error) {
 				if err != nil {
 					panic(err)
 				}
-				investigators := investigatorsStringFromAction(a.Investigators)
+
+				investigators := investigatorsStringFromAction(a.Investigators, 23)
+
+				idstr := fmt.Sprintf("%.0f", a.ID)
+				if len(idstr) < 20 {
+					for i := len(idstr); i < 20; i++ {
+						idstr += " "
+					}
+				}
+
+				if len(a.Name) < 30 {
+					for i := len(a.Name); i < 30; i++ {
+						a.Name += " "
+					}
+				}
 				if len(a.Name) > 30 {
 					a.Name = a.Name[0:27] + "..."
 				}
-				str := fmt.Sprintf("* %s, %s launched '%s' with id %.0f on target '%s'",
-					a.LastUpdateTime.Format("On Mon Jan 2 at 3:04pm (MST)"),
-					investigators, a.Name, a.ID, a.Target)
+
+				datestr := a.LastUpdateTime.Format("Mon Jan 2 3:04pm MST")
+				if len(datestr) > 20 {
+					datestr = datestr[0:20]
+				}
+				if len(datestr) < 20 {
+					for i := len(datestr); i < 20; i++ {
+						datestr += " "
+					}
+				}
+				str := fmt.Sprintf("%s   %s   %s   %s", idstr, a.Name, datestr, investigators)
 				actout = append(actout, str)
 			case "active agents":
 				agtout[1] = fmt.Sprintf("* %.0f agents have checked in during the last 5 minutes", data.Value)
