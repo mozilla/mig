@@ -172,8 +172,8 @@ func runAgent(foreground bool) (err error) {
 			time.Sleep(60 * time.Second)
 			cmd := exec.Command(ctx.Agent.BinPath)
 			_ = cmd.Start()
-			os.Exit(0)
 		}
+		os.Exit(1)
 	}
 
 	// Goroutine that receives messages from AMQP
