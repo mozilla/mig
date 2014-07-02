@@ -63,6 +63,18 @@ func commandReader(input string, ctx Context) (err error) {
 		panic(err)
 	}
 
+	// completion
+	var symbols = []string{"exit", "help", "json", "r", "results"}
+	readline.Completer = func(query, ctx string) []string {
+		var res []string
+		for _, sym := range symbols {
+			if strings.HasPrefix(sym, query) {
+				res = append(res, sym)
+			}
+		}
+		return res
+	}
+
 	fmt.Println("Entering command reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Command %.0f ran on agent '%s' based on action '%s'\n",
 		cmd.ID, cmd.Agent.Name, cmd.Action.Name)

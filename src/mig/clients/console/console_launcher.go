@@ -77,6 +77,19 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 	}
 	hasTimes := false
 	hasSignatures := false
+
+	// completion
+	var symbols = []string{"exit", "help", "json", "launch", "load", "details",
+		"settarget", "settimes", "sign", "times"}
+	readline.Completer = func(query, ctx string) []string {
+		var res []string
+		for _, sym := range symbols {
+			if strings.HasPrefix(sym, query) {
+				res = append(res, sym)
+			}
+		}
+		return res
+	}
 	fmt.Println("Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	prompt := "\x1b[33;1mlauncher>\x1b[0m "
 	for {
@@ -151,6 +164,7 @@ times			show the various timestamps of the action
 					panic(err)
 				}
 				a.ExpireAfter = a.ValidFrom.Add(period)
+				hasTimes = true
 			}
 			if !hasSignatures {
 				pgpsig, err := computeSignature(a, ctx)
@@ -158,6 +172,7 @@ times			show the various timestamps of the action
 					panic(err)
 				}
 				a.PGPSignatures = append(a.PGPSignatures, pgpsig)
+				hasSignatures = true
 			}
 			a, err = postAction(a, follow, ctx)
 			if err != nil {
@@ -224,6 +239,7 @@ settimes now +60m
 					break
 				}
 			}
+			hasTimes = true
 		case "times":
 			fmt.Printf("Valid from   '%s' until '%s'\nStarted on   '%s'\n"+
 				"Last updated '%s'\nFinished on  '%s'\n",

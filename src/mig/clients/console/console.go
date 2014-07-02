@@ -111,6 +111,18 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// completion
+	var symbols = []string{"action", "command", "help", "exit", "showcfg", "status"}
+	readline.Completer = func(query, ctx string) []string {
+		var res []string
+		for _, sym := range symbols {
+			if strings.HasPrefix(sym, query) {
+				res = append(res, sym)
+			}
+		}
+		return res
+	}
+
 	fmt.Printf("\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", ctx.API.URL)
 	for {
 		input, err := readline.String("\x1b[32;1mmig>\x1b[0m ")
