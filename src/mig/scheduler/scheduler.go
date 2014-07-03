@@ -511,11 +511,13 @@ func sendCommand(cmdPath string, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
+	expire := cmd.Action.ExpireAfter.Sub(cmd.Action.ValidFrom)
 	// build amqp message for sending
 	msg := amqp.Publishing{
 		DeliveryMode: amqp.Persistent,
 		Timestamp:    time.Now(),
 		ContentType:  "text/plain",
+		Expiration:   fmt.Sprintf("%d", int64(expire/time.Millisecond)),
 		Body:         []byte(data),
 	}
 	agtQueue := fmt.Sprintf("mig.agt.%s", cmd.Agent.QueueLoc)
