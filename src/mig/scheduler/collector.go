@@ -36,6 +36,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"mig"
 	"os"
@@ -72,14 +73,10 @@ func spoolInspection(ctx Context) (err error) {
 		panic(err)
 	}
 
-	//err = evaluateInFlightAction(ctx)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//err = evaluateInFlightCommand(ctx)
-	//if err != nil {
-	//	panic(err)
-	//}
+	err = evaluateInFlightCommands(ctx)
+	if err != nil {
+		panic(err)
+	}
 
 	err = cleanDir(ctx, ctx.Directories.Action.Done)
 	if err != nil {
@@ -235,6 +232,56 @@ func loadCommandsDone(ctx Context) (err error) {
 		// queue it
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("loading returned command '%s'", cmd.Action.Name)}
 		ctx.Channels.CommandDone <- filename
+	}
+	dir.Close()
+	return
+}
+
+// evaluateInFlightCommand loads commands in the inflight directory
+// and terminate the expired ones
+func evaluateInFlightCommands(ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("evaluateInFlightCommands() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving evaluateInFlightCommands()"}.Debug()
+	}()
+	dir, err := os.Open(ctx.Directories.Command.InFlight)
+	dirContent, err := dir.Readdir(-1)
+	if err != nil {
+		panic(err)
+	}
+	// loop over the content of the directory
+	for _, DirEntry := range dirContent {
+		if !DirEntry.Mode().IsRegular() {
+			// ignore non file
+			continue
+		}
+		filename := ctx.Directories.Command.InFlight + "/" + DirEntry.Name()
+		cmd, err := mig.CmdFromFile(filename)
+		if err != nil {
+			panic(err)
+		}
+
+		if time.Now().After(cmd.Action.ExpireAfter) {
+			desc := fmt.Sprintf("expiring action '%s' on agent '%s'", cmd.Action.Name, cmd.Agent.Name)
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: desc}
+			// expired command must be terminated
+			cmd.Status = "cancelled"
+			cmd.FinishTime = time.Now().UTC()
+			// write it into the returned command directory
+			data, err := json.Marshal(cmd)
+			if err != nil {
+				panic(err)
+			}
+			dest := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.Returned, cmd.Action.ID, cmd.ID)
+			err = safeWrite(ctx, dest, data)
+			if err != nil {
+				panic(err)
+			}
+			//ctx.Directories.Command.Returned
+			os.Remove(filename)
+		}
 	}
 	dir.Close()
 	return

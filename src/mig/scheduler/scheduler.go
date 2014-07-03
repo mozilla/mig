@@ -584,8 +584,10 @@ func terminateCommand(cmdPath string, ctx Context) (err error) {
 		panic(err)
 	}
 	cmd.FinishTime = time.Now().UTC()
+	if cmd.Status == "sent" {
+		cmd.Status = "done"
+	}
 	// update command in database
-	cmd.Status = "done"
 	err = ctx.DB.FinishCommand(cmd)
 	if err != nil {
 		panic(err)
