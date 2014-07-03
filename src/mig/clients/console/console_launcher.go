@@ -179,7 +179,7 @@ times			show the various timestamps of the action
 			if err != nil {
 				panic(err)
 			}
-			time.Sleep(1 * time.Second)
+			fmt.Println("")
 			_ = actionReader(fmt.Sprintf("action %.0f", a.ID), ctx)
 			goto exit
 		case "load":
@@ -363,7 +363,6 @@ func followAction(a mig.Action, ctx Context) (err error) {
 	}()
 	fmt.Printf("Entering follower mode for action ID %.0f\n", a.ID)
 	sent := 0
-	tenpercent := 0
 	dotter := 0
 	previousctr := 0
 	status := ""
@@ -391,30 +390,23 @@ func followAction(a mig.Action, ctx Context) (err error) {
 				continue
 			} else {
 				sent = a.Counters.Sent
-				if sent < 10 {
-					tenpercent = 1
-				} else {
-					tenpercent = sent / 10
-				}
 				fmt.Printf("%d commands have been sent\n", sent)
 			}
 		}
 		if a.Counters.Returned > 0 && a.Counters.Returned > previousctr {
-			if (a.Counters.Returned % tenpercent) == 0 {
-				if a.Counters.Returned == a.Counters.Sent {
-					fmt.Println("100% done")
-					break
-				}
-				completion := (float64(a.Counters.Returned) / float64(a.Counters.Sent)) * 100
-				fmt.Printf("%.0f%% done - %d/%d\n",
-					completion, a.Counters.Returned, a.Counters.Sent)
+			if a.Counters.Returned == a.Counters.Sent {
+				fmt.Printf("100%% done, completed in %s\n", a.FinishTime.Sub(a.StartTime).String())
+				break
 			}
+			completion := (float64(a.Counters.Returned) / float64(a.Counters.Sent)) * 100
+			fmt.Printf("%.0f%% done - %d/%d\n",
+				completion, a.Counters.Returned, a.Counters.Sent)
 			previousctr = a.Counters.Returned
 		}
 		time.Sleep(500 * time.Millisecond)
 		dotter++
 		if dotter%10 == 0 {
-			fmt.Printf("%d seconds\n", dotter)
+			fmt.Printf("%d seconds\n", dotter/2)
 		}
 	}
 	return
