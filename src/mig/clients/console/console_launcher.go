@@ -123,7 +123,7 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 exit			exit this mode
 help			show this help
 json <pretty>		show the json of the action
-launch <follow>		launch the action. block until completion if "follow" is set
+launch <nofollow>	launch the action. to return before completion, add "nofollow"
 load <path>		load an action from a file at <path>
 details			display the action details
 settarget <target>	set the target
@@ -147,10 +147,10 @@ times			show the various timestamps of the action
 			}
 			fmt.Printf("%s\n", ajson)
 		case "launch":
-			follow := false
+			follow := true
 			if len(orders) > 1 {
 				if orders[1] == "follow" {
-					follow = true
+					follow = false
 				} else {
 					fmt.Printf("Unknown option '%s'\n", orders[1])
 				}
