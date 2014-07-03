@@ -68,12 +68,11 @@ type Results struct {
 }
 
 func (p Parameters) Validate() (err error) {
-	versionre := regexp.MustCompile(`^[0-9]{12}+[a-z0-9]{7}.[a-zA-Z0-9]{50}$`)
 	locre := regexp.MustCompile(`^https?://`)
 	checksumre := regexp.MustCompile(`^[a-zA-Z0-9]{64}$`)
 	for k, el := range p.Elements {
-		if !versionre.MatchString(el["to_version"]) {
-			return fmt.Errorf("In %s, parameter 'to_version' with value '%s' is invalid. Expecting version.", k, el["to_version"])
+		if el["to_version"] == "" {
+			return fmt.Errorf("In %s, parameter 'to_version' is empty. Expecting version.", k, el["to_version"])
 		}
 		if !locre.MatchString(el["location"]) {
 			return fmt.Errorf("In %s, parameter 'location' with value '%s' is invalid. Expecting URL.", k, el["location"])
