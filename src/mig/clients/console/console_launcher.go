@@ -164,6 +164,7 @@ times			show the various timestamps of the action
 					panic(err)
 				}
 				a.ExpireAfter = a.ValidFrom.Add(period)
+				a.ExpireAfter = a.ExpireAfter.Add(60 * time.Second).UTC()
 				hasTimes = true
 			}
 			if !hasSignatures {
@@ -227,6 +228,7 @@ settimes now +60m
 					break
 				}
 				a.ExpireAfter = a.ValidFrom.Add(period)
+				a.ExpireAfter = a.ExpireAfter.Add(60 * time.Second).UTC()
 			} else {
 				a.ValidFrom, err = time.Parse("2014-01-01T00:00:00.0Z", orders[1])
 				if err != nil {
