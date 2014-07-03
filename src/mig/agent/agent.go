@@ -516,6 +516,7 @@ func publish(ctx Context, exchange, routingKey string, body []byte) (err error) 
 		DeliveryMode: amqp.Persistent,
 		Timestamp:    time.Now(),
 		ContentType:  "text/plain",
+		Expiration:   fmt.Sprintf("%d", int64(ctx.Sleeper/time.Millisecond)*10),
 		Body:         []byte(body),
 	}
 	for tries := 0; tries < 2; tries++ {
