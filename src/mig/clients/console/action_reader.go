@@ -65,8 +65,8 @@ func actionReader(input string, ctx Context) (err error) {
 	investigators := investigatorsStringFromAction(a.Investigators, 80)
 
 	// completion
-	var symbols = []string{"command", "copy", "counters", "exit", "foundsomething",
-		"foundnothing", "help", "investigators", "json", "details", "r", "times"}
+	var symbols = []string{"command", "copy", "counters", "details", "exit", "foundsomething",
+		"foundnothing", "help", "investigators", "json", "pretty", "r", "times"}
 	readline.Completer = func(query, ctx string) []string {
 		var res []string
 		for _, sym := range symbols {

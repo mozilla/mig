@@ -64,7 +64,7 @@ func commandReader(input string, ctx Context) (err error) {
 	}
 
 	// completion
-	var symbols = []string{"exit", "help", "json", "r", "results"}
+	var symbols = []string{"exit", "help", "json", "pretty", "r", "results"}
 	readline.Completer = func(query, ctx string) []string {
 		var res []string
 		for _, sym := range symbols {
