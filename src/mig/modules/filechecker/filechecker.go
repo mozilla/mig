@@ -367,11 +367,11 @@ func findRootPath(pattern string) string {
 	// find the root path before the first pattern character.
 	// seppos records the position of the latest path separator
 	// before the first pattern.
-	seppos := 1
+	seppos := 0
 	for cursor := 0; cursor < len(pattern); cursor++ {
 		char := pattern[cursor]
 		switch char {
-		case '*', '?', '[', '{':
+		case '*', '?', '[':
 			// found pattern character. but ignore it if preceded by backslash
 			if cursor > 0 {
 				if pattern[cursor-1] == '\\' {
@@ -386,7 +386,11 @@ func findRootPath(pattern string) string {
 		}
 	}
 exit:
-	return pattern[0 : seppos+1]
+	if seppos == 0 {
+		return string(pattern[0])
+	} else {
+		return pattern[0 : seppos+1]
+	}
 }
 
 // pathWalk goes down a directory and build a list of Active checklist that
@@ -414,6 +418,9 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 			   it to the interested list, and delete it from the todo
 			*/
 			interestedlist[id] = todolist[id]
+			if DEBUG {
+				fmt.Printf("Adding check id '%d' to interestedlist\n", id)
+			}
 			delete(todolist, id)
 		}
 	}
@@ -444,6 +451,10 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 			entryAbsPath += dirEntry.Name()
 			// this entry is a subdirectory, keep it for later
 			if dirEntry.IsDir() {
+				// append trailing slash
+				if entryAbsPath[len(entryAbsPath)-1] != os.PathSeparator {
+					entryAbsPath += string(os.PathSeparator)
+				}
 				subdirs = append(subdirs, entryAbsPath)
 				continue
 			}
@@ -504,35 +515,39 @@ func pathIncludes(root, pattern string) bool {
 			patterndepth++
 		}
 		if patterndepth == rootdepth {
-			// pattern reaches the same depth as root, we have two choices:
-			// 1. pattern has a match in the current depth, in which case we
-			//    use pattern as it is
-			// 2. pattern has a match in a subdirectory, so we create a subpattern
-			//    that only matches the current depth
-			subpattern = pattern[0 : pos+1]
-			if -1 != strings.Index(pattern[pos+1:len(pattern)-1], string(os.PathSeparator)) {
-				subpattern += "*"
-			} else {
-				subpattern = pattern
-			}
+			// pattern reaches the same depth as root, so we create a subpattern
+			// that only matches the current depth
+			subpattern = pattern[0:pos+1] + "*"
 			break
 		}
 	}
-	match, _ := filepath.Match(subpattern, root)
+	// if the current root is deeper than the pattern, and
+	// the pattern terminate with a wilcard, we reduce the matching
+	// of the root to the len of the pattern. that will allow us to
+	// continue recursively. If no wildcard, don't go down the tree
+	subroot := root
+	if rootdepth > patterndepth {
+		if pattern[len(pattern)-1] == '*' {
+			subroot = root[0 : len(pattern)-1]
+		}
+	}
+	match, _ := filepath.Match(subpattern, subroot)
 	if !match {
 		if DEBUG {
-			fmt.Printf("pathIncludes: '%s' is NOT interested in path '%s'\n", subpattern, root)
+			fmt.Printf("pathIncludes: '%s' is NOT interested in path '%s'\n", subpattern, subroot)
 		}
 		return false
 	}
 	if DEBUG {
-		fmt.Printf("pathIncludes: '%s' is interested in path '%s'\n", subpattern, root)
+		fmt.Printf("pathIncludes: '%s' is interested in path '%s'\n", subpattern, subroot)
 	}
 	return true
 }
 
 // evaluateFile looks for patterns that match a file and build a list of checks
 // passed to inspectFile
+// '/etc/' will grep into /etc/ without going further down. '/etc/*' will go further down.
+// '/etc/*sswd' or '/etc/*yum*/*.repo' work as expected.
 func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -542,22 +557,57 @@ func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err
 	if DEBUG {
 		fmt.Printf("evaluateFile: evaluating '%s'\n", file)
 	}
+	if len(interestedlist) < 1 {
+		if DEBUG {
+			fmt.Printf("evaluateFile: interestedlist is empty\n")
+		}
+		return nil
+	}
 	// that one is a file, see if it matches one of the pattern
 	inspect := false
 	checkBitmask := 0
 	var activechecks []int
 	for id, check := range interestedlist {
-		match, err := filepath.Match(check.path, file)
-		if err != nil {
-			return err
+		match := false
+		subfile := file
+		if strings.IndexAny(check.path, "*?[") < 0 {
+			// check.path doesn't contain metacharacters,
+			// do a direct comparison
+			if check.path[len(check.path)-1] == os.PathSeparator {
+				if len(file) >= len(check.path) {
+					if check.path[0:len(check.path)-1] == file[0:len(check.path)-1] {
+						match = true
+					}
+				}
+			} else if file == check.path {
+				match = true
+			}
+		} else {
+			// filepath.Match isn't very tolerant. a pattern such as '/etc*'
+			// will not match the file '/etc/passwd'. We work around that by
+			// matching on equal length if check.path is shorter than file and
+			// if check.path ends with a wildcard
+			if len(check.path) < len(file) {
+				if check.path[len(check.path)-1] == '*' {
+					subfile = file[0 : len(check.path)-1]
+				}
+			}
+			match, err = filepath.Match(check.path, subfile)
+			if err != nil {
+				return err
+			}
 		}
 		if match {
 			if DEBUG {
-				fmt.Printf("evaluateFile: activated check id '%d' '%s' on '%s'\n", id, check.path, file)
+				fmt.Printf("evaluateFile: activated check id '%d' '%s' on '%s'\n", id, check.path, subfile)
 			}
 			activechecks = append(activechecks, id)
 			checkBitmask |= check.testcode
 			inspect = true
+		} else {
+			if DEBUG {
+				fmt.Printf("evaluateFile: '%s' is NOT interested in '%s'\n", check.path, file)
+			}
 		}
 	}
 	if inspect {
@@ -1002,14 +1052,13 @@ func (r Results) Print(matchOnly bool) (results []string, err error) {
 						results = append(results, res)
 						continue
 					}
-					for file, _ := range r.Elements[path][method][id][value].Files {
+					for file, cnt := range r.Elements[path][method][id][value].Files {
 						verb := "match"
 						if r.Elements[path][method][id][value].Matchcount > 1 {
 							verb = "matches"
 						}
-						res := fmt.Sprintf("%d %s in file '%s' on '%s' in check '%s':'%s':'%s'",
-							r.Elements[path][method][id][value].Matchcount, verb,
-							file, value, path, method, id)
+						res := fmt.Sprintf("%d %s in '%s' on '%s' for filechecker '%s':'%s':'%s'",
+							cnt, verb, file, value, path, method, id)
 						results = append(results, res)
 					}
 				}

@@ -41,6 +41,20 @@
                         ]
                     }
                 },
+                "/etc/": {
+                    "regex": {
+                        "look into /etc/ only, no recursive walk down the path": [
+                            "^something interesting$"
+                        ]
+                    }
+                },
+                "/etc/*": {
+                    "regex": {
+                        "look into /etc/ and all subsequent directories": [
+                            "$another interesting thing$"
+                        ]
+                    }
+                },
                 "/*bin/": {
                     "sha256": {
                         "detect known dangerous binaries": [
