@@ -40,6 +40,7 @@ import (
 	"fmt"
 	"io"
 	"mig"
+	"mig/modules/filechecker"
 	"strings"
 
 	"github.com/bobappleyard/readline"
@@ -64,7 +65,7 @@ func commandReader(input string, ctx Context) (err error) {
 	}
 
 	// completion
-	var symbols = []string{"exit", "help", "json", "pretty", "r", "results"}
+	var symbols = []string{"exit", "help", "json", "match", "pretty", "r", "results"}
 	readline.Completer = func(query, ctx string) []string {
 		var res []string
 		for _, sym := range symbols {
@@ -95,11 +96,11 @@ func commandReader(input string, ctx Context) (err error) {
 			goto exit
 		case "help":
 			fmt.Printf(`The following orders are available:
-exit		exit this mode
-help		show this help
-json <pretty>	show the json of the command
-r		refresh the command (get latest version from upstream)
-results		display the results
+exit			exit this mode
+help			show this help
+json <pretty>		show the json of the command
+r			refresh the command (get latest version from upstream)
+results <match>		print the results. if "match" is set, only print results that have at least one match
 `)
 		case "json":
 			var cjson []byte
@@ -123,12 +124,38 @@ results		display the results
 			}
 			fmt.Println("Reload succeeded")
 		case "results":
-			var cjson []byte
-			cjson, err = json.MarshalIndent(cmd.Results, "", "  ")
-			if err != nil {
-				panic(err)
+			match := false
+			if len(orders) > 1 {
+				if orders[1] == "match" {
+					match = true
+				} else {
+					fmt.Printf("Unknown option '%s'\n", orders[1])
+				}
 			}
-			fmt.Printf("%s\n", cjson)
+			for i, result := range cmd.Results {
+				buf, err := json.Marshal(result)
+				if err != nil {
+					panic(err)
+				}
+				switch cmd.Action.Operations[i].Module {
+				case "filechecker":
+					var r filechecker.Results
+					err = json.Unmarshal(buf, &r)
+					if err != nil {
+						panic(err)
+					}
+					results, err := r.Print(match)
+					if err != nil {
+						panic(err)
+					}
+					for _, res := range results {
+						fmt.Println(res)
+					}
+				default:
+					fmt.Printf("no result parser available for module '%s'. try `json pretty`\n",
+						cmd.Action.Operations[i].Module)
+				}
+			}
 		case "":
 			break
 		default:
