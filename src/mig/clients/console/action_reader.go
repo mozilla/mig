@@ -278,9 +278,9 @@ func searchFoundAnything(a mig.Action, wantFound bool, ctx Context) (err error) 
 		fmt.Printf("%d agents have not found anything\n", len(agents))
 	}
 	if len(agents) > 0 {
-		fmt.Println("---- Command ID ----\t---- Agent Name & ID----")
+		fmt.Println("---- Command ID ----    ---- Agent Name & ID----")
 		for agtid, cmd := range agents {
-			fmt.Printf("%.0f\t%s [%.0f]\n", cmd.ID, cmd.Agent.Name, agtid)
+			fmt.Printf("%20.0f    %s [%.0f]\n", cmd.ID, cmd.Agent.Name, agtid)
 		}
 	}
 	return
