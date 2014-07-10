@@ -46,7 +46,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"code.google.com/p/go.crypto/sha3"
@@ -214,6 +216,7 @@ func Run(Args []byte) string {
 	// walk through the parameters and generate a checklist of filechecks
 	checklist := make(map[int]filecheck)
 	todolist := make(map[int]filecheck)
+	interestedlist := make(map[int]filecheck)
 	i := 0
 	for path, methods := range *params {
 		for method, identifiers := range methods {
@@ -240,10 +243,16 @@ func Run(Args []byte) string {
 		// are still in the todo list
 		if _, ok := todolist[id]; !ok {
 			// this check isn't in the todolist anymore, skip it
+			if DEBUG {
+				fmt.Printf("Main: Skipping check id '%d'. Already done.\n", id)
+			}
 			continue
 		}
-		var activechecks []int
-		err = pathWalk(check.path, activechecks, 0, checklist, todolist)
+		root := findRootPath(check.path)
+		if DEBUG {
+			fmt.Printf("Main: Found root path at '%s'\n", root)
+		}
+		err = pathWalk(root, checklist, todolist, interestedlist)
 		if err != nil {
 			if DEBUG {
 				fmt.Printf("pathWalk failed with error '%v'\n", err)
@@ -316,6 +325,35 @@ func createCheck(path, method, identifier, test string) (check filecheck) {
 	return
 }
 
+// findRootPath takes a path pattern and extracts the root, that is the
+// directory we can start our pattern search from.
+// example: pattern='/etc/cron.*/*' => root='/etc/'
+func findRootPath(pattern string) string {
+	// find the root path before the first pattern character.
+	// seppos records the position of the latest path separator
+	// before the first pattern.
+	seppos := 1
+	for cursor := 0; cursor < len(pattern); cursor++ {
+		char := pattern[cursor]
+		switch char {
+		case '*', '?', '[', '{':
+			// found pattern character. but ignore it if preceded by backslash
+			if cursor > 0 {
+				if pattern[cursor-1] == '\\' {
+					break
+				}
+			}
+			goto exit
+		case os.PathSeparator:
+			if cursor > 0 {
+				seppos = cursor
+			}
+		}
+	}
+exit:
+	return pattern[0 : seppos+1]
+}
+
 // pathWalk goes down a directory and build a list of Active checklist that
 // apply to the current path. For a given directory, it calls itself for all
 // subdirectories fund, recursively walking down the pass. When it find a file,
@@ -323,25 +361,20 @@ func createCheck(path, method, identifier, test string) (check filecheck) {
 // the file with.
 // parameters:
 //      - path is the file system path to inspect
-//      - activechecks is a slice that contains the IDs of the checklist
-//        that all files in that path and below must be checked against
-//      - checkBitmask is a bitmask of the checks types currently active
 //      - checklist is the global list of checklist
 //      - todolist is a map that contains the checklist that are not yet active
+//      - interestedlist is a map that contains checks that are interested in the
+//	  current path but not yet active
 // return:
 //      - nil on success, error on error
-func pathWalk(path string, activechecks []int, checkBitmask int, checklist, todolist map[int]filecheck) (err error) {
+func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck) (err error) {
 	for id, check := range todolist {
-		if check.path == path {
+		if pathIncludes(path, check.path) {
 			/* Found a new Check to apply to the current path, add
-			   it to the active list, and delete it from the todo
+			   it to the interested list, and delete it from the todo
 			*/
-			activechecks = append(activechecks, id)
-			checkBitmask |= check.testcode
+			interestedlist[id] = todolist[id]
 			delete(todolist, id)
-			if DEBUG {
-				fmt.Printf("pathWalk: Activating Check id '%d' for path '%s'\n", id, path)
-			}
 		}
 	}
 	var subdirs []string
@@ -363,38 +396,138 @@ func pathWalk(path string, activechecks []int, checkBitmask int, checklist, todo
 		}
 		// loop over the content of the directory
 		for _, dirEntry := range dirContent {
-			entryAbsPath := path + "/" + dirEntry.Name()
+			entryAbsPath := path
+			// append path separator if missing
+			if entryAbsPath[len(entryAbsPath)-1] != os.PathSeparator {
+				entryAbsPath += string(os.PathSeparator)
+			}
+			entryAbsPath += dirEntry.Name()
 			// this entry is a subdirectory, keep it for later
 			if dirEntry.IsDir() {
 				subdirs = append(subdirs, entryAbsPath)
-			} else if dirEntry.Mode().IsRegular() {
-				// that one is a file, open it and inspect it
-				entryfd, err := os.Open(entryAbsPath)
+				continue
+			}
+			if dirEntry.Mode().IsRegular() {
+				err = evaluateFile(entryAbsPath, interestedlist, checklist)
 				if err != nil {
-					// woops, open failed. update counters and move on
-					stats.Openfailed++
-					continue
-				}
-				inspectFile(entryfd, activechecks, checkBitmask, checklist)
-				stats.Filescount++
-				if err := entryfd.Close(); err != nil {
 					panic(err)
 				}
 			}
 		}
-	} else if targetMode.Mode().IsRegular() {
-		inspectFile(target, activechecks, checkBitmask, checklist)
-		stats.Filescount++
+	}
+	if targetMode.Mode().IsRegular() {
+		err = evaluateFile(path, interestedlist, checklist)
+		if err != nil {
+			panic(err)
+		}
 	}
 	// close the current target, we are done with it
 	if err := target.Close(); err != nil {
 		panic(err)
 	}
-	// if we found any sub directories, go down the rabbit hole recursively
+	// if we found any sub directories, go down the rabbit hole recursively,
+	// but only if one of the check is interested in going
 	for _, dir := range subdirs {
-		pathWalk(dir, activechecks, checkBitmask, checklist, todolist)
+		interested := false
+		for _, check := range interestedlist {
+			if pathIncludes(dir, check.path) {
+				interested = true
+				break
+			}
+		}
+		if interested {
+			pathWalk(dir, checklist, todolist, interestedlist)
+		}
 	}
 	return nil
+}
+
+// pathIncludes is an optimization that matches a pattern with the current
+// depth of a directory.
+// To make filtering more efficient, split the pattern at the PathSeparator
+// level of the current path. If the current levels don't match, there's no
+// need to continue further down this path
+func pathIncludes(root, pattern string) bool {
+	rootdepth := 0
+	for pos := 0; pos < len(root); pos++ {
+		if root[pos] == os.PathSeparator {
+			rootdepth++
+		}
+	}
+	subpattern := pattern
+	patterndepth := 0
+	for pos := 0; pos < len(pattern); pos++ {
+		if pattern[pos] == os.PathSeparator {
+			patterndepth++
+		}
+		if patterndepth == rootdepth {
+			// pattern reaches the same depth as root, we have two choices:
+			// 1. pattern has a match in the current depth, in which case we
+			//    use pattern as it is
+			// 2. pattern has a match in a subdirectory, so we create a subpattern
+			//    that only matches the current depth
+			subpattern = pattern[0 : pos+1]
+			if -1 != strings.Index(pattern[pos+1:len(pattern)-1], string(os.PathSeparator)) {
+				subpattern += "*"
+			} else {
+				subpattern = pattern
+			}
+			break
+		}
+	}
+	match, _ := filepath.Match(subpattern, root)
+	if !match {
+		if DEBUG {
+			fmt.Printf("pathIncludes: '%s' is NOT interested in path '%s'\n", subpattern, root)
+		}
+		return false
+	}
+	if DEBUG {
+		fmt.Printf("pathIncludes: '%s' is interested in path '%s'\n", subpattern, root)
+	}
+	return true
+}
+
+// evaluateFile looks for patterns that match a file and build a list of checks
+// passed to inspectFile
+func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err error) {
+	if DEBUG {
+		fmt.Printf("evaluateFile: evaluating '%s'\n", file)
+	}
+	// that one is a file, see if it matches one of the pattern
+	inspect := false
+	checkBitmask := 0
+	var activechecks []int
+	for id, check := range interestedlist {
+		match, err := filepath.Match(check.path, file)
+		if err != nil {
+			return err
+		}
+		if match {
+			if DEBUG {
+				fmt.Printf("evaluateFile: activated check id '%d' '%s' on '%s'\n", id, check.path, file)
+			}
+			activechecks = append(activechecks, id)
+			checkBitmask |= check.testcode
+			inspect = true
+		}
+	}
+	if inspect {
+		// it matches, open the file and inspect it
+		entryfd, err := os.Open(file)
+		if err != nil {
+			// woops, open failed. update counters and move on
+			stats.Openfailed++
+			return nil
+		}
+		inspectFile(entryfd, activechecks, checkBitmask, checklist)
+		stats.Filescount++
+		if err := entryfd.Close(); err != nil {
+			panic(err)
+		}
+		stats.Filescount++
+	}
+	return
 }
 
 // inspectFile is an orchestration function that runs the individual checks
@@ -675,7 +808,7 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) string {
 	// into a Response object
 	for _, check := range checklist {
 		if DEBUG {
-			fmt.Printf("Main: Check '%d' returned %d positive match\n", check.id, check.matchcount)
+			fmt.Printf("Main: Check '%s' returned %d positive match\n", check.id, check.matchcount)
 		}
 		if check.hasmatched {
 			for file, hits := range check.files {
