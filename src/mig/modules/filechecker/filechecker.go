@@ -44,7 +44,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -176,7 +175,8 @@ type filecheck struct {
 type Results struct {
 	FoundAnything bool                                                     `json:"foundanything"`
 	Elements      map[string]map[string]map[string]map[string]singleresult `json:"elements"`
-	Extra         extraresults                                             `json:"extra"`
+	Statistics    statistics                                               `json:"statistics"`
+	Error         string                                                   `json:"error"`
 }
 
 // singleresult contains information on the result of a single test
@@ -184,11 +184,6 @@ type singleresult struct {
 	Filecount  int            `json:"filecount"`
 	Matchcount int            `json:"matchcount"`
 	Files      map[string]int `json:"files"`
-}
-
-// extraresult contains additional data, this is optional but nice to have
-type extraresults struct {
-	Statistics statistics `json:"statistics"`
 }
 
 // NewResponse constructs a Response
@@ -200,7 +195,18 @@ func NewResults() *Results {
 // individual checks, stored in a map.
 // Each Check contains a path, which is inspected in the pathWalk function.
 // The results are stored in the checklist map and sent to stdout at the end.
-func Run(Args []byte) string {
+func Run(Args []byte) (resStr string) {
+	defer func() {
+		if e := recover(); e != nil {
+			// return error in json
+			res := NewResults()
+			res.Statistics = stats
+			res.Error = fmt.Sprintf("%v", e)
+			err, _ := json.Marshal(res)
+			resStr = string(err[:])
+			return
+		}
+	}()
 	t0 := time.Now()
 	params := NewParameters()
 	err := json.Unmarshal(Args, &params)
@@ -222,7 +228,10 @@ func Run(Args []byte) string {
 		for method, identifiers := range methods {
 			for identifier, tests := range identifiers {
 				for _, test := range tests {
-					check := createCheck(path, method, identifier, test)
+					check, err := createCheck(path, method, identifier, test)
+					if err != nil {
+						panic(err)
+					}
 					checklist[i] = check
 					todolist[i] = check
 					i++
@@ -254,13 +263,18 @@ func Run(Args []byte) string {
 		}
 		err = pathWalk(root, checklist, todolist, interestedlist)
 		if err != nil {
+			panic(err)
 			if DEBUG {
 				fmt.Printf("pathWalk failed with error '%v'\n", err)
 			}
 		}
 	}
 
-	return buildResults(checklist, t0)
+	resStr, err = buildResults(checklist, t0)
+	if err != nil {
+		panic(err)
+	}
+	return
 }
 
 // BitMask for the type of check to apply to a given file
@@ -280,7 +294,12 @@ const (
 )
 
 // createCheck creates a new filecheck
-func createCheck(path, method, identifier, test string) (check filecheck) {
+func createCheck(path, method, identifier, test string) (check filecheck, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("createCheck() -> %v", e)
+		}
+	}()
 	check.id = identifier
 	check.path = path
 	check.method = method
@@ -368,6 +387,11 @@ exit:
 // return:
 //      - nil on success, error on error
 func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("pathWalk() -> %v", e)
+		}
+	}()
 	for id, check := range todolist {
 		if pathIncludes(path, check.path) {
 			/* Found a new Check to apply to the current path, add
@@ -383,9 +407,9 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 	// the inspection function for all files
 	target, err := os.Open(path)
 	if err != nil {
-		log.Println("filechecker failed to open", path, ":", err)
 		stats.Openfailed++
-		return err
+		// do not panic when open fails, just increase a counter
+		return nil
 	}
 	targetMode, _ := target.Stat()
 	if targetMode.Mode().IsDir() {
@@ -436,7 +460,10 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 			}
 		}
 		if interested {
-			pathWalk(dir, checklist, todolist, interestedlist)
+			err = pathWalk(dir, checklist, todolist, interestedlist)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	return nil
@@ -491,6 +518,11 @@ func pathIncludes(root, pattern string) bool {
 // evaluateFile looks for patterns that match a file and build a list of checks
 // passed to inspectFile
 func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("evaluateFile() -> %v", e)
+		}
+	}()
 	if DEBUG {
 		fmt.Printf("evaluateFile: evaluating '%s'\n", file)
 	}
@@ -543,6 +575,11 @@ func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err
 // returns:
 //      - nil on success, error on failure
 func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist map[int]filecheck) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("inspectFile() -> %v", e)
+		}
+	}()
 	// Iterate through the entire checklist, and process the checks of each file
 	if DEBUG {
 		fmt.Printf("InspectFile: file '%s' CheckMask '%d'\n",
@@ -556,7 +593,11 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 				ReList = append(ReList, id)
 			}
 		}
-		if matchRegexOnFile(fd, ReList, checklist) {
+		match, err := matchRegexOnFile(fd, ReList, checklist)
+		if err != nil {
+			panic(err)
+		}
+		if match {
 			if DEBUG {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
@@ -577,7 +618,10 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 		}
 	}
 	if (checkBitmask & CheckMD5) != 0 {
-		hash := getHash(fd, CheckMD5)
+		hash, err := getHash(fd, CheckMD5)
+		if err != nil {
+			panic(err)
+		}
 		if verifyHash(fd.Name(), hash, CheckMD5, activechecks, checklist) {
 			if DEBUG {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
@@ -585,7 +629,10 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 		}
 	}
 	if (checkBitmask & CheckSHA1) != 0 {
-		hash := getHash(fd, CheckSHA1)
+		hash, err := getHash(fd, CheckSHA1)
+		if err != nil {
+			panic(err)
+		}
 		if verifyHash(fd.Name(), hash, CheckSHA1, activechecks, checklist) {
 			if DEBUG {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
@@ -593,7 +640,10 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 		}
 	}
 	if (checkBitmask & CheckSHA256) != 0 {
-		hash := getHash(fd, CheckSHA256)
+		hash, err := getHash(fd, CheckSHA256)
+		if err != nil {
+			panic(err)
+		}
 		if verifyHash(fd.Name(), hash, CheckSHA256, activechecks, checklist) {
 			if DEBUG {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
@@ -601,7 +651,10 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 		}
 	}
 	if (checkBitmask & CheckSHA384) != 0 {
-		hash := getHash(fd, CheckSHA384)
+		hash, err := getHash(fd, CheckSHA384)
+		if err != nil {
+			panic(err)
+		}
 		if verifyHash(fd.Name(), hash, CheckSHA384, activechecks, checklist) {
 			if DEBUG {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
@@ -609,7 +662,10 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 		}
 	}
 	if (checkBitmask & CheckSHA512) != 0 {
-		hash := getHash(fd, CheckSHA512)
+		hash, err := getHash(fd, CheckSHA512)
+		if err != nil {
+			panic(err)
+		}
 		if verifyHash(fd.Name(), hash, CheckSHA512, activechecks, checklist) {
 			if DEBUG {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
@@ -617,7 +673,10 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 		}
 	}
 	if (checkBitmask & CheckSHA3_224) != 0 {
-		hash := getHash(fd, CheckSHA3_224)
+		hash, err := getHash(fd, CheckSHA3_224)
+		if err != nil {
+			panic(err)
+		}
 		if verifyHash(fd.Name(), hash, CheckSHA3_224, activechecks, checklist) {
 			if DEBUG {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
@@ -625,7 +684,10 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 		}
 	}
 	if (checkBitmask & CheckSHA3_256) != 0 {
-		hash := getHash(fd, CheckSHA3_256)
+		hash, err := getHash(fd, CheckSHA3_256)
+		if err != nil {
+			panic(err)
+		}
 		if verifyHash(fd.Name(), hash, CheckSHA3_256, activechecks, checklist) {
 			if DEBUG {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
@@ -633,7 +695,10 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 		}
 	}
 	if (checkBitmask & CheckSHA3_384) != 0 {
-		hash := getHash(fd, CheckSHA3_384)
+		hash, err := getHash(fd, CheckSHA3_384)
+		if err != nil {
+			panic(err)
+		}
 		if verifyHash(fd.Name(), hash, CheckSHA3_384, activechecks, checklist) {
 			if DEBUG {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
@@ -641,7 +706,10 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 		}
 	}
 	if (checkBitmask & CheckSHA3_512) != 0 {
-		hash := getHash(fd, CheckSHA3_512)
+		hash, err := getHash(fd, CheckSHA3_512)
+		if err != nil {
+			panic(err)
+		}
 		if verifyHash(fd.Name(), hash, CheckSHA3_512, activechecks, checklist) {
 			if DEBUG {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
@@ -659,7 +727,12 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 //      - hashType is an integer that define the type of hash
 // return:
 //      - hexhash, the hex encoded hash of the file found at fp
-func getHash(fd *os.File, hashType int) (hexhash string) {
+func getHash(fd *os.File, hashType int) (hexhash string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("getHash() -> %v", e)
+		}
+	}()
 	if DEBUG {
 		fmt.Printf("getHash: computing hash for '%s'\n", fd.Name())
 	}
@@ -739,7 +812,12 @@ func verifyHash(file string, hash string, check int, activechecks []int, checkli
 //      - checklist is a map of Check
 // return:
 //      - hasmatched is a boolean set to true if at least one regexp matches
-func matchRegexOnFile(fd *os.File, ReList []int, checklist map[int]filecheck) (hasmatched bool) {
+func matchRegexOnFile(fd *os.File, ReList []int, checklist map[int]filecheck) (hasmatched bool, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("matchRegexOnFile() -> %v", e)
+		}
+	}()
 	hasmatched = false
 	// temp map to store the results
 	results := make(map[int]int)
@@ -800,7 +878,12 @@ func matchRegexOnName(filename string, ReList []int, checklist map[int]filecheck
 
 // buildResults iterates on the map of checklist and print the results to stdout (if
 // DEBUG is set) and into JSON format
-func buildResults(checklist map[int]filecheck, t0 time.Time) string {
+func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("buildResults() -> %v", e)
+		}
+	}()
 	res := NewResults()
 	history := make(map[string]int)
 
@@ -863,7 +946,7 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) string {
 	stats.Exectime = t1.Sub(t0).String()
 
 	// store the stats in the response
-	res.Extra.Statistics = stats
+	res.Statistics = stats
 
 	if DEBUG {
 		fmt.Printf("Tested checklist: %d\n"+
@@ -880,5 +963,6 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) string {
 	if err != nil {
 		panic(err)
 	}
-	return string(JsonResults[:])
+	resStr = string(JsonResults[:])
+	return
 }
