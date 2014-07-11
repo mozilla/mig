@@ -896,7 +896,6 @@ func matchRegexOnFile(fd *os.File, ReList []int, checklist map[int]filecheck) (h
 			if checklist[id].regex.MatchString(scanner.Text()) {
 				hasmatched = true
 				results[id]++
-				break
 			}
 		}
 	}
