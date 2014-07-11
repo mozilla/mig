@@ -364,6 +364,10 @@ func createCheck(path, method, identifier, test string) (check filecheck, err er
 // directory we can start our pattern search from.
 // example: pattern='/etc/cron.*/*' => root='/etc/'
 func findRootPath(pattern string) string {
+	// if pattern has no metacharacter, use as-is
+	if strings.IndexAny(pattern, "*?[") < 0 {
+		return pattern
+	}
 	// find the root path before the first pattern character.
 	// seppos records the position of the latest path separator
 	// before the first pattern.
@@ -430,11 +434,11 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 	// the inspection function for all files
 	target, err := os.Open(path)
 	if err != nil {
-		stats.Openfailed++
 		// do not panic when open fails, just increase a counter
+		stats.Openfailed++
 		return nil
 	}
-	targetMode, _ := target.Stat()
+	targetMode, _ := os.Lstat(path)
 	if targetMode.Mode().IsDir() {
 		// target is a directory, process its content
 		dirContent, err := target.Readdir(-1)
@@ -458,7 +462,28 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 				subdirs = append(subdirs, entryAbsPath)
 				continue
 			}
-			if dirEntry.Mode().IsRegular() {
+			// if entry is a symlink, evaluate the target
+			isLinkedFile := false
+			if dirEntry.Mode()&os.ModeSymlink == os.ModeSymlink {
+				linkmode, linkpath, err := followSymLink(entryAbsPath)
+				if err != nil {
+					// reading the link failed, count and continue
+					stats.Openfailed++
+					continue
+				}
+				if DEBUG {
+					fmt.Printf("'%s' links to '%s'\n", entryAbsPath, linkpath)
+				}
+				if linkmode.IsDir() {
+					// target is a directory, add to the list of subdirectories
+					subdirs = append(subdirs, linkpath)
+					continue
+				}
+				if linkmode.IsRegular() {
+					isLinkedFile = true
+				}
+			}
+			if dirEntry.Mode().IsRegular() || isLinkedFile {
 				err = evaluateFile(entryAbsPath, interestedlist, checklist)
 				if err != nil {
 					panic(err)
@@ -466,12 +491,36 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 			}
 		}
 	}
-	if targetMode.Mode().IsRegular() {
+
+	// target is a symlink, expand it
+	isLinkedFile := false
+	if targetMode.Mode()&os.ModeSymlink == os.ModeSymlink {
+		linkmode, linkpath, err := followSymLink(path)
+		if err != nil {
+			// reading the link failed, count and continue
+			stats.Openfailed++
+			return nil
+		}
+		if DEBUG {
+			fmt.Printf("'%s' links to '%s'\n", path, linkpath)
+		}
+		if linkmode.IsDir() {
+			// target is a directory, add to the list of subdirectories
+			subdirs = append(subdirs, linkpath)
+		}
+		if linkmode.IsRegular() {
+			isLinkedFile = true
+		}
+	}
+
+	// target is a file or a symlink to a file, evaluate it
+	if targetMode.Mode().IsRegular() || isLinkedFile {
 		err = evaluateFile(path, interestedlist, checklist)
 		if err != nil {
 			panic(err)
 		}
 	}
+
 	// close the current target, we are done with it
 	if err := target.Close(); err != nil {
 		panic(err)
@@ -494,6 +543,30 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 		}
 	}
 	return nil
+}
+
+// followSymLink expands a symbolic link and return the absolute path of the target,
+// along with its FileMode and an error
+func followSymLink(link string) (mode os.FileMode, path string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("followSymLink() -> %v", e)
+		}
+	}()
+	path, err = filepath.EvalSymlinks(link)
+	if err != nil {
+		panic(err)
+	}
+	// make an absolute path
+	if !filepath.IsAbs(path) {
+		path = filepath.Dir(link) + string(os.PathSeparator) + path
+	}
+	fi, err := os.Lstat(path)
+	if err != nil {
+		panic(err)
+	}
+	mode = fi.Mode()
+	return
 }
 
 // pathIncludes is an optimization that matches a pattern with the current
