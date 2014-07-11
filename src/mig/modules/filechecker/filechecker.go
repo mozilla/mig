@@ -47,6 +47,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -176,7 +177,7 @@ type Results struct {
 	FoundAnything bool                                                     `json:"foundanything"`
 	Elements      map[string]map[string]map[string]map[string]singleresult `json:"elements"`
 	Statistics    statistics                                               `json:"statistics"`
-	Error         string                                                   `json:"error"`
+	Errors        []string                                                 `json:"error"`
 }
 
 // singleresult contains information on the result of a single test
@@ -191,6 +192,8 @@ func NewResults() *Results {
 	return &Results{Elements: make(map[string]map[string]map[string]map[string]singleresult), FoundAnything: false}
 }
 
+var walkingErrors []string
+
 // Run() is filechecker's entry point. It parses command line arguments into a list of
 // individual checks, stored in a map.
 // Each Check contains a path, which is inspected in the pathWalk function.
@@ -201,7 +204,10 @@ func Run(Args []byte) (resStr string) {
 			// return error in json
 			res := NewResults()
 			res.Statistics = stats
-			res.Error = fmt.Sprintf("%v", e)
+			for _, we := range walkingErrors {
+				res.Errors = append(res.Errors, we)
+			}
+			res.Errors = append(res.Errors, fmt.Sprintf("%v", e))
 			err, _ := json.Marshal(res)
 			resStr = string(err[:])
 			return
@@ -222,7 +228,6 @@ func Run(Args []byte) (resStr string) {
 	// walk through the parameters and generate a checklist of filechecks
 	checklist := make(map[int]filecheck)
 	todolist := make(map[int]filecheck)
-	interestedlist := make(map[int]filecheck)
 	i := 0
 	for path, methods := range *params {
 		for method, identifiers := range methods {
@@ -241,26 +246,31 @@ func Run(Args []byte) (resStr string) {
 		}
 	}
 
-	// loop through the list of checks and initiate a path walk. A given path is walked
-	// only once, and the pathwalk function will build a list of checks to run when entering
-	// a new path.
+	// From all the checks, grab a list of root path sorted small sortest
+	// to longest, and then enter each path iteratively
+	var roots []string
 	for id, check := range checklist {
-		if DEBUG {
-			fmt.Printf("Main: Inspecting path '%s' from Check id '%d'\n", check.path, id)
-		}
-		// loop through the list of checks, and only process the ones that
-		// are still in the todo list
-		if _, ok := todolist[id]; !ok {
-			// this check isn't in the todolist anymore, skip it
-			if DEBUG {
-				fmt.Printf("Main: Skipping check id '%d'. Already done.\n", id)
-			}
-			continue
-		}
 		root := findRootPath(check.path)
 		if DEBUG {
-			fmt.Printf("Main: Found root path at '%s'\n", root)
+			fmt.Printf("Main: Found root path at '%s' in check '%d':'%s'\n", root, id, check.test)
 		}
+		exist := false
+		for _, p := range roots {
+			if root == p {
+				exist = true
+			}
+		}
+		if !exist {
+			roots = append(roots, root)
+		}
+		// sorting the array is useful in case the same command contains "/some/thing"
+		// and then "/some". By starting with the smallest root, we ensure that all the
+		// checks for both "/some" and "/some/thing" will be processed.
+		sort.Strings(roots)
+	}
+	// enter each root one by one
+	for _, root := range roots {
+		interestedlist := make(map[int]filecheck)
 		err = pathWalk(root, checklist, todolist, interestedlist)
 		if err != nil {
 			panic(err)
@@ -416,6 +426,9 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 			err = fmt.Errorf("pathWalk() -> %v", e)
 		}
 	}()
+	if DEBUG {
+		fmt.Printf("pathWalk: walking into '%s'\n", path)
+	}
 	for id, check := range todolist {
 		if pathIncludes(path, check.path) {
 			/* Found a new Check to apply to the current path, add
@@ -423,7 +436,8 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 			*/
 			interestedlist[id] = todolist[id]
 			if DEBUG {
-				fmt.Printf("Adding check id '%d' to interestedlist\n", id)
+				fmt.Printf("pathWalk: adding check '%d':'%s' to interestedlist, removing from todolist\n",
+					id, check.test)
 			}
 			delete(todolist, id)
 		}
@@ -436,6 +450,7 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 	if err != nil {
 		// do not panic when open fails, just increase a counter
 		stats.Openfailed++
+		walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
 		return nil
 	}
 	targetMode, _ := os.Lstat(path)
@@ -469,6 +484,7 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 				if err != nil {
 					// reading the link failed, count and continue
 					stats.Openfailed++
+					walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
 					continue
 				}
 				if DEBUG {
@@ -499,6 +515,7 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 		if err != nil {
 			// reading the link failed, count and continue
 			stats.Openfailed++
+			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
 			return nil
 		}
 		if DEBUG {
@@ -575,6 +592,13 @@ func followSymLink(link string) (mode os.FileMode, path string, err error) {
 // level of the current path. If the current levels don't match, there's no
 // need to continue further down this path
 func pathIncludes(root, pattern string) bool {
+	// if pattern has no metacharacter, use as-is
+	if strings.IndexAny(pattern, "*?[") < 0 {
+		if root == pattern {
+			return true
+		}
+		return false
+	}
 	rootdepth := 0
 	for pos := 0; pos < len(root); pos++ {
 		if root[pos] == os.PathSeparator {
@@ -628,7 +652,7 @@ func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err
 		}
 	}()
 	if DEBUG {
-		fmt.Printf("evaluateFile: evaluating '%s'\n", file)
+		fmt.Printf("evaluateFile: evaluating '%s' against %d checks\n", file, len(interestedlist))
 	}
 	if len(interestedlist) < 1 {
 		if DEBUG {
@@ -967,6 +991,10 @@ func matchRegexOnFile(fd *os.File, ReList []int, checklist map[int]filecheck) (h
 		}
 		for _, id := range ReList {
 			if checklist[id].regex.MatchString(scanner.Text()) {
+				if DEBUG {
+					fmt.Printf("matchRegexOnFile: regex '%s' match on line '%s'\n",
+						checklist[id].test, scanner.Text())
+				}
 				hasmatched = true
 				results[id]++
 			}
@@ -1086,6 +1114,11 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err
 	// store the stats in the response
 	res.Statistics = stats
 
+	// store the errors encountered along the way
+	for _, we := range walkingErrors {
+		res.Errors = append(res.Errors, we)
+	}
+
 	if DEBUG {
 		fmt.Printf("Tested checklist: %d\n"+
 			"Tested files:     %d\n"+
@@ -1136,6 +1169,9 @@ func (r Results) Print(matchOnly bool) (results []string, err error) {
 				}
 			}
 		}
+	}
+	for _, we := range r.Errors {
+		results = append(results, we)
 	}
 	return
 }
