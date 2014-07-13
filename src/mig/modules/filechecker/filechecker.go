@@ -56,43 +56,54 @@ import (
 
 var DEBUG bool = false
 
-// A checklist is an object that has the following representation:
-// Parameters {
-//	path "path1" {
-//		method "name1" {
-//			check "id1" [
-//				test "value1"
-//				test "value2"
+// Parameters contains a list of file checks that has the following representation:
+//	 Parameters {
+//		path "path1" {
+//			method "name1" {
+//				check "id1" [
+//					test "value1"
+//					test "value2"
+//					...
+//				],
+//				check "id2" [
+//					test "value3"
+//				]
+//			}
+//			method "name 2" {
 //				...
-//			],
-//			check "id2" [
-//				test "value3"
-//			]
+//			}
 //		}
-//		method "name 2" {
+//		path "path2" {
 //			...
 //		}
-//	}
-//	path "path2" {
-//		...
-//	}
-// }
+//	 }
 //
 // In JSON form, the structure above looks like the following:
-// {
-//	"/some/path/or/file": {
-//		"<method=[filename|regex|md5|sha256|...]>": {
-//			"random string as identifier": [
-//				"^testregex1$",
-//				"^.+[0-9][a-z]",
-//				.....
-//			]
+//	 {
+//		"/some/path/or/file": {
+//			"<method=[filename|regex|md5|sha256|...]>": {
+//				"random string as identifier": [
+//					"^testregex1$",
+//					"^.+[0-9][a-z]",
+//					.....
+//				]
+//			}
+//		},
+//		"/some/other/path":{
+//			etc...
 //		}
-//	},
-//	"/some/other/path":{
-//		etc...
-//	}
-// }
+//	 }
+//
+// The path supports pattern matching using Go's filepath.Match() syntax.
+// example: "/home/*/.ssh/*" or "/*bin/" or "/etc/*yum*/*.repo"
+//
+// It also supports non-recursive checks by ending the path with a separator.
+// example: "/etc/" will search into all the files inside of /etc/<anything>,
+// similar to 'find /etc -maxdepth 1 -type f'
+//
+// To run a recursive check, end the path with a wildcard.
+// example: "/etc/*" will search go down all of the subdirectories of /etc/,
+// similar to 'find /etc -type f'
 type Parameters map[string]map[string]map[string][]string
 
 // Create a new Parameters
