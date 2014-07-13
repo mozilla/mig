@@ -31,12 +31,19 @@
         <h1>
 <a name="mig-mozilla-investigator" class="anchor" href="#mig-mozilla-investigator"><span class="octicon octicon-link"></span></a>MIG: Mozilla InvestiGator</h1>
 
-<p>MIG is OpSec's platform for investigative surgery of remote endpoints. It's a
-platform that allows investigators to send actions to pools of agents, and check
-for indicator of compromision, verify the state of a configuration, block an
-account, create a firewall rule or update a blacklist.</p>
+<p>MIG is a platform to perform investigative surgery on remote endpoints. It enables investigators to obtain information from large numbers of systems in parallel, thus accelerating investigation of incidents.</p>
 
 <p><img src="http://4u.1nw.eu/mig-logo-transparent.png" alt="MIG logo"></p>
+
+<p>MIG is designed to provide strong security primitives:</p>
+
+<ul>
+<li>Access control is ensured by requiring GPG signatures on all actions. Sensitive actions can also request signatures from multiple investigators. An attacker who takes over the central server will be able to read non-sensitive data, but will not be able to send actions to agents. The GPG keys are securely kept by their investigators.</li>
+<li>Privacy is respected by never retrieving raw data from endpoints. When MIG is ran on laptops or phones, end-users can request reports on the operations performed on their devices. The 2-man-rule for sensitive actions also protect from rogue investigators invading privacy.</li>
+<li>Reliability is built in. No component is critical. If an agent crashes, it will attempt to recover and reconnect to the platform indefinitely. If the platform crashes, a new platform can be rebuilt rapidly without backups.</li>
+</ul><p>MIG privileges a model where requesting information from endpoints is fast and simple. It does not attempt to record everything all the time. Instead, it assumes that when an information will be needed, it will be easy to retrieve it.</p>
+
+<p>It's an army of Sherlock Holmes, ready to interrogate your endpoints within seconds.</p>
 
 <p>For example: an investigator launches an action to search for an apache module
 that matches a given md5 value. MIG will register the action, find all the
