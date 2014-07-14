@@ -114,7 +114,8 @@ func main() {
 	fmt.Printf("\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", ctx.API.URL)
 	for {
 		// completion
-		var symbols = []string{"action", "command", "help", "exit", "showcfg", "status"}
+		var symbols = []string{"action", "agent", "command", "help", "exit", "showcfg", "status",
+			"search", "where", "and"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -149,6 +150,11 @@ func main() {
 			} else {
 				fmt.Println("error: 'action' order takes one argument; " +
 					"either 'new' to enter launcher mode, or an action ID to enter reader mode.")
+			}
+		case "agent":
+			err = agentReader(input, ctx)
+			if err != nil {
+				log.Println(err)
 			}
 		case "command":
 			err = commandReader(input, ctx)
