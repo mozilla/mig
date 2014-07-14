@@ -71,6 +71,7 @@ func main() {
 	var urlencode = flag.Bool("urlencode", false, "URL Encode marshalled JSON before output")
 	var posturl = flag.String("posturl", "", "POST action to <url> (enforces urlencode)")
 	var file = flag.String("i", "/path/to/file", "Load action from file")
+	var target = flag.String("t", "some.target.example.net", "Set the target of the action")
 	var validfrom = flag.String("validfrom", "now", "(optional) set an ISO8601 date the action will be valid from. If unset, use 'now'.")
 	var expireafter = flag.String("expireafter", "30m", "(optional) set a validity duration for the action. If unset, use '30m'.")
 	flag.Parse()
@@ -108,6 +109,10 @@ func main() {
 		log.Fatal(err)
 	}
 	a.ExpireAfter = a.ValidFrom.Add(period)
+
+	if *target != "some.target.example.net" {
+		a.Target = *target
+	}
 
 	// find homedir
 	var homedir string
