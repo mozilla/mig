@@ -137,16 +137,12 @@ func runModuleDirectly(mode string, args []byte) (err error) {
 	switch mode {
 	case "connected":
 		fmt.Println(connected.Run(args))
-		os.Exit(0)
 	case "filechecker":
 		fmt.Println(filechecker.Run(args))
-		os.Exit(0)
 	case "agentdestroy":
 		fmt.Println(agentdestroy.Run(args))
-		os.Exit(0)
 	case "upgrade":
 		fmt.Println(upgrade.Run(args))
-		os.Exit(0)
 	default:
 		fmt.Println("Module", mode, "is not implemented")
 	}
