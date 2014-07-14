@@ -64,24 +64,24 @@ func actionReader(input string, ctx Context) (err error) {
 	}
 	investigators := investigatorsStringFromAction(a.Investigators, 80)
 
-	// completion
-	var symbols = []string{"command", "copy", "counters", "details", "exit", "foundsomething",
-		"foundnothing", "help", "investigators", "json", "pretty", "r", "times"}
-	readline.Completer = func(query, ctx string) []string {
-		var res []string
-		for _, sym := range symbols {
-			if strings.HasPrefix(sym, query) {
-				res = append(res, sym)
-			}
-		}
-		return res
-	}
-
 	fmt.Println("Entering action reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Action: '%s'.\nLaunched by '%s' on '%s'.\nStatus '%s'.\n",
 		a.Name, investigators, a.StartTime, a.Status)
 	prompt := "\x1b[31;1maction " + aid[len(aid)-3:len(aid)] + ">\x1b[0m "
 	for {
+		// completion
+		var symbols = []string{"command", "copy", "counters", "details", "exit", "foundsomething",
+			"foundnothing", "help", "investigators", "json", "pretty", "r", "times"}
+		readline.Completer = func(query, ctx string) []string {
+			var res []string
+			for _, sym := range symbols {
+				if strings.HasPrefix(sym, query) {
+					res = append(res, sym)
+				}
+			}
+			return res
+		}
+
 		input, err := readline.String(prompt)
 		if err == io.EOF {
 			break
