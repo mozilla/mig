@@ -92,13 +92,31 @@ The following search parameters are available:
 				if err != nil {
 					panic(err)
 				}
-				fmt.Printf("%20.0f   %s   %s\n", cmd.ID, cmd.Agent.Name, cmd.FinishTime.Format(time.RFC3339))
+				name := cmd.Action.Name
+				if len(name) < 30 {
+					for i := len(name); i < 30; i++ {
+						name += " "
+					}
+				}
+				if len(name) > 30 {
+					name = name[0:27] + "..."
+				}
+				fmt.Printf("%20.0f   %s   %s\n", cmd.ID, name, cmd.FinishTime.Format(time.RFC3339))
 			case "agent":
 				agt, err := valueToAgent(data.Value)
 				if err != nil {
 					panic(err)
 				}
-				fmt.Printf("%20.0f   %s   %s\n", agt.ID, agt.Name[0:30], agt.HeartBeatTS.Format(time.RFC3339))
+				name := agt.Name
+				if len(name) < 30 {
+					for i := len(name); i < 30; i++ {
+						name += " "
+					}
+				}
+				if len(name) > 30 {
+					name = name[0:27] + "..."
+				}
+				fmt.Printf("%20.0f   %s   %s\n", agt.ID, name[0:30], agt.HeartBeatTS.Format(time.RFC3339))
 			}
 		}
 	}
