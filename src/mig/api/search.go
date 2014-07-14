@@ -40,6 +40,7 @@ import (
 	"mig"
 	migdb "mig/database"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"time"
@@ -149,29 +150,65 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 	// prepare the output in the requested format
 	switch p.Report {
 	case "complianceitems":
-		var items interface{}
-		switch p.Type {
-		case "command":
-			items, err = commandsToComplianceItems(results.([]mig.Command))
-		default:
+		if p.Type != "command" {
 			panic("compliance items not available for this type")
 		}
+		beforeStr := url.QueryEscape(p.Before.Format(time.RFC3339Nano))
+		afterStr := url.QueryEscape(p.After.Format(time.RFC3339Nano))
+		items, err := commandsToComplianceItems(results.([]mig.Command))
 		if err != nil {
 			panic(err)
 		}
-		err = resource.AddItem(cljs.Item{
-			Href: loc,
-			Data: []cljs.Data{{Name: "compliance items", Value: items}},
-		})
+		for i, item := range items {
+			err = resource.AddItem(cljs.Item{
+				Href: fmt.Sprintf("http://%s:%d%s/search?type=command?agentname=%s&commandid=%s&actionid=%s&threatfamily=compliance&report=complianceitems&after=%s&before=%s",
+					ctx.Server.IP, ctx.Server.Port, ctx.Server.BaseRoute, item.Target,
+					p.CommandID, p.ActionID, afterStr, beforeStr),
+				Data: []cljs.Data{{Name: "compliance item", Value: item}},
+			})
+			if err != nil {
+				panic(err)
+			}
+			if float64(i) > p.Limit {
+				break
+			}
+		}
 	default:
-		// no transformation, just return the results
-		err = resource.AddItem(cljs.Item{
-			Href: loc,
-			Data: []cljs.Data{{Name: "search results", Value: results}},
-		})
-	}
-	if err != nil {
-		panic(err)
+		switch p.Type {
+		case "command":
+			for _, r := range results.([]mig.Command) {
+				err = resource.AddItem(cljs.Item{
+					Href: fmt.Sprintf("http://%s:%d%s/command?commandid=%.0f",
+						ctx.Server.IP, ctx.Server.Port, ctx.Server.BaseRoute, r.ID),
+					Data: []cljs.Data{{Name: p.Type, Value: r}},
+				})
+				if err != nil {
+					panic(err)
+				}
+			}
+		case "action":
+			for _, r := range results.([]mig.Action) {
+				err = resource.AddItem(cljs.Item{
+					Href: fmt.Sprintf("http://%s:%d%s/action?actionid=%.0f",
+						ctx.Server.IP, ctx.Server.Port, ctx.Server.BaseRoute, r.ID),
+					Data: []cljs.Data{{Name: p.Type, Value: r}},
+				})
+				if err != nil {
+					panic(err)
+				}
+			}
+		case "agent":
+			for _, r := range results.([]mig.Agent) {
+				err = resource.AddItem(cljs.Item{
+					Href: fmt.Sprintf("http://%s:%d%s/agent?agentid=%.0f",
+						ctx.Server.IP, ctx.Server.Port, ctx.Server.BaseRoute, r.ID),
+					Data: []cljs.Data{{Name: p.Type, Value: r}},
+				})
+				if err != nil {
+					panic(err)
+				}
+			}
+		}
 	}
 	// add search parameters at the end of the response
 	err = resource.AddItem(cljs.Item{
