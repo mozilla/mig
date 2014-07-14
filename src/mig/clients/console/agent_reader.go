@@ -67,7 +67,7 @@ func agentReader(input string, ctx Context) (err error) {
 
 	fmt.Println("Entering agent reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Agent %.0f named '%s'\n", agt.ID, agt.Name)
-	prompt := "\x1b[36;1magent " + agtid[len(agtid)-3:len(agtid)] + ">\x1b[0m "
+	prompt := "\x1b[34;1magent " + agtid[len(agtid)-3:len(agtid)] + ">\x1b[0m "
 	for {
 		// completion
 		var symbols = []string{"details", "exit", "help", "json", "pretty", "r", "lastcommands"}
@@ -92,6 +92,10 @@ func agentReader(input string, ctx Context) (err error) {
 		orders := strings.Split(input, " ")
 		switch orders[0] {
 		case "details":
+			agt, err = getAgent(agtid, ctx)
+			if err != nil {
+				panic(err)
+			}
 			fmt.Printf(`Agent ID %.0f
 name       %s
 last seen  %s ago
