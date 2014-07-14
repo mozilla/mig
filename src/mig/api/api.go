@@ -101,7 +101,7 @@ func main() {
 	s.HandleFunc("/command", getCommand).Methods("GET")
 	s.HandleFunc("/command/cancel/", describeCancelCommand).Methods("GET")
 	s.HandleFunc("/command/cancel/", cancelCommand).Methods("POST")
-	s.HandleFunc("/agent/dashboard", getAgentsDashboard).Methods("GET")
+	s.HandleFunc("/agent", getAgent).Methods("GET")
 	s.HandleFunc("/dashboard", getDashboard).Methods("GET")
 
 	// all set, start the http handler
@@ -157,14 +157,6 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
-	resource.AddQuery(cljs.Query{
-		Rel:  "Get agent dashboard",
-		Href: fmt.Sprintf("%s/agent/dashboard", ctx.Server.BaseURL),
-	})
-	if err != nil {
-		panic(err)
-	}
-
 	err = resource.AddLink(cljs.Link{
 		Rel:  "create action",
 		Href: fmt.Sprintf("%s/action/create/", ctx.Server.BaseURL),
@@ -208,6 +200,18 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 		Prompt: "GET endpoint to query a command by ID, using url parameter ?commandid=<numerical id>",
 		Data: []cljs.Data{
 			{Name: "commandid", Value: "[0-9]{1,20}", Prompt: "Command ID"},
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	resource.AddQuery(cljs.Query{
+		Rel:    "Query agent by ID",
+		Href:   fmt.Sprintf("%s/agent", ctx.Server.BaseURL),
+		Prompt: "GET endpoint to query an agent by ID, using url parameter ?agentid=<numerical id>",
+		Data: []cljs.Data{
+			{Name: "agentid", Value: "[0-9]{1,20}", Prompt: "Agent ID"},
 		},
 	})
 	if err != nil {
@@ -566,7 +570,7 @@ func cancelCommand(respWriter http.ResponseWriter, request *http.Request) {
 	respond(501, resource, respWriter, request, opid)
 }
 
-func getAgentsDashboard(respWriter http.ResponseWriter, request *http.Request) {
+func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
@@ -578,7 +582,43 @@ func getAgentsDashboard(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAgentsDashboard()"}.Debug()
 	}()
-	respond(501, resource, respWriter, request, opid)
+	agentID, err := strconv.ParseFloat(request.URL.Query()["agentid"][0], 64)
+	if err != nil {
+		err = fmt.Errorf("Wrong parameters 'agentid': '%v'", err)
+		panic(err)
+	}
+
+	// retrieve the command
+	var agt mig.Agent
+	if agentID > 0 {
+		agt, err = ctx.DB.AgentByID(agentID)
+		if err != nil {
+			if fmt.Sprintf("%v", err) == "Error while retrieving agent: 'sql: no rows in result set'" {
+				// not found, return 404
+				resource.SetError(cljs.Error{
+					Code:    fmt.Sprintf("%.0f", opid),
+					Message: fmt.Sprintf("Agent ID '%.0f' not found", agentID)})
+				respond(404, resource, respWriter, request, opid)
+				return
+			} else {
+				panic(err)
+			}
+		}
+	} else {
+		// bad request, return 400
+		resource.SetError(cljs.Error{
+			Code:    fmt.Sprintf("%.0f", opid),
+			Message: fmt.Sprintf("Invalid Agent ID '%.0f'", agentID)})
+		respond(400, resource, respWriter, request, opid)
+		return
+	}
+	// store the results in the resource
+	agentItem, err := agentToItem(agt)
+	if err != nil {
+		panic(err)
+	}
+	resource.AddItem(agentItem)
+	respond(200, resource, respWriter, request, opid)
 }
 
 func getDashboard(respWriter http.ResponseWriter, request *http.Request) {

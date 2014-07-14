@@ -68,6 +68,7 @@ type SearchParameters struct {
 	After         time.Time `json:"after"`
 	Type          string    `json:"type"`
 	Report        string    `json:"report"`
+	AgentID       string    `json:"agentid"`
 	AgentName     string    `json:"agentname"`
 	ActionName    string    `json:"actionname"`
 	ActionID      string    `json:"actionid"`
@@ -83,6 +84,7 @@ func NewSearchParameters() (p SearchParameters) {
 	p.Before = time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
 	p.After = time.Date(11, time.January, 11, 11, 11, 11, 11, time.UTC)
 	p.AgentName = "%"
+	p.AgentID = "∞"
 	p.ActionName = "%"
 	p.ActionID = "∞"
 	p.CommandID = "∞"
@@ -118,6 +120,18 @@ func (db *DB) SearchCommands(p SearchParameters) (commands []mig.Command, err er
 			return
 		}
 	}
+	var minAgentID float64 = 0
+	var maxAgentID float64 = 18446744073709551616 //2^64
+	if p.AgentID != "∞" {
+		minAgentID, err = strconv.ParseFloat(p.AgentID, 64)
+		if err != nil {
+			return
+		}
+		maxAgentID, err = strconv.ParseFloat(p.AgentID, 64)
+		if err != nil {
+			return
+		}
+	}
 	rows, err := db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
 		actions.id, actions.name, actions.target, actions.description, actions.threat,
 		actions.operations, actions.validfrom, actions.expireafter,
@@ -130,11 +144,12 @@ func (db *DB) SearchCommands(p SearchParameters) (commands []mig.Command, err er
 		AND actions.name LIKE $5
 		AND actions.id >= $6 AND actions.id <= $7
 		AND agents.name LIKE $8
-		AND actions.threat->>'family' LIKE $9
-		AND commands.status LIKE $10
-		ORDER BY commands.id DESC LIMIT $11`,
+		AND agents.id >= $9 AND agents.id <= $10
+		AND actions.threat->>'family' LIKE $11
+		AND commands.status LIKE $12
+		ORDER BY commands.id DESC LIMIT $13`,
 		p.Before, p.After, minCommandID, maxCommandID, p.ActionName, minActionID, maxActionID,
-		p.AgentName, p.ThreatFamily, p.Status, uint64(p.Limit))
+		p.AgentName, minAgentID, maxAgentID, p.ThreatFamily, p.Status, uint64(p.Limit))
 	if err != nil {
 		err = fmt.Errorf("Error while finding commands: '%v'", err)
 		return
@@ -257,7 +272,7 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 		WHERE agents.heartbeattime <= $1 AND agents.heartbeattime >= $2
 		AND agents.name LIKE $3
 		AND agents.status LIKE $4
-		ORDER BY agents.heartbeattime LIMIT $5`,
+		ORDER BY agents.heartbeattime DESC LIMIT $5`,
 		p.Before, p.After, p.AgentName, p.Status, uint64(p.Limit))
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
@@ -679,6 +694,22 @@ func (db *DB) FinishCommand(cmd mig.Command) (err error) {
 func (db *DB) AgentByQueueAndPID(queueloc string, pid int) (agent mig.Agent, err error) {
 	err = db.c.QueryRow(`SELECT id, name, queueloc, os, version, pid, starttime, heartbeattime,
 		status FROM agents WHERE queueloc=$1 AND pid=$2`, queueloc, pid).Scan(
+		&agent.ID, &agent.Name, &agent.QueueLoc, &agent.OS, &agent.Version, &agent.PID,
+		&agent.StartTime, &agent.HeartBeatTS, &agent.Status)
+	if err != nil {
+		err = fmt.Errorf("Error while retrieving agent: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows {
+		return
+	}
+	return
+}
+
+// AgentByID returns a single agent identified by its ID
+func (db *DB) AgentByID(id float64) (agent mig.Agent, err error) {
+	err = db.c.QueryRow(`SELECT id, name, queueloc, os, version, pid, starttime, heartbeattime,
+		status FROM agents WHERE id=$1`, id).Scan(
 		&agent.ID, &agent.Name, &agent.QueueLoc, &agent.OS, &agent.Version, &agent.PID,
 		&agent.StartTime, &agent.HeartBeatTS, &agent.Status)
 	if err != nil {

@@ -85,6 +85,15 @@ func commandToItem(cmd mig.Command) (item cljs.Item, err error) {
 	return
 }
 
+// agentToItem receives an agent and returns an Item in Collection+JSON
+func agentToItem(agt mig.Agent) (item cljs.Item, err error) {
+	item.Href = fmt.Sprintf("%s/agent?agentid=%.0f", ctx.Server.BaseURL, agt.ID)
+	item.Data = []cljs.Data{
+		{Name: "agent", Value: agt},
+	}
+	return
+}
+
 // agentsSumToItem receives an AgentsSum and returns an Item
 // in the Collection+JSON format
 func agentsSummaryToItem(sum []migdb.AgentsSum, count float64, ctx Context) (item cljs.Item, err error) {

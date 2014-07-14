@@ -83,6 +83,8 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			if err != nil {
 				panic("after date not in RFC3339 format")
 			}
+		case "agentid":
+			p.AgentID = request.URL.Query()["agentid"][0]
 		case "agentname":
 			p.AgentName = request.URL.Query()["agentname"][0]
 		case "before":
