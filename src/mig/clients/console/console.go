@@ -164,9 +164,15 @@ action <id|new>	enter action mode. if <id> is given, go to reader mode. if "new"
 command <id>	enter command reader mode for command <id>
 help		show this help
 exit		leave
+search		perform a search. see "search help" for more information.
 showcfg		display running configuration
 status		display platform status: connected agents and latest actions
 `)
+		case "search":
+			err = search(input, ctx)
+			if err != nil {
+				log.Println(err)
+			}
 		case "showcfg":
 			fmt.Printf("homedir = %s\n[api]\n    url = %s\n[gpg]\n    home = %s\n    keyid = %s\n",
 				ctx.API.URL, ctx.Homedir, ctx.GPG.Home, ctx.GPG.KeyID)
@@ -273,39 +279,11 @@ func printStatus(ctx Context) (err error) {
 		for _, data := range item.Data {
 			switch data.Name {
 			case "action":
-				a, err := valueToAction(data.Value)
+				idstr, name, datestr, invs, err := actionPrintShort(data.Value)
 				if err != nil {
 					panic(err)
 				}
-
-				investigators := investigatorsStringFromAction(a.Investigators, 23)
-
-				idstr := fmt.Sprintf("%.0f", a.ID)
-				if len(idstr) < 20 {
-					for i := len(idstr); i < 20; i++ {
-						idstr += " "
-					}
-				}
-
-				if len(a.Name) < 30 {
-					for i := len(a.Name); i < 30; i++ {
-						a.Name += " "
-					}
-				}
-				if len(a.Name) > 30 {
-					a.Name = a.Name[0:27] + "..."
-				}
-
-				datestr := a.LastUpdateTime.Format("Mon Jan 2 3:04pm MST")
-				if len(datestr) > 20 {
-					datestr = datestr[0:20]
-				}
-				if len(datestr) < 20 {
-					for i := len(datestr); i < 20; i++ {
-						datestr += " "
-					}
-				}
-				str := fmt.Sprintf("%s   %s   %s   %s", idstr, a.Name, datestr, investigators)
+				str := fmt.Sprintf("%s   %s   %s   %s", idstr, name, datestr, invs)
 				actout = append(actout, str)
 			case "active agents":
 				agtout[1] = fmt.Sprintf("* %.0f agents have checked in during the last 5 minutes", data.Value)

@@ -286,6 +286,42 @@ func searchFoundAnything(a mig.Action, wantFound bool, ctx Context) (err error) 
 	return
 }
 
+func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, err error) {
+	a, err := valueToAction(data)
+	if err != nil {
+		panic(err)
+	}
+	invs = investigatorsStringFromAction(a.Investigators, 23)
+
+	idstr = fmt.Sprintf("%.0f", a.ID)
+	if len(idstr) < 20 {
+		for i := len(idstr); i < 20; i++ {
+			idstr += " "
+		}
+	}
+
+	name = a.Name
+	if len(name) < 30 {
+		for i := len(name); i < 30; i++ {
+			name += " "
+		}
+	}
+	if len(name) > 30 {
+		name = name[0:27] + "..."
+	}
+
+	datestr = a.LastUpdateTime.Format("Mon Jan 2 3:04pm MST")
+	if len(datestr) > 20 {
+		datestr = datestr[0:20]
+	}
+	if len(datestr) < 20 {
+		for i := len(datestr); i < 20; i++ {
+			datestr += " "
+		}
+	}
+	return
+}
+
 func investigatorsStringFromAction(invlist []mig.Investigator, strlen int) (investigators string) {
 	for ctr, i := range invlist {
 		if ctr > 0 {
