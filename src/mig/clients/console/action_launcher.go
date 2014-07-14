@@ -51,8 +51,8 @@ import (
 	"github.com/jvehent/cljs"
 )
 
-// default expiration is 5 minutes
-var defaultExpiration = "5m"
+// default expiration is 60 seconds
+var defaultExpiration = "60s"
 
 // actionLauncher prepares an action for launch, either by starting with an empty
 // template, or by loading an existing action from the api or the local disk
@@ -407,7 +407,7 @@ func followAction(a mig.Action, ctx Context) (err error) {
 		time.Sleep(500 * time.Millisecond)
 		dotter++
 		if dotter%10 == 0 {
-			fmt.Printf("%d seconds\n", dotter/2)
+			fmt.Printf("elapsed: %s\n", time.Now().Sub(a.StartTime).String())
 		}
 	}
 	return
