@@ -32,6 +32,12 @@ and other provisions required by the GPL or the LGPL. If you do not delete
 the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
 */
+
+// filechecker provides functions to scan a file system. It can look into files
+// using regexes. It can search files by name. It can match hashes in md5, sha1,
+// sha256, sha384, sha512, sha3_224, sha3_256, sha3_384 and sha3_512.
+// The filesystem can be searches using pattern, as described in the Parameters
+// documentation.
 package filechecker
 
 import (
@@ -57,53 +63,74 @@ import (
 var DEBUG bool = false
 
 // Parameters contains a list of file checks that has the following representation:
-//	 Parameters {
-//		path "path1" {
-//			method "name1" {
-//				check "id1" [
-//					test "value1"
-//					test "value2"
-//					...
-//				],
-//				check "id2" [
-//					test "value3"
-//				]
-//			}
-//			method "name 2" {
-//				...
-//			}
-//		}
-//		path "path2" {
-//			...
-//		}
-//	 }
+//       Parameters {
+//      	path "path1" {
+//      		method "name1" {
+//      			check "id1" [
+//      				test "value1"
+//      				test "value2"
+//      				...
+//      			],
+//      			check "id2" [
+//      				test "value3"
+//      			]
+//      		}
+//      		method "name 2" {
+//      			...
+//      		}
+//      	}
+//      	path "path2" {
+//      		...
+//      	}
+//       }
 //
-// In JSON form, the structure above looks like the following:
-//	 {
-//		"/some/path/or/file": {
-//			"<method=[filename|regex|md5|sha256|...]>": {
-//				"random string as identifier": [
-//					"^testregex1$",
-//					"^.+[0-9][a-z]",
-//					.....
+// JSON sample:
+// 	{
+//		"/usr/*bin/*": {
+//			"filename": {
+//				"module names": [
+//					"atddd",
+//					"cupsdd",
+//					"cupsddh",
+//					"ksapdd",
+//					"kysapdd",
+//					"skysapdd",
+//					"xfsdxd"
+//				]
+//			},
+//			"md5": {
+//				"atddd": [
+//					"fade6e3ab4b396553b191f23d8c04cf1"
+//				],
+//				"cupsdd": [
+//					"ce607e782faa5ace379c13a5de8052a3"
+//				],
+//				"ksapdd": [
+//					"8cdb7abd20cf64764812cfccc90cb3dc"
+//				],
+//				"ksyapdd": [
+//					"f3709e031a37d79773e757d37fe91fe4"
+//				],
+//				"skysapdd": [
+//					"6739ca4a835c7976089e2f00150f252b"
+//				],
+//				"xfsdxd": [
+//					"bbff498590d545cbc82007ec38d97d5a"
 //				]
 //			}
-//		},
-//		"/some/other/path":{
-//			etc...
 //		}
-//	 }
+// 	}
 //
 // The path supports pattern matching using Go's filepath.Match() syntax.
 // example: "/home/*/.ssh/*" or "/*bin/" or "/etc/*yum*/*.repo"
 //
 // It also supports non-recursive checks by ending the path with a separator.
 // example: "/etc/" will search into all the files inside of /etc/<anything>,
-// similar to 'find /etc -maxdepth 1 -type f'
+// but not deeper. It is similar to the command `find /etc -maxdepth 1 -type f`
 //
 // To run a recursive check, end the path with a wildcard.
-// example: "/etc/*" will search go down all of the subdirectories of /etc/,
-// similar to 'find /etc -type f'
+// example: "/etc/*" will go down all of the subdirectories of /etc/,
+// similar to the command `find /etc -type f`
 type Parameters map[string]map[string]map[string][]string
 
 // Create a new Parameters
@@ -183,7 +210,62 @@ type filecheck struct {
 	regex                           *regexp.Regexp
 }
 
-// Response is a struct that formats the data returned to the caller
+// Results contains the details of what was inspected on the file system.
+// The `Elements` parameter contains 5 level-deep structure that represents
+// the original search parameters, plus the detailled result of each test.
+// To help with results parsing, if any of the check matches at least once,
+// the flag `FoundAnything` will be set to true.
+//
+// JSON sample:
+//	{
+//		"elements": {
+//			"/usr/*bin/*": {
+//			    "filename": {
+//			        "module names": {
+//			            "atddd": {
+//			                "filecount": 1992,
+//			                "files": {},
+//			                "matchcount": 0
+//			            },
+//			            "cupsdd": {
+//			                "filecount": 1992,
+//			                "files": {},
+//			                "matchcount": 0
+//			            }
+//			        }
+//			    },
+//			    "md5": {
+//			        "atddd": {
+//			            "fade6e3ab4b396553b191f23d8c04cf1": {
+//			                "filecount": 996,
+//			                "files": {},
+//			                "matchcount": 0
+//			            }
+//			        },
+//			        "cupsdd": {
+//			            "ce607e782faa5ace379c13a5de8052a3": {
+//			                "filecount": 996,
+//			                "files": {},
+//			                "matchcount": 0
+//			            }
+//			        }
+//			    }
+//			}
+//		},
+//		"error": [
+//			"ERROR: followSymLink() -\u003e lstat /usr/lib/vmware-tools/bin64/vmware-user-wrapper: no such file or directory"
+//		],
+//		"foundanything": false,
+//		"statistics": {
+//			"checkcount": 52,
+//			"checksmatch": 0,
+//			"exectime": "4.67603983s",
+//			"filescount": 6574,
+//			"openfailed": 1,
+//			"totalhits": 0,
+//			"uniquefiles": 0
+//		}
+//	}
 type Results struct {
 	FoundAnything bool                                                     `json:"foundanything"`
 	Elements      map[string]map[string]map[string]map[string]singleresult `json:"elements"`
@@ -198,8 +280,8 @@ type singleresult struct {
 	Files      map[string]int `json:"files"`
 }
 
-// NewResponse constructs a Response
-func NewResults() *Results {
+// newResults allocates a Results structure
+func newResults() *Results {
 	return &Results{Elements: make(map[string]map[string]map[string]map[string]singleresult), FoundAnything: false}
 }
 
@@ -213,7 +295,7 @@ func Run(Args []byte) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
-			res := NewResults()
+			res := newResults()
 			res.Statistics = stats
 			for _, we := range walkingErrors {
 				res.Errors = append(res.Errors, we)
@@ -1061,7 +1143,7 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err
 			err = fmt.Errorf("buildResults() -> %v", e)
 		}
 	}()
-	res := NewResults()
+	res := newResults()
 	history := make(map[string]int)
 
 	// iterate through the checklist and parse the results
@@ -1151,6 +1233,8 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err
 
 // Print() returns results in a human-readable format. if matchOnly is set,
 // only results that have at least one match are returned.
+// If matchOnly is not set, all results are returned, along with errors and
+// statistics.
 func (r Results) Print(matchOnly bool) (results []string, err error) {
 	for path, _ := range r.Elements {
 		for method, _ := range r.Elements[path] {
