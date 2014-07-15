@@ -583,11 +583,6 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 				if debug {
 					fmt.Printf("'%s' links to '%s'\n", entryAbsPath, linkpath)
 				}
-				if linkmode.IsDir() {
-					// target is a directory, add to the list of subdirectories
-					subdirs = append(subdirs, linkpath)
-					continue
-				}
 				if linkmode.IsRegular() {
 					isLinkedFile = true
 				}
@@ -613,10 +608,6 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 		}
 		if debug {
 			fmt.Printf("'%s' links to '%s'\n", path, linkpath)
-		}
-		if linkmode.IsDir() {
-			// target is a directory, add to the list of subdirectories
-			subdirs = append(subdirs, linkpath)
 		}
 		if linkmode.IsRegular() {
 			isLinkedFile = true
