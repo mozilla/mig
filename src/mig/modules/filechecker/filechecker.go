@@ -60,7 +60,7 @@ import (
 	"code.google.com/p/go.crypto/sha3"
 )
 
-var DEBUG bool = false
+var debug bool = false
 
 // Parameters contains a list of file checks that has the following representation:
 //       Parameters {
@@ -344,7 +344,7 @@ func Run(Args []byte) (resStr string) {
 	var roots []string
 	for id, check := range checklist {
 		root := findRootPath(check.path)
-		if DEBUG {
+		if debug {
 			fmt.Printf("Main: Found root path at '%s' in check '%d':'%s'\n", root, id, check.test)
 		}
 		exist := false
@@ -367,7 +367,7 @@ func Run(Args []byte) (resStr string) {
 		err = pathWalk(root, checklist, todolist, interestedlist)
 		if err != nil {
 			panic(err)
-			if DEBUG {
+			if debug {
 				fmt.Printf("pathWalk failed with error '%v'\n", err)
 			}
 		}
@@ -378,7 +378,7 @@ func Run(Args []byte) (resStr string) {
 		panic(err)
 	}
 
-	if DEBUG {
+	if debug {
 		// pretty printing
 		var r Results
 		err = json.Unmarshal([]byte(resStr), &r)
@@ -399,17 +399,17 @@ func Run(Args []byte) (resStr string) {
 // BitMask for the type of check to apply to a given file
 // see documentation about iota for more info
 const (
-	CheckRegex = 1 << iota
-	CheckFileName
-	CheckMD5
-	CheckSHA1
-	CheckSHA256
-	CheckSHA384
-	CheckSHA512
-	CheckSHA3_224
-	CheckSHA3_256
-	CheckSHA3_384
-	CheckSHA3_512
+	checkRegex = 1 << iota
+	checkFilename
+	checkMD5
+	checkSHA1
+	checkSHA256
+	checkSHA384
+	checkSHA512
+	checkSHA3_224
+	checkSHA3_256
+	checkSHA3_384
+	checkSHA3_512
 )
 
 // createCheck creates a new filecheck
@@ -425,31 +425,31 @@ func createCheck(path, method, identifier, test string) (check filecheck, err er
 	check.test = test
 	switch method {
 	case "regex":
-		check.testcode = CheckRegex
+		check.testcode = checkRegex
 		// compile the value into a regex
 		check.regex = regexp.MustCompile(test)
 	case "filename":
-		check.testcode = CheckFileName
+		check.testcode = checkFilename
 		// compile the value into a regex
 		check.regex = regexp.MustCompile(test)
 	case "md5":
-		check.testcode = CheckMD5
+		check.testcode = checkMD5
 	case "sha1":
-		check.testcode = CheckSHA1
+		check.testcode = checkSHA1
 	case "sha256":
-		check.testcode = CheckSHA256
+		check.testcode = checkSHA256
 	case "sha384":
-		check.testcode = CheckSHA384
+		check.testcode = checkSHA384
 	case "sha512":
-		check.testcode = CheckSHA512
+		check.testcode = checkSHA512
 	case "sha3_224":
-		check.testcode = CheckSHA3_224
+		check.testcode = checkSHA3_224
 	case "sha3_256":
-		check.testcode = CheckSHA3_256
+		check.testcode = checkSHA3_256
 	case "sha3_384":
-		check.testcode = CheckSHA3_384
+		check.testcode = checkSHA3_384
 	case "sha3_512":
-		check.testcode = CheckSHA3_512
+		check.testcode = checkSHA3_512
 	default:
 		err := fmt.Sprintf("ParseCheck: Invalid method '%s'", method)
 		panic(err)
@@ -519,7 +519,7 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 			err = fmt.Errorf("pathWalk() -> %v", e)
 		}
 	}()
-	if DEBUG {
+	if debug {
 		fmt.Printf("pathWalk: walking into '%s'\n", path)
 	}
 	for id, check := range todolist {
@@ -528,7 +528,7 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 			   it to the interested list, and delete it from the todo
 			*/
 			interestedlist[id] = todolist[id]
-			if DEBUG {
+			if debug {
 				fmt.Printf("pathWalk: adding check '%d':'%s' to interestedlist, removing from todolist\n",
 					id, check.test)
 			}
@@ -580,7 +580,7 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 					walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
 					continue
 				}
-				if DEBUG {
+				if debug {
 					fmt.Printf("'%s' links to '%s'\n", entryAbsPath, linkpath)
 				}
 				if linkmode.IsDir() {
@@ -611,7 +611,7 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
 			return nil
 		}
-		if DEBUG {
+		if debug {
 			fmt.Printf("'%s' links to '%s'\n", path, linkpath)
 		}
 		if linkmode.IsDir() {
@@ -723,12 +723,12 @@ func pathIncludes(root, pattern string) bool {
 	}
 	match, _ := filepath.Match(subpattern, subroot)
 	if !match {
-		if DEBUG {
+		if debug {
 			fmt.Printf("pathIncludes: '%s' is NOT interested in path '%s'\n", subpattern, subroot)
 		}
 		return false
 	}
-	if DEBUG {
+	if debug {
 		fmt.Printf("pathIncludes: '%s' is interested in path '%s'\n", subpattern, subroot)
 	}
 	return true
@@ -744,11 +744,11 @@ func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err
 			err = fmt.Errorf("evaluateFile() -> %v", e)
 		}
 	}()
-	if DEBUG {
+	if debug {
 		fmt.Printf("evaluateFile: evaluating '%s' against %d checks\n", file, len(interestedlist))
 	}
 	if len(interestedlist) < 1 {
-		if DEBUG {
+		if debug {
 			fmt.Printf("evaluateFile: interestedlist is empty\n")
 		}
 		return nil
@@ -788,14 +788,14 @@ func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err
 			}
 		}
 		if match {
-			if DEBUG {
+			if debug {
 				fmt.Printf("evaluateFile: activated check id '%d' '%s' on '%s'\n", id, check.path, subfile)
 			}
 			activechecks = append(activechecks, id)
 			checkBitmask |= check.testcode
 			inspect = true
 		} else {
-			if DEBUG {
+			if debug {
 				fmt.Printf("evaluateFile: '%s' is NOT interested in '%s'\n", check.path, file)
 			}
 		}
@@ -837,15 +837,15 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 		}
 	}()
 	// Iterate through the entire checklist, and process the checks of each file
-	if DEBUG {
+	if debug {
 		fmt.Printf("InspectFile: file '%s' CheckMask '%d'\n",
 			fd.Name(), checkBitmask)
 	}
-	if (checkBitmask & CheckRegex) != 0 {
+	if (checkBitmask & checkRegex) != 0 {
 		// build a list of checklist of check type 'contains'
 		var ReList []int
 		for _, id := range activechecks {
-			if (checklist[id].testcode & CheckRegex) != 0 {
+			if (checklist[id].testcode & checkRegex) != 0 {
 				ReList = append(ReList, id)
 			}
 		}
@@ -854,120 +854,120 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 			panic(err)
 		}
 		if match {
-			if DEBUG {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (checkBitmask & CheckFileName) != 0 {
+	if (checkBitmask & checkFilename) != 0 {
 		// build a list of checklist of check type 'contains'
 		var ReList []int
 		for _, id := range activechecks {
-			if (checklist[id].testcode & CheckFileName) != 0 {
+			if (checklist[id].testcode & checkFilename) != 0 {
 				ReList = append(ReList, id)
 			}
 		}
 		if matchRegexOnName(fd.Name(), ReList, checklist) {
-			if DEBUG {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (checkBitmask & CheckMD5) != 0 {
-		hash, err := getHash(fd, CheckMD5)
+	if (checkBitmask & checkMD5) != 0 {
+		hash, err := getHash(fd, checkMD5)
 		if err != nil {
 			panic(err)
 		}
-		if verifyHash(fd.Name(), hash, CheckMD5, activechecks, checklist) {
-			if DEBUG {
+		if verifyHash(fd.Name(), hash, checkMD5, activechecks, checklist) {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (checkBitmask & CheckSHA1) != 0 {
-		hash, err := getHash(fd, CheckSHA1)
+	if (checkBitmask & checkSHA1) != 0 {
+		hash, err := getHash(fd, checkSHA1)
 		if err != nil {
 			panic(err)
 		}
-		if verifyHash(fd.Name(), hash, CheckSHA1, activechecks, checklist) {
-			if DEBUG {
+		if verifyHash(fd.Name(), hash, checkSHA1, activechecks, checklist) {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (checkBitmask & CheckSHA256) != 0 {
-		hash, err := getHash(fd, CheckSHA256)
+	if (checkBitmask & checkSHA256) != 0 {
+		hash, err := getHash(fd, checkSHA256)
 		if err != nil {
 			panic(err)
 		}
-		if verifyHash(fd.Name(), hash, CheckSHA256, activechecks, checklist) {
-			if DEBUG {
+		if verifyHash(fd.Name(), hash, checkSHA256, activechecks, checklist) {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (checkBitmask & CheckSHA384) != 0 {
-		hash, err := getHash(fd, CheckSHA384)
+	if (checkBitmask & checkSHA384) != 0 {
+		hash, err := getHash(fd, checkSHA384)
 		if err != nil {
 			panic(err)
 		}
-		if verifyHash(fd.Name(), hash, CheckSHA384, activechecks, checklist) {
-			if DEBUG {
+		if verifyHash(fd.Name(), hash, checkSHA384, activechecks, checklist) {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (checkBitmask & CheckSHA512) != 0 {
-		hash, err := getHash(fd, CheckSHA512)
+	if (checkBitmask & checkSHA512) != 0 {
+		hash, err := getHash(fd, checkSHA512)
 		if err != nil {
 			panic(err)
 		}
-		if verifyHash(fd.Name(), hash, CheckSHA512, activechecks, checklist) {
-			if DEBUG {
+		if verifyHash(fd.Name(), hash, checkSHA512, activechecks, checklist) {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (checkBitmask & CheckSHA3_224) != 0 {
-		hash, err := getHash(fd, CheckSHA3_224)
+	if (checkBitmask & checkSHA3_224) != 0 {
+		hash, err := getHash(fd, checkSHA3_224)
 		if err != nil {
 			panic(err)
 		}
-		if verifyHash(fd.Name(), hash, CheckSHA3_224, activechecks, checklist) {
-			if DEBUG {
+		if verifyHash(fd.Name(), hash, checkSHA3_224, activechecks, checklist) {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (checkBitmask & CheckSHA3_256) != 0 {
-		hash, err := getHash(fd, CheckSHA3_256)
+	if (checkBitmask & checkSHA3_256) != 0 {
+		hash, err := getHash(fd, checkSHA3_256)
 		if err != nil {
 			panic(err)
 		}
-		if verifyHash(fd.Name(), hash, CheckSHA3_256, activechecks, checklist) {
-			if DEBUG {
+		if verifyHash(fd.Name(), hash, checkSHA3_256, activechecks, checklist) {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (checkBitmask & CheckSHA3_384) != 0 {
-		hash, err := getHash(fd, CheckSHA3_384)
+	if (checkBitmask & checkSHA3_384) != 0 {
+		hash, err := getHash(fd, checkSHA3_384)
 		if err != nil {
 			panic(err)
 		}
-		if verifyHash(fd.Name(), hash, CheckSHA3_384, activechecks, checklist) {
-			if DEBUG {
+		if verifyHash(fd.Name(), hash, checkSHA3_384, activechecks, checklist) {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
 	}
-	if (checkBitmask & CheckSHA3_512) != 0 {
-		hash, err := getHash(fd, CheckSHA3_512)
+	if (checkBitmask & checkSHA3_512) != 0 {
+		hash, err := getHash(fd, checkSHA3_512)
 		if err != nil {
 			panic(err)
 		}
-		if verifyHash(fd.Name(), hash, CheckSHA3_512, activechecks, checklist) {
-			if DEBUG {
+		if verifyHash(fd.Name(), hash, checkSHA3_512, activechecks, checklist) {
+			if debug {
 				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
 			}
 		}
@@ -989,28 +989,28 @@ func getHash(fd *os.File, hashType int) (hexhash string, err error) {
 			err = fmt.Errorf("getHash() -> %v", e)
 		}
 	}()
-	if DEBUG {
+	if debug {
 		fmt.Printf("getHash: computing hash for '%s'\n", fd.Name())
 	}
 	var h hash.Hash
 	switch hashType {
-	case CheckMD5:
+	case checkMD5:
 		h = md5.New()
-	case CheckSHA1:
+	case checkSHA1:
 		h = sha1.New()
-	case CheckSHA256:
+	case checkSHA256:
 		h = sha256.New()
-	case CheckSHA384:
+	case checkSHA384:
 		h = sha512.New384()
-	case CheckSHA512:
+	case checkSHA512:
 		h = sha512.New()
-	case CheckSHA3_224:
+	case checkSHA3_224:
 		h = sha3.NewKeccak224()
-	case CheckSHA3_256:
+	case checkSHA3_256:
 		h = sha3.NewKeccak256()
-	case CheckSHA3_384:
+	case checkSHA3_384:
 		h = sha3.NewKeccak384()
-	case CheckSHA3_512:
+	case checkSHA3_512:
 		h = sha3.NewKeccak512()
 	default:
 		err := fmt.Sprintf("getHash: Unkown hash type %d", hashType)
@@ -1084,7 +1084,7 @@ func matchRegexOnFile(fd *os.File, ReList []int, checklist map[int]filecheck) (h
 		}
 		for _, id := range ReList {
 			if checklist[id].regex.MatchString(scanner.Text()) {
-				if DEBUG {
+				if debug {
 					fmt.Printf("matchRegexOnFile: regex '%s' match on line '%s'\n",
 						checklist[id].test, scanner.Text())
 				}
@@ -1136,7 +1136,7 @@ func matchRegexOnName(filename string, ReList []int, checklist map[int]filecheck
 }
 
 // buildResults iterates on the map of checklist and print the results to stdout (if
-// DEBUG is set) and into JSON format
+// debug is set) and into JSON format
 func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1149,12 +1149,12 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err
 	// iterate through the checklist and parse the results
 	// into a Response object
 	for _, check := range checklist {
-		if DEBUG {
+		if debug {
 			fmt.Printf("Main: Check '%s' returned %d positive match\n", check.id, check.matchcount)
 		}
 		if check.hasmatched {
 			for file, hits := range check.files {
-				if DEBUG {
+				if debug {
 					fmt.Printf("\t- %d hits on %s\n", hits, file)
 				}
 				stats.Totalhits += hits
@@ -1212,7 +1212,7 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err
 		res.Errors = append(res.Errors, we)
 	}
 
-	if DEBUG {
+	if debug {
 		fmt.Printf("Tested checklist: %d\n"+
 			"Tested files:     %d\n"+
 			"checklist Match:  %d\n"+
