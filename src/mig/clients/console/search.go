@@ -37,11 +37,18 @@ package main
 
 import (
 	"fmt"
+	"mig"
 	"strings"
 	"time"
 
 	"github.com/jvehent/cljs"
 )
+
+type searchParameters struct {
+	sType   string
+	query   string
+	version string
+}
 
 // search runs a search for actions, commands or agents
 func search(input string, ctx Context) (err error) {
@@ -66,57 +73,63 @@ The following search parameters are available:
 	default:
 		return fmt.Errorf("Invalid search '%s'. Try `search help`.\n", input)
 	}
-	query, err := parseSearchQuery(orders)
+	sp, err := parseSearchQuery(orders)
 	if err != nil {
 		panic(err)
 	}
-	items, err := runSearchQuery(query, ctx)
+	items, err := runSearchQuery(sp, ctx)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("----    ID      ---- + ----         Name         ---- + ---- Last Update ----")
-	for _, item := range items {
-		for _, data := range item.Data {
-			if data.Name != sType {
-				continue
+	switch sType {
+	case "agent":
+		agents, err := filterAgentItems(sp, items, ctx)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("----    ID      ---- + ----         Name         ---- + -- Last Heartbeat --")
+		for _, agt := range agents {
+			name := agt.Name
+			if len(name) < 30 {
+				for i := len(name); i < 30; i++ {
+					name += " "
+				}
 			}
-			switch data.Name {
-			case "action":
-				idstr, name, datestr, _, err := actionPrintShort(data.Value)
-				if err != nil {
-					panic(err)
+			if len(name) > 30 {
+				name = name[0:27] + "..."
+			}
+			fmt.Printf("%20.0f   %s   %s\n", agt.ID, name[0:30], agt.HeartBeatTS.Format(time.RFC3339))
+		}
+	case "action", "command":
+		fmt.Println("----    ID      ---- + ----         Name         ---- + --- Last Updated ---")
+		for _, item := range items {
+			for _, data := range item.Data {
+				if data.Name != sType {
+					continue
 				}
-				fmt.Printf("%s   %s   %s\n", idstr, name, datestr)
-			case "command":
-				cmd, err := valueToCommand(data.Value)
-				if err != nil {
-					panic(err)
-				}
-				name := cmd.Action.Name
-				if len(name) < 30 {
-					for i := len(name); i < 30; i++ {
-						name += " "
+				switch data.Name {
+				case "action":
+					idstr, name, datestr, _, err := actionPrintShort(data.Value)
+					if err != nil {
+						panic(err)
 					}
-				}
-				if len(name) > 30 {
-					name = name[0:27] + "..."
-				}
-				fmt.Printf("%20.0f   %s   %s\n", cmd.ID, name, cmd.FinishTime.Format(time.RFC3339))
-			case "agent":
-				agt, err := valueToAgent(data.Value)
-				if err != nil {
-					panic(err)
-				}
-				name := agt.Name
-				if len(name) < 30 {
-					for i := len(name); i < 30; i++ {
-						name += " "
+					fmt.Printf("%s   %s   %s\n", idstr, name, datestr)
+				case "command":
+					cmd, err := valueToCommand(data.Value)
+					if err != nil {
+						panic(err)
 					}
+					name := cmd.Action.Name
+					if len(name) < 30 {
+						for i := len(name); i < 30; i++ {
+							name += " "
+						}
+					}
+					if len(name) > 30 {
+						name = name[0:27] + "..."
+					}
+					fmt.Printf("%20.0f   %s   %s\n", cmd.ID, name, cmd.FinishTime.Format(time.RFC3339))
 				}
-				if len(name) > 30 {
-					name = name[0:27] + "..."
-				}
-				fmt.Printf("%20.0f   %s   %s\n", agt.ID, name[0:30], agt.HeartBeatTS.Format(time.RFC3339))
 			}
 		}
 	}
@@ -124,14 +137,14 @@ The following search parameters are available:
 }
 
 // parseSearchQuery transforms a search string into an API query
-func parseSearchQuery(orders []string) (query string, err error) {
+func parseSearchQuery(orders []string) (sp searchParameters, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("parseSearchQuery() -> %v", e)
 		}
 	}()
 	sType := orders[1]
-	query = "search?type=" + sType
+	query := "search?type=" + sType
 	if len(orders) < 4 {
 		panic("Invalid search syntax. try `search help`.")
 	}
@@ -185,26 +198,67 @@ func parseSearchQuery(orders []string) (query string, err error) {
 			}
 		case "limit":
 			query += "&limit=" + value
+		case "version":
+			if sType != "agent" {
+				panic("'version' is only valid when searching for agents")
+			}
+			sp.version = value
 		default:
 			panic(fmt.Sprintf("Unknown search key '%s'", key))
 		}
 	}
+	sp.sType = sType
+	sp.query = query
 	return
 }
 
 // runSearchQuery executes a search string against the API
-func runSearchQuery(query string, ctx Context) (items []cljs.Item, err error) {
+func runSearchQuery(sp searchParameters, ctx Context) (items []cljs.Item, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("runSearchQuery() -> %v", e)
 		}
 	}()
-	fmt.Println("Search query:", query)
-	targetURL := ctx.API.URL + query
+	fmt.Println("Search query:", sp.query)
+	targetURL := ctx.API.URL + sp.query
 	resource, err := getAPIResource(targetURL, ctx)
 	if err != nil {
 		panic(err)
 	}
 	items = resource.Collection.Items
+	return
+}
+
+func filterAgentItems(sp searchParameters, items []cljs.Item, ctx Context) (agents []mig.Agent, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("filterItems() -> %v", e)
+		}
+	}()
+	for _, item := range items {
+		for _, data := range item.Data {
+			if data.Name != sp.sType {
+				continue
+			}
+			switch sp.sType {
+			case "agent":
+				agt, err := valueToAgent(data.Value)
+				if err != nil {
+					panic(err)
+				}
+				if sp.version != "" {
+					tests := strings.Split(sp.version, "%")
+					for _, test := range tests {
+						if !strings.Contains(agt.Version, test) {
+							// this agent doesn't have the version we are looking for, skip it
+							goto skip
+						}
+					}
+				}
+				agents = append(agents, agt)
+			}
+		skip:
+		}
+	}
 	return
 }
