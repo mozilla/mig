@@ -1269,7 +1269,7 @@ func (r Results) Print(matchOnly bool) (results []string, err error) {
 		for _, we := range r.Errors {
 			results = append(results, we)
 		}
-		stat := fmt.Sprintf("Statistics: %d checks tested on %d files. %d failed to open. %d checks matched on %d files. %d total hits. ran in %s.\n",
+		stat := fmt.Sprintf("Statistics: %d checks tested on %d files. %d failed to open. %d checks matched on %d files. %d total hits. ran in %s.",
 			r.Statistics.Checkcount, r.Statistics.Filescount, r.Statistics.Openfailed, r.Statistics.Checksmatch, r.Statistics.Uniquefiles,
 			r.Statistics.Totalhits, r.Statistics.Exectime)
 		results = append(results, stat)
