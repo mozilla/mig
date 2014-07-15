@@ -339,13 +339,6 @@ func createCheck(path, method, identifier, test string) (check filecheck, err er
 	}()
 	check.id = identifier
 	check.path = path
-	// if path has no metacharacter, make sure it has a trailing slash
-	if strings.IndexAny(check.path, "*?[") < 0 {
-		// append a trailing slash if none is present
-		if check.path[len(check.path)-1] != os.PathSeparator {
-			check.path += string(os.PathSeparator)
-		}
-	}
 	check.method = method
 	check.test = test
 	switch method {
