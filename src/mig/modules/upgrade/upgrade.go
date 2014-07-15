@@ -33,6 +33,15 @@ the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
 */
 
+// The upgrade module is used to download and install a new version of the
+// mig-agent. It retrieves a binary from an HTTP location, validates its
+// checksum. Verifies that the binary version is different from the currently
+// running version. Install the binary and run it.
+//
+// At the end of the run, two mig-agent will be running on the same endpoint,
+// and the scheduler will take care of killing one of them. This module does
+// not attempt to kill the current mig-agent, in case the new one does not
+// connect properly.
 package upgrade
 
 import (
@@ -52,6 +61,15 @@ import (
 	"bitbucket.org/kardianos/osext"
 )
 
+// JSON sample:
+//        {
+//            "module": "upgrade",
+//            "parameters": {
+//                "to_version": "201403031435-b9536d2",
+//                "location": "https://download.mig.example.net/mig-agent-b9536d2-201403031435",
+//                "checksum": "c59d4eaeac728671c635ff645014e2afa935bebffdb5fbd207ffdeab"
+//            }
+//        }
 type Parameters struct {
 	Elements map[string]map[string]string `json:"elements"`
 }

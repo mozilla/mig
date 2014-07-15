@@ -33,6 +33,10 @@ the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
 */
 
+// agentdestroy is a module used in the upgrade protocol to kill an agent
+// that has been upgraded, and remove its binary from the file system.
+// The only sanity check it does, aside from validating the parameters, is
+// refusing to suicide. Meaning an agent will not run this module against itself.
 package agentdestroy
 
 import (
@@ -43,6 +47,14 @@ import (
 	"runtime"
 )
 
+// JSON sample:
+//        {
+//            "module": "agentdestroy",
+//            "parameters": {
+//                "pid": 12345,
+//                "version": "b9536d2-201403031435"
+//            }
+//        }
 type Parameters struct {
 	PID     int    `json:"pid"`
 	Version string `json:"version"`
