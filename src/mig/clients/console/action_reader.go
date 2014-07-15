@@ -249,28 +249,28 @@ func searchFoundAnything(a mig.Action, wantFound bool, ctx Context) (err error) 
 			err = fmt.Errorf("foundAnything() -> %v", e)
 		}
 	}()
-	foundanything := "false"
+	targetURL := ctx.API.URL + "search?type=command&limit=1000000&actionid=" + fmt.Sprintf("%.0f", a.ID)
 	if wantFound {
-		foundanything = "true"
+		targetURL += "&foundanything=true"
+	} else {
+		targetURL += "&foundanything=false"
 	}
-	targetURL := ctx.API.URL + "search?type=command&limit=1000000&actionid=" + fmt.Sprintf("%.0f", a.ID) + "&foundanything=" + foundanything
 	resource, err := getAPIResource(targetURL, ctx)
-	if resource.Collection.Items[0].Data[0].Name != "search results" {
-		fmt.Println(targetURL)
-		panic("API returned something that is not search results.")
-	}
-	var results []mig.Command
-	bData, err := json.Marshal(resource.Collection.Items[0].Data[0].Value)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(bData, &results)
 	if err != nil {
 		panic(err)
 	}
 	agents := make(map[float64]mig.Command)
-	for _, cmd := range results {
-		agents[cmd.Agent.ID] = cmd
+	for _, item := range resource.Collection.Items {
+		for _, data := range item.Data {
+			if data.Name != "command" {
+				continue
+			}
+			cmd, err := valueToCommand(data.Value)
+			if err != nil {
+				panic(err)
+			}
+			agents[cmd.Agent.ID] = cmd
+		}
 	}
 	if wantFound {
 		fmt.Printf("%d agents have found things\n", len(agents))
