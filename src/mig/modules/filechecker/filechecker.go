@@ -529,10 +529,9 @@ func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck
 			*/
 			interestedlist[id] = todolist[id]
 			if debug {
-				fmt.Printf("pathWalk: adding check '%d':'%s' to interestedlist, removing from todolist\n",
-					id, check.test)
+				fmt.Printf("pathWalk: adding check '%d':'%s':'%s':'%s' to interestedlist, removing from todolist\n",
+					id, check.path, check.method, check.test)
 			}
-			delete(todolist, id)
 		}
 	}
 	var subdirs []string
