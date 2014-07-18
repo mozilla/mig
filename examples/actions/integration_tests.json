@@ -1,0 +1,60 @@
+{
+    "name": "Integration tests",
+    "description": {
+        "author": "Julien Vehent",
+        "email": "ulfr@mozilla.com",
+        "revision": 201407180000
+    },
+    "target": "linux",
+    "threat": {
+        "level": "-",
+        "family": "test"
+    },
+    "operations": [
+        {
+            "module": "filechecker",
+            "parameters": {
+                "/home/*/.ssh/*": {
+                    "regex": {
+                        "should not match": [
+                            "should not match"
+                        ]
+                    }
+                },
+                "/etc/*yum*/*.repo": {
+                    "regex": {
+                        "should match": [
+                            "^gpgcheck=1$"
+                        ]
+                    }
+                },
+                "/etc*": {
+                    "regex": {
+                        "should match": [
+                            "^jvehent:"
+                        ]
+                    }
+                },
+                "/etc/shadow": {
+                    "regex": {
+                        "should not match": [
+                            "^shouldnotmatch$"
+                        ],
+                        "should match": [
+                            "^root:"
+                        ]
+                    },
+                    "filename": {
+                        "should match": [
+                            "^\\/etc\\/shadow$"
+                        ],
+                        "should not match": [
+                            "^bob$"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "syntaxversion": 1
+}
