@@ -763,23 +763,26 @@ func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err
 				match = true
 			}
 		} else {
-			// filepath.Match isn't very tolerant. a pattern such as '/etc*'
-			// will not match the file '/etc/passwd'. We work around that by
-			// matching on equal length if check.path is shorter than file and
-			// if check.path ends with a wildcard
-			if len(check.path) < len(file) {
-				if check.path[len(check.path)-1] == '*' {
-					subfile = file[0 : len(check.path)-1]
-				}
-			}
-			match, err = filepath.Match(check.path, subfile)
+			match, err = filepath.Match(check.path, file)
 			if err != nil {
 				return err
+			}
+			if !match && (len(check.path) < len(file)) && (check.path[len(check.path)-1] == '*') {
+				// 2nd chance to match if check.path is shorter than file and ends
+				// with a wildcard.
+				// filepath.Match isn't very tolerant: a pattern such as '/etc*'
+				// will not match the file '/etc/passwd'.
+				// We work around that by attempting to match on equal length.
+				subfile = file[0 : len(check.path)-1]
+				match, err = filepath.Match(check.path, subfile)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		if match {
 			if debug {
-				fmt.Printf("evaluateFile: activated check id '%d' '%s' on '%s'\n", id, check.path, subfile)
+				fmt.Printf("evaluateFile: activated check id '%d' '%s' on '%s'\n", id, check.path, file)
 			}
 			activechecks = append(activechecks, id)
 			checkBitmask |= check.testcode
