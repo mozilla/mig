@@ -44,9 +44,9 @@ import (
 	"io/ioutil"
 	"mig"
 	"net"
+	"net/http"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 
 	"bitbucket.org/kardianos/osext"
@@ -155,9 +155,14 @@ func Init(foreground bool) (ctx Context, err error) {
 	}
 
 	// connect to the message broker
-	ctx, err = initMQ(ctx)
+	ctx, err = initMQ(ctx, false)
 	if err != nil {
-		panic(err)
+		// if the connection failed, look for a proxy
+		// in the environment variables, and try again
+		ctx, err = initMQ(ctx, true)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return
@@ -326,7 +331,7 @@ func initACL(orig_ctx Context) (ctx Context, err error) {
 	return
 }
 
-func initMQ(orig_ctx Context) (ctx Context, err error) {
+func initMQ(orig_ctx Context, try_proxy bool) (ctx Context, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
@@ -340,15 +345,43 @@ func initMQ(orig_ctx Context) (ctx Context, err error) {
 	ctx.MQ.Bind.Key = fmt.Sprintf("mig.agt.%s", ctx.Agent.QueueLoc)
 
 	// parse the dial string and use TLS if using amqps
-	if strings.Contains(AMQPBROKER, "amqps://") {
+	amqp_uri, err := amqp.ParseURI(AMQPBROKER)
+	if err != nil {
+		panic(err)
+	}
+	if amqp_uri.Scheme == "amqps" {
 		ctx.MQ.UseTLS = true
 	}
 
 	// create an AMQP configuration with specific timers
 	var dialConfig amqp.Config
 	dialConfig.Heartbeat = 2 * ctx.Sleeper
-	dialConfig.Dial = func(network, addr string) (net.Conn, error) {
-		return net.DialTimeout(network, addr, 2*ctx.Sleeper)
+	if try_proxy {
+		panic("no proxy support available")
+		dialConfig.Dial = func(network, addr string) (net.Conn, error) {
+			// make a fake request object to get the proxy from env
+			target := "http://" + amqp_uri.Host + ":" + fmt.Sprintf("%d", amqp_uri.Port) + amqp_uri.Vhost
+			req, err := http.NewRequest("GET", target, nil)
+			if err != nil {
+				return nil, err
+			}
+			proxy_url, err := http.ProxyFromEnvironment(req)
+			if err != nil {
+				return nil, err
+			}
+			// connect to the proxy
+			conn, err := net.DialTimeout("tcp", proxy_url.Host, 2*ctx.Sleeper)
+			if err != nil {
+				return nil, err
+			}
+			// write a CONNECT request in the tcp connection
+			fmt.Fprintf(conn, "CONNECT "+req.Host+" HTTP/1.1\r\nHost: "+req.Host+"\r\n\r\n")
+			return conn, nil
+		}
+	} else {
+		dialConfig.Dial = func(network, addr string) (net.Conn, error) {
+			return net.DialTimeout(network, addr, 2*ctx.Sleeper)
+		}
 	}
 
 	if ctx.MQ.UseTLS {

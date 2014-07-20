@@ -56,6 +56,9 @@ var LOGGINGCONF = mig.Logging{
 }
 
 // location of the rabbitmq server
+// if a direct connection fails, the agent will look for the environment
+// variables HTTP_PROXY and HTTPS_PROXY, and retry the connection using
+// HTTP CONNECT proxy tunneling
 var AMQPBROKER string = "amqp://guest:guest@localhost:5672/"
 
 // frequency at which the agent sends heartbeat messages
