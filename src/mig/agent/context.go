@@ -156,15 +156,31 @@ func Init(foreground bool) (ctx Context, err error) {
 		panic(err)
 	}
 
+	connected := false
 	// connect to the message broker
-	ctx, err = initMQ(ctx, false)
+	ctx, err = initMQ(ctx, false, "")
 	if err != nil {
+		ctx.Channels.Log <- mig.Log{Desc: "Failed to connect to relay directly"}.Debug()
 		// if the connection failed, look for a proxy
 		// in the environment variables, and try again
-		ctx, err = initMQ(ctx, true)
+		ctx, err = initMQ(ctx, true, "")
 		if err != nil {
-			panic(err)
+			ctx.Channels.Log <- mig.Log{Desc: "Failed to connect to relay using environment proxy"}.Debug()
+			// still failing, try connecting using the proxies in the configuration
+			for _, proxy := range PROXIES {
+				ctx, err = initMQ(ctx, true, proxy)
+				if err != nil {
+					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay using proxy %s", proxy)}.Debug()
+					continue
+				}
+				connected = true
+				goto mqdone
+			}
 		}
+	}
+mqdone:
+	if !connected {
+		panic("Failed to connect to the relay")
 	}
 
 	return
@@ -333,7 +349,7 @@ func initACL(orig_ctx Context) (ctx Context, err error) {
 	return
 }
 
-func initMQ(orig_ctx Context, try_proxy bool) (ctx Context, err error) {
+func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
@@ -362,34 +378,33 @@ func initMQ(orig_ctx Context, try_proxy bool) (ctx Context, err error) {
 	if try_proxy {
 		// if in try_proxy mode, the agent will try to connect to the relay using a CONNECT proxy
 		// but because CONNECT is a HTTP method, not available in AMQP, we need to establish
-		// that connection ourselves.
-		//
-		// the code below looks for HTTP(S)_PROXY environment variables and, if present, tries
-		// to connect to the relay through the proxy, and returns the net.Conn pointer back
-		ctx.Channels.Log <- mig.Log{Desc: "Attempting connection to relay using environment proxies"}.Debug()
-		dialConfig.Dial = func(network, addr string) (conn net.Conn, err error) {
-			// make a fake request object to get the proxy from env
-			target := "http://" + addr
+		// that connection ourselves, and give it back to the amqp.DialConfig method
+		if proxy == "" {
+			// try to get the proxy from the environemnt (variable HTTP_PROXY)
+			target := "http://" + amqp_uri.Host + ":" + fmt.Sprintf("%d", amqp_uri.Port)
 			req, err := http.NewRequest("GET", target, nil)
 			if err != nil {
-				return
+				panic(err)
 			}
 			proxy_url, err := http.ProxyFromEnvironment(req)
 			if err != nil {
-				return
+				panic(err)
 			}
 			if proxy_url == nil {
-				err = fmt.Errorf("Failed to find a suitable proxy in environment")
-				return
+				panic("Failed to find a suitable proxy in environment")
 			}
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Found proxy at %s", proxy_url.Host)}.Debug()
+			proxy = proxy_url.Host
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Found proxy at %s", proxy)}.Debug()
+		}
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Connecting via proxy %s", proxy)}.Debug()
+		dialConfig.Dial = func(network, addr string) (conn net.Conn, err error) {
 			// connect to the proxy
-			conn, err = net.DialTimeout("tcp", proxy_url.Host, 5*time.Second)
+			conn, err = net.DialTimeout("tcp", proxy, 5*time.Second)
 			if err != nil {
 				return
 			}
 			// write a CONNECT request in the tcp connection
-			fmt.Fprintf(conn, "CONNECT "+req.Host+" HTTP/1.1\r\nHost: "+req.Host+"\r\n\r\n")
+			fmt.Fprintf(conn, "CONNECT "+proxy+" HTTP/1.1\r\nHost: "+proxy+"\r\n\r\n")
 			// verify status is 200, and flush the buffer
 			status, err := bufio.NewReader(conn).ReadString('\n')
 			if err != nil {

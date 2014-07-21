@@ -61,6 +61,10 @@ var LOGGINGCONF = mig.Logging{
 // HTTP CONNECT proxy tunneling
 var AMQPBROKER string = "amqp://guest:guest@localhost:5672/"
 
+// if the connection still fails after looking for a HTTP_PROXY, try to use the
+// proxies listed below
+var PROXIES = [...]string{`proxy.example.net:3128`, `proxy2.example.net:8080`}
+
 // frequency at which the agent sends heartbeat messages
 var HEARTBEATFREQ time.Duration = 300 * time.Second
 
