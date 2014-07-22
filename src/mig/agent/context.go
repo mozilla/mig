@@ -160,23 +160,27 @@ func Init(foreground bool) (ctx Context, err error) {
 	// connect to the message broker
 	ctx, err = initMQ(ctx, false, "")
 	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: "Failed to connect to relay directly"}.Debug()
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay directly: '%v'", err)}.Debug()
 		// if the connection failed, look for a proxy
 		// in the environment variables, and try again
 		ctx, err = initMQ(ctx, true, "")
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: "Failed to connect to relay using environment proxy"}.Debug()
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay using HTTP_PROXY: '%v'", err)}.Debug()
 			// still failing, try connecting using the proxies in the configuration
 			for _, proxy := range PROXIES {
 				ctx, err = initMQ(ctx, true, proxy)
 				if err != nil {
-					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay using proxy %s", proxy)}.Debug()
+					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay using proxy %s: '%v'", proxy, err)}.Debug()
 					continue
 				}
 				connected = true
 				goto mqdone
 			}
+		} else {
+			connected = true
 		}
+	} else {
+		connected = true
 	}
 mqdone:
 	if !connected {
@@ -404,21 +408,21 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 				return
 			}
 			// write a CONNECT request in the tcp connection
-			fmt.Fprintf(conn, "CONNECT "+proxy+" HTTP/1.1\r\nHost: "+proxy+"\r\n\r\n")
+			fmt.Fprintf(conn, "CONNECT "+addr+" HTTP/1.1\r\nHost: "+addr+"\r\n\r\n")
 			// verify status is 200, and flush the buffer
 			status, err := bufio.NewReader(conn).ReadString('\n')
 			if err != nil {
 				return
 			}
 			if status == "" || len(status) < 12 {
-				err = fmt.Errorf("Invalid status received from proxy: '%s'", status[0:len(status)-1])
+				err = fmt.Errorf("Invalid status received from proxy: '%s'", status[0:len(status)-2])
 				return
 			}
 			// 9th character in response should be "2"
 			// HTTP/1.0 200 Connection established
 			//          ^
 			if status[9] != '2' {
-				err = fmt.Errorf("Invalid status received from proxy: '%s'", status[0:len(status)-1])
+				err = fmt.Errorf("Invalid status received from proxy: '%s'", status[0:len(status)-2])
 				return
 			}
 			return
