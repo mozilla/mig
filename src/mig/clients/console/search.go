@@ -38,6 +38,7 @@ package main
 import (
 	"fmt"
 	"mig"
+	"regexp"
 	"strings"
 	"time"
 
@@ -232,7 +233,7 @@ func runSearchQuery(sp searchParameters, ctx Context) (items []cljs.Item, err er
 func filterAgentItems(sp searchParameters, items []cljs.Item, ctx Context) (agents []mig.Agent, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("filterItems() -> %v", e)
+			err = fmt.Errorf("filterAgentItems() -> %v", e)
 		}
 	}()
 	for _, item := range items {
@@ -260,5 +261,69 @@ func filterAgentItems(sp searchParameters, items []cljs.Item, ctx Context) (agen
 		skip:
 		}
 	}
+	return
+}
+
+// filterString matches an input string against a filter that's an array of string in the form
+// ['|', 'grep', 'something', '|', 'grep', '-v', 'notsomething']
+func filterString(input string, filter []string) (output string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("filterString() -> %v", e)
+		}
+	}()
+	const (
+		modeNull = 1 << iota
+		modePipe
+		modeGrep
+		modeInverseGrep
+		modeConsumed
+	)
+	mode := modeNull
+	for _, comp := range filter {
+		switch comp {
+		case "|":
+			if mode != modeNull {
+				panic("Invalid pipe placement")
+			}
+			mode = modePipe
+			continue
+		case "grep":
+			if mode != modePipe {
+				panic("grep must be preceded by a pipe")
+			}
+			mode = modeGrep
+		case "-v":
+			if mode != modeGrep {
+				panic("-v is an option of grep, but grep is missing")
+			}
+			mode = modeInverseGrep
+		default:
+			if mode == modeNull {
+				panic("unknown filter mode")
+			} else if (mode == modeGrep) || (mode == modeInverseGrep) {
+				re, err := regexp.CompilePOSIX(comp)
+				if err != nil {
+					panic(err)
+				}
+				if re.MatchString(input) {
+					// the string matches, but we want inverse grep
+					if mode == modeInverseGrep {
+						return "", err
+					}
+				} else {
+					// the string doesn't match, and we want grep
+					if mode == modeGrep {
+						return "", err
+					}
+				}
+			} else {
+				panic("unrecognized filter syntax")
+			}
+			// reset the mode
+			mode = modeNull
+		}
+	}
+	output = input
 	return
 }

@@ -43,6 +43,7 @@ import (
 	"strings"
 
 	"github.com/bobappleyard/readline"
+	"github.com/jvehent/cljs"
 )
 
 // actionReader retrieves an action from the API using its numerical ID
@@ -58,7 +59,7 @@ func actionReader(input string, ctx Context) (err error) {
 		panic("wrong order format. must be 'action <actionid>'")
 	}
 	aid := inputArr[1]
-	a, err := getAction(aid, ctx)
+	a, links, err := getAction(aid, ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -108,6 +109,8 @@ func actionReader(input string, ctx Context) (err error) {
 				"Cancelled:\t%d\nFailed:\t\t%d\nTimeout:\t%d\n",
 				a.Counters.Sent, a.Counters.Returned, a.Counters.Done,
 				a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
+		case "details":
+			actionPrintDetails(a)
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
@@ -132,6 +135,9 @@ foundnothing	list commands and agents that have found nothing
 help		show this help
 investigators   print the list of investigators that signed the action
 json <pretty>	show the json of the action
+ls <filter>	returns the list of commands with their status
+		'filter' is a pipe separated string of filter:
+		ex: ls | grep server1.(dom1|dom2) | grep -v example.net
 details		display the details of the action, including status & times
 r		refresh the action (get latest version from upstream)
 times		show the various timestamps of the action
@@ -155,40 +161,51 @@ times		show the various timestamps of the action
 				panic(err)
 			}
 			fmt.Printf("%s\n", ajson)
-		case "details":
-			fmt.Printf(`
-ID             %.0f
-Name           %s
-Target         %s
-Desc           author '%s <%s>'; revision '%.0f';
-               url '%s'
-Threat         type '%s'; level '%s'; family '%s'; reference '%s'
-Status         %s
-Times          valid from %s until %s
-               started %s; last updated %s; finished %s
-               duration: %s
-`, a.ID, a.Name, a.Target, a.Description.Author, a.Description.Email, a.Description.Revision,
-				a.Description.URL, a.Threat.Type, a.Threat.Level, a.Threat.Family, a.Threat.Ref, a.Status,
-				a.ValidFrom, a.ExpireAfter, a.StartTime, a.LastUpdateTime, a.FinishTime, a.LastUpdateTime.Sub(a.StartTime).String())
-			fmt.Printf("Investigators  ")
-			for _, i := range a.Investigators {
-				fmt.Println(i.Name, "- keyid:", i.PGPFingerprint)
+		case "ls":
+			has_filter := false
+			var filter []string
+			if len(orders) > 1 {
+				has_filter = true
+				filter = orders[1:len(orders)]
 			}
-			fmt.Printf("Operations     count=%d => ", len(a.Operations))
-			for _, op := range a.Operations {
-				fmt.Printf("%s; ", op.Module)
+			ctr := 0
+			for _, link := range links {
+				if has_filter {
+					str, err := filterString(link.Rel, filter)
+					if err != nil {
+						fmt.Printf("Invalid filter '%s': '%v'\n", filter, err)
+						break
+					}
+					if str != "" {
+						fmt.Println(str)
+						ctr++
+					}
+				} else {
+					fmt.Println(link.Rel)
+					ctr++
+				}
 			}
-			fmt.Printf("\n")
-			fmt.Printf("Counters       sent=%d; returned=%d; done=%d\n"+
-				"               cancelled=%d; failed=%d; timeout=%d\n",
-				a.Counters.Sent, a.Counters.Returned, a.Counters.Done,
-				a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
+			fmt.Printf("%d command", ctr)
+			if ctr > 1 {
+				fmt.Printf("s")
+			}
+			fmt.Printf(" found\n")
 		case "r":
-			a, err = getAction(aid, ctx)
+			a, links, err = getAction(aid, ctx)
 			if err != nil {
 				panic(err)
 			}
 			fmt.Println("Reload succeeded")
+		case "results":
+			//match := false
+			//if len(orders) > 1 {
+			//	if orders[1] == "match" {
+			//		match = true
+			//	} else {
+			//		fmt.Printf("Unknown option '%s'\n", orders[1])
+			//	}
+			//}
+
 		case "times":
 			fmt.Printf("Valid from   '%s' until '%s'\nStarted on   '%s'\n"+
 				"Last updated '%s'\nFinished on  '%s'\n",
@@ -205,7 +222,7 @@ exit:
 	return
 }
 
-func getAction(aid string, ctx Context) (a mig.Action, err error) {
+func getAction(aid string, ctx Context) (a mig.Action, links []cljs.Link, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("getAction() -> %v", e)
@@ -223,6 +240,7 @@ func getAction(aid string, ctx Context) (a mig.Action, err error) {
 	if err != nil {
 		panic(err)
 	}
+	links = resource.Collection.Items[0].Links
 	return
 }
 
@@ -332,5 +350,36 @@ func investigatorsStringFromAction(invlist []mig.Investigator, strlen int) (inve
 	if len(investigators) > strlen {
 		investigators = investigators[0:(strlen-3)] + "..."
 	}
+	return
+}
+
+func actionPrintDetails(a mig.Action) {
+	fmt.Printf(`
+ID             %.0f
+Name           %s
+Target         %s
+Desc           author '%s <%s>'; revision '%.0f';
+               url '%s'
+Threat         type '%s'; level '%s'; family '%s'; reference '%s'
+Status         %s
+Times          valid from %s until %s
+               started %s; last updated %s; finished %s
+               duration: %s
+`, a.ID, a.Name, a.Target, a.Description.Author, a.Description.Email, a.Description.Revision,
+		a.Description.URL, a.Threat.Type, a.Threat.Level, a.Threat.Family, a.Threat.Ref, a.Status,
+		a.ValidFrom, a.ExpireAfter, a.StartTime, a.LastUpdateTime, a.FinishTime, a.LastUpdateTime.Sub(a.StartTime).String())
+	fmt.Printf("Investigators  ")
+	for _, i := range a.Investigators {
+		fmt.Println(i.Name, "- keyid:", i.PGPFingerprint)
+	}
+	fmt.Printf("Operations     count=%d => ", len(a.Operations))
+	for _, op := range a.Operations {
+		fmt.Printf("%s; ", op.Module)
+	}
+	fmt.Printf("\n")
+	fmt.Printf("Counters       sent=%d; returned=%d; done=%d\n"+
+		"               cancelled=%d; failed=%d; timeout=%d\n",
+		a.Counters.Sent, a.Counters.Returned, a.Counters.Done,
+		a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
 	return
 }

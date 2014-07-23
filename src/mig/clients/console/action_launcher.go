@@ -368,7 +368,7 @@ func followAction(a mig.Action, ctx Context) (err error) {
 	previousctr := 0
 	status := ""
 	for {
-		a, err = getAction(fmt.Sprintf("%.0f", a.ID), ctx)
+		a, _, err = getAction(fmt.Sprintf("%.0f", a.ID), ctx)
 		if err != nil {
 			panic(err)
 		}

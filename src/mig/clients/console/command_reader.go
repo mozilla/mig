@@ -132,29 +132,9 @@ results <match>		print the results. if "match" is set, only print results that h
 					fmt.Printf("Unknown option '%s'\n", orders[1])
 				}
 			}
-			for i, result := range cmd.Results {
-				buf, err := json.Marshal(result)
-				if err != nil {
-					panic(err)
-				}
-				switch cmd.Action.Operations[i].Module {
-				case "filechecker":
-					var r filechecker.Results
-					err = json.Unmarshal(buf, &r)
-					if err != nil {
-						panic(err)
-					}
-					results, err := r.Print(match)
-					if err != nil {
-						panic(err)
-					}
-					for _, res := range results {
-						fmt.Println(res)
-					}
-				default:
-					fmt.Printf("no result parser available for module '%s'. try `json pretty`\n",
-						cmd.Action.Operations[i].Module)
-				}
+			err = commandPrintResults(cmd, match)
+			if err != nil {
+				panic(err)
 			}
 		case "":
 			break
@@ -203,5 +183,88 @@ func valueToCommand(v interface{}) (cmd mig.Command, err error) {
 	if err != nil {
 		panic(err)
 	}
+	return
+}
+
+func commandPrintResults(cmd mig.Command, match bool) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("commandPrintResults() -> %v", e)
+		}
+	}()
+	for i, result := range cmd.Results {
+		buf, err := json.Marshal(result)
+		if err != nil {
+			panic(err)
+		}
+		switch cmd.Action.Operations[i].Module {
+		case "filechecker":
+			var r filechecker.Results
+			err = json.Unmarshal(buf, &r)
+			if err != nil {
+				panic(err)
+			}
+			results, err := r.Print(match)
+			if err != nil {
+				panic(err)
+			}
+			for _, res := range results {
+				fmt.Println(res)
+			}
+		default:
+			fmt.Printf("no result parser available for module '%s'. try `json pretty`\n",
+				cmd.Action.Operations[i].Module)
+		}
+	}
+	return
+}
+
+func commandPrintShort(data interface{}) (idstr, agtname, duration, status string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("commandPrintShort() -> %v", e)
+		}
+	}()
+	cmd, err := valueToCommand(data)
+	if err != nil {
+		panic(err)
+	}
+	idstr = fmt.Sprintf("%.0f", cmd.ID)
+	if len(idstr) < 20 {
+		for i := len(idstr); i < 20; i++ {
+			idstr += " "
+		}
+	}
+
+	agtname = cmd.Agent.Name
+	if len(agtname) < 30 {
+		for i := len(agtname); i < 30; i++ {
+			agtname += " "
+		}
+	}
+	if len(agtname) > 30 {
+		agtname = agtname[0:27] + "..."
+	}
+
+	duration = cmd.FinishTime.Sub(cmd.StartTime).String()
+	if len(duration) > 10 {
+		duration = duration[0:8] + duration[len(duration)-3:len(duration)-1]
+	}
+	if len(duration) < 10 {
+		for i := len(duration); i < 10; i++ {
+			duration += " "
+		}
+	}
+
+	status = cmd.Status
+	if len(status) > 10 {
+		status = status[0:9]
+	}
+	if len(status) < 10 {
+		for i := len(status); i < 10; i++ {
+			status += " "
+		}
+	}
+
 	return
 }
