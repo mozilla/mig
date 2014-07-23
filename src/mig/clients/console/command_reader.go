@@ -41,7 +41,6 @@ import (
 	"io"
 	"mig"
 	"mig/modules/filechecker"
-	"net/url"
 	"strings"
 
 	"github.com/bobappleyard/readline"
@@ -165,10 +164,6 @@ func getCommandByURL(target string, ctx Context) (cmd mig.Command, err error) {
 			err = fmt.Errorf("getCommandByURL() -> %v", e)
 		}
 	}()
-	url, err := url.Parse(target)
-	if err != nil {
-		panic(err)
-	}
 	resource, err := getAPIResource(target, ctx)
 	if err != nil {
 		panic(err)
