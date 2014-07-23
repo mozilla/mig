@@ -41,6 +41,7 @@ import (
 	"io"
 	"mig"
 	"mig/modules/filechecker"
+	"net/url"
 	"strings"
 
 	"github.com/bobappleyard/readline"
@@ -132,7 +133,7 @@ results <match>		print the results. if "match" is set, only print results that h
 					fmt.Printf("Unknown option '%s'\n", orders[1])
 				}
 			}
-			err = commandPrintResults(cmd, match)
+			err = commandPrintResults(cmd, match, false)
 			if err != nil {
 				panic(err)
 			}
@@ -155,7 +156,20 @@ func getCommand(cmdid string, ctx Context) (cmd mig.Command, err error) {
 		}
 	}()
 	targetURL := ctx.API.URL + "command?commandid=" + cmdid
-	resource, err := getAPIResource(targetURL, ctx)
+	return getCommandByURL(targetURL, ctx)
+}
+
+func getCommandByURL(target string, ctx Context) (cmd mig.Command, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("getCommandByURL() -> %v", e)
+		}
+	}()
+	url, err := url.Parse(target)
+	if err != nil {
+		panic(err)
+	}
+	resource, err := getAPIResource(target, ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -186,7 +200,7 @@ func valueToCommand(v interface{}) (cmd mig.Command, err error) {
 	return
 }
 
-func commandPrintResults(cmd mig.Command, match bool) (err error) {
+func commandPrintResults(cmd mig.Command, match, showAgent bool) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("commandPrintResults() -> %v", e)
@@ -209,7 +223,11 @@ func commandPrintResults(cmd mig.Command, match bool) (err error) {
 				panic(err)
 			}
 			for _, res := range results {
-				fmt.Println(res)
+				if showAgent {
+					fmt.Printf("%s: %s\n", cmd.Agent.Name, res)
+				} else {
+					fmt.Println(res)
+				}
 			}
 		default:
 			fmt.Printf("no result parser available for module '%s'. try `json pretty`\n",

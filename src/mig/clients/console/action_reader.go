@@ -173,15 +173,26 @@ times		show the various timestamps of the action
 			}
 			fmt.Println("Reload succeeded")
 		case "results":
-			//match := false
-			//if len(orders) > 1 {
-			//	if orders[1] == "match" {
-			//		match = true
-			//	} else {
-			//		fmt.Printf("Unknown option '%s'\n", orders[1])
-			//	}
-			//}
-
+			match := false
+			if len(orders) > 1 {
+				if orders[1] == "match" {
+					match = true
+				} else {
+					fmt.Printf("Unknown option '%s'\n", orders[1])
+				}
+			}
+			for _, link := range links {
+				// TODO: replace the url parsing hack with proper link creation in API response
+				cmdid := strings.Split(link.Href, "=")[1]
+				cmd, err := getCommand(cmdid, ctx)
+				if err != nil {
+					panic(err)
+				}
+				err = commandPrintResults(cmd, match, true)
+				if err != nil {
+					panic(err)
+				}
+			}
 		case "times":
 			fmt.Printf("Valid from   '%s' until '%s'\nStarted on   '%s'\n"+
 				"Last updated '%s'\nFinished on  '%s'\n",
