@@ -162,34 +162,10 @@ times		show the various timestamps of the action
 			}
 			fmt.Printf("%s\n", ajson)
 		case "ls":
-			has_filter := false
-			var filter []string
-			if len(orders) > 1 {
-				has_filter = true
-				filter = orders[1:len(orders)]
+			err = actionPrintLinks(links, orders)
+			if err != nil {
+				panic(err)
 			}
-			ctr := 0
-			for _, link := range links {
-				if has_filter {
-					str, err := filterString(link.Rel, filter)
-					if err != nil {
-						fmt.Printf("Invalid filter '%s': '%v'\n", filter, err)
-						break
-					}
-					if str != "" {
-						fmt.Println(str)
-						ctr++
-					}
-				} else {
-					fmt.Println(link.Rel)
-					ctr++
-				}
-			}
-			fmt.Printf("%d command", ctr)
-			if ctr > 1 {
-				fmt.Printf("s")
-			}
-			fmt.Printf(" found\n")
 		case "r":
 			a, links, err = getAction(aid, ctx)
 			if err != nil {
@@ -264,7 +240,7 @@ func valueToAction(v interface{}) (a mig.Action, err error) {
 func searchFoundAnything(a mig.Action, wantFound bool, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("foundAnything() -> %v", e)
+			err = fmt.Errorf("searchFoundAnything() -> %v", e)
 		}
 	}()
 	targetURL := ctx.API.URL + "search?type=command&limit=1000000&actionid=" + fmt.Sprintf("%.0f", a.ID)
@@ -305,6 +281,11 @@ func searchFoundAnything(a mig.Action, wantFound bool, ctx Context) (err error) 
 }
 
 func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("actionPrintShort() -> %v", e)
+		}
+	}()
 	a, err := valueToAction(data)
 	if err != nil {
 		panic(err)
@@ -381,5 +362,42 @@ Times          valid from %s until %s
 		"               cancelled=%d; failed=%d; timeout=%d\n",
 		a.Counters.Sent, a.Counters.Returned, a.Counters.Done,
 		a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
+	return
+}
+
+func actionPrintLinks(links []cljs.Link, orders []string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("actionPrintLinks() -> %v", e)
+		}
+	}()
+	has_filter := false
+	var filter []string
+	if len(orders) > 1 {
+		has_filter = true
+		filter = orders[1:len(orders)]
+	}
+	ctr := 0
+	for _, link := range links {
+		if has_filter {
+			str, err := filterString(link.Rel, filter)
+			if err != nil {
+				fmt.Printf("Invalid filter '%s': '%v'\n", filter, err)
+				break
+			}
+			if str != "" {
+				fmt.Println(str)
+				ctr++
+			}
+		} else {
+			fmt.Println(link.Rel)
+			ctr++
+		}
+	}
+	fmt.Printf("%d command", ctr)
+	if ctr > 1 {
+		fmt.Printf("s")
+	}
+	fmt.Printf(" found\n")
 	return
 }
