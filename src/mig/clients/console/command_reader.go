@@ -65,8 +65,12 @@ func commandReader(input string, ctx Context) (err error) {
 	}
 
 	fmt.Println("Entering command reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
+	agtname := cmd.Agent.Name
+	if useShortNames {
+		agtname = shorten(agtname)
+	}
 	fmt.Printf("Command %.0f ran on agent '%s' based on action '%s'\n",
-		cmd.ID, cmd.Agent.Name, cmd.Action.Name)
+		cmd.ID, agtname, cmd.Action.Name)
 	prompt := "\x1b[36;1mcommand " + cmdid[len(cmdid)-3:len(cmdid)] + ">\x1b[0m "
 	for {
 		// completion
