@@ -219,7 +219,11 @@ func commandPrintResults(cmd mig.Command, match, showAgent bool) (err error) {
 			}
 			for _, res := range results {
 				if showAgent {
-					fmt.Printf("%s: %s\n", cmd.Agent.Name, res)
+					agtname := cmd.Agent.Name
+					if useShortNames {
+						agtname = shorten(agtname)
+					}
+					fmt.Printf("%s: %s\n", agtname, res)
 				} else {
 					fmt.Println(res)
 				}
@@ -250,6 +254,9 @@ func commandPrintShort(data interface{}) (idstr, agtname, duration, status strin
 	}
 
 	agtname = cmd.Agent.Name
+	if useShortNames {
+		agtname = shorten(agtname)
+	}
 	if len(agtname) < 30 {
 		for i := len(agtname); i < 30; i++ {
 			agtname += " "
