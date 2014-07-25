@@ -80,7 +80,7 @@ In the work:
 * Output results in standard format for alerting
 * Investigation console
 
-![MIG Console](doc/.files/console_screenshot.png)
+[![MIG Console demo](doc/.files/console_screenshot.png)](https://www.youtube.com/watch?v=3MeN0cN79L4)
 
 Documentation
 -------------
