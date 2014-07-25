@@ -38,9 +38,14 @@ platform, but only reply to questions instead. All actions are signed by GPG
 keys that are not stored in the platform, thus preventing a compromision from
 taking over the entire infrastructure.
 
-Check out this 6 minutes presentation for background:
 
-[![MIG youtube video](http://img.youtube.com/vi/uwrJ6Mtc4S0/0.jpg)](http://www.youtube.com/watch?v=uwrJ6Mtc4S0)
+Video presentation
+------------------
+
+Check out this 10 minutes video for a more general presentation and a demo of
+the console interface.
+
+[![MIG youtube video](http://img.youtube.com/vi/wJwj5YB6FFA/0.jpg)](http://www.youtube.com/watch?v=wJwj5YB6FFA)
 
 Goals
 -----
