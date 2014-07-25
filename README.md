@@ -85,6 +85,8 @@ In the work:
 Documentation
 -------------
 All documentation is available in the 'doc' directory.
+* [Concepts & Internal Components](doc/concepts.rst)
+* [Installation & Configuration](doc/configuration.rst)
 
 Bug & Issue tracker
 -------------------
