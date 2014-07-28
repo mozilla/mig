@@ -517,6 +517,72 @@ Note: erlang r14B doesn't support TLS 1.1 and 1.2, as returned by the command:
 That is it for rabbitmq. Go back to the MIG Agent configuration section of this
 page in order to add the client certificate into your agents.
 
+Queues mirroring
+~~~~~~~~~~~~~~~~
+
+By default, queues within a RabbitMQ cluster are located on a single node (the
+node on which they were first declared). If that node goes down, the queue will
+become unavailable. To mirror all MIG queues to all nodes of a rabbitmq cluster,
+use the following policy:
+
+.. code:: bash
+
+	# rabbitmqctl -p mig set_policy mig-mirror-all "^mig\." '{"ha-mode":"all"}'
+	Setting policy "mig-mirror-all" for pattern "^mig\\." to "{\"ha-mode\":\"all\"}" with priority "0" ...
+	...done.
+
+Cluster management
+~~~~~~~~~~~~~~~~~~
+
+To create a cluster, all rabbitmq nodes must share a secret called erlang
+cookie. The erlang cookie is located in `/var/lib/rabbitmq/.erlang.cookie`.
+Make sure the value of the cookie is identical on all members of the cluster,
+then tell one node to join another one:
+
+.. code:: bash
+
+	# rabbitmqctl stop_app
+	Stopping node 'rabbit@ip-172-30-200-73' ...
+	...done.
+
+	# rabbitmqctl join_cluster rabbit@ip-172-30-200-42
+	Clustering node 'rabbit@ip-172-30-200-73' with 'rabbit@ip-172-30-200-42' ...
+	...done.
+
+	# rabbitmqctl start_app
+	Starting node 'rabbit@ip-172-30-200-73' ...
+	...done.
+
+To remove a dead node from the cluster, use the following command from any
+active node of the running cluster.
+
+.. code:: bash
+
+	# rabbitmqctl forget_cluster_node rabbit@ip-172-30-200-84
+
+If one node of the cluster goes down, and the agents have trouble reconnecting,
+they may throw the error `NOT_FOUND - no binding mig.agt....`. That happens when
+the binding in question exists but the 'home' node of the (durable) queue is not
+alive. In case of a mirrored queue that would imply that all mirrors are down.
+Essentially both the queue and associated bindings are in a limbo state at that
+point - they neither exist nor do they not exist. `source`_
+
+.. _`source`: http://rabbitmq.1065348.n5.nabble.com/Can-t-Bind-After-Upgrading-from-3-1-1-to-3-1-5-td29793.html
+
+The safest thing to do is to delete all the queues on the cluster, and restart
+the scheduler. The agents will restart themselves.
+
+.. code:: bash
+
+	# for queue in $(rabbitmqctl list_queues -p mig|grep ^mig|awk '{print $1}')
+	do
+		echo curl -i -u admin:adminpassword -H "content-type:application/json" \
+		-XDELETE http://localhost:15672/api/queues/mig/$queue;
+	done
+
+(remove the `echo` in the command above, it's there as a safety for copy/paste
+people).
+
 Serving AMQPS on port 443
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
