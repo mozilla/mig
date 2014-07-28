@@ -447,8 +447,8 @@ If the PID of the old agent lingers on the system, an error is logged for the
 investigator to decide what to do next. The scheduler does not attempt to clean
 up the situation.
 
-Agent command execution flow
-----------------------------
+Command execution flow in Agent and Modules
+-------------------------------------------
 
 An agent receives a command from the scheduler on its personal AMQP queue (1).
 It parses the command (2) and extracts all of the operations to perform.
@@ -478,7 +478,152 @@ are destroyed.
                |(6)                                         (receiver)
                |                                                 |
                |                                                 V(5)
-               +                                             (sender)
+               +                                             (publisher)
              +-------+                                           /
              |results|<-----------------------------------------'
              +-------+
+
+Threat Model
+------------
+
+Running an agent as root on a large number of endpoints means that Mozilla
+InvestiGator is a target of choice to compromise an infrastructure.
+Without proper protections, a vulnerability in the agent or in the platform
+could lead to a compromission of the endpoints.
+
+The architectural choices made in MIG diminish the exposure of the endpoints to
+a compromise. And while the risk cannot be reduced to zero entirely, it would
+take an attacker direct control on the investigators key material, or be root
+on the infrastructure in order to take control of MIG.
+
+MIG's security controls include:
+
+* Strong GPG security model
+* Infrastructure resiliency
+* No port listening
+* Protection of connections to the relays
+* Randomization of the queue names
+* Whitelisting of agents
+* Limit data extraction to a minimum
+
+Strong GPG security model
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+All actions that are passed to the MIG platform and to the agents require
+valid GPG signatures from one or more trusted investigators. The public keys of
+trusted investigators are hardcoded in the agents, making it almost impossible
+to override without root access to the endpoints, or access to an investigator's
+private key. The GPG private keys are never seen by the MIG platform (API,
+Scheduler, Database or Relays). A compromise of the platform would not lead to
+an attacker taking control of the agents and compromising the endpoints.
+
+Infrastructure resiliency
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+One of the design goal of MIG is to make each components as stateless as
+possible. The database is used as a primary data store, and the schedulers and
+relays keep data in transit in their respective cache. But any of these
+components can go down and be rebuilt without compromising the resiliency of
+the platform. As a matter of fact, it is strongly recommended to rebuilt each
+of the platform component from scratch on a regular basis, and only keep the
+database as a persistent storage.
+
+Unlike other systems that require constant network connectivity between the
+agents and the platform, MIG is designed to work with intermittent or unreliable
+connectivity with the agents. The rabbitmq relays will cache commands that are
+not consumed immediately by offline agents. These agents can connect to the
+relay whenever they chose to, and pick up outstanding tasks.
+
+If the relays go down for any period of time, the agents will attempt to
+reconnect at regular intervals continuously. It is trivial to rebuild
+a fresh rabbitmq cluster, even on a new IP space, as long as the FQDN of the
+cluster, and the TLS cert/key and credentials of the AMQPS access point
+remain the same.
+
+No port listening
+~~~~~~~~~~~~~~~~~
+
+The agents do not accept incoming connections. There is no listening port that
+an attacker could use to exploit a vulnerability in the agent. Instead, the
+agent connects to the platform by establishing an outbound connection to the
+relays. The connection uses TLS, making it theorically impossible for an
+attacker to MITM without access to the PKI and DNS, both of which are not
+part of the MIG platform.
+
+Protection of connections to the relays
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The rabbitmq relay of a MIG infrastructure may very well be listening on the
+public internet. This is used when MIG agents are distributed into various
+environments, as opposed to concentrated on a single network location. RabbitMQ
+and Erlang provide a stable network stack, but are not shielded from a network
+attack that would take down the cluster. To reduce the exposure of the AMQP
+endpoints, the relays use AMQP over TLS and require the agents to present a
+client certificate before accepting the connection.
+
+The client certificate is shared across all the agents. **It is not used as an
+authentication mechanism.** Its sole purpose is to limit the exposure of a public
+AMQP endpoint. Consider it a network filter.
+
+Once the TLS connection between the agent and the relay is established, the
+agent will present a username and password to open the AMQP connection. Again,
+these credentials are shared across all agents, and are not used to authenticate
+individual agents. Their role is to assign an ACL to the agent.
+The ACL limits the AMQP action an agent can perform on the cluster.
+See `rabbitmq configuration`_ for more information.
+
+.. _`rabbitmq configuration`: configuration.rst
+
+Randomization of the queue names
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The protections above limit the exposure of the AMQP endpoint, but since the
+secrets are shared across all agents, the possibility still exists that an
+attacker gains access to the secrets, and establish a connection to the relays.
+
+Such access would have very limited capabilities. It cannot be used to publish
+commands to the agents, because publication is ACL-limited to the scheduler.
+It can be used to publish fake results to the scheduler, or listen on the
+agent queue for incoming commands.
+
+Both are made difficult by prepending a random number to the name of an agent
+queue. An agent queue is named using the following scheme:
+
+	`mig.agt.<OS family>.<Hostname>.<uid>`
+
+The OS and hostname of a given agent are easy to guess, but the uid isn't.
+The UID is a 64 bits integer composed of nanosecond timestamps and a random 32
+bits integer, chosen by the agent on first start. It is specific to an endpoint.
+
+Whitelisting of agents
+~~~~~~~~~~~~~~~~~~~~~~
+
+At the moment, MIG does not provide a strong mechanism to authenticate agents.
+It is a work in progress, but for now agents are whitelisted in the scheduler
+using the hostname that are advertised in the heartbeat messages. While easy to
+spoof, it provides a basic filtering mechanism. The long term goal is to allow
+the scheduler to call an external database to authorize agents. In AWS, the
+scheduler could call the AWS API to verify that a given agent does indeed exist
+in the infrastructure. In a traditional datacenter, this could be an inventory
+database.
+
+Limit data extraction to a minimum
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Agents are not `meant` to retrieve raw data from their endpoints. This is more
+of a good practice rather than a technical limitation. The modules shipped with
+the agent are meant to return boolean answers of the type "match" or "no match".
+
+It could be argued that answering "match" on sensitive requests is similar to
+extracting data from the agents. MIG does not solve this issue.. It is the
+responsibility of the investigators to limit the scope of their queries (ie, do
+not search for a root password by sending an action with the password in the
+regex).
+
+The goal here is to prevent a rogue investigator from dumping large amount of
+data from an endpoint. MIG could trigger a memory dump of a process, but
+retrieve that data will require direct access to the endpoint.
+
+Note that MIG's database keeps records of all actions, commands and results. If
+sensitive data were to be collected by MIG, that data would be available in the
+database.
