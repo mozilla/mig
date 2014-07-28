@@ -30,8 +30,8 @@ the scheduler, each action and command are stored individually in a text file in
 
 	10 directories
 
-Postgresql database
--------------------
+Postgresql Schema
+-----------------
 
 Entity-Relationship Diagram
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -175,6 +175,9 @@ Database creation script
 .. include:: .files/createdb.sh
 	:code: bash
 
+Queries
+-------
+
 Adding Investigators
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -189,3 +192,19 @@ Adapt the query below to add a new investigator.
 	INSERT INTO investigators (name, pgpfingerprint)
 	VALUES ('Bob Kelso', 'E608......');
 
+Finding offline agents
+~~~~~~~~~~~~~~~~~~~~~~
+
+The following query retrieves a list of agents that have been online over the
+last 30 days, but have not sent a heartbeat in the last 5 minutes.
+
+.. code:: sql
+
+	SELECT DISTINCT(name) FROM agents
+	WHERE name IN (
+		SELECT DISTINCT(name) FROM agents
+		WHERE heartbeattime >= NOW() - interval '30 days'
+	) AND name NOT IN (
+		SELECT DISTINCT(name) FROM agents
+		WHERE heartbeattime >= NOW() - interval '5 minutes'
+	) ORDER BY name;
