@@ -134,7 +134,7 @@ func GenID() float64 {
 	h := crc32.NewIEEE()
 	t := time.Now().UTC().Format(time.RFC3339Nano)
 	r := rand.New(rand.NewSource(65537))
-	rand := string(r.Intn(1000000000))
+	rand := string(r.Intn(4294967296))
 	h.Write([]byte(t + rand))
 	// concatenate timestamp and hash into 64 bits ID
 	// id = <32 bits unix ts><32 bits CRC hash>
