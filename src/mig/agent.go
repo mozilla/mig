@@ -48,4 +48,13 @@ type Agent struct {
 	HeartBeatTS     time.Time `json:"heartbeatts,omitempty"`
 	Status          string    `json:"status,omitempty"`
 	Authorized      bool      `json:"authorized,omitempty"`
+	Env             AgentEnv  `json:"environment,omitempty"`
 }
+
+type AgentEnv struct {
+	Init  string `json:"init,omitempty"`
+	Ident string `json:"ident,omitempty"`
+	Arch  string `json:"arch,omitempty"`
+}
+
+// findHostname retrieves the hostname of the node

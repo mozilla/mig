@@ -36,6 +36,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
+	"bufio"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
@@ -46,10 +47,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"runtime"
 	"time"
-
-	"bufio"
 
 	"bitbucket.org/kardianos/osext"
 	"github.com/streadway/amqp"
@@ -63,6 +61,7 @@ type Context struct {
 	Agent struct {
 		Hostname, OS, QueueLoc, UID, BinPath, RunDir string
 		Respawn                                      bool
+		Env                                          mig.AgentEnv
 	}
 	Channels struct {
 		// internal
@@ -129,11 +128,35 @@ func Init(foreground bool) (ctx Context, err error) {
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "Logging routine initialized."}.Debug()
 
-	// retrieve information on agent environment
-	ctx, err = initAgentEnv(ctx)
+	// get the path of the executable
+	ctx.Agent.BinPath, err = osext.Executable()
 	if err != nil {
 		panic(err)
 	}
+
+	// retrieve the hostname
+	ctx, err = findHostname(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// retrieve information about the operating system
+	ctx, err = findOSInfo(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// find the run directory
+	ctx.Agent.RunDir = getRunDir()
+
+	// get the agent ID
+	ctx, err = initAgentID(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// build the agent message queue location
+	ctx.Agent.QueueLoc = fmt.Sprintf("%s.%s.%s", ctx.Agent.OS, ctx.Agent.Hostname, ctx.Agent.UID)
 
 	// daemonize if not in foreground mode
 	if !foreground {
@@ -199,53 +222,6 @@ func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx.Channels.Results = make(chan mig.Command, 5)
 	ctx.Channels.Log = make(chan mig.Log, 97)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
-	return
-}
-
-// initAgentEnv retrieves information about the running system
-func initAgentEnv(orig_ctx Context) (ctx Context, err error) {
-	ctx = orig_ctx
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("initAgentEnv() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgentEnv()"}.Debug()
-	}()
-
-	// get the hostname
-	ctx.Agent.Hostname, err = os.Hostname()
-	if err != nil {
-		panic(err)
-	}
-
-	// get the operating system family
-	ctx.Agent.OS = runtime.GOOS
-
-	// get the path of the executable
-	ctx.Agent.BinPath, err = osext.Executable()
-	if err != nil {
-		panic(err)
-	}
-
-	// RunDir location depends on the operation system
-	switch ctx.Agent.OS {
-	case "linux":
-		ctx.Agent.RunDir = "/var/run/mig/"
-	case "windows":
-		ctx.Agent.RunDir = "%appdata%/mig/"
-	case "darwin":
-		ctx.Agent.RunDir = "/Library/Preferences/mig/"
-	}
-
-	// get the agent ID
-	ctx, err = initAgentID(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// build the agent message queue location
-	ctx.Agent.QueueLoc = fmt.Sprintf("%s.%s.%s", ctx.Agent.OS, ctx.Agent.Hostname, ctx.Agent.UID)
-
 	return
 }
 
@@ -514,4 +490,33 @@ func Destroy(ctx Context) (err error) {
 	close(ctx.Channels.Log)
 	ctx.MQ.conn.Close()
 	return
+}
+
+// cleanString removes spaces, quotes and newlines
+func cleanString(str string) string {
+	if len(str) < 1 {
+		return str
+	}
+	if str[len(str)-1] == '\n' {
+		str = str[0 : len(str)-1]
+	}
+	// remove heading whitespaces
+	for {
+		if (str[0] == ' ' || str[0] == '"') && len(str) > 1 {
+			str = str[1:len(str)]
+		} else {
+			break
+		}
+	}
+	fmt.Println("checkpoint")
+	// remove trailing whitespaces
+	for {
+		if (str[len(str)-1] == ' ' || str[len(str)-1] == '"') && len(str) > 2 {
+			str = str[0 : len(str)-1]
+		} else {
+			break
+		}
+	}
+	fmt.Println("checkpoint")
+	return str
 }

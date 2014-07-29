@@ -37,10 +37,11 @@ package main
 
 import (
 	"fmt"
+	"mig"
 	"os"
 	"os/exec"
 
-	"bitbucket.org/jvehent/service"
+	"bitbucket.org/kardianos/service"
 )
 
 // On Windows, processes aren't forked by the init, so when the service is
@@ -71,7 +72,7 @@ func daemonize(ctx Context) (err error) {
 				return ctx, err
 			}
 			// if already running, stop it
-			_ = svc.Stop()
+			//_ = svc.Stop()
 			err = svc.Remove()
 			if err != nil {
 				// fail but continue, the service may not exist yet

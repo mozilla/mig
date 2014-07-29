@@ -37,11 +37,9 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"mig"
 	"os"
 	"os/exec"
-	"strings"
 
 	"bitbucket.org/kardianos/service"
 )
@@ -63,24 +61,19 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving daemonize()"}.Debug()
 	}()
 	if os.Getppid() == 1 {
-		initCmd, err := ioutil.ReadFile("/proc/1/cmdline")
-		if err != nil {
-			panic(err)
-		}
-		init := fmt.Sprintf("%s", initCmd)
-		if strings.Contains(init, "init [") {
-			// that's system-v, fork a new agent in foreground mode
-			cmd := exec.Command(ctx.Agent.BinPath, "-f")
-			err = cmd.Start()
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to spawn new agent from '%s': '%v'", ctx.Agent.BinPath, err)}.Err()
-			}
-			os.Exit(0)
-		} else {
+		if ctx.Agent.Env.Init == "upstart" || ctx.Agent.Env.Init == "systemd" {
 			// if not controlled by system-v, we tell the agent
 			// to not respawn itself. upstart/systemd will do it
 			ctx.Agent.Respawn = false
+			return
 		}
+		// that's system-v, fork a new agent in foreground mode
+		cmd := exec.Command(ctx.Agent.BinPath, "-f")
+		err = cmd.Start()
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to spawn new agent from '%s': '%v'", ctx.Agent.BinPath, err)}.Err()
+		}
+		os.Exit(0)
 	} else {
 		// install the service, start it, and exit
 		if MUSTINSTALLSERVICE {
@@ -90,7 +83,7 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 				return ctx, err
 			}
 			// if already running, stop it
-			_ = svc.Stop()
+			// _ = svc.Stop()
 			err = svc.Remove()
 			if err != nil {
 				// fail but continue, the service may not exist yet

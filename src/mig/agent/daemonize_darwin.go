@@ -37,10 +37,11 @@ package main
 
 import (
 	"fmt"
+	"mig"
 	"os"
 	"os/exec"
 
-	"bitbucket.org/jvehent/service"
+	"bitbucket.org/kardianos/service"
 )
 
 // On MacOS, launchd takes care of keeping processes alive. The daemonization
@@ -68,7 +69,7 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 				return ctx, err
 			}
 			// if already running, stop it
-			_ = svc.Stop()
+			//_ = svc.Stop()
 			err = svc.Remove()
 			if err != nil {
 				// fail but continue, the service may not exist yet
