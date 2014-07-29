@@ -127,7 +127,8 @@ deb-agent: mig-agent
 
 osxpkg-agent: mig-agent
 	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
+	mkdir 'tmp' 'tmp/sbin'
+	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
 	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent-$(BUILDENV)" > tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
