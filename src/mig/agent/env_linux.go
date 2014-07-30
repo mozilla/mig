@@ -144,11 +144,11 @@ func getInit() (initname string, err error) {
 	}
 	init := fmt.Sprintf("%s", initCmd)
 	if strings.Contains(init, "init [") {
-		initname = "upstart"
+		initname = "sysvinit"
 	} else if strings.Contains(init, "systemd") {
 		initname = "systemd"
 	} else if strings.Contains(init, "init") {
-		initname = "sysvinit"
+		initname = "upstart"
 	} else {
 		// failed to detect init system, falling back to sysvinit
 		initname = "sysvinit-fallback"
