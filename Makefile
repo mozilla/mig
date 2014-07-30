@@ -118,8 +118,7 @@ rpm-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
-	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent-$(BUILDENV)" > tmp/agent_install.sh
-	chmod 0755 tmp/agent_install.sh
+	make agent-install-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
@@ -128,8 +127,7 @@ deb-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
-	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent-$(BUILDENV)" > tmp/agent_install.sh
-	chmod 0755 tmp/agent_install.sh
+	make agent-install-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
@@ -139,11 +137,19 @@ osxpkg-agent: mig-agent
 	mkdir 'tmp' 'tmp/sbin'
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
-	echo -en "#!/bin/sh\npkill mig-agent-$(BUILDENV)\nset -e\nchmod 500 /sbin/mig-agent-$(BUILDENV)\nchown root:root /sbin/mig-agent-$(BUILDENV)\n/sbin/mig-agent-$(BUILDENV)" > tmp/agent_install.sh
-	chmod 0755 tmp/agent_install.sh
+	make agent-install-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
+
+agent-install-script:
+	echo '#!/bin/sh' > tmp/agent_install.sh
+	echo 'pid=$$(nc localhost 51664 <<< pid)' >> tmp/agent_install.sh
+	echo 'if [ $$? -eq 0 ]; then kill $$pid; else pkill /sbin/mig-agent; fi' >> tmp/agent_install.sh
+	echo 'chmod 500 /sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
+	echo 'chown root:root /sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
+	echo '/sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
+	chmod 0755 tmp/agent_install.sh
 
 rpm-scheduler: mig-scheduler
 	rm -rf tmp
@@ -176,4 +182,4 @@ clean:
 clean-all: clean
 	rm -rf pkg
 
-.PHONY: clean clean-all go_get_deps_into_system mig-agent-386 mig-agent-amd64
+.PHONY: clean clean-all go_get_deps_into_system mig-agent-386 mig-agent-amd64 agent-install-script
