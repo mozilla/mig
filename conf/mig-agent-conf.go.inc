@@ -65,6 +65,9 @@ var AMQPBROKER string = "amqp://guest:guest@localhost:5672/"
 // proxies listed below
 var PROXIES = [...]string{`proxy.example.net:3128`, `proxy2.example.net:8080`}
 
+// local socket used to retrieve stat information from a running agent
+var SOCKET = "127.0.0.1:51664"
+
 // frequency at which the agent sends heartbeat messages
 var HEARTBEATFREQ time.Duration = 300 * time.Second
 

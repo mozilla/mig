@@ -86,7 +86,9 @@ type Context struct {
 	}
 	OpID    float64       // ID of the current operation, used for tracking
 	Sleeper time.Duration // timer used when the agent has to sleep for a while
-	Stats   struct {
+	Socket  struct {
+		Bind     string
+		Listener net.Listener
 	}
 	Logging mig.Logging
 }
@@ -210,6 +212,24 @@ mqdone:
 		panic("Failed to connect to the relay")
 	}
 
+	// try to connect the stat socket until it works
+	// this may fail if one agent is already running
+	if SOCKET != "" {
+		go func() {
+			for {
+				ctx.Socket.Bind = SOCKET
+				ctx, err = initSocket(ctx)
+				if err == nil {
+					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Stat socket connected successfully on %s", ctx.Socket.Bind)}.Info()
+					goto socketdone
+				}
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect stat socket: '%v'", err)}.Err()
+				time.Sleep(60 * time.Second)
+			}
+		socketdone:
+			return
+		}()
+	}
 	return
 }
 
