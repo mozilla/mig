@@ -98,6 +98,95 @@ You also need to edit the **AMQPBROKER** variable to invoke **amqps** instead of
 the regular amqp mode. You probably also want to change the port from 5672
 (default amqp) to 5671 (default amqps).
 
+Proxy support
+~~~~~~~~~~~~~
+
+The agent supports connecting to the relay via a CONNECT proxy. It will attempt
+a direct connection first, and if this fails, will look for the environment
+variable `HTTP_PROXY` to use as a proxy. A list of proxies can be manually
+added to the configuration of the agent in the `PROXIES` parameters. These
+proxies will be used if the two previous connections fail.
+
+An agent using a proxy will reference the name of the proxy in the environment
+fields of the heartbeat sent to the scheduler.
+
+Stat socket
+~~~~~~~~~~~
+
+The agent can establish a listening TCP socket on localhost for management
+purpose. The list of supported operations can be obtained by sending the
+keyword `help` to this socket.
+
+.. code:: bash
+
+	$ nc localhost 51664 <<< help
+
+	Welcome to the MIG agent socket. The commands are:
+	pid	returns the PID of the running agent
+
+To obtain the PID of the running agent, use the following command:
+
+.. code:: bash
+
+	$ nc localhost 51664 <<< pid ; echo
+	9792
+
+Leave the `SOCKET` configuration variable empty to disable the stat socket.
+
+Logging
+~~~~~~~
+
+The agent can log to stdout, to a file or to the system logging. On Windows,
+the system logging is the Event log. On POSIX systems, it's syslog.
+
+The `LOGGINGCONF` parameter is used to configure the proper logging level.
+
+Access Control Lists
+~~~~~~~~~~~~~~~~~~~~
+
+see `concepts: Access Control Lists`_
+
+.. _`concepts: Access Control Lists`: concepts.rst
+
+Investigators's public keys
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The public keys of all investigators must be listed in the `PUBLICPGPKEYS`
+array. Each key is its own entry in the array. To export a public key in the
+proper format, use the command:
+
+.. code:: bash
+
+	$ gpg --export -a jvehent@mozilla.com
+
+	-----BEGIN PGP PUBLIC KEY BLOCK-----
+	Version: GnuPG v1
+
+	mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
+	QPFOPgu3O3iij6UOVh+LOkqccjJ8gZVLYMJzUQC+2RJ3jvXhti8xZ1hs2iEr65Rj
+	zUklHVZguf2Zv2X9Er8rnlW5xzplsVXNWnVvMDXyzx0ufC00dDbCwahLQnv6Vqq8
+	etc...
+
+Then insert the whole, with header and footer, into the array:
+
+.. code:: bash
+
+	// PGP public key that is authorized to sign actions
+	var PUBLICPGPKEYS = [...]string{
+	`-----BEGIN PGP PUBLIC KEY BLOCK-----
+	Version: GnuPG v1 - bob.kelso@mozilla.com
+
+	mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
+	=3tGV
+	-----END PGP PUBLIC KEY BLOCK-----
+	`,
+	`
+	-----BEGIN PGP PUBLIC KEY BLOCK-----
+	Version: GnuPG v1. Name: sam.axe@mozilla.com
+
+	mQINBE5bjGABEACnT9K6MEbeDFyCty7KalsNnMjXH73kY4B8aJXbE6SSnRA3gWpa
+	-----END PGP PUBLIC KEY BLOCK-----`}
+
 Build instructions
 ------------------
 
@@ -130,7 +219,14 @@ Use the AGTCONF make variable to specify a different path than
 
 .. code:: bash
 
-	make mig-agent AGTCONF=conf/mig-agent-conf.dev.go
+	$ make mig-agent AGTCONF=conf/mig-agent-conf.dev.go BUILDENV=dev
+
+To cross-compile for a different platform, use the `ARCH` and `OS` make
+variables:
+
+.. code:: bash
+
+	$ make mig-agent AGTCONF=conf/mig-agent-conf.prod.go BUILDENV=prod OS=windows ARCH=amd64
 
 Scheduler Configuration
 -----------------------
