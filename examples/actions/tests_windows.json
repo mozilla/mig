@@ -1,0 +1,36 @@
+{
+    "name": "Some tests for windows",
+    "description": {
+        "author": "Julien Vehent",
+        "email": "ulfr@mozilla.com",
+        "revision": 201407300000
+    },
+    "target": "windows",
+    "threat": {
+        "level": "-",
+        "family": "test"
+    },
+    "operations": [
+        {
+            "module": "filechecker",
+            "parameters": {
+                "C:\\Windows\\System32\\drivers\\etc\\hosts": {
+                    "regex": {
+                        "should match": [
+                            "localhost",
+                            "127.0.0.1"
+                        ]
+                    }
+                },
+                "C:\\Windows\\System32\\": {
+                    "md5": {
+                        "should not match": [
+                            "c6e35b4cdad5ee02f14215facc710c85"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "syntaxversion": 1
+}

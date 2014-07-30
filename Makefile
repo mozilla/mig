@@ -7,7 +7,7 @@ BUILDDATE	:= $(shell date +%Y%m%d%H%M)
 BUILDENV	:= dev
 BUILDREV	:= $(BUILDDATE)+$(BUILDREF).$(BUILDENV)
 
-# Supported OSes: linux darwin freebsd windows
+# Supported OSes: linux darwin windows
 # Supported ARCHes: 386 amd64
 OS			:= linux
 ARCH		:= amd64
@@ -18,7 +18,11 @@ endif
 ifeq ($(ARCH),386)
 	FPMARCH := i686
 endif
-
+ifeq ($(OS),windows)
+	BINSUFFIX   := ".exe"
+else
+	BINSUFFIX	:= ""
+endif
 PREFIX		:= /usr/local/
 DESTDIR		:= /
 GPGMEDIR	:= src/mig/pgp/sign
@@ -30,7 +34,7 @@ CFLAGS		:=
 LDFLAGS		:=
 GOOPTS		:=
 GO 			:= GOPATH=$(shell go env GOROOT)/bin:$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go
-GOGETTER	:= GOPATH=$(shell pwd) go get -u
+GOGETTER	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go get -u
 GOLDFLAGS	:= -ldflags "-X main.version $(BUILDREV)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
@@ -44,18 +48,20 @@ mig-agent:
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
 	cp $(AGTCONF) src/mig/agent/configuration.go
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV) $(GOLDFLAGS) mig/agent
-	[ -x $(BINDIR)/mig-agent-$(BUILDREV) ] && echo SUCCESS && exit 0
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig/agent
+	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] && echo SUCCESS && exit 0
 
-mig-agent-all: mig-agent-386 mig-agent-amd64
-
-mig-agent-386:
-	make OS=linux ARCH=386 mig-agent
-	make OS=darwin ARCH=386 mig-agent
-
-mig-agent-amd64:
-	make OS=linux ARCH=amd64 mig-agent
-	make OS=darwin ARCH=amd64 mig-agent
+#mig-agent-all: mig-agent-386 mig-agent-amd64
+#
+#mig-agent-386:
+#	make OS=linux ARCH=386 mig-agent
+#	make OS=darwin ARCH=386 mig-agent
+#	make OS=windows ARCH=386 mig-agent
+#
+#mig-agent-amd64:
+#	make OS=linux ARCH=amd64 mig-agent
+#	make OS=darwin ARCH=amd64 mig-agent
+#	make OS=windows ARCH=amd64 mig-agent
 
 mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
@@ -93,6 +99,9 @@ go_get_deps:
 	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
 	$(GOGETTER) camlistore.org/pkg/misc/pinentry
 	$(GOGETTER) github.com/bobappleyard/readline
+ifeq ($(OS),windows)
+	$(GOGETTER) code.google.com/p/winsvc/eventlog
+endif
 
 install: mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent

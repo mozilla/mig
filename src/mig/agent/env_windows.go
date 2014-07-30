@@ -36,6 +36,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"mig"
@@ -89,23 +90,24 @@ func getSysInfo() (hostname, domain, osname, osversion string, err error) {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("getSysInfo() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving getSysInfo()"}.Debug()
 	}()
 	// get data from the systeminfo
-	out, err := exec.Command("systeminfo.exe", "/FO", "LIST").Output()
+	out, err := exec.Command("systeminfo").Output()
 	if err != nil {
 		panic(err)
 	}
-	buf := bytes.NewBuffer(out)
+	buf := bytes.NewReader(out)
+	reader := bufio.NewReader(buf)
+	iter := 0
+	fmt.Println("parsing systeminfo output")
 	for {
-		line, err := buf.ReadString('\n')
-		if err != nil {
+		lineBytes, _, err := reader.ReadLine()
+		// don't loop more than 2000 times
+		if err != nil || iter > 2000 {
 			goto exit
 		}
-		// chomp
-		if line[len(line)-1] == '\n' {
-			line = line[0 : len(line)-1]
-		}
+		line := fmt.Sprintf("%s", lineBytes)
+		fmt.Println(line)
 		if strings.Contains(line, "OS Name:") {
 			out := strings.SplitN(line, ":", 2)
 			if len(out) == 2 {
@@ -131,6 +133,7 @@ func getSysInfo() (hostname, domain, osname, osversion string, err error) {
 			}
 			hostname = cleanString(hostname)
 		}
+		iter++
 	}
 exit:
 	return

@@ -500,23 +500,31 @@ func cleanString(str string) string {
 	if str[len(str)-1] == '\n' {
 		str = str[0 : len(str)-1]
 	}
-	// remove heading whitespaces
+	// remove heading whitespaces and quotes
 	for {
-		if (str[0] == ' ' || str[0] == '"') && len(str) > 1 {
+		if len(str) < 2 {
+			break
+		}
+		switch str[0] {
+		case ' ', '"', '\'':
 			str = str[1:len(str)]
-		} else {
-			break
+		default:
+			goto trailing
 		}
 	}
-	fmt.Println("checkpoint")
-	// remove trailing whitespaces
+trailing:
+	// remove trailing whitespaces, quotes and linebreaks
 	for {
-		if (str[len(str)-1] == ' ' || str[len(str)-1] == '"') && len(str) > 2 {
-			str = str[0 : len(str)-1]
-		} else {
+		if len(str) < 2 {
 			break
 		}
+		switch str[len(str)-1] {
+		case ' ', '"', '\'', '\r', '\n':
+			str = str[0 : len(str)-1]
+		default:
+			goto exit
+		}
 	}
-	fmt.Println("checkpoint")
+exit:
 	return str
 }

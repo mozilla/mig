@@ -47,7 +47,8 @@ import (
 // On Windows, processes aren't forked by the init, so when the service is
 // started, it will need to fork itself, with the child in foreground mode,
 // and exit. We also need to cover service installation prior to the fork.
-func daemonize(ctx Context) (err error) {
+func daemonize(orig_ctx Context) (ctx Context, err error) {
+	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("daemonize() -> %v", e)
