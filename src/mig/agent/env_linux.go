@@ -36,6 +36,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"mig"
@@ -75,7 +76,11 @@ func findOSInfo(orig_ctx Context) (ctx Context, err error) {
 	ctx.Agent.Env.Arch = runtime.GOARCH
 	ctx.Agent.Env.Ident, err = getLSBRelease()
 	if err != nil {
-		panic(err)
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Info()
+		ctx.Agent.Env.Ident, err = getIssue()
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("getIssue() failed: %v", err)}.Info()
+		}
 	}
 	ctx.Agent.Env.Init, err = getInit()
 	if err != nil {
@@ -91,7 +96,11 @@ func getLSBRelease() (desc string, err error) {
 			err = fmt.Errorf("getLSBRelease() -> %v", e)
 		}
 	}()
-	out, err := exec.Command("lsb_release", "-i", "-r", "-c", "-s").Output()
+	path, err := exec.LookPath("lsb_release")
+	if err != nil {
+		return "", fmt.Errorf("lsb_release is not present")
+	}
+	out, err := exec.Command(path, "-i", "-r", "-c", "-s").Output()
 	if err != nil {
 		panic(err)
 	}
@@ -100,6 +109,25 @@ func getLSBRelease() (desc string, err error) {
 	if err != nil {
 		panic(err)
 	}
+	return
+}
+
+// getIssue parses /etc/issue and returns the first line
+func getIssue() (initname string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("getIssue() -> %v", e)
+		}
+	}()
+	issue, err := ioutil.ReadFile("/etc/issue")
+	if err != nil {
+		panic(err)
+	}
+	loc := bytes.IndexAny(issue, "\n")
+	if loc < 2 {
+		return "", fmt.Errorf("issue string not found")
+	}
+	initname = fmt.Sprintf("%s", issue[0:loc])
 	return
 }
 
