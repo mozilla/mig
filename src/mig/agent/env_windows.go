@@ -92,7 +92,7 @@ func getSysInfo() (hostname, domain, osname, osversion string, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving getSysInfo()"}.Debug()
 	}()
 	// get data from the systeminfo
-	out, err := exec.Command("systeminfo").Output()
+	out, err := exec.Command("systeminfo.exe", "/FO", "LIST").Output()
 	if err != nil {
 		panic(err)
 	}
