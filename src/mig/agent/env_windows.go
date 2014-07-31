@@ -140,5 +140,5 @@ exit:
 }
 
 func getRunDir() string {
-	return "%appdata%/mig/"
+	return `C:\Windows\`
 }

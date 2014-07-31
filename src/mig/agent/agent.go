@@ -34,8 +34,6 @@ the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
 */
 
-// TODO
-// * syntax check mig.Action.Arguments before exec()
 package main
 
 import (
@@ -81,6 +79,7 @@ func main() {
 	var mode = flag.String("m", "agent", "Module to run (eg. agent, filechecker).")
 	var file = flag.String("i", "/path/to/file", "Load action from file")
 	var foreground = flag.Bool("f", false, "Agent will fork into background by default. Except if this flag is set.")
+	var upgrading = flag.Bool("u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
 	var showversion = flag.Bool("V", false, "Print Agent version and exit.")
 	flag.Parse()
 
@@ -97,7 +96,7 @@ func main() {
 
 	// run the agent, and exit when done
 	if *mode == "agent" && *file == "/path/to/file" {
-		err := runAgent(*foreground)
+		err := runAgent(*foreground, *upgrading, *debug)
 		if err != nil {
 			panic(err)
 		}
@@ -152,13 +151,13 @@ func runModuleDirectly(mode string, args []byte) (err error) {
 
 // runAgent is the startup function for agent mode. It only exits when the agent
 // must shut down.
-func runAgent(foreground bool) (err error) {
+func runAgent(foreground, upgrading, debug bool) (err error) {
 	var ctx Context
 	// initialize the agent
-	ctx, err = Init(foreground)
+	ctx, err = Init(foreground, upgrading)
 	if err != nil {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
-		if foreground {
+		if debug {
 			// if in foreground mode, don't retry, just panic
 			time.Sleep(1 * time.Second)
 			panic(err)

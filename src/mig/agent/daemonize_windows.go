@@ -40,8 +40,6 @@ import (
 	"mig"
 	"os"
 	"os/exec"
-
-	"bitbucket.org/kardianos/service"
 )
 
 // On Windows, processes aren't forked by the init, so when the service is
@@ -57,6 +55,16 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 	}()
 
 	if os.Getppid() == 1 {
+		// if this agent has been launched as part of an upgrade, its parent will be
+		// detached to init, but no service would be launched, so we launch one
+		if upgrading && MUSTINSTALLSERVICE {
+			ctx, err = serviceDeploy(ctx)
+			if err != nil {
+				panic(err)
+			}
+			// mig-agent service has been launched, exit this process
+			os.Exit(0)
+		}
 		// fork a new agent and detach. new agent will reattach to init
 		cmd := exec.Command(ctx.Agent.BinPath, "-f")
 		err = cmd.Start()
@@ -67,29 +75,9 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 	} else {
 		// install the service
 		if MUSTINSTALLSERVICE {
-			svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
+			ctx, err = serviceDeploy(ctx)
 			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service initialization failed: '%v'", err)}.Err()
-				return ctx, err
-			}
-			// if already running, stop it
-			//_ = svc.Stop()
-			err = svc.Remove()
-			if err != nil {
-				// fail but continue, the service may not exist yet
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service removal failed: '%v'", err)}.Err()
-			}
-			err = svc.Install()
-			if err != nil {
-				// if installation fails, do not continue
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service installation failed: '%v'", err)}.Err()
-				return ctx, err
-			}
-			err = svc.Start()
-			if err != nil {
-				// if starting fails, do not continue either
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service startup failed: '%v'", err)}.Err()
-				return ctx, err
+				panic(err)
 			}
 		} else {
 			// we are not in foreground mode, and we don't want a service installation
@@ -101,6 +89,7 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 				return ctx, err
 			}
 		}
+		os.Exit(0)
 	}
 	return
 }

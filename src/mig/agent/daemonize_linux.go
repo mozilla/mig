@@ -40,8 +40,6 @@ import (
 	"mig"
 	"os"
 	"os/exec"
-
-	"bitbucket.org/kardianos/service"
 )
 
 // daemonize() adds logic to deal with several invocation scenario.
@@ -52,7 +50,7 @@ import (
 //
 // If the parent process is not 1, then we try to install the mig-agent
 // service, start the service, and exit. Or we just fork, and exit.
-func daemonize(orig_ctx Context) (ctx Context, err error) {
+func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
@@ -61,13 +59,24 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving daemonize()"}.Debug()
 	}()
 	if os.Getppid() == 1 {
+		// if this agent has been launched as part of an upgrade, its parent will be
+		// detached to init, but no service would be launched, so we launch one
+		if upgrading && MUSTINSTALLSERVICE {
+			ctx, err = serviceDeploy(ctx)
+			if err != nil {
+				panic(err)
+			}
+			// mig-agent service has been launched, exit this process
+			os.Exit(0)
+		}
+		// We are not upgrading, and parent is init. We must decide how to handle
+		// respawns based on the type of init system: upstart and systemd will
+		// take care of respawning agents automatically. sysvinit won't.
 		if ctx.Agent.Env.Init == "upstart" || ctx.Agent.Env.Init == "systemd" {
-			// if not controlled by system-v, we tell the agent
-			// to not respawn itself. upstart/systemd will do it
 			ctx.Agent.Respawn = false
 			return
 		}
-		// that's system-v, fork a new agent in foreground mode
+		// init is sysvinit, fork and exit the current process
 		cmd := exec.Command(ctx.Agent.BinPath, "-f")
 		err = cmd.Start()
 		if err != nil {
@@ -75,31 +84,11 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 		}
 		os.Exit(0)
 	} else {
-		// install the service, start it, and exit
+		// if this agent has been launched by a user, check whether service installation is requested
 		if MUSTINSTALLSERVICE {
-			svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
+			ctx, err = serviceDeploy(ctx)
 			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service initialization failed: '%v'", err)}.Err()
-				return ctx, err
-			}
-			// if already running, stop it
-			// _ = svc.Stop()
-			err = svc.Remove()
-			if err != nil {
-				// fail but continue, the service may not exist yet
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service removal failed: '%v'", err)}.Err()
-			}
-			err = svc.Install()
-			if err != nil {
-				// if installation fails, do not continue
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service installation failed: '%v'", err)}.Err()
-				return ctx, err
-			}
-			err = svc.Start()
-			if err != nil {
-				// if starting fails, do not continue either
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service startup failed: '%v'", err)}.Err()
-				return ctx, err
+				panic(err)
 			}
 		} else {
 			// we are not in foreground mode, and we don't want a service installation

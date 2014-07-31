@@ -342,8 +342,61 @@ string that can used in permissions.
 	$gpg --fingerprint --with-colons jvehent@mozilla.com |grep '^fpr'|cut -f 10 -d ':'
 	E60892BB9BD89A69F759A1A0A3D652173B763E8F
 
+Agent initialization process
+----------------------------
+The agent tries to be as autonomous as possible. One of the goal is to ship
+agents without requiring external provisioning tools, such as Chef or Puppet.
+Therefore, the agent attempts to install itself as a service, and also supports
+a builtin upgrade protocol (described in the next section).
+
+As a portable binary, the agent needs to detect the type of operating system
+and init method that is used by an endpoint. Depending on the endpoint,
+different initialization methods are used. The diagram below explains the
+decision process followed by the agent.
+
+.. image:: .files/mig-agent-initialization-process.png
+
+Go does not provide support for running programs in the backgroud. On endpoints
+that run upstart, systemd (linux) or launchd (darwin), this is not an issue
+because the init daemon takes care of running the agent in the background,
+rerouting its file descriptors and restarting on crash. On Windows and System-V,
+however, the agent daemonizes by forking itself into `foreground` mode, and
+re-forking itself on error (such as loss of connectivity to the relay).
+On Windows and System-V, if the agent is killed, it will not be restarted
+automatically.
+
 Agent registration process
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The initialization process goes through several environment detection steps
+which are used to select the proper init method. Once started, the agent will
+send a heartbeat to the public relay, and also store that heartbeat in its
+`run` directory. The location of the `run` directory is platform specific.
+
+* windows: C:\Windows\
+* darwin: /Library/Preferences/mig/
+* linux: /var/run/mig/
+
+Below is a sample heartbeat message from a linux agent stored in
+`/var/run/mig/mig-agent.ok`.
+
+.. code:: json
+
+	{
+		"destructiontime": "0001-01-01T00:00:00Z",
+		"environment": {
+			"arch": "amd64",
+			"ident": "Red Hat Enterprise Linux Server release 6.5 (Santiago)",
+			"init": "upstart"
+		},
+		"heartbeatts": "2014-07-31T14:00:20.00442837-07:00",
+		"name": "someserver.example.net",
+		"os": "linux",
+		"pid": 26256,
+		"queueloc": "linux.someserver.example.net.5hsa811oda",
+		"starttime": "2014-07-30T21:34:48.525449401-07:00",
+		"version": "201407310027+bcbdd94.prod"
+	}
 
 Agent upgrade process
 ---------------------

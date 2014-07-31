@@ -172,7 +172,8 @@ func Run(Args []byte) string {
 	}
 
 	// Launch the new agent and exit the module
-	_, err = exec.Command(agentBinPath).Output()
+	cmd := exec.Command(agentBinPath, "-u")
+	err = cmd.Start()
 	if err != nil {
 		return buildResults(p, fmt.Sprintf("%v", err))
 	}
@@ -288,7 +289,7 @@ func moveBinary(binPath, version string) (linkloc string, err error) {
 		linkloc = "/sbin/mig-agent"
 	case "windows":
 		target = fmt.Sprintf("C:/Windows/mig-agent-%s.exe", version)
-		linkloc = "C:/Windows/mig-agent"
+		linkloc = "C:/Windows/mig-agent.exe"
 	default:
 		err = fmt.Errorf("'%s' isn't a supported OS", runtime.GOOS)
 		return

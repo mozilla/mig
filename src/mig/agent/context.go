@@ -50,6 +50,7 @@ import (
 	"time"
 
 	"bitbucket.org/kardianos/osext"
+	"bitbucket.org/kardianos/service"
 	"github.com/streadway/amqp"
 )
 
@@ -95,7 +96,7 @@ type Context struct {
 
 // Init prepare the AMQP connections to the broker and launches the
 // goroutines that will process commands received by the MIG Scheduler
-func Init(foreground bool) (ctx Context, err error) {
+func Init(foreground, upgrade bool) (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initAgent() -> %v", e)
@@ -164,7 +165,7 @@ func Init(foreground bool) (ctx Context, err error) {
 	if !foreground {
 		// give one second for the caller to exit
 		time.Sleep(time.Second)
-		ctx, err = daemonize(ctx)
+		ctx, err = daemonize(ctx, upgrade)
 		if err != nil {
 			panic(err)
 		}
@@ -509,6 +510,36 @@ func Destroy(ctx Context) (err error) {
 	close(ctx.Channels.Results)
 	close(ctx.Channels.Log)
 	ctx.MQ.conn.Close()
+	return
+}
+
+// serviceDeploy stops, removes, installs and start the mig-agent service in one go
+func serviceDeploy(orig_ctx Context) (ctx Context, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("serviceDeploy() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving serviceDeploy()"}.Debug()
+	}()
+	svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
+	if err != nil {
+		panic(err)
+	}
+	// if already running, stop it
+	_ = svc.Stop()
+	err = svc.Remove()
+	if err != nil {
+		// fail but continue, the service may not exist yet
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service removal failed: '%v'", err)}.Err()
+	}
+	err = svc.Install()
+	if err != nil {
+		panic(err)
+	}
+	err = svc.Start()
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
