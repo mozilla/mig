@@ -515,6 +515,7 @@ func Destroy(ctx Context) (err error) {
 
 // serviceDeploy stops, removes, installs and start the mig-agent service in one go
 func serviceDeploy(orig_ctx Context) (ctx Context, err error) {
+	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("serviceDeploy() -> %v", e)
