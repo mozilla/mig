@@ -40,6 +40,7 @@ import (
 	"mig"
 	"os"
 	"os/exec"
+	"time"
 )
 
 // daemonize() adds logic to deal with several invocation scenario.
@@ -59,20 +60,25 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving daemonize()"}.Debug()
 	}()
 	if os.Getppid() == 1 {
+		ctx.Channels.Log <- mig.Log{Desc: "Parent is init."}.Debug()
 		// if this agent has been launched as part of an upgrade, its parent will be
 		// detached to init, but no service would be launched, so we launch one
 		if upgrading && MUSTINSTALLSERVICE {
+			ctx.Channels.Log <- mig.Log{Desc: "Agent is an upgrade. Deploying service."}.Debug()
+			time.Sleep(3 * time.Second)
 			ctx, err = serviceDeploy(ctx)
 			if err != nil {
 				panic(err)
 			}
 			// mig-agent service has been launched, exit this process
+			ctx.Channels.Log <- mig.Log{Desc: "Service deployed. Exit."}.Debug()
 			os.Exit(0)
 		}
 		// We are not upgrading, and parent is init. We must decide how to handle
 		// respawns based on the type of init system: upstart and systemd will
 		// take care of respawning agents automatically. sysvinit won't.
 		if ctx.Agent.Env.Init == "upstart" || ctx.Agent.Env.Init == "systemd" {
+			ctx.Channels.Log <- mig.Log{Desc: "Running as a service."}.Debug()
 			ctx.Agent.Respawn = false
 			return
 		}
@@ -82,14 +88,17 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to spawn new agent from '%s': '%v'", ctx.Agent.BinPath, err)}.Err()
 		}
+		ctx.Channels.Log <- mig.Log{Desc: "Started new foreground agent. Exit."}.Debug()
 		os.Exit(0)
 	} else {
+		ctx.Channels.Log <- mig.Log{Desc: "Parent is not init."}.Debug()
 		// if this agent has been launched by a user, check whether service installation is requested
 		if MUSTINSTALLSERVICE {
 			ctx, err = serviceDeploy(ctx)
 			if err != nil {
 				panic(err)
 			}
+			ctx.Channels.Log <- mig.Log{Desc: "Service deployed. Exit."}.Debug()
 		} else {
 			// we are not in foreground mode, and we don't want a service installation
 			// so just fork in foreground mode, and exit the current process
@@ -99,6 +108,7 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to spawn new agent from '%s': '%v'", ctx.Agent.BinPath, err)}.Err()
 				return ctx, err
 			}
+			ctx.Channels.Log <- mig.Log{Desc: "Started new foreground agent. Exit."}.Debug()
 		}
 		os.Exit(0)
 	}

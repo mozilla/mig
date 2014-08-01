@@ -40,6 +40,7 @@ import (
 	"mig"
 	"os"
 	"os/exec"
+	"time"
 )
 
 // On MacOS, launchd takes care of keeping processes alive. The daemonization
@@ -58,15 +59,19 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 		// if this agent has been launched as part of an upgrade, its parent will be
 		// detached to init, but no service would be launched, so we launch one
 		if upgrading && MUSTINSTALLSERVICE {
+			ctx.Channels.Log <- mig.Log{Desc: "Agent is an upgrade. Deploying service."}.Debug()
+			time.Sleep(3 * time.Second)
 			ctx, err = serviceDeploy(ctx)
 			if err != nil {
 				panic(err)
 			}
 			// mig-agent service has been launched, exit this process
+			ctx.Channels.Log <- mig.Log{Desc: "Service deployed. Exit."}.Debug()
 			os.Exit(0)
 		}
 		// if controlled by launchd, we tell the agent
 		// to not respawn itself. launchd will do it
+		ctx.Channels.Log <- mig.Log{Desc: "Running as a service."}.Debug()
 		ctx.Agent.Respawn = false
 	} else {
 		// install the service, start it, and exit
@@ -75,6 +80,7 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 			if err != nil {
 				panic(err)
 			}
+			ctx.Channels.Log <- mig.Log{Desc: "Service deployed. Exit."}.Debug()
 		} else {
 			// we are not in foreground mode, and we don't want a service installation
 			// so just fork in foreground mode, and exit the current process
@@ -84,6 +90,7 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to spawn new agent from '%s': '%v'", ctx.Agent.BinPath, err)}.Err()
 				return ctx, err
 			}
+			ctx.Channels.Log <- mig.Log{Desc: "Started new foreground agent. Exit."}.Debug()
 		}
 		os.Exit(0)
 	}

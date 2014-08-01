@@ -526,21 +526,30 @@ func serviceDeploy(orig_ctx Context) (ctx Context, err error) {
 	if err != nil {
 		panic(err)
 	}
-	// if already running, stop it
-	_ = svc.Stop()
+	// if already running, stop it. don't panic on error
+	err = svc.Stop()
+	if err != nil {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to stop service mig-agent: '%v'", err)}.Info()
+	} else {
+		ctx.Channels.Log <- mig.Log{Desc: "Stopped running mig-agent service"}.Info()
+	}
 	err = svc.Remove()
 	if err != nil {
 		// fail but continue, the service may not exist yet
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Service removal failed: '%v'", err)}.Err()
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to remove service mig-agent: '%v'", err)}.Info()
+	} else {
+		ctx.Channels.Log <- mig.Log{Desc: "Removed existing mig-agent service"}.Info()
 	}
 	err = svc.Install()
 	if err != nil {
 		panic(err)
 	}
+	ctx.Channels.Log <- mig.Log{Desc: "Installed mig-agent service"}.Info()
 	err = svc.Start()
 	if err != nil {
 		panic(err)
 	}
+	ctx.Channels.Log <- mig.Log{Desc: "Started mig-agent service"}.Info()
 	return
 }
 
