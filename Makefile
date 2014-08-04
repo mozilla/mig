@@ -119,6 +119,7 @@ rpm-agent: mig-agent
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
 	make agent-install-script
+	make agent-cron
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
@@ -128,6 +129,7 @@ deb-agent: mig-agent
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
 	make agent-install-script
+	make agent-cron
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
@@ -138,6 +140,7 @@ osxpkg-agent: mig-agent
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
 	make agent-install-script
+	make agent-cron
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
@@ -150,6 +153,13 @@ agent-install-script:
 	echo 'chown root:root /sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
 	echo '/sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
+
+agent-cron:
+	mkdir -p tmp/etc/cron.d/
+	echo 'PATH="/sbin"' > tmp/etc/cron.d/mig-agent
+	echo 'SHELL=/bin/bash' >> tmp/etc/cron.d/mig-agent
+	echo '*/10 * * * * root /sbin/mig-agent -q=pid 2>&1 1>/dev/null || /sbin/mig-agent' >> tmp/etc/cron.d/mig-agent
+	chmod 0755 tmp/etc/cron.d/mig-agent
 
 rpm-scheduler: mig-scheduler
 	rm -rf tmp
