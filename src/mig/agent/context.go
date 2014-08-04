@@ -433,14 +433,14 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 	if ctx.MQ.UseTLS {
 		ctx.Channels.Log <- mig.Log{Desc: "Loading AMQPS TLS parameters"}.Debug()
 		// import the client certificates
-		cert, err := tls.X509KeyPair([]byte(AGENTCERT), []byte(AGENTKEY))
+		cert, err := tls.X509KeyPair(AGENTCERT, AGENTKEY)
 		if err != nil {
 			panic(err)
 		}
 
 		// import the ca cert
 		ca := x509.NewCertPool()
-		if ok := ca.AppendCertsFromPEM([]byte(CACERT)); !ok {
+		if ok := ca.AppendCertsFromPEM(CACERT); !ok {
 			panic("failed to import CA Certificate")
 		}
 		TLSconfig := tls.Config{Certificates: []tls.Certificate{cert},

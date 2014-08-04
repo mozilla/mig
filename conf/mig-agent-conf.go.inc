@@ -136,27 +136,24 @@ QnD9SDA9/d80
 // CA cert that signs the rabbitmq server certificate, for verification
 // of the chain of trust. If rabbitmq uses a self-signed cert, add this
 // cert below
-var CACERT string = `-----BEGIN CERTIFICATE-----
+var CACERT = []byte(`-----BEGIN CERTIFICATE-----
 MIIHyTCCBbGgAwIBAgIBATANBgkqhkiG9w0BAQUFADB9MQswCQYDVQQGEwJJTDEW
 ........
 NOsF/5oirpt9P/FlUQqmMGqz9IgcgA38corog14=
------END CERTIFICATE-----
-`
+-----END CERTIFICATE-----`)
 
 // All clients share a single X509 certificate, for TLS auth on the
 // rabbitmq server. Add the public client cert below.
-var AGENTCERT string = `-----BEGIN CERTIFICATE-----
+var AGENTCERT = []byte(`-----BEGIN CERTIFICATE-----
 MIIGYjCCBUqgAwIBAgIDDD5PMA0GCSqGSIb3DQEBBQUAMIGMMQswCQYDVQQGEwJJ
 ........
 04lr0kZCZTYpIQ5KFFe/s+3n0A3RDu4qzhrxOf3BMHyAITB+/Nh4IlRCZu2ygv2X
 ej2w/mPv
------END CERTIFICATE-----
-`
+-----END CERTIFICATE-----`)
 
 // Add the private client key below.
-var AGENTKEY string = `-----BEGIN RSA PRIVATE KEY-----
+var AGENTKEY = []byte(`-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAvJQqCjE4I63S3kR9KV0EG9e/lX/bZxa/2QVvZGi9/Suj65nD
 ........
 RMSEpg+wuIVnKUi6KThiMKyXfZaTX7BDuR/ezE/JHs1TN5Hkw43TCQ==
------END RSA PRIVATE KEY-----
-`
+-----END RSA PRIVATE KEY-----`)

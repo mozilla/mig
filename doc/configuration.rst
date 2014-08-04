@@ -228,6 +228,24 @@ variables:
 
 	$ make mig-agent AGTCONF=conf/mig-agent-conf.prod.go BUILDENV=prod OS=windows ARCH=amd64
 
+Agent external configuration file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to use a configuration file with the agent. The location of the
+file can be specified using the `-c` flag of the agent's binary. If no flag is
+specific, the agent will look for a configuration file at
+`/etc/mig/mig-agent.cfg`. If no file is found at this location, the builtin
+parameters are used.
+
+The following parameters are **not** controlable by the configuration file:
+
+* list of investigators public keys in `PUBLICPGPKEYS`
+* list of access control lists in `AGENTACL`
+* list of proxies in `PROXIES`
+
+All other parameters can be overriden in the configuration file. Check out the
+sample file `mig-agent.cfg.inc` in the **conf** folder.
+
 Scheduler Configuration
 -----------------------
 

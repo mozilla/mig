@@ -78,6 +78,7 @@ func main() {
 	var debug = flag.Bool("d", false, "Debug mode: run in foreground, log to stdout.")
 	var mode = flag.String("m", "agent", "Module to run (eg. agent, filechecker).")
 	var file = flag.String("i", "/path/to/file", "Load action from file.")
+	var config = flag.String("c", "/etc/mig/mig-agent.cfg", "Load configuration from file.")
 	var query = flag.String("q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
 	var foreground = flag.Bool("f", false, "Agent will fork into background by default. Except if this flag is set.")
 	var upgrading = flag.Bool("u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
@@ -103,6 +104,13 @@ func main() {
 		}
 		fmt.Println(resp)
 		os.Exit(0)
+	}
+
+	err := configLoad(*config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load external configuration: %s", err)
+	} else {
+		fmt.Println("Configuration loaded from", *config)
 	}
 
 	// run the agent, and exit when done
