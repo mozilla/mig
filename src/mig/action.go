@@ -129,12 +129,14 @@ func ActionFromFile(path string) (Action, error) {
 	return a, err
 }
 
+const MAXINT = int(^uint(0) >> 1)
+
 // GenID returns an ID composed of a unix timestamp and a random CRC32
 func GenID() float64 {
 	h := crc32.NewIEEE()
 	t := time.Now().UTC().Format(time.RFC3339Nano)
 	r := rand.New(rand.NewSource(65537))
-	rand := string(r.Intn(4294967296))
+	rand := string(r.Intn(MAXINT))
 	h.Write([]byte(t + rand))
 	// concatenate timestamp and hash into 64 bits ID
 	// id = <32 bits unix ts><32 bits CRC hash>
