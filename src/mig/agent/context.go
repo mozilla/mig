@@ -526,6 +526,10 @@ func serviceDeploy(orig_ctx Context) (ctx Context, err error) {
 	if err != nil {
 		panic(err)
 	}
+
+	// TODO: FIX THIS. it appears that stopping a service on upstart will kill both the agent
+	// running as a service, and the agent currently upgrading which isn't yet running as a service.
+
 	// if already running, stop it. don't panic on error
 	err = svc.Stop()
 	if err != nil {
@@ -533,6 +537,7 @@ func serviceDeploy(orig_ctx Context) (ctx Context, err error) {
 	} else {
 		ctx.Channels.Log <- mig.Log{Desc: "Stopped running mig-agent service"}.Info()
 	}
+
 	err = svc.Remove()
 	if err != nil {
 		// fail but continue, the service may not exist yet
