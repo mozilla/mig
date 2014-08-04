@@ -36,6 +36,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"mig"
 	"net"
@@ -54,28 +55,28 @@ func initSocket(orig_ctx Context) (ctx Context, err error) {
 	if err != nil {
 		panic(err)
 	}
-	go acceptSockConn(ctx)
+	go socketAccept(ctx)
 	return
 }
 
-func acceptSockConn(ctx Context) {
+func socketAccept(ctx Context) {
 	for {
 		fd, err := ctx.Socket.Listener.Accept()
 		if err != nil {
 			break
 		}
-		go serveConn(fd, ctx)
+		go socketServe(fd, ctx)
 	}
 }
 
 // serveConn processes the request and close the connection. Connections to
 // the stat socket are single-request only.
-func serveConn(fd net.Conn, ctx Context) {
+func socketServe(fd net.Conn, ctx Context) {
 	defer func() {
 		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("serveConn() -> %v", e)}.Err()
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("socketServe() -> %v", e)}.Err()
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving serveConn()"}.Debug()
+		ctx.Channels.Log <- mig.Log{Desc: "leaving socketServe()"}.Debug()
 	}()
 	var resp string
 	buf := make([]byte, 8192)
@@ -99,10 +100,30 @@ pid	returns the PID of the running agent
 			resp = "unknown command"
 		}
 	}
-	n, err = fd.Write([]byte(resp))
+	n, err = fd.Write([]byte(resp + "\n"))
 	if err != nil {
 		panic(err)
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("serveConn(): %d bytes written", n)}.Debug()
 	fd.Close()
+}
+
+func socketQuery(bind, query string) (resp string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("socketQuery() -> %v", e)
+		}
+	}()
+	conn, err := net.Dial("tcp", bind)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Fprintf(conn, query+"\n")
+	resp, err = bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		panic(err)
+	}
+	// remove newline
+	resp = resp[0 : len(resp)-1]
+	return
 }

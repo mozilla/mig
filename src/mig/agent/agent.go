@@ -75,12 +75,13 @@ type moduleOp struct {
 func main() {
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
-	var debug = flag.Bool("d", false, "Debug mode: run in foreground, log to stdout")
+	var debug = flag.Bool("d", false, "Debug mode: run in foreground, log to stdout.")
 	var mode = flag.String("m", "agent", "Module to run (eg. agent, filechecker).")
-	var file = flag.String("i", "/path/to/file", "Load action from file")
+	var file = flag.String("i", "/path/to/file", "Load action from file.")
+	var query = flag.String("q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
 	var foreground = flag.Bool("f", false, "Agent will fork into background by default. Except if this flag is set.")
 	var upgrading = flag.Bool("u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
-	var showversion = flag.Bool("V", false, "Print Agent version and exit.")
+	var showversion = flag.Bool("V", false, "Print Agent version to stdout and exit.")
 	flag.Parse()
 
 	if *showversion {
@@ -92,6 +93,16 @@ func main() {
 		*foreground = true
 		LOGGINGCONF.Level = "debug"
 		LOGGINGCONF.Mode = "stdout"
+	}
+
+	if *query != "somequery" {
+		resp, err := socketQuery(SOCKET, *query)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(10)
+		}
+		fmt.Println(resp)
+		os.Exit(0)
 	}
 
 	// run the agent, and exit when done

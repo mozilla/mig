@@ -147,10 +147,10 @@ osxpkg-agent: mig-agent
 
 agent-install-script:
 	echo '#!/bin/sh' > tmp/agent_install.sh
-	echo 'pid=$$(nc localhost 51664 <<< pid)' >> tmp/agent_install.sh
-	echo 'if [ $$? -eq 0 ]; then kill $$pid; else pkill /sbin/mig-agent; fi' >> tmp/agent_install.sh
 	echo 'chmod 500 /sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
 	echo 'chown root:root /sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
+	echo 'rm /sbin/mig-agent; ln -s /sbin/mig-agent-$(BUILDENV) /sbin/mig-agent' >> tmp/agent_install.sh
+	echo '/sbin/mig-agent -q=pid 2>&1 1>/dev/null && kill $$(/sbin/mig-agent -q=pid)' >> tmp/agent_install.sh
 	echo '/sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 
