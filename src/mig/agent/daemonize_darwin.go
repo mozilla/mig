@@ -95,3 +95,14 @@ func daemonize(orig_ctx Context) (ctx Context, err error) {
 	}
 	return
 }
+
+func installCron(ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("installCron() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving installCron()"}.Debug()
+	}()
+	panic("mig-agent doesn't have a cronjob for darwin.")
+	return
+}

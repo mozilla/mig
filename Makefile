@@ -156,10 +156,10 @@ agent-install-script:
 
 agent-cron:
 	mkdir -p tmp/etc/cron.d/
-	echo 'PATH="/sbin"' > tmp/etc/cron.d/mig-agent
+	echo 'PATH="/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin"' > tmp/etc/cron.d/mig-agent
 	echo 'SHELL=/bin/bash' >> tmp/etc/cron.d/mig-agent
 	echo '*/10 * * * * root /sbin/mig-agent -q=pid 2>&1 1>/dev/null || /sbin/mig-agent' >> tmp/etc/cron.d/mig-agent
-	chmod 0755 tmp/etc/cron.d/mig-agent
+	chmod 0644 tmp/etc/cron.d/mig-agent
 
 rpm-scheduler: mig-scheduler
 	rm -rf tmp

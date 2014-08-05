@@ -37,6 +37,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"mig"
 	"os"
 	"os/exec"
@@ -109,6 +110,25 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 			ctx.Channels.Log <- mig.Log{Desc: "Started new foreground agent. Exit."}.Debug()
 		}
 		os.Exit(0)
+	}
+	return
+}
+
+func installCron(ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("installCron() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving installCron()"}.Debug()
+	}()
+	var job = []byte(`# mig agent monitoring cronjob
+PATH="/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin"
+SHELL=/bin/bash
+*/10 * * * * root /sbin/mig-agent -q=pid 2>&1 1>/dev/null || /sbin/mig-agent
+`)
+	err = ioutil.WriteFile("/etc/cron.d/mig-agent", job, 0644)
+	if err != nil {
+		panic("Failed to create cron job")
 	}
 	return
 }

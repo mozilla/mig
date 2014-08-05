@@ -114,6 +114,14 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	// is controlled by systemd, upstart or launchd
 	ctx.Agent.Respawn = ISIMMORTAL
 
+	// if immortal, install cron job that monitors the agent
+	if ISIMMORTAL {
+		err = installCron(ctx)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+		}
+	}
+
 	// create the go channels
 	ctx, err = initChannels(ctx)
 	if err != nil {
