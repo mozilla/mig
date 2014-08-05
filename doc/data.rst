@@ -208,3 +208,30 @@ last 30 days, but have not sent a heartbeat in the last 5 minutes.
 		SELECT DISTINCT(name) FROM agents
 		WHERE heartbeattime >= NOW() - interval '5 minutes'
 	) ORDER BY name;
+
+Finding double agents
+~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes during upgrades the older agent isn't shut down. You can find these
+endpoints with double agents in the database because each agent sends separate
+heartbeats for the same endpoint:
+
+.. code:: sql
+
+	SELECT COUNT(name), name FROM agents
+	WHERE heartbeattime >= NOW() - INTERVAL '10 minutes'
+	GROUP BY name ORDER BY count(name) DESC;
+
+This query will list all the agents sorted by the count of agents heartbeatting
+on each endpoint::
+
+    | count  |             name
+    |--------+--------------------------------------
+    | 3      | puppet3.private.dc1.example.net
+    | 2      | mv1.mv.example.net
+    | 2      | memcache1.webapp.dc1.example.net
+    | 2      | ip2.dc.example.net
+    | 2      | command.private.corp.dc1.example.net
+    | 1      | backup1.private.dc1.example.net
+    | 1      | backup2.db.dc1.example.net
+    | 1      | intranet4.db.dc3.example.net
