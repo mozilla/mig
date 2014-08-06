@@ -752,11 +752,16 @@ func (db *DB) AgentsActiveSince(pointInTime time.Time) (agents []mig.Agent, err 
 
 // InsertAgent creates a new agent in the database
 func (db *DB) InsertAgent(agt mig.Agent) (err error) {
+	jEnv, err := json.Marshal(agt.Env)
+	if err != nil {
+		err = fmt.Errorf("Failed to marshal agent environment: '%v'", err)
+		return
+	}
 	agtid := mig.GenID()
 	_, err = db.c.Exec(`INSERT INTO agents
-		(id, name, queueloc, os, version, pid, starttime, destructiontime, heartbeattime, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`, agtid, agt.Name, agt.QueueLoc,
-		agt.OS, agt.Version, agt.PID, agt.StartTime, agt.DestructionTime, agt.HeartBeatTS, agt.Status)
+		(id, name, queueloc, os, version, pid, starttime, destructiontime, heartbeattime, status, environment)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`, agtid, agt.Name, agt.QueueLoc,
+		agt.OS, agt.Version, agt.PID, agt.StartTime, agt.DestructionTime, agt.HeartBeatTS, agt.Status, jEnv)
 	if err != nil {
 		return fmt.Errorf("Failed to insert agent in database: '%v'", err)
 	}

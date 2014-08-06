@@ -85,7 +85,8 @@ platform.
 		starttime timestamp with time zone NOT NULL,
 		destructiontime timestamp with time zone,
 		heartbeattime timestamp with time zone NOT NULL,
-		status varchar(256)
+		status varchar(256),
+		environment json
 	);
 
 The `commands` table contains each action sent to each agent.
