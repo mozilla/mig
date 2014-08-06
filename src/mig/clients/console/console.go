@@ -281,7 +281,7 @@ func printStatus(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	agtout := make([]string, 3)
+	agtout := make([]string, 5)
 	agtout[0] = "Agents Summary:"
 	actout := make([]string, 2)
 	actout[0] = "Latest Actions:"
@@ -317,6 +317,10 @@ func printStatus(ctx Context) (err error) {
 				}
 			case "agents started in the last 24 hours":
 				agtout[2] = fmt.Sprintf("* %.0f agents (re)started in the last 24 hours", data.Value)
+			case "endpoints running 2 or more agents":
+				agtout[3] = fmt.Sprintf("* %.0f endpoints are running 2 or more agents", data.Value)
+			case "endpoints that have disappeared over last 7 days":
+				agtout[4] = fmt.Sprintf("* %.0f endpoints have disappeared over the last 7 days", data.Value)
 			}
 		}
 	}

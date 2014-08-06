@@ -643,7 +643,16 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	sumItem, err := agentsSummaryToItem(sum, count, ctx)
+	double, err := ctx.DB.CountDoubleAgents(time.Now().Add(-5 * time.Minute))
+	if err != nil {
+		panic(err)
+	}
+	disappeared, err := ctx.DB.CountDisappearedAgents(
+		time.Now().Add(-7*24*time.Hour), time.Now().Add(-5*time.Minute))
+	if err != nil {
+		panic(err)
+	}
+	sumItem, err := agentsSummaryToItem(sum, count, double, disappeared, ctx)
 	resource.AddItem(sumItem)
 
 	// add the last 10 actions

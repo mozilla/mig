@@ -902,10 +902,48 @@ func (db *DB) SumAgentsByVersion(pointInTime time.Time) (sum []AgentsSum, err er
 	return
 }
 
-// NewAgents retrieves a count of agents that started after `pointInTime`
+// CountNewAgents retrieves a count of agents that started after `pointInTime`
 func (db *DB) CountNewAgents(pointInTime time.Time) (sum float64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(name) FROM agents
 		WHERE starttime >= $1 AND starttime <= NOW()`, pointInTime).Scan(&sum)
+	if err != nil {
+		err = fmt.Errorf("Error while counting agents: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows {
+		return
+	}
+	return
+}
+
+// CountDoubleAgents counts the number of endpoints that run more than one agent
+func (db *DB) CountDoubleAgents(pointInTime time.Time) (sum float64, err error) {
+	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(name)) FROM agents
+		WHERE name IN (
+			SELECT name FROM agents
+			WHERE heartbeattime >= $1
+			GROUP BY name HAVING count(name) > 1
+		)`, pointInTime).Scan(&sum)
+	if err != nil {
+		err = fmt.Errorf("Error while counting double agents: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows {
+		return
+	}
+	return
+}
+
+// CountDisappearedAgents counts the number of endpoints that have disappeared recently
+func (db *DB) CountDisappearedAgents(seenSince, activeSince time.Time) (sum float64, err error) {
+	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(name)) FROM agents
+		WHERE name IN (
+		        SELECT DISTINCT(name) FROM agents
+		        WHERE heartbeattime >= $1
+		) AND name NOT IN (
+		        SELECT DISTINCT(name) FROM agents
+		        WHERE heartbeattime >= $2
+		)`, seenSince, activeSince).Scan(&sum)
 	if err != nil {
 		err = fmt.Errorf("Error while counting agents: '%v'", err)
 		return
