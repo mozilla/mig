@@ -221,7 +221,8 @@ heartbeats for the same endpoint:
 
 	SELECT COUNT(name), name FROM agents
 	WHERE heartbeattime >= NOW() - INTERVAL '10 minutes'
-	GROUP BY name ORDER BY count(name) DESC;
+	GROUP BY name HAVING COUNT(name) > 1
+	ORDER BY count(name) DESC;
 
 This query will list all the agents sorted by the count of agents heartbeatting
 on each endpoint::
@@ -233,6 +234,3 @@ on each endpoint::
     | 2      | memcache1.webapp.dc1.example.net
     | 2      | ip2.dc.example.net
     | 2      | command.private.corp.dc1.example.net
-    | 1      | backup1.private.dc1.example.net
-    | 1      | backup2.db.dc1.example.net
-    | 1      | intranet4.db.dc3.example.net
