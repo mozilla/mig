@@ -106,16 +106,16 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := configLoad(*config)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Not using external configuration: %s\n", err)
-	} else {
-		fmt.Println("Configuration loaded from", *config)
-	}
-
 	// run the agent, and exit when done
 	if *mode == "agent" && *file == "/path/to/file" {
-		err := runAgent(*foreground, *upgrading, *debug)
+		// try to read a local configuration file
+		err := configLoad(*config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Not using external configuration: %s. Continuing startup.\n", err)
+		} else {
+			fmt.Fprintf(os.Stderr, "Configuration loaded from %s\n", *config)
+		}
+		err = runAgent(*foreground, *upgrading, *debug)
 		if err != nil {
 			panic(err)
 		}
