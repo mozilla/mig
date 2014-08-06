@@ -108,6 +108,21 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	if err != nil {
 		panic(err)
 	}
+	// create the go channels
+	ctx, err = initChannels(ctx)
+	if err != nil {
+		panic(err)
+	}
+	// Logging GoRoutine,
+	go func() {
+		for event := range ctx.Channels.Log {
+			_, err := mig.ProcessLog(ctx.Logging, event)
+			if err != nil {
+				fmt.Println("Unable to process logs")
+			}
+		}
+	}()
+	ctx.Channels.Log <- mig.Log{Desc: "Logging routine initialized."}.Debug()
 
 	// defines whether the agent should respawn itself or not
 	// this value is overriden in the daemonize calls if the agent
@@ -121,23 +136,6 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
 		}
 	}
-
-	// create the go channels
-	ctx, err = initChannels(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// Logging GoRoutine,
-	go func() {
-		for event := range ctx.Channels.Log {
-			_, err := mig.ProcessLog(ctx.Logging, event)
-			if err != nil {
-				fmt.Println("Unable to process logs")
-			}
-		}
-	}()
-	ctx.Channels.Log <- mig.Log{Desc: "Logging routine initialized."}.Debug()
 
 	// get the path of the executable
 	ctx.Agent.BinPath, err = osext.Executable()

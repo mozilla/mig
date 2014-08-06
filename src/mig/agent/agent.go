@@ -108,7 +108,7 @@ func main() {
 
 	err := configLoad(*config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load external configuration: %s", err)
+		fmt.Fprintf(os.Stderr, "Not using external configuration: %s\n", err)
 	} else {
 		fmt.Println("Configuration loaded from", *config)
 	}
