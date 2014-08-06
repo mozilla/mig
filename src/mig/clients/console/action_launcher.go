@@ -400,7 +400,10 @@ func followAction(a mig.Action, ctx Context) (err error) {
 				break
 			}
 			completion := (float64(a.Counters.Returned) / float64(a.Counters.Sent)) * 100
-			fmt.Printf("%.0f%% done - %d/%d\n",
+			if completion > 99.9 && a.Counters.Returned != a.Counters.Sent {
+				completion = 99.9
+			}
+			fmt.Printf("%.1f%% done - %d/%d\n",
 				completion, a.Counters.Returned, a.Counters.Sent)
 			previousctr = a.Counters.Returned
 		}
