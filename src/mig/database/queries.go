@@ -918,11 +918,11 @@ func (db *DB) CountNewAgents(pointInTime time.Time) (sum float64, err error) {
 
 // CountDoubleAgents counts the number of endpoints that run more than one agent
 func (db *DB) CountDoubleAgents(pointInTime time.Time) (sum float64, err error) {
-	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(name)) FROM agents
-		WHERE name IN (
-			SELECT name FROM agents
+	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
+		WHERE queueloc IN (
+			SELECT queueloc FROM agents
 			WHERE heartbeattime >= $1
-			GROUP BY name HAVING count(name) > 1
+			GROUP BY queueloc HAVING count(queueloc) > 1
 		)`, pointInTime).Scan(&sum)
 	if err != nil {
 		err = fmt.Errorf("Error while counting double agents: '%v'", err)

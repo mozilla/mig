@@ -219,10 +219,10 @@ heartbeats for the same endpoint:
 
 .. code:: sql
 
-	SELECT COUNT(name), name FROM agents
+	SELECT COUNT(queueloc), queueloc FROM agents
 	WHERE heartbeattime >= NOW() - INTERVAL '10 minutes'
-	GROUP BY name HAVING COUNT(name) > 1
-	ORDER BY count(name) DESC;
+	GROUP BY queueloc HAVING COUNT(queueloc) > 1
+	ORDER BY count(queueloc) DESC;
 
 This query will list all the agents sorted by the count of agents heartbeatting
 on each endpoint::
