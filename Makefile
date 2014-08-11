@@ -121,7 +121,7 @@ rpm-agent: mig-agent
 	make agent-install-script
 	make agent-cron
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
+		-m "Mozilla OpSec" --url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
 
 deb-agent: mig-agent
@@ -131,7 +131,7 @@ deb-agent: mig-agent
 	make agent-install-script
 	make agent-cron
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
+		-m "Mozilla OpSec" --url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
 
 osxpkg-agent: mig-agent
@@ -142,7 +142,7 @@ osxpkg-agent: mig-agent
 	make agent-install-script
 	make agent-cron
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		--url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
+		-m "Mozilla OpSec" --url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
 
 agent-install-script:
@@ -167,7 +167,7 @@ rpm-scheduler: mig-scheduler
 	$(INSTALL) -D -m 0640 mig.cfg tmp/etc/mig/mig.cfg
 	$(MKDIR) -p tmp/var/cache/mig
 	fpm -C tmp -n mig-scheduler --license GPL --vendor mozilla --description "Mozilla InvestiGator Scheduler" \
-		--url https://github.com/mozilla/mig \
+		-m "Mozilla OpSec" --url https://github.com/mozilla/mig \
 		-s dir -t rpm .
 
 rpm-utils: mig-action-generator
@@ -175,7 +175,7 @@ rpm-utils: mig-action-generator
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/bin/mig-action-generator
 	$(MKDIR) -p tmp/var/cache/mig
 	fpm -C tmp -n mig-utils --license GPL --vendor mozilla --description "Mozilla InvestiGator Utilities" \
-		--url https://github.com/mozilla/mig \
+		-m "Mozilla OpSec" --url https://github.com/mozilla/mig \
 		-s dir -t rpm .
 
 tests: mig-agent
