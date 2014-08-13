@@ -15,3 +15,5 @@ src/*
 !src/mig
 *.rpm
 *.deb
+packages/
+tmp/

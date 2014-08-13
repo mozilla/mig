@@ -20,6 +20,7 @@ do
     #echo NEW EVENT: $event $dir $file
 
     if [[ "$dir" =~ src\/mig\/$ ]]; then
+        echo
         make mig-agent && \
         make mig-action-generator && \
         make mig-action-verifier && \
@@ -28,18 +29,27 @@ do
         echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ agent && "$file" != "configuration.go" ]] ; then
+        echo
+        make mig-agent && echo success $(date +%H:%M:%S)
+
+    elif [[ "$dir" =~ modules && "$file" != "configuration.go" ]] ; then
+        echo
         make mig-agent && echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ api ]] ; then
+        echo
         make mig-api && echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ generator ]] ; then
+        echo
         make mig-action-generator && echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ verifier ]] ; then
+        echo
         make mig-action-verifier && echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ pgp ]] ; then
+        echo
         make mig-agent && \
         make mig-action-generator && \
         make mig-action-verifier && \
@@ -47,6 +57,7 @@ do
         echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ scheduler ]] ; then
+        echo
         make mig-scheduler && echo success $(date +%H:%M:%S)
 
     fi
