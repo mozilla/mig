@@ -12,10 +12,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mig"
-	"mig/modules/agentdestroy"
-	"mig/modules/connected"
-	"mig/modules/filechecker"
-	"mig/modules/upgrade"
 	"os"
 	"os/exec"
 	"strings"
@@ -121,19 +117,13 @@ func main() {
 
 // runModuleDirectly executes a module and displays the results on stdout
 func runModuleDirectly(mode string, args []byte) (err error) {
-	switch mode {
-	case "connected":
-		fmt.Println(connected.Run(args))
-	case "filechecker":
-		fmt.Println(filechecker.Run(args))
-	case "agentdestroy":
-		fmt.Println(agentdestroy.Run(args))
-	case "upgrade":
-		fmt.Println(upgrade.Run(args))
-	default:
-		fmt.Println("Module", mode, "is not implemented")
+	if _, ok := mig.AvailableModules[mode]; ok {
+		// instanciate and call module
+		modRunner := mig.AvailableModules[mode]()
+		fmt.Println(modRunner.(mig.Moduler).Run(args))
+	} else {
+		fmt.Println("Unknown module", mode)
 	}
-
 	return
 }
 
@@ -290,21 +280,13 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 		desc := fmt.Sprintf("sending operation %d to module %s", counter, operation.Module)
 		ctx.Channels.Log <- mig.Log{OpID: currentOp.id, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: desc}
 
-		// pass the module operation object to the proper channel
-		switch operation.Module {
-		case "connected", "filechecker", "upgrade", "agentdestroy":
-			// send the operation to the module
+		// check that the module is available and pass the command to the execution channel
+		if _, ok := mig.AvailableModules[operation.Module]; ok {
+			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("calling module '%s'", operation.Module)}.Debug()
 			ctx.Channels.RunAgentCommand <- currentOp
 			opsCounter++
-		case "shell":
-			// send to the external execution path
-			ctx.Channels.RunExternalCommand <- currentOp
-			opsCounter++
-		case "terminate":
-			ctx.Channels.Terminate <- fmt.Errorf("Terminate order received from scheduler")
-			opsCounter++
-		default:
-			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("module '%s' is invalid", operation.Module)}
+		} else {
+			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("module '%s' not available", operation.Module)}
 		}
 	}
 

@@ -13,74 +13,74 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"mig"
 	"os"
 	"regexp"
 	"runtime"
 	"strings"
 )
 
-// Parameters contains a list of IP to check follow, using the following syntax:
-//
-// JSON example:
-// 	{
-// 		"parameters": {
-// 			"C&C server": [
-// 				"116.10.189.246"
-// 			]
-// 		}
-// 	}
-//
-type Parameters struct {
-	Elements map[string][]string `json:"elements"`
+func init() {
+	mig.RegisterModule("connected", func() interface{} {
+		return new(Runner)
+	})
 }
 
-func NewParameters() (p Parameters) {
-	return
+type Runner struct {
+	Parameters params
+	Results    results
+	conns      params
 }
 
-// Results returns a list of connections that match the parameters
-//
-// JSON sample:
-// 	{
-// 	    "foundanything": true,
-// 	    "elements": {
-// 		"C&C server": {
-// 		    "172.21.0.1": {
-// 			"matchcount": 2,
-// 			"connections": [
-// 			    "ipv4     2 tcp      6 431957 ESTABLISHED src=172.21.0.3 dst=172.21.0.1 sport=51479 dport=445 src=172.21.0.1 dst=172.21.0.3 sport=445 dport=51479 [ASSURED] mark=0 secctx=system_u:object_r:unlabeled_t:s0 zone=0 use=2",
-// 			    "ipv4     2 udp      17 16 src=172.21.0.3 dst=172.21.0.1 sport=50271 dport=53 src=172.21.0.1 dst=172.21.0.3 sport=53 dport=50271 [ASSURED] mark=0 secctx=system_u:object_r:unlabeled_t:s0 zone=0 use=2"
-// 			]
-// 		    }
-// 		}
-// 	    },
-// 	    "statistics": {
-// 		"openfailed": 1,
-// 		"totalconn": 182
-// 	    }
-// 	}
-// Since the modules tries several files in /proc, some of which may not exist,
-// it is likely that openfailed will return a non-zero value.
-type Results struct {
+type params map[string][]string
+
+type results struct {
 	FoundAnything bool                               `json:"foundanything"`
 	Elements      map[string]map[string]singleresult `json:"elements,omitempty"`
-	Error         string                             `json:"error,omitempty"`
-	Statistics    Statistics                         `json:"statistics,omitempty"`
+	Errors        []string                           `json:"errors,omitempty"`
+	Statistics    statistics                         `json:"statistics,omitempty"`
 }
 
-func NewResults() *Results {
-	return &Results{Elements: make(map[string]map[string]singleresult), FoundAnything: false}
+type statistics struct {
+	OpenFailed int `json:"openfailed"`
+	TotalConn  int `json:"totalconn"`
 }
 
 // singleresult contains information on the result of a single test
 type singleresult struct {
-	Matchcount  int      `json:"matchcount,omitempty"`
+	MatchCount  int      `json:"matchcount,omitempty"`
 	Connections []string `json:"connections,omitempty"`
 }
 
+func newResults() *results {
+	return &results{Elements: make(map[string]map[string]singleresult), FoundAnything: false}
+}
+
+func (r Runner) Run(args []byte) string {
+	err := json.Unmarshal(args, &r.Parameters)
+	if err != nil {
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
+	}
+
+	err = r.ValidateParameters()
+	if err != nil {
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
+	}
+
+	switch runtime.GOOS {
+	case "linux":
+		r.conns = r.checkLinuxConnectedIPs()
+	default:
+		panic("OS not supported")
+	}
+	return r.buildResults()
+}
+
 // Validate ensures that the parameters contain valid IPv4 addresses
-func (p Parameters) Validate() (err error) {
-	for _, values := range p.Elements {
+func (r Runner) ValidateParameters() (err error) {
+	for _, values := range r.Parameters {
 		for _, value := range values {
 			ipre := regexp.MustCompile(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b`)
 			if !ipre.MatchString(value) {
@@ -91,45 +91,12 @@ func (p Parameters) Validate() (err error) {
 	return
 }
 
-var stats Statistics
-
-type Statistics struct {
-	Openfailed int `json:"openfailed"`
-	Totalconn  int `json:"totalconn"`
-}
-
-type connectedIPs map[string][]string
-
-func Run(Args []byte) string {
-	var conns connectedIPs
-	var errors string
-	params := NewParameters()
-
-	err := json.Unmarshal(Args, &params.Elements)
-	if err != nil {
-		panic(err)
-	}
-
-	err = params.Validate()
-	if err != nil {
-		panic(err)
-	}
-
-	switch runtime.GOOS {
-	case "linux":
-		conns = checkLinuxConnectedIPs(params)
-	default:
-		errors = fmt.Sprintf("'%s' isn't a supported OS", runtime.GOOS)
-	}
-	return buildResults(params, conns, errors)
-}
-
 // checkLinuxConnectedIPs checks the content of /proc/net/ip_conntrack
 // and /proc/net/nf_conntrack
-func checkLinuxConnectedIPs(params Parameters) connectedIPs {
+func (r Runner) checkLinuxConnectedIPs() map[string][]string {
 	var list []string
-	var conns connectedIPs
-	for _, ips := range params.Elements {
+	connections := make(map[string][]string)
+	for _, ips := range r.Parameters {
 		for _, newIP := range ips {
 			addit := true
 			for _, ip := range list {
@@ -146,53 +113,46 @@ func checkLinuxConnectedIPs(params Parameters) connectedIPs {
 	sources := []string{"/proc/net/ip_conntrack", "/proc/net/nf_conntrack"}
 	for _, srcfile := range sources {
 		// check those regexes against conntrack
-		file, err := os.Open(srcfile)
+		fd, err := os.Open(srcfile)
 		if err != nil {
-			stats.Openfailed++
+			r.Results.Statistics.OpenFailed++
 		}
-		defer file.Close()
-		conns = findInFile(file, list)
-	}
-	return conns
-}
-
-// iterate through a file and look for IP strings
-func findInFile(fd *os.File, list []string) (conns connectedIPs) {
-	conns = make(map[string][]string)
-	scanner := bufio.NewScanner(fd)
-	for scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			panic(err)
-		}
-		for _, ip := range list {
-			if strings.Contains(scanner.Text(), ip) {
-				conns[ip] = append(conns[ip], scanner.Text())
+		defer fd.Close()
+		scanner := bufio.NewScanner(fd)
+		for scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				panic(err)
 			}
+			for _, ip := range list {
+				if strings.Contains(scanner.Text(), ip) {
+					connections[ip] = append(connections[ip], scanner.Text())
+				}
+			}
+			r.Results.Statistics.TotalConn++
 		}
-		stats.Totalconn++
 	}
-	return
+	return connections
 }
 
 // buildResults transforms the connectedIPs map into a Results
 // map that is serialized in JSON and returned as a string
-func buildResults(params Parameters, conns connectedIPs, errors string) string {
-	results := NewResults()
-	for ip, lines := range conns {
+func (r Runner) buildResults() string {
+	results := newResults()
+	for ip, lines := range r.conns {
 		// find mapping between IP and test name, and store the result
-		for name, testips := range params.Elements {
+		for name, testips := range r.Parameters {
 			for _, testip := range testips {
 				if testip == ip {
 					if _, ok := results.Elements[name]; !ok {
 						results.Elements[name] = map[string]singleresult{
 							ip: singleresult{
-								Matchcount:  len(lines),
+								MatchCount:  len(lines),
 								Connections: lines,
 							},
 						}
 					} else {
 						results.Elements[name][ip] = singleresult{
-							Matchcount:  len(lines),
+							MatchCount:  len(lines),
 							Connections: lines,
 						}
 					}
@@ -201,10 +161,6 @@ func buildResults(params Parameters, conns connectedIPs, errors string) string {
 		}
 		results.FoundAnything = true
 	}
-	if errors != "" {
-		results.Error = errors
-	}
-	results.Statistics = stats
 	jsonOutput, err := json.Marshal(*results)
 	if err != nil {
 		panic(err)
