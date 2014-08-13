@@ -1,0 +1,29 @@
+{
+    "name": "Find endpoints with uptime > 1.5 years",
+    "description": {
+        "author": "Julien Vehent",
+        "email": "ulfr@mozilla.com",
+        "revision": 201408060000
+    },
+    "target": "linux",
+    "threat": {
+        "level": "-",
+        "type": "system",
+        "family": "search"
+    },
+    "operations": [
+        {
+            "module": "filechecker",
+            "parameters": {
+                "/proc/uptime": {
+                    "regex": {
+                        "Look for high uptime": [
+                            "^[5-9]{1}[0-9]{7,}\\."
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "syntaxversion": 1
+}
