@@ -23,9 +23,11 @@ type Agent struct {
 }
 
 type AgentEnv struct {
-	Init  string `json:"init,omitempty"`
-	Ident string `json:"ident,omitempty"`
-	Arch  string `json:"arch,omitempty"`
+	Init      string `json:"init,omitempty"`
+	Ident     string `json:"ident,omitempty"`
+	Arch      string `json:"arch,omitempty"`
+	IsProxied bool   `json:"isproxied"`
+	Proxy     string `json:"proxy,omitempty"`
 }
 
 // findHostname retrieves the hostname of the node

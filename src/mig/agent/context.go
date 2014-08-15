@@ -399,6 +399,8 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 				err = fmt.Errorf("Invalid status received from proxy: '%s'", status[0:len(status)-2])
 				return
 			}
+			ctx.Agent.Env.IsProxied = true
+			ctx.Agent.Env.Proxy = proxy
 			return
 		}
 	} else {
