@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mig"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -28,7 +29,14 @@ func findHostname(orig_ctx Context) (ctx Context, err error) {
 	// get the hostname
 	out, err := exec.Command("hostname", "--fqdn").Output()
 	if err != nil {
-		panic(err)
+		// --fqdn can fail sometimes. when that happens, use Go's builtin
+		// hostname lookup (reads /proc/sys/kernel/hostname)
+		hostname, err := os.Hostname()
+		if err != nil {
+			panic(err)
+		}
+		ctx.Agent.Hostname = hostname
+		return ctx, err
 	}
 	// remove trailing newline
 	ctx.Agent.Hostname = fmt.Sprintf("%s", out[0:len(out)-1])
