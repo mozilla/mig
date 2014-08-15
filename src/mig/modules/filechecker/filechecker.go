@@ -640,57 +640,44 @@ func followSymLink(link string) (mode os.FileMode, path string, err error) {
 	return
 }
 
-// pathIncludes is an optimization that matches a pattern with the current
-// depth of a directory.
-// To make filtering more efficient, split the pattern at the PathSeparator
-// level of the current path. If the current levels don't match, there's no
-// need to continue further down this path
-func pathIncludes(root, pattern string) bool {
+// pathIncludes verifies that a given path matches a given pattern
+func pathIncludes(path, pattern string) bool {
 	// if pattern has no metacharacter, use as-is
 	if strings.IndexAny(pattern, "*?[") < 0 {
-		if root == pattern {
+		if path == pattern {
 			return true
 		}
 		return false
 	}
-	rootdepth := 0
-	for pos := 0; pos < len(root); pos++ {
-		if root[pos] == os.PathSeparator {
-			rootdepth++
-		}
-	}
-	subpattern := pattern
-	patterndepth := 0
-	for pos := 0; pos < len(pattern); pos++ {
-		if pattern[pos] == os.PathSeparator {
-			patterndepth++
-		}
-		if patterndepth == rootdepth {
-			// pattern reaches the same depth as root, so we create a subpattern
-			// that only matches the current depth
-			subpattern = pattern[0:pos+1] + "*"
-			break
-		}
-	}
-	// if the current root is deeper than the pattern, and
-	// the pattern terminate with a wilcard, we reduce the matching
-	// of the root to the len of the pattern. that will allow us to
-	// continue recursively. If no wildcard, don't go down the tree
-	subroot := root
-	if rootdepth > patterndepth {
-		if pattern[len(pattern)-1] == '*' {
-			subroot = root[0 : len(pattern)-1]
-		}
-	}
-	match, _ := filepath.Match(subpattern, subroot)
-	if !match {
-		if debug {
-			fmt.Printf("pathIncludes: '%s' is NOT interested in path '%s'\n", subpattern, subroot)
-		}
-		return false
+	// decompose the path into a slice of strings using the PathSeparator to split
+	// and compare each component of the pattern with the correspond component of the path
+	pathItems := strings.Split(path, string(os.PathSeparator))
+	patternItems := strings.Split(pattern, string(os.PathSeparator))
+	matchLen := len(patternItems)
+	if matchLen > len(pathItems) {
+		matchLen = len(pathItems)
 	}
 	if debug {
-		fmt.Printf("pathIncludes: '%s' is interested in path '%s'\n", subpattern, subroot)
+		fmt.Printf("Path comparison: ")
+	}
+	for i := 0; i < matchLen; i++ {
+		if i > 0 && pathItems[i] == "" {
+			// skip comparison of the last item of the path because it's empty
+			break
+		}
+		match, _ := filepath.Match(patternItems[i], pathItems[i])
+		if !match {
+			if debug {
+				fmt.Printf("'%s'!='%s'\n", pathItems[i], patternItems[i])
+			}
+			return false
+		}
+		if debug {
+			fmt.Printf("'%s'=~'%s'; ", pathItems[i], patternItems[i])
+		}
+	}
+	if debug {
+		fmt.Printf("=> match\n")
 	}
 	return true
 }
