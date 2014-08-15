@@ -95,6 +95,25 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "Logging routine initialized."}.Debug()
 
+	// try to connect the stat socket until it works
+	// this may fail if one agent is already running
+	if SOCKET != "" {
+		go func() {
+			for {
+				ctx.Socket.Bind = SOCKET
+				ctx, err = initSocket(ctx)
+				if err == nil {
+					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Stat socket connected successfully on %s", ctx.Socket.Bind)}.Info()
+					goto socketdone
+				}
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect stat socket: '%v'", err)}.Err()
+				time.Sleep(60 * time.Second)
+			}
+		socketdone:
+			return
+		}()
+	}
+
 	// defines whether the agent should respawn itself or not
 	// this value is overriden in the daemonize calls if the agent
 	// is controlled by systemd, upstart or launchd
@@ -188,25 +207,6 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 mqdone:
 	if !connected {
 		panic("Failed to connect to the relay")
-	}
-
-	// try to connect the stat socket until it works
-	// this may fail if one agent is already running
-	if SOCKET != "" {
-		go func() {
-			for {
-				ctx.Socket.Bind = SOCKET
-				ctx, err = initSocket(ctx)
-				if err == nil {
-					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Stat socket connected successfully on %s", ctx.Socket.Bind)}.Info()
-					goto socketdone
-				}
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect stat socket: '%v'", err)}.Err()
-				time.Sleep(60 * time.Second)
-			}
-		socketdone:
-			return
-		}()
 	}
 	return
 }
