@@ -52,7 +52,12 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 			ctx.Agent.Respawn = false
 			return
 		}
-		// init is sysvinit, fork and exit the current process
+		// init is sysvinit, install a cron job that acts as a watchdog,
+		// then exec a new agent and exit the current one
+		err = installCron(ctx)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+		}
 		cmd := exec.Command(ctx.Agent.BinPath, "-f")
 		err = cmd.Start()
 		if err != nil {
