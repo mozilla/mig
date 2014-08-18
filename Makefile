@@ -120,7 +120,7 @@ rpm-agent: mig-agent
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
 	make agent-install-script
-	make agent-cron
+	#make agent-cron
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
@@ -130,7 +130,7 @@ deb-agent: mig-agent
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
 	make agent-install-script
-	make agent-cron
+	#make agent-cron
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
@@ -141,7 +141,7 @@ osxpkg-agent: mig-agent
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
 	make agent-install-script
-	make agent-cron
+	#make agent-cron
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
 		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
@@ -179,9 +179,8 @@ rpm-utils: mig-action-generator
 		-m "Mozilla OpSec" --url https://github.com/mozilla/mig \
 		-s dir -t rpm .
 
-tests: mig-agent
-	$(BINDIR)/mig-agent -m=filechecker '{"/etc/passwd":{"regex":{"this is an arbitrary string to describe this check":["^ulfrhasbeenhacked", "^rootkit.+/sbin/nologin"],"another arbitrary string":["iamaregex[0-9]"]}}}' > /dev/null
-	$(BINDIR)/mig-agent -m=filechecker -i=checks/policy_system_auditd_exec.json
+test: mig-agent
+	$(BINDIR)/mig-agent-latest -m=filechecker '{"/etc/passwd":{"regex":{"this is an arbitrary string to describe this check":["^ulfrhasbeenhacked", "^rootkit.+/sbin/nologin"],"another arbitrary string":["iamaregex[0-9]"]}}}'
 
 clean:
 	rm -rf bin
@@ -191,6 +190,11 @@ clean:
 	find src/ -maxdepth 1 -mindepth 1 ! -name mig -exec rm -rf {} \;
 
 clean-all: clean
-	rm -rf pkg
+	rm -rf packages
 
-.PHONY: clean clean-all go_get_deps_into_system mig-agent-386 mig-agent-amd64 agent-install-script
+clean-agent:
+	find bin/ -name mig-agent* -exec rm {} \;
+	rm -rf packages
+	rm -rf tmp
+
+.PHONY: clean clean-all clean-agent go_get_deps_into_system mig-agent-386 mig-agent-amd64 agent-install-script agent-cron
