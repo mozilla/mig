@@ -104,7 +104,7 @@ foundsomething	list commands and agents that have found something
 foundnothing	list commands and agents that have found nothing
 help		show this help
 investigators   print the list of investigators that signed the action
-json <pretty>	show the json of the action
+json         	show the json of the action
 ls <filter>	returns the list of commands with their status
 		'filter' is a pipe separated string of filter:
 		ex: ls | grep server1.(dom1|dom2) | grep -v example.net
@@ -118,15 +118,7 @@ times		show the various timestamps of the action
 			}
 		case "json":
 			var ajson []byte
-			if len(orders) > 1 {
-				if orders[1] == "pretty" {
-					ajson, err = json.MarshalIndent(a, "", "  ")
-				} else {
-					fmt.Printf("Unknown option '%s'\n", orders[1])
-				}
-			} else {
-				ajson, err = json.Marshal(a)
-			}
+			ajson, err = json.MarshalIndent(a, "", "  ")
 			if err != nil {
 				panic(err)
 			}

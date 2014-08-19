@@ -70,23 +70,15 @@ func commandReader(input string, ctx Context) (err error) {
 			goto exit
 		case "help":
 			fmt.Printf(`The following orders are available:
-exit			exit this mode
-help			show this help
-json <pretty>		show the json of the command
-r			refresh the command (get latest version from upstream)
-results <match>		print the results. if "match" is set, only print results that have at least one match
+exit		exit this mode
+help		show this help
+json		show the json of the command
+r		refresh the command (get latest version from upstream)
+results <match>	print the results. if "match" is set, only print results that have at least one match
 `)
 		case "json":
 			var cjson []byte
-			if len(orders) > 1 {
-				if orders[1] == "pretty" {
-					cjson, err = json.MarshalIndent(cmd, "", "  ")
-				} else {
-					fmt.Printf("Unknown option '%s'\n", orders[1])
-				}
-			} else {
-				cjson, err = json.Marshal(cmd)
-			}
+			cjson, err = json.MarshalIndent(cmd, "", "  ")
 			if err != nil {
 				panic(err)
 			}
@@ -197,7 +189,7 @@ func commandPrintResults(cmd mig.Command, match, showAgent bool) (err error) {
 					if useShortNames {
 						agtname = shorten(agtname)
 					}
-					fmt.Printf("%s: %s\n", agtname, res)
+					fmt.Printf("%s\t%s\n", agtname, res)
 				} else {
 					fmt.Println(res)
 				}
