@@ -24,10 +24,11 @@ import (
 var version string
 
 type moduleResult struct {
-	id     float64
-	err    error
-	status string
-	output interface{}
+	id       float64
+	err      error
+	status   string
+	output   interface{}
+	position int
 }
 
 type moduleOp struct {
@@ -35,6 +36,7 @@ type moduleOp struct {
 	mode       string
 	params     interface{}
 	resultChan chan moduleResult
+	position   int
 }
 
 func main() {
@@ -275,7 +277,8 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 		currentOp := moduleOp{id: mig.GenID(),
 			mode:       operation.Module,
 			params:     operation.Parameters,
-			resultChan: resultChan}
+			resultChan: resultChan,
+			position:   counter}
 
 		desc := fmt.Sprintf("sending operation %d to module %s", counter, operation.Module)
 		ctx.Channels.Log <- mig.Log{OpID: currentOp.id, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: desc}
@@ -308,6 +311,7 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 
 	var result moduleResult
 	result.id = op.id
+	result.position = op.position
 
 	ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: fmt.Sprintf("executing module '%s'", op.mode)}.Debug()
 	// waiter is a channel that receives a message when the timeout expires
@@ -354,7 +358,6 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 
 	// Normal exit case: command has finished before the timeout
 	case err := <-waiter:
-
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command failed."}.Err()
 			// update the command status and send the response back
@@ -390,12 +393,16 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 
 	resultReceived := 0
 
+	// create the slice of results and insert each incoming
+	// result at the right position: operation[0] => results[0]
+	cmd.Results = make([]interface{}, opsCounter)
+
 	// for each result received, populate the content of cmd.Results with it
 	// stop when we received all the expected results
 	for result := range resultChan {
 		ctx.Channels.Log <- mig.Log{OpID: result.id, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "received results from module"}.Debug()
 		cmd.Status = result.status
-		cmd.Results = append(cmd.Results, result.output)
+		cmd.Results[result.position] = result.output
 		resultReceived++
 		if resultReceived >= opsCounter {
 			break
