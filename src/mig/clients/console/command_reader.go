@@ -10,10 +10,14 @@ import (
 	"fmt"
 	"io"
 	"mig"
-	"mig/modules/filechecker"
 	"strings"
 
 	"github.com/bobappleyard/readline"
+
+	_ "mig/modules/agentdestroy"
+	_ "mig/modules/connected"
+	_ "mig/modules/filechecker"
+	_ "mig/modules/upgrade"
 )
 
 // commandReader retrieves an command from the API using its numerical ID
@@ -172,14 +176,16 @@ func commandPrintResults(cmd mig.Command, match, showAgent bool) (err error) {
 		if err != nil {
 			panic(err)
 		}
-		switch cmd.Action.Operations[i].Module {
-		case "filechecker":
-			var r filechecker.Results
-			err = json.Unmarshal(buf, &r)
-			if err != nil {
-				panic(err)
-			}
-			results, err := r.Print(match)
+		// verify that we know the module
+		moduleName := cmd.Action.Operations[i].Module
+		if _, ok := mig.AvailableModules[moduleName]; !ok {
+			fmt.Println("Skipping unknown module", moduleName)
+			continue
+		}
+		modRunner := mig.AvailableModules[moduleName]()
+		// look for a result printer in the module
+		if _, ok := modRunner.(mig.HasResultsPrinter); ok {
+			results, err := modRunner.(mig.HasResultsPrinter).PrintResults(buf, match)
 			if err != nil {
 				panic(err)
 			}
@@ -194,9 +200,8 @@ func commandPrintResults(cmd mig.Command, match, showAgent bool) (err error) {
 					fmt.Println(res)
 				}
 			}
-		default:
-			fmt.Printf("no result parser available for module '%s'. try `json pretty`\n",
-				cmd.Action.Operations[i].Module)
+		} else {
+			fmt.Printf("no result printer available for module '%s'. try `json pretty`\n", moduleName)
 		}
 	}
 	return

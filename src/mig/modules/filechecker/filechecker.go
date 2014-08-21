@@ -363,7 +363,7 @@ func (r Runner) Run(Args []byte) (resStr string) {
 
 	if debug {
 		// pretty printing
-		printedResults, err := PrintResults([]byte(resStr), false)
+		printedResults, err := r.PrintResults([]byte(resStr), false)
 		if err != nil {
 			panic(err)
 		}
@@ -1193,49 +1193,49 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err
 // only results that have at least one match are returned.
 // If matchOnly is not set, all results are returned, along with errors and
 // statistics.
-func PrintResults(rawResults []byte, matchOnly bool) (results []string, err error) {
-	var r Results
-	err = json.Unmarshal(rawResults, &r)
+func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string, err error) {
+	var results Results
+	err = json.Unmarshal(rawResults, &results)
 	if err != nil {
 		panic(err)
 	}
-	for path, _ := range r.Elements {
-		for method, _ := range r.Elements[path] {
-			for id, _ := range r.Elements[path][method] {
-				for value, _ := range r.Elements[path][method][id] {
+	for path, _ := range results.Elements {
+		for method, _ := range results.Elements[path] {
+			for id, _ := range results.Elements[path][method] {
+				for value, _ := range results.Elements[path][method][id] {
 					if matchOnly {
-						if r.Elements[path][method][id][value].Matchcount < 1 {
+						if results.Elements[path][method][id][value].Matchcount < 1 {
 							// go to next value
 							continue
 						}
 					}
-					if len(r.Elements[path][method][id][value].Files) == 0 {
+					if len(results.Elements[path][method][id][value].Files) == 0 {
 						res := fmt.Sprintf("0 match on '%s' in check '%s':'%s':'%s'",
 							value, path, method, id)
-						results = append(results, res)
+						prints = append(prints, res)
 						continue
 					}
-					for file, cnt := range r.Elements[path][method][id][value].Files {
+					for file, cnt := range results.Elements[path][method][id][value].Files {
 						verb := "match"
-						if r.Elements[path][method][id][value].Matchcount > 1 {
+						if results.Elements[path][method][id][value].Matchcount > 1 {
 							verb = "matches"
 						}
 						res := fmt.Sprintf("%d %s in '%s' on '%s' for filechecker '%s':'%s':'%s'",
 							cnt, verb, file, value, path, method, id)
-						results = append(results, res)
+						prints = append(prints, res)
 					}
 				}
 			}
 		}
 	}
 	if !matchOnly {
-		for _, we := range r.Errors {
-			results = append(results, we)
+		for _, we := range results.Errors {
+			prints = append(prints, we)
 		}
 		stat := fmt.Sprintf("Statistics: %d checks tested on %d files. %d failed to open. %d checks matched on %d files. %d total hits. ran in %s.",
-			r.Statistics.Checkcount, r.Statistics.Filescount, r.Statistics.Openfailed, r.Statistics.Checksmatch, r.Statistics.Uniquefiles,
-			r.Statistics.Totalhits, r.Statistics.Exectime)
-		results = append(results, stat)
+			results.Statistics.Checkcount, results.Statistics.Filescount, results.Statistics.Openfailed, results.Statistics.Checksmatch, results.Statistics.Uniquefiles,
+			results.Statistics.Totalhits, results.Statistics.Exectime)
+		prints = append(prints, stat)
 	}
 	return
 }

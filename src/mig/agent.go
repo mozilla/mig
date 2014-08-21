@@ -63,3 +63,8 @@ type Moduler interface {
 	Run([]byte) string
 	ValidateParameters() error
 }
+
+// HasResultsPrinter implements functions used by module to print information
+type HasResultsPrinter interface {
+	PrintResults([]byte, bool) ([]string, error)
+}
