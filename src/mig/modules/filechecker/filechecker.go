@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"mig"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,6 +33,17 @@ import (
 )
 
 var debug bool = false
+
+func init() {
+	mig.RegisterModule("filechecker", func() interface{} {
+		return new(Runner)
+	})
+}
+
+type Runner struct {
+	Parameters Parameters
+	Results    Results
+}
 
 // Parameters contains a list of file checks that has the following representation:
 //       Parameters {
@@ -105,14 +117,14 @@ var debug bool = false
 type Parameters map[string]map[string]map[string][]string
 
 // Create a new Parameters
-func NewParameters() *Parameters {
+func newParameters() *Parameters {
 	p := make(Parameters)
 	return &p
 }
 
 // validate a Parameters
-func (p Parameters) Validate() (err error) {
-	for path, methods := range p {
+func (r Runner) ValidateParameters() (err error) {
+	for path, methods := range r.Parameters {
 		if string(path) == "" {
 			return fmt.Errorf("Invalid path parameter. Expected string")
 		}
@@ -262,7 +274,7 @@ var walkingErrors []string
 // individual checks, stored in a map.
 // Each Check contains a path, which is inspected in the pathWalk function.
 // The results are stored in the checklist map and sent to stdout at the end.
-func Run(Args []byte) (resStr string) {
+func (r Runner) Run(Args []byte) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
@@ -278,13 +290,13 @@ func Run(Args []byte) (resStr string) {
 		}
 	}()
 	t0 := time.Now()
-	params := NewParameters()
-	err := json.Unmarshal(Args, &params)
+	//r.Parameters = newParameters()
+	err := json.Unmarshal(Args, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}
 
-	err = params.Validate()
+	err = r.ValidateParameters()
 	if err != nil {
 		panic(err)
 	}
@@ -293,7 +305,7 @@ func Run(Args []byte) (resStr string) {
 	checklist := make(map[int]filecheck)
 	todolist := make(map[int]filecheck)
 	i := 0
-	for path, methods := range *params {
+	for path, methods := range r.Parameters {
 		for method, identifiers := range methods {
 			for identifier, tests := range identifiers {
 				for _, test := range tests {
@@ -351,16 +363,11 @@ func Run(Args []byte) (resStr string) {
 
 	if debug {
 		// pretty printing
-		var r Results
-		err = json.Unmarshal([]byte(resStr), &r)
+		printedResults, err := PrintResults([]byte(resStr), false)
 		if err != nil {
 			panic(err)
 		}
-		results, err := r.Print(false)
-		if err != nil {
-			panic(err)
-		}
-		for _, res := range results {
+		for _, res := range printedResults {
 			fmt.Println(res)
 		}
 	}
@@ -1182,11 +1189,16 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err
 	return
 }
 
-// Print() returns results in a human-readable format. if matchOnly is set,
+// PrintResults() returns results in a human-readable format. if matchOnly is set,
 // only results that have at least one match are returned.
 // If matchOnly is not set, all results are returned, along with errors and
 // statistics.
-func (r Results) Print(matchOnly bool) (results []string, err error) {
+func PrintResults(rawResults []byte, matchOnly bool) (results []string, err error) {
+	var r Results
+	err = json.Unmarshal(rawResults, &r)
+	if err != nil {
+		panic(err)
+	}
 	for path, _ := range r.Elements {
 		for method, _ := range r.Elements[path] {
 			for id, _ := range r.Elements[path][method] {
