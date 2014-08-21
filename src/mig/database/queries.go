@@ -132,37 +132,45 @@ func (db *DB) SearchCommands(p SearchParameters) (commands []mig.Command, err er
 			&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
 			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.OS, &cmd.Agent.Version)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to retrieve command: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jRes, &cmd.Results)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal command results: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jDesc, &cmd.Action.Description)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jThreat, &cmd.Action.Threat)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOps, &cmd.Action.Operations)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jSig, &cmd.Action.PGPSignatures)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
 			return
 		}
 		commands = append(commands, cmd)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
 	return
 }
 
@@ -204,32 +212,39 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 			&a.Counters.Returned, &a.Counters.Done, &a.Counters.Cancelled,
 			&a.Counters.Failed, &a.Counters.TimeOut, &jSig, &a.SyntaxVersion)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Error while retrieving action: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jDesc, &a.Description)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jThreat, &a.Threat)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOps, &a.Operations)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jSig, &a.PGPSignatures)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
 			return
 		}
 		actions = append(actions, a)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
 	return
 }
 
@@ -254,12 +269,16 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 			&agent.PID, &agent.StartTime, &agent.DestructionTime, &agent.HeartBeatTS,
 			&agent.Status)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
 			return
 		}
 		agents = append(agents, agent)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
+
 	return
 }
 
@@ -275,10 +294,6 @@ func (db *DB) Last10Actions() (actions []mig.Action, err error) {
 		err = fmt.Errorf("Error while listing actions: '%v'", err)
 		return
 	}
-	if err == sql.ErrNoRows {
-		rows.Close()
-		return
-	}
 	for rows.Next() {
 		var jDesc, jThreat, jOps, jSig []byte
 		var a mig.Action
@@ -288,30 +303,38 @@ func (db *DB) Last10Actions() (actions []mig.Action, err error) {
 			&a.Counters.Returned, &a.Counters.Done, &a.Counters.Cancelled,
 			&a.Counters.Failed, &a.Counters.TimeOut, &jSig, &a.SyntaxVersion)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Error while retrieving action: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jDesc, &a.Description)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jThreat, &a.Threat)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOps, &a.Operations)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jSig, &a.PGPSignatures)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
 			return
 		}
 		actions = append(actions, a)
+	}
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
 	}
 	return
 }
@@ -498,10 +521,6 @@ func (db *DB) InvestigatorByActionID(aid float64) (ivgts []mig.Investigator, err
 		err = fmt.Errorf("Error while finding investigator: '%v'", err)
 		return
 	}
-	if err == sql.ErrNoRows {
-		rows.Close()
-		return
-	}
 	for rows.Next() {
 		var ivgt mig.Investigator
 		err = rows.Scan(&ivgt.ID, &ivgt.Name, &ivgt.PGPFingerprint)
@@ -512,7 +531,9 @@ func (db *DB) InvestigatorByActionID(aid float64) (ivgts []mig.Investigator, err
 		}
 		ivgts = append(ivgts, ivgt)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
 	return
 }
 
@@ -586,37 +607,45 @@ func (db *DB) CommandsByActionID(actionid float64) (commands []mig.Command, err 
 			&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
 			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.OS, &cmd.Agent.Version)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to retrieve command: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jRes, &cmd.Results)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal command results: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jDesc, &cmd.Action.Description)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jThreat, &cmd.Action.Threat)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOps, &cmd.Action.Operations)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jSig, &cmd.Action.PGPSignatures)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
 			return
 		}
 		commands = append(commands, cmd)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
 	return
 }
 
@@ -711,12 +740,15 @@ func (db *DB) AgentsActiveSince(pointInTime time.Time) (agents []mig.Agent, err 
 			&agent.PID, &agent.StartTime, &agent.DestructionTime, &agent.HeartBeatTS,
 			&agent.Status)
 		if err != nil {
+			rows.Close()
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
 			return
 		}
 		agents = append(agents, agent)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
 	return
 }
 
@@ -772,7 +804,6 @@ func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agent
 		WHERE agents.heartbeattime >= $1 AND agents.heartbeattime <= NOW()
 		AND agents.queueloc=$2`, pointInTime, queueloc)
 	if err != nil {
-		rows.Close()
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
 	}
@@ -787,7 +818,9 @@ func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agent
 		}
 		agents = append(agents, agent)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
 	return
 }
 
@@ -817,7 +850,9 @@ func (db *DB) ActiveAgentsByTarget(target string, pointInTime time.Time) (agents
 		}
 		agents = append(agents, agent)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
 	return
 }
 
@@ -868,7 +903,9 @@ func (db *DB) SumAgentsByVersion(pointInTime time.Time) (sum []AgentsSum, err er
 		}
 		sum = append(sum, asum)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
 	return
 }
 
