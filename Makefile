@@ -16,7 +16,7 @@ ifeq ($(ARCH),amd64)
 	FPMARCH := x86_64
 endif
 ifeq ($(ARCH),386)
-	FPMARCH := i686
+	FPMARCH := i386
 endif
 ifeq ($(OS),windows)
 	BINSUFFIX   := ".exe"
