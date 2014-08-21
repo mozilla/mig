@@ -56,6 +56,19 @@ func newResults() *results {
 	return &results{Elements: make(map[string]map[string]singleresult), FoundAnything: false}
 }
 
+// Validate ensures that the parameters contain valid IPv4 addresses
+func (r Runner) ValidateParameters() (err error) {
+	for _, values := range r.Parameters {
+		for _, value := range values {
+			ipre := regexp.MustCompile(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b`)
+			if !ipre.MatchString(value) {
+				return fmt.Errorf("Parameter '%s' is not a valid IP", value)
+			}
+		}
+	}
+	return
+}
+
 func (r Runner) Run(args []byte) string {
 	err := json.Unmarshal(args, &r.Parameters)
 	if err != nil {
@@ -76,19 +89,6 @@ func (r Runner) Run(args []byte) string {
 		panic("OS not supported")
 	}
 	return r.buildResults()
-}
-
-// Validate ensures that the parameters contain valid IPv4 addresses
-func (r Runner) ValidateParameters() (err error) {
-	for _, values := range r.Parameters {
-		for _, value := range values {
-			ipre := regexp.MustCompile(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b`)
-			if !ipre.MatchString(value) {
-				return fmt.Errorf("Parameter '%s' isn't a valid IP", value)
-			}
-		}
-	}
-	return
 }
 
 // checkLinuxConnectedIPs checks the content of /proc/net/ip_conntrack
@@ -138,6 +138,8 @@ func (r Runner) checkLinuxConnectedIPs() map[string][]string {
 // map that is serialized in JSON and returned as a string
 func (r Runner) buildResults() string {
 	results := newResults()
+	results.Errors = r.Results.Errors
+	results.Statistics = r.Results.Statistics
 	for ip, lines := range r.conns {
 		// find mapping between IP and test name, and store the result
 		for name, testips := range r.Parameters {

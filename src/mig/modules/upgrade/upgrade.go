@@ -22,6 +22,7 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
+	"mig"
 	"net/http"
 	"os"
 	"os/exec"
@@ -32,6 +33,17 @@ import (
 	"bitbucket.org/kardianos/osext"
 )
 
+func init() {
+	mig.RegisterModule("upgrade", func() interface{} {
+		return new(Runner)
+	})
+}
+
+type Runner struct {
+	Parameters params
+	Results    results
+}
+
 // JSON sample:
 //        {
 //            "module": "upgrade",
@@ -41,84 +53,83 @@ import (
 //                "checksum": "c59d4eaeac728671c635ff645014e2afa935bebffdb5fbd207ffdeab"
 //            }
 //        }
-type Parameters struct {
-	Elements map[string]map[string]string `json:"elements"`
-}
+type params map[string]map[string]string
 
-func NewParameters() (p Parameters) {
-	return
-}
-
-type Results struct {
+type results struct {
 	Success    bool       `json:"success"`
 	OldPID     int        `json:"oldpid"`
-	Error      string     `json:"error,omitempty"`
-	Statistics Statistics `json:"statistics,omitempty"`
+	Errors     []string   `json:"errors,omitempty"`
+	Statistics statistics `json:"statistics,omitempty"`
 }
 
-func (p Parameters) Validate() (err error) {
-	locre := regexp.MustCompile(`^https?://`)
-	checksumre := regexp.MustCompile(`^[a-zA-Z0-9]{64}$`)
-	for k, el := range p.Elements {
-		if el["to_version"] == "" {
-			return fmt.Errorf("In %s, parameter 'to_version' is empty. Expecting version.", k, el["to_version"])
-		}
-		if !locre.MatchString(el["location"]) {
-			return fmt.Errorf("In %s, parameter 'location' with value '%s' is invalid. Expecting URL.", k, el["location"])
-		}
-		if !checksumre.MatchString(el["checksum"]) {
-			return fmt.Errorf("In %s, parameter 'checksum' with value '%s' is invalid. Expecting SHA256 checksum.", k, el["checksum"])
-		}
-	}
-	return
-}
+var stats statistics
 
-var stats Statistics
-
-type Statistics struct {
+type statistics struct {
 	DownloadTime string `json:"downloadtime"`
 	DownloadSize int64  `json:"downloadsize"`
 }
 
-func Run(Args []byte) string {
-	p := NewParameters()
+func (r Runner) ValidateParameters() (err error) {
+	locre := regexp.MustCompile(`^https?://`)
+	checksumre := regexp.MustCompile(`^[a-zA-Z0-9]{64}$`)
+	for k, v := range r.Parameters {
+		if v["to_version"] == "" {
+			return fmt.Errorf("In %s, parameter 'to_version' is empty. Expecting version.", k, v["to_version"])
+		}
+		if !locre.MatchString(v["location"]) {
+			return fmt.Errorf("In %s, parameter 'location' with value '%s' is invalid. Expecting URL.", k, v["location"])
+		}
+		if !checksumre.MatchString(v["checksum"]) {
+			return fmt.Errorf("In %s, parameter 'checksum' with value '%s' is invalid. Expecting SHA256 checksum.", k, v["checksum"])
+		}
+	}
+	return
+}
 
-	err := json.Unmarshal(Args, &p.Elements)
+func (r Runner) Run(Args []byte) string {
+	err := json.Unmarshal(Args, &r.Parameters)
 	if err != nil {
-		panic(err)
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 
-	err = p.Validate()
+	err = r.ValidateParameters()
 	if err != nil {
-		return buildResults(p, fmt.Sprintf("%v", err))
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 
 	// Extract the parameters that apply to this OS and Arch
 	key := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
-	el, ok := p.Elements[key]
+	el, ok := r.Parameters[key]
 	if !ok {
-		return buildResults(p, fmt.Sprintf("No parameter found for %s", key))
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 
 	// Verify that the version we're told to upgrade to isn't the current one
 	cversion, err := getCurrentVersion()
 	if err != nil {
-		return buildResults(p, fmt.Sprintf("%v", err))
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 	if cversion == el["to_version"] {
-		return buildResults(p, fmt.Sprintf("Agent is already running version '%s'", cversion))
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Agent is already running version '%s'", cversion))
+		return r.buildResults()
 	}
 
 	// Download new agent binary from provided location
 	binfd, err := downloadBinary(el["location"])
 	if err != nil {
-		return buildResults(p, fmt.Sprintf("%v", err))
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 
 	// Verify checksum of the binary
 	err = verifyChecksum(binfd, el["checksum"])
 	if err != nil {
-		return buildResults(p, fmt.Sprintf("%v", err))
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 
 	// grab the path before closing the file descriptor
@@ -126,30 +137,34 @@ func Run(Args []byte) string {
 
 	err = binfd.Close()
 	if err != nil {
-		return buildResults(p, fmt.Sprintf("%v", err))
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 
 	// Dry run of the binary to verify that the version is correct
 	// but also that it can run without error
 	err = verifyVersion(binPath, el["to_version"])
 	if err != nil {
-		return buildResults(p, fmt.Sprintf("%v", err))
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 
 	// Move the binary of the new agent from tmp, to the correct destination
 	agentBinPath, err := moveBinary(binPath, el["to_version"])
 	if err != nil {
-		return buildResults(p, fmt.Sprintf("%v", err))
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 
 	// Launch the new agent and exit the module
 	cmd := exec.Command(agentBinPath, "-u")
 	err = cmd.Start()
 	if err != nil {
-		return buildResults(p, fmt.Sprintf("%v", err))
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 
-	return buildResults(p, "")
+	return r.buildResults()
 }
 
 // Run the agent binary to obtain the current version
@@ -300,16 +315,13 @@ func moveBinary(binPath, version string) (linkloc string, err error) {
 
 // buildResults transforms the ConnectedIPs map into a Results
 // map that is serialized in JSON and returned as a string
-func buildResults(params Parameters, errors string) string {
-	var results Results
-	results.OldPID = os.Getppid()
-	if errors != "" {
-		results.Error = errors
-	} else {
-		results.Success = true
+func (r Runner) buildResults() string {
+	r.Results.OldPID = os.Getppid()
+	if len(r.Results.Errors) == 0 {
+		r.Results.Success = true
 	}
-	results.Statistics = stats
-	jsonOutput, err := json.Marshal(results)
+	r.Results.Statistics = stats
+	jsonOutput, err := json.Marshal(r.Results)
 	if err != nil {
 		panic(err)
 	}
