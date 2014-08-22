@@ -13,6 +13,7 @@ import(
     _ "mig/modules/connected"
     _ "mig/modules/upgrade"
     _ "mig/modules/agentdestroy"
+    _ "mig/modules/example"
 )
 
 // restart the agent on failures, don't let it die

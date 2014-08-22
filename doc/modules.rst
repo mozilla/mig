@@ -6,269 +6,269 @@ MIG Modules
 .. sectnum::
 .. contents:: Table of Contents
 
-The MIG Agent does not execute operations by itself. It relies on modules, that
-are imported into the agent at compile time. Agent modules are typically Go
-modules that are imported into the agent code. The filechecker module is a good
-example:
+In this document, we explain how modules are written and integrated into MIG.
+
+The reception of a command by an agent triggers the execution of modules. A
+module is a Go package that is imported into the agent at compilation, and that
+performs a very specific set of tasks. For example, the `filechecker` module
+provides a way to scan a file system for files that contain regexes, match a
+checksum, ... Another module is called `connected`, and looks for IP addresses
+currently connected to an endpoint. `user` is a module to manages users, etc...
+
+Module are somewhat autonomous. They can be developped outside of the MIG code
+base, and only imported during compilation of the agent. Go does not provide a
+way to load external libraries, so modules are shipped within the agent's static
+binary, and not as separate files.
+
+Module logic
+============
+
+A module registers itself at runtime via the init() function, which calls
+`mig.RegisterModule` with a module name and an instance of the `Runner`
+variable. The agent uses the list populated by `mig.RegisterModule` to keep
+track of the available modules. When a command is received from the scheduler
+by the agent, the agent goes through the list of operations, and looks for an
+available module to execute each operation.
 
 .. code:: go
 
-    // this is how a module is imported into the agent, in src/mig/agent/agent.go
-    import(
-        ...
-    	"mig/modules/filechecker"
-        ...
-    )
+	// in src/mig/agent/agent.go
+	...
 
-    // runModuleDirectly executes a module and displays the results on stdout
-    func runModuleDirectly(mode string, args []byte) (err error) {
-        switch mode {
-        case "filechecker":
-            fmt.Println(filechecker.Run(args))
-            os.Exit(0)
-        default:
-            fmt.Println("Module", mode, "is not implemented")
-        }
-
-        return
-    }
-
-In the example above, the filechecker module is invoked trough its
-'filechecker.Run()' function. The agent passes arguments to the module in JSON
-format, typically taken from Action.Operations[x].Parameters where x is an int
-that identifies the module entry in the Operations array.
-
-.. code:: json
-
-    {
-        "....": "...."
-        "Operations": [
-        {
-            "Module": "filechecker",
-            "Parameters": {
-                "/etc/passwd": {
-                    "regex": {
-                        "string identifier for this check": [
-                            "^ulfrhasbeenhacked",
-                            "root:\\$(1|2a|5|6)\\$",
-                            "^rootkit.+/sbin/nologin$"
-                        ],
-                        "another check, another identifier": [
-                            "iamaregex[0-9]$"
-                        ]
-                    }
-                }
-            }
-        }
-    }
-
-Inside the Parameters object, the JSON format that a module accepts depends on
-the module. The other MIG components (API, scheduler, agent or database) do not
-validate the content of the module parameters.
-
-Coding conventions
-==================
-
-To facilitate module integration, some conventions are established:
-
-* modules must provide a **Run()** function for invocation.
-* Run() must take a single argument: a **[]byte** of the encoded JSON Parameters.
-* modules must return a **JSON encoded string**, and an error.
-
-.. code:: go
-
-    func Run(Args []byte) (output string, err error) {
-        // do magic
-        return
-    }
-
-* modules must provide a **Parameters** struct, that describes the parameter
-  format expected by the module.
-
-.. code:: go
-
-    type Parameters struct {
-        Elements map[string]map[string]map[string][]string
-    }
-
-* modules must provide a **NewParameters()** method that returns an allocated
-  instance of the Parameters struct.
-
-.. code:: go
-
-    func NewParameters() *Parameters {
-        return &Parameters{Elements: make(map[string]map[string]map[string][]string)}
-    }
-
-* modules must provide a **Validate()** method, that takes a Parameters as
-  argument, validates its syntax, and returns any error.
-
-.. code:: go
-
-    func (p Parameters) Validate() (err error)  {
-        // walk through parameters and validate them
-        return
-    }
-
-Example: mymodule
-=================
-
-This section describe the integration of an example module to the agent.
-
-Sample Code
------------
-
-The following code sample can be used to create a new module. It should be
-located into mig/src/mig/modules/<mymodule>/<mymodule>.go and imported into
-the agent as "mig/modules/modulename".
-
-.. code:: go
-
-    package mymodule
-    import (
-        "encoding/json"
-        "fmt"
-    )
-
-    // Parameters follow the structure
-    // {
-    //  "first element": [
-    //		  "stringA",
-    //		  "stringB",
-    //		  "stringC"
-    //		  ],
-    //  "second element": [
-    //		  "etc...
-    // }
-    type Parameters struct {
-        Elements	map[string][]string
-    }
-
-    func NewParameters() (p Parameters) {
-        return
-    }
-
-    func (p Parameters) Validate() (err error)  {
-        for _, values := range p.Elements {
-            for _, value := range values {
-                if value == "" {
-                    return fmt.Errorf("Parameter is empty")
-                }
-            }
-        }
-        return
-    }
-
-    func Run(Args []byte) (output string, err error) {
-        params := NewParameters()
-
-        err := json.Unmarshal(Args, &params.Elements)
-        if err != nil {
-            panic(err)
-        }
-
-        err = params.Validate()
-        if err != nil {
-            panic(err)
-        }
-
-        // do something useful
-        // ......
-
-        jsonOutput, err := json.Marshal(params.Elements)
-        if err != nil {
-            panic(err)
-        }
-        output = string(jsonOutput[:]
-        return
-    }
-
-Agent integration
------------------
-
-In the agent, three additions must be made:
-1. import the module
-2. create a module Run() for direct invocation (console mode)
-3. add the module name to channel invocation (agent mode)
-
-In mig/src/agent/agent.go, modify the code as follow:
-
-.. code:: go
-
-    // top of code, around line 40
-    import(
-        ...
-        "mig/modules/mymodule"
-        ...
-    )
-
-    ...
-    // for direct, console mode, invocation
-    func runModuleDirectly(mode string, args []byte) (err error) {
-        switch mode {
-        ...
-        case "mymodule":
-            fmt.Println(mymodule.Run(args))
-            os.Exit(0)
-        ...
-        }
-        return
-    }
-
-    // for channel, agent mode, invocation
-    func parseCommands(ctx Context, msg []byte) (err error) {
-
-        ...
-
-		// pass the module operation object to the proper channel
-		switch operation.Module {
-		case "...", "mymodule":
-			// send the operation to the module
+	for counter, operation := range cmd.Action.Operations {
+		...
+		// check that the module is available and pass the command to the execution channel
+		if _, ok := mig.AvailableModules[operation.Module]; ok {
 			ctx.Channels.RunAgentCommand <- currentOp
-        ...
-        }
-        ...
-    }
+			opsCounter++
+		}
+	}
 
-You can then rebuild the agent with 'make mig-agent'.
+If a module is available to run an operation, the agent executes a fork of
+itself to run the module. This is done by calling the agent binary with the
+flag **-m**, followed by the name of the module, and the module parameters
+provided by the command.
 
-Action and module invocation
-----------------------------
-
-The following action will invoke the module named "mymodule".
-
-.. code:: json
-
-    {
-        "Name": "example action",
-        "Description": {
-            "Author": "Julien Vehent",
-            "Email": "jvehent@mozilla.com",
-            "URL": "https://example.net/url_to_something#useful",
-            "Revision": 201402041000
-        },
-        "Target": "linux",
-        "Threat": {
-            "Level": "info",
-            "Family": "test",
-            "Ref": test1"
-        },
-        "Operations": [
-            {
-                "Module": "mymodule",
-                "Parameters": {
-                    "first element": [ "stringA", "stringB", "stringC" ],
-                    "second element": [ "stringD", "stringE", "stringF" ]
-                }
-            }
-        ],
-        "SyntaxVersion": 1
-    }
-
-Run it from the command line directly, and the module output will be printed
-on the terminal.
+This can easily be done on the command line directly:
 
 .. code:: bash
 
-    $ ./bin/linux/amd64/mig-agent -i checks/base_v1.json
-    {"first element":["stringA","stringB","stringC"],"second element":["stringD","stringE","stringF"]}
+	$ /sbin/mig-agent -m example '{"gethostname": true, "getaddresses": true, "lookuphost": "www.google.com"}'
+	{"elements":{"hostname":"fedbox2.subdomain.example.net"...........
+
+When the agent is invoked with a **-m** flag that is not set to `agent`, it
+will attempt to run a module instead of running in agent mode. The snippet of
+code below is then executed:
+
+.. code:: go
+
+	// runModuleDirectly executes a module and displays the results on stdout
+	func runModuleDirectly(mode string, args []byte) (err error) {
+		if _, ok := mig.AvailableModules[mode]; ok {
+			// instanciate and call module
+			modRunner := mig.AvailableModules[mode]()
+			fmt.Println(modRunner.(mig.Moduler).Run(args))
+		} else {
+			fmt.Println("Unknown module", mode)
+		}
+		return
+	}
+
+The code above shows how the agent find the right module to run.
+A module implements the `mig.Moduler` interface, which implements a function
+named `Run()`. The agent simply invokes the `Run()` function of the module
+using the information provided during the registration.
+
+The `Example` module
+====================
+
+An example module that can be used as a template is available in
+`src/mig/modules/example/`_. We will study its structure to understand how
+modules are written and executed.
+
+.. _`src/mig/modules/example/`: ../src/mig/modules/example/example.go
+
+The main function of a module is called `Run()`. It takes one argument: an
+array of bytes that unmarshals into a JSON struct of parameters. The module
+takes care of unmarshalling into the proper struct, and validates the
+parameters using a function called `ValidateParameters()`.
+
+The agent has no idea what parameters format a module expects. And different
+modules have different parameters. From the point of view of the agent, module
+parameters are treated as an `interface{}`, such that the content of the
+interface doesn't matter to the agent, as long as it is valid JSON (this
+requirement is enforced by the database).
+
+For more details on the `action` and `command` formats used by MIG, read
+`Concepts & Internal Components`_.
+
+.. _`Concepts & Internal Components`: concepts.rst
+
+The JSON sample below show an action that calls the `example` module. The
+
+.. code:: json
+
+    {
+        "... action fields ..."
+        "operations": [
+            {
+                "module": "example",
+                "parameters": {
+                    "gethostname": true,
+                    "getaddresses": true,
+                    "lookuphost": "www.google.com"
+                }
+            }
+        ]
+    }
+
+The content of the `parameters` field is passed `Run()` as an array of bytes.
+Inside the module, `Run()` unmarshals and validates the parameters into its
+internal format.
+
+.. code:: go
+
+	// Runner gives access to the exported functions and structs of the module
+	type Runner struct {
+		Parameters params
+		Results    results
+	}
+
+	// a simple parameters structure, the format is arbitrary
+	type params struct {
+		GetHostname  bool   `json:"gethostname"`
+		GetAddresses bool   `json:"getaddresses"`
+		LookupHost   string `json:"lookuphost"`
+	}
+	func (r Runner) Run(Args []byte) string {
+		// arguments are passed as an array of bytes, the module has to unmarshal that
+		// into the proper structure of parameters, then validate it.
+		err := json.Unmarshal(Args, &r.Parameters)
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+			return r.buildResults()
+		}
+		err = r.ValidateParameters()
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+			return r.buildResults()
+		}
+
+		// ... do more stuff here
+		return r.buildResults()
+	}
+
+Now all the module has to do, is perform the work, and return the results as a
+JSON string.
+
+Implementation requirements
+===========================
+
+All modules must implement the **mig.Moduler** interface, defined in the `MIG
+package`_:
+
+.. _`MIG package`: ../src/mig/agent.go
+
+.. code:: go
+
+	// Moduler provides the interface to a Module
+	type Moduler interface {
+		Run([]byte) string
+		ValidateParameters() error
+	}
+
+
+* a module must implement a **Runner** type and register a new instance of it
+  as part of the init process. The name (here `example`) used in the call to
+  RegisterModule must be unique. Two modules cannot share the same name,
+  otherwise the agent will panic at runtime.
+
+.. code:: go
+
+	type Runner struct {
+		Parameters params
+		Results    results
+	}
+	func init() {
+		mig.RegisterModule("example", func() interface{} {
+			return new(Runner)
+		})
+	}
+
+`params` and `results` are local structures specific to the module.
+
+* `Runner` must implement two functions: **Run()** and **ValidateParameters()**.
+* `Run()` takes a single argument: a **[]byte** of the encoded JSON Parameters,
+  and returns a single string, typically a marshalled JSON string.
+
+.. code:: go
+
+	func (r Runner) Run(Args []byte) string {
+		...
+		return
+	}
+
+* `ValidateParameters()` does not take any argument, and returns a single error
+  when validation fails.
+
+.. code:: go
+
+	func (r Runner) ValidateParameters() (err error) {
+		...
+		return
+	}
+
+* a module must have a registration name that is unique
+
+Use a module
+============
+To use a module, you only need to anonymously import it into the configuration
+of the agent. The example agent configuration at `conf/mig-agent-conf.go.inc`_
+shows how modules need to be imported using the underscore character:
+
+.. _`conf/mig-agent-conf.go.inc`: ../conf/mig-agent-conf.go.inc
+
+.. code:: go
+
+	import(
+		"mig"
+		"time"
+
+		_ "mig/modules/filechecker"
+		_ "mig/modules/connected"
+		_ "mig/modules/upgrade"
+		_ "mig/modules/agentdestroy"
+		_ "mig/modules/example"
+	)
+
+Additionally, the MIG console may need to import the modules as well in order
+to use the `HasResultsPrinter` interface. To do so, add the same imports into
+the `import()` section of `src/mig/clients/console/console.go`.
+
+Additional module interfaces
+============================
+
+HasResultsPrinter
+~~~~~~~~~~~~~~~~~
+
+`HasResultsPrinter` is an interface used to allow a module `Runner` to implement
+the **PrintResults()** function. `PrintResults()` can be used to return the
+results of a module as an array of string, for pretty display in the MIG
+Console.
+
+The interface is defined as:
+
+.. code:: go
+
+	type HasResultsPrinter interface {
+		PrintResults([]byte, bool) ([]string, error)
+	}
+
+And a module implementation would have the function:
+
+.. code:: go
+
+	func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string, err error) {
+		...
+		return
+	}
