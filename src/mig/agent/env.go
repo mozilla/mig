@@ -47,7 +47,6 @@ var stunHosts = map[string]int{
 	"stun.voxgratia.org":  3478,
 	"stun.xten.com":       3478,
 }
-var maxStunLookups = 3
 
 func findNATviaStun(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
@@ -76,7 +75,7 @@ func findNATviaStun(orig_ctx Context) (ctx Context, err error) {
 		case stun.NAT_NONE:
 			ctx.Agent.Env.NAT.Result = "Not behind a NAT"
 		case stun.NAT_SYMETRIC_UDP_FIREWALL:
-			ctx.Agent.Env.NAT.Result = "Symetric UDP firewall"
+			ctx.Agent.Env.NAT.Result = "Symmetric UDP firewall"
 		default:
 			ctx.Agent.Env.NAT.Result = "Unknown"
 		}
@@ -87,7 +86,7 @@ func findNATviaStun(orig_ctx Context) (ctx Context, err error) {
 		}
 		ctr++
 		if ctr == 3 {
-			ctx.Agent.Env.NAT.Result = "Max lookups reached without results"
+			ctx.Agent.Env.NAT.Result = "Attempted 3 lookups without results"
 			break
 		}
 	}
