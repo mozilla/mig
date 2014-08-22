@@ -16,6 +16,9 @@ var ISIMMORTAL bool = true
 // request installing of a service to start the agent at boot
 var MUSTINSTALLSERVICE bool = true
 
+// attempt to discover the public IP of the endpoint by querying a STUN server
+var DISCOVERPUBLICIP = false
+
 var LOGGINGCONF = mig.Logging{
 	Mode:	"stdout",	// stdout | file | syslog
 	Level:	"debug",	// debug | info | ...

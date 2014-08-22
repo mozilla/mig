@@ -53,8 +53,10 @@ func findOSInfo(orig_ctx Context) (ctx Context, err error) {
 	}()
 	ctx.Agent.OS = runtime.GOOS
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("OS is %s", ctx.Agent.OS)}.Debug()
+
 	ctx.Agent.Env.Arch = runtime.GOARCH
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Arch is %s", ctx.Agent.Env.Arch)}.Debug()
+
 	ctx.Agent.Env.Ident, err = getLSBRelease()
 	if err != nil {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Info()
@@ -64,11 +66,13 @@ func findOSInfo(orig_ctx Context) (ctx Context, err error) {
 		}
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Ident is %s", ctx.Agent.Env.Ident)}.Debug()
+
 	ctx.Agent.Env.Init, err = getInit()
 	if err != nil {
 		panic(err)
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init is %s", ctx.Agent.Env.Init)}.Debug()
+
 	return
 }
 

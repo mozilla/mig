@@ -100,6 +100,7 @@ go_get_deps:
 	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
 	$(GOGETTER) camlistore.org/pkg/misc/pinentry
 	$(GOGETTER) github.com/bobappleyard/readline
+	$(GOGETTER) github.com/ccding/go-stun/stun
 ifeq ($(OS),windows)
 	$(GOGETTER) code.google.com/p/winsvc/eventlog
 endif

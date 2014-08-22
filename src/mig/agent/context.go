@@ -136,6 +136,18 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	if err != nil {
 		panic(err)
 	}
+	ctx, err = findLocalIPs(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// Attempt to discover the public IP by querying a STUN server
+	if DISCOVERPUBLICIP {
+		ctx, err = findNATviaStun(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	// find the run directory
 	ctx.Agent.RunDir = getRunDir()

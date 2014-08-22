@@ -23,11 +23,20 @@ type Agent struct {
 }
 
 type AgentEnv struct {
-	Init      string `json:"init,omitempty"`
-	Ident     string `json:"ident,omitempty"`
-	Arch      string `json:"arch,omitempty"`
-	IsProxied bool   `json:"isproxied"`
-	Proxy     string `json:"proxy,omitempty"`
+	Init      string   `json:"init,omitempty"`
+	Ident     string   `json:"ident,omitempty"`
+	Arch      string   `json:"arch,omitempty"`
+	IsProxied bool     `json:"isproxied"`
+	Proxy     string   `json:"proxy,omitempty"`
+	Addresses []string `json:"addresses,omitempty"`
+	NAT       NAT      `json:"nat,omitempty"`
+}
+
+// NAT stores Network Address Translation information of an endpoint
+type NAT struct {
+	IP         string `json:"ip,omitempty"`
+	Result     string `json:"result,omitempty"`
+	StunServer string `json:"stunserver,omitempty"`
 }
 
 // findHostname retrieves the hostname of the node

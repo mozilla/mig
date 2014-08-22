@@ -1,12 +1,13 @@
 ; Sample MIG Agent configuration file
 
 [agent]
-    isimmortal      = on
-    installservice  = on
-    relay           = "amqp://guest:guest@localhost:5672/"
-    socket          = "127.0.0.1:51664"
-    heartbeatfreq   = "300s"
-    moduletimeout   = "300s"
+    isimmortal       = on
+    installservice   = on
+    discoverpublicip = off
+    relay            = "amqp://guest:guest@localhost:5672/"
+    socket           = "127.0.0.1:51664"
+    heartbeatfreq    = "300s"
+    moduletimeout    = "300s"
 
 [certs]
     ca  = "/path/to/ca/cert"
