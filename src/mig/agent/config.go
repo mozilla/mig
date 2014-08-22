@@ -17,12 +17,13 @@ import (
 
 type config struct {
 	Agent struct {
-		IsImmortal     bool
-		InstallService bool
-		Relay          string
-		Socket         string
-		HeartbeatFreq  string
-		ModuleTimeout  string
+		IsImmortal       bool
+		InstallService   bool
+		DiscoverPublicIP bool
+		Relay            string
+		Socket           string
+		HeartbeatFreq    string
+		ModuleTimeout    string
 	}
 	Certs struct {
 		Ca, Cert, Key string
@@ -45,6 +46,7 @@ func configLoad(path string) (err error) {
 	}
 	ISIMMORTAL = config.Agent.IsImmortal
 	MUSTINSTALLSERVICE = config.Agent.InstallService
+	DISCOVERPUBLICIP = config.Agent.DiscoverPublicIP
 	LOGGINGCONF = config.Logging
 	AMQPBROKER = config.Agent.Relay
 	HEARTBEATFREQ, err = time.ParseDuration(config.Agent.HeartbeatFreq)
