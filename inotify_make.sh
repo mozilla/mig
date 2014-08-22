@@ -48,6 +48,10 @@ do
         echo
         make mig-action-verifier && echo success $(date +%H:%M:%S)
 
+    elif [[ "$dir" =~ console ]] ; then
+        echo
+        make mig-console && echo success $(date +%H:%M:%S)
+
     elif [[ "$dir" =~ pgp ]] ; then
         echo
         make mig-agent && \

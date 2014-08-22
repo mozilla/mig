@@ -5,8 +5,14 @@
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 package mig
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"time"
+)
 
+// Agent stores the description of an agent and serves as a canvas
+// for heartbeat messages
 type Agent struct {
 	ID              float64   `json:"id,omitempty"`
 	Name            string    `json:"name"`
@@ -22,6 +28,7 @@ type Agent struct {
 	Env             AgentEnv  `json:"environment,omitempty"`
 }
 
+// AgentEnv stores basic information of the endpoint
 type AgentEnv struct {
 	Init      string   `json:"init,omitempty"`
 	Ident     string   `json:"ident,omitempty"`
@@ -39,4 +46,25 @@ type NAT struct {
 	StunServer string `json:"stunserver,omitempty"`
 }
 
-// findHostname retrieves the hostname of the node
+// AvailableModules stores a list of activated module with their runner
+var AvailableModules = make(map[string]func() interface{})
+
+// RegisterModule adds a module to the list of available modules
+func RegisterModule(name string, runner func() interface{}) {
+	if _, exist := AvailableModules[name]; exist {
+		fmt.Fprintf(os.Stderr, "RegisterModule: a module named '%s' has already been registered.\nAre you trying to import the same module twice?\n", name)
+		os.Exit(1)
+	}
+	AvailableModules[name] = runner
+}
+
+// Moduler provides the interface to a Module
+type Moduler interface {
+	Run([]byte) string
+	ValidateParameters() error
+}
+
+// HasResultsPrinter implements functions used by module to print information
+type HasResultsPrinter interface {
+	PrintResults([]byte, bool) ([]string, error)
+}

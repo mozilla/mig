@@ -12,10 +12,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mig"
-	"mig/modules/agentdestroy"
-	"mig/modules/connected"
-	"mig/modules/filechecker"
-	"mig/modules/upgrade"
 	"os"
 	"os/exec"
 	"strings"
@@ -28,10 +24,11 @@ import (
 var version string
 
 type moduleResult struct {
-	id     float64
-	err    error
-	status string
-	output interface{}
+	id       float64
+	err      error
+	status   string
+	output   interface{}
+	position int
 }
 
 type moduleOp struct {
@@ -39,6 +36,7 @@ type moduleOp struct {
 	mode       string
 	params     interface{}
 	resultChan chan moduleResult
+	position   int
 }
 
 func main() {
@@ -121,19 +119,13 @@ func main() {
 
 // runModuleDirectly executes a module and displays the results on stdout
 func runModuleDirectly(mode string, args []byte) (err error) {
-	switch mode {
-	case "connected":
-		fmt.Println(connected.Run(args))
-	case "filechecker":
-		fmt.Println(filechecker.Run(args))
-	case "agentdestroy":
-		fmt.Println(agentdestroy.Run(args))
-	case "upgrade":
-		fmt.Println(upgrade.Run(args))
-	default:
-		fmt.Println("Module", mode, "is not implemented")
+	if _, ok := mig.AvailableModules[mode]; ok {
+		// instanciate and call module
+		modRunner := mig.AvailableModules[mode]()
+		fmt.Println(modRunner.(mig.Moduler).Run(args))
+	} else {
+		fmt.Println("Unknown module", mode)
 	}
-
 	return
 }
 
@@ -285,26 +277,19 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 		currentOp := moduleOp{id: mig.GenID(),
 			mode:       operation.Module,
 			params:     operation.Parameters,
-			resultChan: resultChan}
+			resultChan: resultChan,
+			position:   counter}
 
 		desc := fmt.Sprintf("sending operation %d to module %s", counter, operation.Module)
 		ctx.Channels.Log <- mig.Log{OpID: currentOp.id, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: desc}
 
-		// pass the module operation object to the proper channel
-		switch operation.Module {
-		case "connected", "filechecker", "upgrade", "agentdestroy":
-			// send the operation to the module
+		// check that the module is available and pass the command to the execution channel
+		if _, ok := mig.AvailableModules[operation.Module]; ok {
+			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("calling module '%s'", operation.Module)}.Debug()
 			ctx.Channels.RunAgentCommand <- currentOp
 			opsCounter++
-		case "shell":
-			// send to the external execution path
-			ctx.Channels.RunExternalCommand <- currentOp
-			opsCounter++
-		case "terminate":
-			ctx.Channels.Terminate <- fmt.Errorf("Terminate order received from scheduler")
-			opsCounter++
-		default:
-			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("module '%s' is invalid", operation.Module)}
+		} else {
+			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("module '%s' not available", operation.Module)}
 		}
 	}
 
@@ -326,6 +311,7 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 
 	var result moduleResult
 	result.id = op.id
+	result.position = op.position
 
 	ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: fmt.Sprintf("executing module '%s'", op.mode)}.Debug()
 	// waiter is a channel that receives a message when the timeout expires
@@ -372,7 +358,6 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 
 	// Normal exit case: command has finished before the timeout
 	case err := <-waiter:
-
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command failed."}.Err()
 			// update the command status and send the response back
@@ -408,12 +393,16 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 
 	resultReceived := 0
 
+	// create the slice of results and insert each incoming
+	// result at the right position: operation[0] => results[0]
+	cmd.Results = make([]interface{}, opsCounter)
+
 	// for each result received, populate the content of cmd.Results with it
 	// stop when we received all the expected results
 	for result := range resultChan {
 		ctx.Channels.Log <- mig.Log{OpID: result.id, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "received results from module"}.Debug()
 		cmd.Status = result.status
-		cmd.Results = append(cmd.Results, result.output)
+		cmd.Results[result.position] = result.output
 		resultReceived++
 		if resultReceived >= opsCounter {
 			break

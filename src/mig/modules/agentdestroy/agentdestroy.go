@@ -13,10 +13,22 @@ package agentdestroy
 import (
 	"encoding/json"
 	"fmt"
+	"mig"
 	"os"
 	"os/exec"
 	"runtime"
 )
+
+func init() {
+	mig.RegisterModule("agentdestroy", func() interface{} {
+		return new(Runner)
+	})
+}
+
+type Runner struct {
+	Parameters Parameters
+	Results    results
+}
 
 // JSON sample:
 //        {
@@ -31,90 +43,85 @@ type Parameters struct {
 	Version string `json:"version"`
 }
 
-func NewParameters() (p Parameters) {
-	return
+type results struct {
+	Success bool     `json:"success"`
+	Errors  []string `json:"errors,omitempty"`
 }
 
-type Results struct {
-	Success bool   `json:"success"`
-	Error   string `json:"error,omitempty"`
-}
-
-func (p Parameters) Validate() (err error) {
-	if p.PID < 2 || p.PID > 65535 {
-		return fmt.Errorf("PID '%s' is not in the range [2:65535]", p.PID)
+func (r Runner) ValidateParameters() (err error) {
+	if r.Parameters.PID < 2 || r.Parameters.PID > 65535 {
+		return fmt.Errorf("PID '%s' is not in the range [2:65535]", r.Parameters.PID)
 	}
-	if p.Version == "" {
+	if r.Parameters.Version == "" {
 		return fmt.Errorf("parameter 'version' is empty. Expecting version.")
 	}
 	return
 }
 
-func Run(Args []byte) string {
-	params := NewParameters()
-	var results Results
-
-	err := json.Unmarshal(Args, &params)
+func (r Runner) Run(Args []byte) string {
+	err := json.Unmarshal(Args, &r.Parameters)
 	if err != nil {
-		panic(err)
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 
-	err = params.Validate()
+	err = r.ValidateParameters()
 	if err != nil {
-		panic(err)
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
 	}
 	// Refuse to suicide
-	if params.PID == os.Getppid() {
-		results.Error = fmt.Sprintf("PID '%d' is mine. Refusing to suicide.", params.PID)
-		return buildResults(results)
+	if r.Parameters.PID == os.Getppid() {
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("PID '%d' is mine. Refusing to suicide.", r.Parameters.PID))
+		return r.buildResults()
 	}
 
 	// get the path of the agent's executable
 	var binary string
 	switch runtime.GOOS {
 	case "linux", "darwin", "freebsd", "openbsd", "netbsd":
-		binary, err = os.Readlink(fmt.Sprintf("/proc/%d/exe", params.PID))
+		binary, err = os.Readlink(fmt.Sprintf("/proc/%d/exe", r.Parameters.PID))
 		if err != nil {
-			results.Error = fmt.Sprintf("Binary path of PID '%d' not found: '%v'", params.PID, err)
-			return buildResults(results)
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Binary path of PID '%d' not found: '%v'", r.Parameters.PID, err))
+			return r.buildResults()
 		}
 	case "windows":
-		binary = fmt.Sprintf("C:/Windows/mig-agent-%s.exe", params.Version)
+		binary = fmt.Sprintf("C:/Windows/mig-agent-%s.exe", r.Parameters.Version)
 	default:
-		results.Error = fmt.Sprintf("'%s' isn't a supported OS", runtime.GOOS)
-		return buildResults(results)
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("'%s' isn't a supported OS", runtime.GOOS))
+		return r.buildResults()
 	}
 
 	// check that the binary we're removing has the right version
 	version, err := getAgentVersion(binary)
 	if err != nil {
-		results.Error = fmt.Sprintf("Failed to check agent version: '%v'", err)
-		return buildResults(results)
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Failed to check agent version: '%v'", err))
+		return r.buildResults()
 	}
-	if version != params.Version {
-		results.Error = fmt.Sprintf("Version mismatch. Expected '%s', found '%s'", params.Version, version)
-		return buildResults(results)
+	if version != r.Parameters.Version {
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Version mismatch. Expected '%s', found '%s'", r.Parameters.Version, version))
+		return r.buildResults()
 	}
 	err = os.Remove(binary)
 	if err != nil {
-		results.Error = fmt.Sprintf("Failed to remove binary '%s': '%v'", binary, err)
-		return buildResults(results)
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Failed to remove binary '%s': '%v'", binary, err))
+		return r.buildResults()
 	}
 
 	// Then kill the PID
-	process, err := os.FindProcess(params.PID)
+	process, err := os.FindProcess(r.Parameters.PID)
 	if err != nil {
-		results.Error = fmt.Sprintf("PID '%d' not found. Returned error '%v'", params.PID, err)
-		return buildResults(results)
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("PID '%d' not found. Returned error '%v'", r.Parameters.PID, err))
+		return r.buildResults()
 	} else {
 		err = process.Kill()
 		if err != nil {
-			results.Error = fmt.Sprintf("PID '%d' not killed. Returned error '%v'", params.PID, err)
-			return buildResults(results)
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("PID '%d' not killed. Returned error '%v'", r.Parameters.PID, err))
+			return r.buildResults()
 		}
 	}
-	results.Success = true
-	return buildResults(results)
+	r.Results.Success = true
+	return r.buildResults()
 }
 
 // Run the agent binary to obtain its version
@@ -135,8 +142,8 @@ func getAgentVersion(binary string) (cversion string, err error) {
 	return
 }
 
-func buildResults(results Results) (jsonResults string) {
-	jsonOutput, err := json.Marshal(results)
+func (r Runner) buildResults() (jsonResults string) {
+	jsonOutput, err := json.Marshal(r.Results)
 	if err != nil {
 		panic(err)
 	}

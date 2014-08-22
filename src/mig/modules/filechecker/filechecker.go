@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"mig"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,6 +33,17 @@ import (
 )
 
 var debug bool = false
+
+func init() {
+	mig.RegisterModule("filechecker", func() interface{} {
+		return new(Runner)
+	})
+}
+
+type Runner struct {
+	Parameters Parameters
+	Results    Results
+}
 
 // Parameters contains a list of file checks that has the following representation:
 //       Parameters {
@@ -105,14 +117,14 @@ var debug bool = false
 type Parameters map[string]map[string]map[string][]string
 
 // Create a new Parameters
-func NewParameters() *Parameters {
+func newParameters() *Parameters {
 	p := make(Parameters)
 	return &p
 }
 
 // validate a Parameters
-func (p Parameters) Validate() (err error) {
-	for path, methods := range p {
+func (r Runner) ValidateParameters() (err error) {
+	for path, methods := range r.Parameters {
 		if string(path) == "" {
 			return fmt.Errorf("Invalid path parameter. Expected string")
 		}
@@ -262,7 +274,7 @@ var walkingErrors []string
 // individual checks, stored in a map.
 // Each Check contains a path, which is inspected in the pathWalk function.
 // The results are stored in the checklist map and sent to stdout at the end.
-func Run(Args []byte) (resStr string) {
+func (r Runner) Run(Args []byte) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
@@ -278,13 +290,13 @@ func Run(Args []byte) (resStr string) {
 		}
 	}()
 	t0 := time.Now()
-	params := NewParameters()
-	err := json.Unmarshal(Args, &params)
+	//r.Parameters = newParameters()
+	err := json.Unmarshal(Args, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}
 
-	err = params.Validate()
+	err = r.ValidateParameters()
 	if err != nil {
 		panic(err)
 	}
@@ -293,7 +305,7 @@ func Run(Args []byte) (resStr string) {
 	checklist := make(map[int]filecheck)
 	todolist := make(map[int]filecheck)
 	i := 0
-	for path, methods := range *params {
+	for path, methods := range r.Parameters {
 		for method, identifiers := range methods {
 			for identifier, tests := range identifiers {
 				for _, test := range tests {
@@ -351,16 +363,11 @@ func Run(Args []byte) (resStr string) {
 
 	if debug {
 		// pretty printing
-		var r Results
-		err = json.Unmarshal([]byte(resStr), &r)
+		printedResults, err := r.PrintResults([]byte(resStr), false)
 		if err != nil {
 			panic(err)
 		}
-		results, err := r.Print(false)
-		if err != nil {
-			panic(err)
-		}
-		for _, res := range results {
+		for _, res := range printedResults {
 			fmt.Println(res)
 		}
 	}
@@ -1182,48 +1189,53 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err
 	return
 }
 
-// Print() returns results in a human-readable format. if matchOnly is set,
+// PrintResults() returns results in a human-readable format. if matchOnly is set,
 // only results that have at least one match are returned.
 // If matchOnly is not set, all results are returned, along with errors and
 // statistics.
-func (r Results) Print(matchOnly bool) (results []string, err error) {
-	for path, _ := range r.Elements {
-		for method, _ := range r.Elements[path] {
-			for id, _ := range r.Elements[path][method] {
-				for value, _ := range r.Elements[path][method][id] {
+func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string, err error) {
+	var results Results
+	err = json.Unmarshal(rawResults, &results)
+	if err != nil {
+		panic(err)
+	}
+	for path, _ := range results.Elements {
+		for method, _ := range results.Elements[path] {
+			for id, _ := range results.Elements[path][method] {
+				for value, _ := range results.Elements[path][method][id] {
 					if matchOnly {
-						if r.Elements[path][method][id][value].Matchcount < 1 {
+						if results.Elements[path][method][id][value].Matchcount < 1 {
 							// go to next value
 							continue
 						}
 					}
-					if len(r.Elements[path][method][id][value].Files) == 0 {
+					if len(results.Elements[path][method][id][value].Files) == 0 {
 						res := fmt.Sprintf("0 match on '%s' in check '%s':'%s':'%s'",
 							value, path, method, id)
-						results = append(results, res)
+						prints = append(prints, res)
 						continue
 					}
-					for file, cnt := range r.Elements[path][method][id][value].Files {
+					for file, cnt := range results.Elements[path][method][id][value].Files {
 						verb := "match"
-						if r.Elements[path][method][id][value].Matchcount > 1 {
+						if results.Elements[path][method][id][value].Matchcount > 1 {
 							verb = "matches"
 						}
 						res := fmt.Sprintf("%d %s in '%s' on '%s' for filechecker '%s':'%s':'%s'",
 							cnt, verb, file, value, path, method, id)
-						results = append(results, res)
+						prints = append(prints, res)
 					}
 				}
 			}
 		}
 	}
 	if !matchOnly {
-		for _, we := range r.Errors {
-			results = append(results, we)
+		for _, we := range results.Errors {
+			prints = append(prints, we)
 		}
 		stat := fmt.Sprintf("Statistics: %d checks tested on %d files. %d failed to open. %d checks matched on %d files. %d total hits. ran in %s.",
-			r.Statistics.Checkcount, r.Statistics.Filescount, r.Statistics.Openfailed, r.Statistics.Checksmatch, r.Statistics.Uniquefiles,
-			r.Statistics.Totalhits, r.Statistics.Exectime)
-		results = append(results, stat)
+			results.Statistics.Checkcount, results.Statistics.Filescount, results.Statistics.Openfailed, results.Statistics.Checksmatch, results.Statistics.Uniquefiles,
+			results.Statistics.Totalhits, results.Statistics.Exectime)
+		prints = append(prints, stat)
 	}
 	return
 }
