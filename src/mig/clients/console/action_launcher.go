@@ -103,16 +103,7 @@ sign			PGP sign the action
 times			show the various timestamps of the action
 `)
 		case "json":
-			var ajson []byte
-			if len(orders) > 1 {
-				if orders[1] == "pretty" {
-					ajson, err = json.MarshalIndent(a, "", "  ")
-				} else {
-					fmt.Printf("Unknown option '%s'\n", orders[1])
-				}
-			} else {
-				ajson, err = json.Marshal(a)
-			}
+			ajson, err := json.MarshalIndent(a, "", "  ")
 			if err != nil {
 				panic(err)
 			}
