@@ -38,7 +38,6 @@ var stunHosts = map[string]int{
 	"stun.ideasip.com":    3478,
 	"stun.iptel.org":      3478,
 	"stun.rixtelecom.se":  3478,
-	"stun.schlund.de":     3478,
 	"stunserver.org":      3478,
 	"stun.softjoys.com":   3478,
 	"stun.voiparound.com": 3478,
@@ -67,7 +66,7 @@ func findNATviaStun(orig_ctx Context) (ctx Context, err error) {
 		case stun.NAT_FULL:
 			ctx.Agent.Env.NAT.Result = "Full cone NAT"
 		case stun.NAT_SYMETRIC:
-			ctx.Agent.Env.NAT.Result = "Symetric NAT"
+			ctx.Agent.Env.NAT.Result = "Symmetric NAT"
 		case stun.NAT_RESTRICTED:
 			ctx.Agent.Env.NAT.Result = "Restricted NAT"
 		case stun.NAT_PORT_RESTRICTED:
