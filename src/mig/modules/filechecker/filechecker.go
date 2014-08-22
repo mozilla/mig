@@ -23,6 +23,7 @@ import (
 	"io"
 	"mig"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -1080,7 +1081,7 @@ func matchRegexOnName(filename string, ReList []int, checklist map[int]filecheck
 	hasmatched = false
 	for _, id := range ReList {
 		tmpcheck := checklist[id]
-		if checklist[id].regex.MatchString(filename) {
+		if checklist[id].regex.MatchString(path.Base(filename)) {
 			hasmatched = true
 			tmpcheck.hasmatched = true
 			tmpcheck.matchcount++
