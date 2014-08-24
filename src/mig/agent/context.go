@@ -18,6 +18,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"bitbucket.org/kardianos/osext"
@@ -575,5 +576,8 @@ trailing:
 		}
 	}
 exit:
+	// remove in-string linebreaks
+	str = strings.Replace(str, "\n", " ", -1)
+	str = strings.Replace(str, "\r", " ", -1)
 	return str
 }
