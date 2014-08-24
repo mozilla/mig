@@ -38,7 +38,6 @@ var stunHosts = map[string]int{
 	"stun.ideasip.com":    3478,
 	"stun.iptel.org":      3478,
 	"stun.rixtelecom.se":  3478,
-	"stunserver.org":      3478,
 	"stun.softjoys.com":   3478,
 	"stun.voiparound.com": 3478,
 	"stun.voipbuster.com": 3478,
@@ -49,7 +48,7 @@ var stunHosts = map[string]int{
 
 func findNATviaStun(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
-	ctr := 0
+	attempt := 0
 	for stunSrv, stunPort := range stunHosts {
 		stun.SetServerHost(stunSrv, stunPort)
 		nat, host, err := stun.Discover()
@@ -83,8 +82,8 @@ func findNATviaStun(orig_ctx Context) (ctx Context, err error) {
 			ctx.Agent.Env.NAT.StunServer = fmt.Sprintf("%s:%d", stunSrv, stunPort)
 			break
 		}
-		ctr++
-		if ctr == 3 {
+		attempt++
+		if attempt == 3 {
 			ctx.Agent.Env.NAT.Result = "Attempted 3 lookups without results"
 			break
 		}
