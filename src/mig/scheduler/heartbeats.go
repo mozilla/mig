@@ -123,11 +123,13 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Received valid keepalive from agent '%s'", agt.Name)}.Debug()
 
-	// write to database
-	err = ctx.DB.InsertOrUpdateAgent(agt)
-	if err != nil {
-		panic(err)
-	}
+	// write to database in a goroutine to avoid blocking
+	go func() {
+		err = ctx.DB.InsertOrUpdateAgent(agt)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Heartbeat DB insertion failed with error '%v' for agent '%s'", err, agt.Name)}.Err()
+		}
+	}()
 
 	// start a listener for this agent, if needed
 	err = startAgentListener(agt, ctx)
