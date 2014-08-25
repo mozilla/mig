@@ -23,6 +23,7 @@
     user = "migscheduler"
     password = "123456"
     sslmode = "disable"
+    maxconn = 10
 
 [mq]
     host  = "127.0.0.1"

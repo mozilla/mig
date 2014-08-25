@@ -338,6 +338,37 @@ files or the scheduler and the api.
 Note that `sslmode` can take the values `disable`, `require` (no cert
 verification) and `verify-full` (requires cert verification).
 
+Database tuning
+~~~~~~~~~~~~~~~
+
+The scheduler has an extra parameter to control the max number of database
+connections. It's important to keep that number relatively low, and increase it
+with the size of your infrastructure. The default value is set to `10`, and a
+good production value is `100`.
+
+  ::
+
+	[postgres]
+		...
+		maxconn = 10
+
+If the DB insertion rate is lower than the agent heartbeats rate, the scheduler
+will receive more heartbeats per seconds than it can insert in the database.
+When that happens, you will see the insertion lag increase in the query below:
+
+.. code:: sql
+
+	mig=> select NOW() - heartbeattime as "insertion lag"
+	mig-> from agents order by heartbeattime desc limit 1;
+	  insertion lag
+	-----------------
+	 00:00:00.212257
+	(1 row)
+
+A healthy insertion lag should be below one second. If the lag increases, and
+your DB server still isn't stuck at 100% CPU, try increasing the value of
+`maxconn`. It will cause the scheduler to use more insertion threads.
+
 Logging
 ~~~~~~~
 

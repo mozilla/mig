@@ -32,6 +32,10 @@ func (db *DB) Close() {
 	db.c.Close()
 }
 
+func (db *DB) SetMaxOpenConns(n int) {
+	db.c.SetMaxOpenConns(n)
+}
+
 // SearchParameters contains fields used to perform database searches
 type SearchParameters struct {
 	Before        time.Time `json:"before"`
