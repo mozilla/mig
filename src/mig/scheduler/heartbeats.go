@@ -66,7 +66,7 @@ func startActiveAgentsChannel(ctx Context) (activeAgentsChan <-chan amqp.Deliver
 		panic(err)
 	}
 
-	err = ctx.MQ.Chan.Qos(3, 0, false)
+	err = ctx.MQ.Chan.Qos(0, 0, false)
 	if err != nil {
 		panic(err)
 	}
