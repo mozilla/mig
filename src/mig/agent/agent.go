@@ -39,6 +39,8 @@ type moduleOp struct {
 	position   int
 }
 
+var runningOps = make(map[float64]moduleOp)
+
 func main() {
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
@@ -70,26 +72,9 @@ func main() {
 			os.Exit(10)
 		}
 		fmt.Println(resp)
-		os.Exit(0)
+		goto exit
 	}
 
-	// run the agent, and exit when done
-	if *mode == "agent" && *file == "/path/to/file" {
-		// try to read a local configuration file
-		err := configLoad(*config)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Not using external configuration: %s. Continuing startup.\n", err)
-		} else {
-			fmt.Fprintf(os.Stderr, "Configuration loaded from %s\n", *config)
-		}
-		err = runAgent(*foreground, *upgrading, *debug)
-		if err != nil {
-			panic(err)
-		}
-		os.Exit(0)
-	}
-
-	// outside of agent mode, parse and run modules
 	if *file != "/path/to/file" {
 		// get input data from file
 		action, err := mig.ActionFromFile(*file)
@@ -105,8 +90,35 @@ func main() {
 			}
 			runModuleDirectly(op.Module, args)
 		}
-	} else {
-		// without an input file, use the mode from the command line
+		goto exit
+	}
+
+	// run the agent in the correct mode. the default is to call a module.
+	switch *mode {
+	case "agent":
+		err := configLoad(*config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Not using external configuration: %s. Continuing startup.\n", err)
+		} else {
+			fmt.Fprintf(os.Stderr, "Configuration loaded from %s\n", *config)
+		}
+		err = runAgent(*foreground, *upgrading, *debug)
+		if err != nil {
+			panic(err)
+		}
+	case "agent-checkin":
+		*foreground = true
+		err := configLoad(*config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Not using external configuration: %s. Continuing startup.\n", err)
+		} else {
+			fmt.Fprintf(os.Stderr, "Configuration loaded from %s\n", *config)
+		}
+		err = runAgentCheckin(*foreground, *upgrading, *debug)
+		if err != nil {
+			panic(err)
+		}
+	default:
 		var tmparg string
 		for _, arg := range flag.Args() {
 			tmparg = tmparg + arg
@@ -114,7 +126,7 @@ func main() {
 		args := []byte(tmparg)
 		runModuleDirectly(*mode, args)
 	}
-
+exit:
 }
 
 // runModuleDirectly executes a module and displays the results on stdout
@@ -126,6 +138,58 @@ func runModuleDirectly(mode string, args []byte) (err error) {
 	} else {
 		fmt.Println("Unknown module", mode)
 	}
+	return
+}
+
+// runAgentCheckin is the one-off startup function for agent mode, where the
+// agent shuts itself down after running outstanding commands
+func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
+	var ctx Context
+	// initialize the agent
+	ctx, err = Init(foreground, upgrading)
+	if err != nil {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
+		panic(err)
+	}
+
+	err = startRoutines(ctx)
+	if err != nil {
+		panic(err)
+	}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s in checkin mode", version, ctx.Agent.QueueLoc)}
+
+	// The loop below retrieves messages from the relay. If no message is available,
+	// it will timeout and break out of the loop after 10 seconds, causing the agent to exit
+	for {
+		select {
+		case m := <-ctx.MQ.Bind.Chan:
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("received message '%s'", m.Body)}.Debug()
+			// Ack this message only
+			err := m.Ack(true)
+			if err != nil {
+				desc := fmt.Sprintf("Failed to acknowledge reception. Message will be ignored. Body: '%s'", m.Body)
+				ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
+				continue
+			}
+			// pass it along
+			ctx.Channels.NewCommand <- m.Body
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("received message. queued in position %d", len(ctx.Channels.NewCommand))}
+		case <-time.After(10 * time.Second):
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("No outstanding messages in relay.")}
+			goto done
+		}
+	}
+done:
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Agent is done checking in. shutting down.")}
+
+	// wait until all running operations are done
+	for {
+		time.Sleep(1 * time.Second)
+		if len(runningOps) == 0 {
+			break
+		}
+	}
+	Destroy(ctx)
 	return
 }
 
@@ -155,6 +219,31 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 	// Goroutine that receives messages from AMQP
 	go getCommands(ctx)
 
+	err = startRoutines(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.QueueLoc)}
+
+	// agent won't exit until this chan receives something
+	exitReason := <-ctx.Channels.Terminate
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
+
+	// I'll be back!
+	if ctx.Agent.Respawn {
+		ctx.Channels.Log <- mig.Log{Desc: "Agent is immortal. Resuscitating!"}
+		cmd := exec.Command(ctx.Agent.BinPath, "-f")
+		_ = cmd.Start()
+		os.Exit(0)
+	}
+
+	Destroy(ctx)
+	return
+}
+
+// startRoutines starts the goroutines that process commands and heartbeats
+func startRoutines(ctx Context) (err error) {
 	// GoRoutine that parses and validates incoming commands
 	go func() {
 		for msg := range ctx.Channels.NewCommand {
@@ -195,21 +284,6 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 	// GoRoutine that sends heartbeat messages to scheduler
 	go heartbeat(ctx)
 
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.QueueLoc)}
-
-	// agent won't exit until this chan receives something
-	exitReason := <-ctx.Channels.Terminate
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
-
-	// I'll be back!
-	if ctx.Agent.Respawn {
-		ctx.Channels.Log <- mig.Log{Desc: "Agent is immortal. Resuscitating!"}
-		cmd := exec.Command(ctx.Agent.BinPath, "-f")
-		_ = cmd.Start()
-		os.Exit(0)
-	}
-
-	Destroy(ctx)
 	return
 }
 
@@ -288,6 +362,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("calling module '%s'", operation.Module)}.Debug()
 			ctx.Channels.RunAgentCommand <- currentOp
 			opsCounter++
+			runningOps[currentOp.id] = currentOp
 		} else {
 			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("module '%s' not available", operation.Module)}
 		}
@@ -307,6 +382,8 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 			err = fmt.Errorf("runAgentModule() -> %v", e)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "leaving runAgentModule()"}.Debug()
+		// upon exit, remove the op from the running Ops
+		delete(runningOps, op.id)
 	}()
 
 	var result moduleResult

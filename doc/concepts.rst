@@ -371,8 +371,8 @@ re-forking itself on error (such as loss of connectivity to the relay).
 On Windows and System-V, if the agent is killed, it will not be restarted
 automatically.
 
-Agent registration process
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Registration process
+~~~~~~~~~~~~~~~~~~~~
 
 The initialization process goes through several environment detection steps
 which are used to select the proper init method. Once started, the agent will
@@ -403,6 +403,14 @@ Below is a sample heartbeat message from a linux agent stored in
 		"starttime": "2014-07-30T21:34:48.525449401-07:00",
 		"version": "201407310027+bcbdd94.prod"
 	}
+
+Check-In mode
+~~~~~~~~~~~~~
+In infrastructure where running the agent as a permanent process is not
+acceptable, it is possible to run the agent as a cron job. By starting the
+agent with the flag **-m agent-checkin**, the agent will connect to the
+configured relay, retrieve and run outstanding commands, and exit after 10
+seconds of inactivity.
 
 Agent upgrade process
 ---------------------

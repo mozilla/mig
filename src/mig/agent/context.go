@@ -492,6 +492,8 @@ func Destroy(ctx Context) (err error) {
 	close(ctx.Channels.RunAgentCommand)
 	close(ctx.Channels.RunExternalCommand)
 	close(ctx.Channels.Results)
+	// give one second for the goroutines to close
+	time.Sleep(1 * time.Second)
 	close(ctx.Channels.Log)
 	ctx.MQ.conn.Close()
 	return
