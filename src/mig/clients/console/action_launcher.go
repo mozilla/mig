@@ -302,6 +302,10 @@ func postAction(a mig.Action, follow bool, ctx Context) (a2 mig.Action, err erro
 	if err != nil {
 		panic(err)
 	}
+	if resp.StatusCode != 201 {
+		err = fmt.Errorf("HTTP %d: %v (code %s)", resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		return
+	}
 	a2, err = valueToAction(resource.Collection.Items[0].Data[0].Value)
 	if err != nil {
 		panic(err)
