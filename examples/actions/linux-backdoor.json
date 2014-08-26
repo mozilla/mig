@@ -3,9 +3,9 @@
     "description": {
         "author": "Julien Vehent",
         "email": "julien@linuxwall.info",
-        "revision": 201402231700
+        "revision": 201408261000
     },
-    "target": "linux",
+    "target": "agents.os = 'linux'",
     "threat": {
         "level": "alert",
         "type": "system",
@@ -487,5 +487,5 @@
             }
         }
     ],
-    "syntaxversion": 1
+    "syntaxversion": 2
 }

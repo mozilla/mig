@@ -132,8 +132,8 @@ func (a Action) Validate() (err error) {
 	if a.Target == "" {
 		return errors.New("Action.Target is empty. Expecting string.")
 	}
-	if a.SyntaxVersion < 1 {
-		return errors.New("SyntaxVersion is empty. Expecting string.")
+	if a.SyntaxVersion != 2 {
+		return errors.New("Wrong Syntax Version integer. Expection version 2.")
 	}
 	if a.ValidFrom.String() == "" {
 		return errors.New("Action.ValidFrom is empty. Expecting string.")

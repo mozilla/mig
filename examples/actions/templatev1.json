@@ -4,9 +4,9 @@
         "author": "Bob Smith",
         "email": "bsmith@example.net",
         "url": "http://bob.smith.example.net/blog/ioc1234.html",
-        "revision": 201402231700
+        "revision": 201408261000
     },
-    "target": "linux",
+    "target": "agents.os = 'linux'",
     "threat": {
         "level": "alert",
         "type": "system",
@@ -26,5 +26,5 @@
             }
         }
     ],
-    "syntaxversion": 1
+    "syntaxversion": 2
 }

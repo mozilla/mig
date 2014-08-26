@@ -4,9 +4,9 @@
         "author": "Julien Vehent",
         "email": "jvehent@mozilla.com",
         "url": "http://blog.sucuri.net/2013/02/linux-based-sshd-rootkit-floating-the-interwebs.html",
-        "revision": 201402071130
+        "revision": 201408261000
     },
-    "target": "linux",
+    "target": "agents.os = 'linux'",
     "threat": {
         "level": "alert",
         "type": "system",
@@ -26,5 +26,5 @@
             }
         }
     ],
-    "syntaxversion": 1
+    "syntaxversion": 2
 }

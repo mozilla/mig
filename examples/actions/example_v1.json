@@ -4,9 +4,9 @@
         "author": "Julien Vehent",
         "email": "jvehent@mozilla.com",
         "url": "https://example.net/url_to_something#useful",
-        "revision": 201402041000
+        "revision": 201408261000
     },
-    "target": "linux",
+    "target": "agents.os = 'linux'",
     "threat": {
         "level": "alert",
         "type": "system",
@@ -119,5 +119,5 @@
         }
 
     ],
-    "syntaxversion": 1
+    "syntaxversion": 2
 }

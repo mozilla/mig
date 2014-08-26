@@ -3,9 +3,9 @@
     "description": {
         "author": "Julien Vehent",
         "email": "ulfr@mozilla.com",
-        "revision": 201408060000
+        "revision": 201408261000
     },
-    "target": "linux",
+    "target": "agents.os = 'linux'",
     "threat": {
         "level": "-",
         "type": "system",
@@ -25,5 +25,5 @@
             }
         }
     ],
-    "syntaxversion": 1
+    "syntaxversion": 2
 }

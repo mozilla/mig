@@ -3,9 +3,9 @@
     "Description": {
         "Author": "Julien Vehent",
         "Email": "jvehent@mozilla.com",
-        "Revision": 201404021600
+        "Revision": 201408261000
     },
-    "Target": "linux",
+    "Target": "agents.os = 'linux' AND agents.environment->>'arch' = 'amd64'",
     "Operations": [
         {
             "Module": "upgrade",
@@ -18,5 +18,5 @@
             }
         }
     ],
-    "SyntaxVersion": 1
+    "SyntaxVersion": 2
 }

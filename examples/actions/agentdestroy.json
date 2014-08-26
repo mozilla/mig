@@ -1,19 +1,19 @@
 {
-    "Name": "Kill and remove an agent at the end of the Upgrade protocol",
-    "Description": {
-        "Author": "Julien Vehent",
-        "Email": "jvehent@mozilla.com",
-        "Revision": 201404151300
+    "name": "Kill and remove an agent at the end of the Upgrade protocol",
+    "description": {
+        "author": "Julien Vehent",
+        "email": "jvehent@mozilla.com",
+        "revision": 201408261000
     },
-    "Target": "linux",
-    "Operations": [
+    "target": "agents.os = 'linux'",
+    "operations": [
         {
-            "Module": "agentdestroy",
-            "Parameters": {
+            "module": "agentdestroy",
+            "parameters": {
                 "pid": 28803,
                 "version": "16eb58b-201404021544"
             }
         }
     ],
-    "SyntaxVersion": 1
+    "syntaxversion": 2
 }

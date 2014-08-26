@@ -126,7 +126,7 @@ and salted on linux systems, would use the following action:
 			"url": "https://some_example_url/with_details",
 			"revision": 201402071200
 		},
-		"target": "linux",
+		"target": "agents.environment->>'ident' ILIKE '%ubuntu%' AND agents.name LIKE '%dc1.example.net'",
 		"threat": {
 			"level": "info",
 			"family": "compliance",
@@ -146,28 +146,34 @@ and salted on linux systems, would use the following action:
 				}
 			}
 		],
-		"syntaxversion": 1
+		"syntaxversion": 2
 	}
 
 The parameters are:
 
-* Name: a string that represents the action.
-* Target: a search string that will be used by the scheduler to find the agents
-  the action will run on.
-* Description and Threat: additional fields to describe the action
-* Operations: an array of operations, each operation calls a module with a set
+* **name**: a string that represents the action.
+* **target**: a search string used by the scheduler to find agents to run the
+  action on. The target format uses Postgresql's WHERE condition format against
+  the `agents`_ table of the database. This method allows for complex target
+  queries, like running an action against a specific operating system, or
+  against an endpoint that has a given public IP, etc...
+
+.. _`agents`: data.rst.html#entity-relationship-diagram
+
+* **description** and **threat**: additional fields to describe the action
+* **operations**: an array of operations, each operation calls a module with a set
   of parameters. The parameters syntax are specific to the module.
-* SyntaxVersion: indicator of the action format used. Should be set to 1.
+* **syntaxversion**: indicator of the action format used. Should be set to 2
 
 Upon generation, additional fields are appended to the action:
 
-* PGPSignatures: all of the parameters above are concatenated into a string and
+* **pgpsignatures**: all of the parameters above are concatenated into a string and
   signed with the investigator's private GPG key. The signature is part of the
   action, and used by agents to verify that an action comes from a trusted
   investigator. `PGPSignatures` is an array that contains one or more signature
   from authorized investigators.
-* ValidFrom and ExpireAt: two dates that constrains the validity of the action
-  to a UTC time window.
+* **validfrom** and **expireafter**: two dates that constrains the validity of the
+  action to a UTC time window.
 
 Actions files are submitted to the API or the Scheduler directly. The PGP
 Signatures are always verified by the agents, and can optionally be verified by

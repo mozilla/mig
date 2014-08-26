@@ -828,16 +828,13 @@ func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agent
 	return
 }
 
-// ActiveAgentsByTarget finds all agents that have a name, os, queue location or version
-// that match a given target string
+// ActiveAgentsByTarget runs a search for all agents that match a given target string
 func (db *DB) ActiveAgentsByTarget(target string, pointInTime time.Time) (agents []mig.Agent, err error) {
-	search := fmt.Sprintf("%%%s%%", target)
 	rows, err := db.c.Query(`SELECT id, name, queueloc, os, version, pid,
 		starttime, destructiontime, heartbeattime, status
 		FROM agents
 		WHERE agents.heartbeattime >= $1 AND agents.heartbeattime <= NOW()
-		AND (name ILIKE $2 OR queueloc ILIKE $2
-		OR os ILIKE $2 OR version ILIKE $2)`, pointInTime, search)
+		AND (`+target+`)`, pointInTime)
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
