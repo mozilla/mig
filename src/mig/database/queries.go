@@ -830,11 +830,12 @@ func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agent
 
 // ActiveAgentsByTarget runs a search for all agents that match a given target string
 func (db *DB) ActiveAgentsByTarget(target string, pointInTime time.Time) (agents []mig.Agent, err error) {
-	rows, err := db.c.Query(`SELECT id, name, queueloc, os, version, pid,
+	rows, err := db.c.Query(`SELECT DISTINCT ON (queueloc) id, name, queueloc, os, version, pid,
 		starttime, destructiontime, heartbeattime, status
 		FROM agents
 		WHERE agents.heartbeattime >= $1 AND agents.heartbeattime <= NOW()
-		AND (`+target+`)`, pointInTime)
+		AND (`+target+`)
+		ORDER BY agents.queueloc, agents.heartbeattime DESC`, pointInTime)
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
