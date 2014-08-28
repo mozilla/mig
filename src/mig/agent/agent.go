@@ -174,7 +174,7 @@ func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
 			// pass it along
 			ctx.Channels.NewCommand <- m.Body
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("received message. queued in position %d", len(ctx.Channels.NewCommand))}
-		case <-time.After(10 * time.Second):
+		case <-time.After(3 * time.Second):
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("No outstanding messages in relay.")}
 			goto done
 		}
