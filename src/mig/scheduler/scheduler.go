@@ -602,7 +602,7 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	}
 
 	// use the action ID from the command file to get the action from the database
-	a, err := ctx.DB.ActionByID(cmd.Action.ID)
+	a, err := ctx.DB.ActionMetaByID(cmd.Action.ID)
 	if err != nil {
 		panic(err)
 	}
@@ -625,8 +625,9 @@ func updateAction(cmdPath string, ctx Context) (err error) {
 	a.Counters.Returned++
 	a.LastUpdateTime = time.Now().UTC()
 
-	desc := fmt.Sprintf("updating action '%s': completion=%d/%d, done=%d, cancelled=%d, failed=%d, timeout=%d. duration=%s",
-		a.Name, a.Counters.Returned, a.Counters.Sent, a.Counters.Done,
+	desc := fmt.Sprintf("updating action '%s' with results from agent '%s': "+
+		"completion=%d/%d, done=%d, cancelled=%d, failed=%d, timeout=%d. duration=%s",
+		a.Name, cmd.Agent.Name, a.Counters.Returned, a.Counters.Sent, a.Counters.Done,
 		a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut, a.LastUpdateTime.Sub(a.StartTime).String())
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, CommandID: cmd.ID, Desc: desc}
 

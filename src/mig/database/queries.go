@@ -385,6 +385,24 @@ func (db *DB) ActionByID(id float64) (a mig.Action, err error) {
 	return
 }
 
+// ActionMetaByID retrieves the metadata fields of an action from the database using its ID
+func (db *DB) ActionMetaByID(id float64) (a mig.Action, err error) {
+	err = db.c.QueryRow(`SELECT id, name, validfrom, expireafter, starttime, finishtime, lastupdatetime,
+		status, sentctr, returnedctr, donectr, cancelledctr, failedctr,
+		timeoutctr FROM actions WHERE id=$1`, id).Scan(&a.ID, &a.Name, &a.ValidFrom, &a.ExpireAfter,
+		&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status, &a.Counters.Sent,
+		&a.Counters.Returned, &a.Counters.Done, &a.Counters.Cancelled,
+		&a.Counters.Failed, &a.Counters.TimeOut)
+	if err != nil {
+		err = fmt.Errorf("Error while retrieving action: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows {
+		return
+	}
+	return
+}
+
 // InsertAction writes an action into the database.
 func (db *DB) InsertAction(a mig.Action) (err error) {
 	jDesc, err := json.Marshal(a.Description)
