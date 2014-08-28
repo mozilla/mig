@@ -332,10 +332,16 @@ func followAction(a mig.Action, ctx Context) (err error) {
 	dotter := 0
 	previousctr := 0
 	status := ""
+	attempts := 0
 	for {
 		a, _, err = getAction(fmt.Sprintf("%.0f", a.ID), ctx)
 		if err != nil {
-			panic(err)
+			attempts++
+			time.Sleep(1 * time.Second)
+			if attempts == 30 {
+				panic("failed to retrieve action after 30 seconds. launch may have failed")
+			}
+			continue
 		}
 		if status == "" {
 			status = a.Status
