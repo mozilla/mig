@@ -18,10 +18,11 @@ import (
 // Check the action that was processed, and if it's related to upgrading agents
 // extract the command results, grab the PID of the agents that was upgraded,
 // and mark the agent registration in the database as 'upgraded'
-func markUpgradedAgents(cmd mig.Command, ctx Context) (err error) {
+func markUpgradedAgents(cmd mig.Command, ctx Context) {
+	var err error
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("markUpgradedAgents() -> %v", e)
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: fmt.Sprintf("markUpgradedAgents() failed with error '%v'", e)}.Err()
 		}
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "leaving markUpgradedAgents()"}.Debug()
 	}()

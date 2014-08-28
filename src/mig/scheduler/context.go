@@ -33,10 +33,11 @@ type Context struct {
 	}
 	Channels struct {
 		// internal
-		Terminate                                                                        chan error
-		Log                                                                              chan mig.Log
-		NewAction, ActionDone, CommandReady, UpdateCommand, CommandReturned, CommandDone chan string
-		DetectDupAgents                                                                  chan string
+		Terminate                                             chan error
+		Log                                                   chan mig.Log
+		NewAction, ActionDone, UpdateCommand, CommandReturned chan string
+		CommandReady, CommandDone                             chan mig.Command
+		DetectDupAgents                                       chan string
 	}
 	Collector struct {
 		Freq, DeleteAfter string
@@ -50,7 +51,7 @@ type Context struct {
 			New, InFlight, Done, Invalid string
 		}
 		Command struct {
-			Ready, InFlight, Returned, Done string
+			InFlight, Returned string
 		}
 	}
 	DB migdb.DB
@@ -154,12 +155,6 @@ func initDirectories(orig_ctx Context) (ctx Context, err error) {
 		panic(err)
 	}
 
-	ctx.Directories.Command.Ready = ctx.Directories.Spool + "/command/ready"
-	err = os.MkdirAll(ctx.Directories.Command.Ready, 0750)
-	if err != nil {
-		panic(err)
-	}
-
 	ctx.Directories.Command.InFlight = ctx.Directories.Spool + "/command/inflight"
 	err = os.MkdirAll(ctx.Directories.Command.InFlight, 0750)
 	if err != nil {
@@ -168,12 +163,6 @@ func initDirectories(orig_ctx Context) (ctx Context, err error) {
 
 	ctx.Directories.Command.Returned = ctx.Directories.Spool + "/command/returned"
 	err = os.MkdirAll(ctx.Directories.Command.Returned, 0750)
-	if err != nil {
-		panic(err)
-	}
-
-	ctx.Directories.Command.Done = ctx.Directories.Spool + "/command/done"
-	err = os.MkdirAll(ctx.Directories.Command.Done, 0750)
 	if err != nil {
 		panic(err)
 	}
@@ -299,12 +288,12 @@ func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
 	ctx.Channels.NewAction = make(chan string, 173)
 	ctx.Channels.ActionDone = make(chan string, 127)
-	ctx.Channels.CommandReady = make(chan string, 991)
-	ctx.Channels.UpdateCommand = make(chan string, 599)
-	ctx.Channels.CommandReturned = make(chan string, 271)
-	ctx.Channels.CommandDone = make(chan string, 641)
+	ctx.Channels.CommandReady = make(chan mig.Command, 13229)
+	ctx.Channels.UpdateCommand = make(chan string, 6833)
+	ctx.Channels.CommandReturned = make(chan string, 10559)
+	ctx.Channels.CommandDone = make(chan mig.Command, 14153)
 	ctx.Channels.DetectDupAgents = make(chan string, 29)
-	ctx.Channels.Log = make(chan mig.Log, 601)
+	ctx.Channels.Log = make(chan mig.Log, 21559)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
 	return
 }

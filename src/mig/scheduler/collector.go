@@ -30,29 +30,15 @@ func spoolInspection(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	err = loadCommandsReady(ctx)
-	if err != nil {
-		panic(err)
-	}
 	err = loadReturnedCommands(ctx)
 	if err != nil {
 		panic(err)
 	}
-	err = loadCommandsDone(ctx)
-	if err != nil {
-		panic(err)
-	}
-
 	err = evaluateInFlightCommands(ctx)
 	if err != nil {
 		panic(err)
 	}
-
 	err = cleanDir(ctx, ctx.Directories.Action.Done)
-	if err != nil {
-		panic(err)
-	}
-	err = cleanDir(ctx, ctx.Directories.Command.Done)
 	if err != nil {
 		panic(err)
 	}
@@ -103,44 +89,6 @@ func loadNewActions(ctx Context) (err error) {
 	return
 }
 
-// loadCommandsReady walks through the commands ready directory and load the
-// commands that are passed their scheduled date. It also delete expired commands.
-func loadCommandsReady(ctx Context) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("loadCommandsReady() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving loadCommandsReady()"}.Debug()
-	}()
-	dir, err := os.Open(ctx.Directories.Command.Ready)
-	dirContent, err := dir.Readdir(-1)
-	if err != nil {
-		panic(err)
-	}
-	// loop over the content of the directory
-	for _, DirEntry := range dirContent {
-		if !DirEntry.Mode().IsRegular() {
-			// ignore non file
-			continue
-		}
-		filename := ctx.Directories.Command.Ready + "/" + DirEntry.Name()
-		cmd, err := mig.CmdFromFile(filename)
-		if err != nil {
-			panic(err)
-		}
-		if time.Now().After(cmd.Action.ExpireAfter) {
-			// delete expired
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("removing expired command '%s'", cmd.Action.Name)}
-			os.Remove(filename)
-		} else if time.Now().After(cmd.Action.ValidFrom) {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("launching command '%s'", cmd.Action.Name)}
-			ctx.Channels.CommandReady <- filename
-		}
-	}
-	dir.Close()
-	return
-}
-
 // loadReturnedCommands walks through the returned commands directory and loads
 // the commands into the scheduler
 func loadReturnedCommands(ctx Context) (err error) {
@@ -169,39 +117,6 @@ func loadReturnedCommands(ctx Context) (err error) {
 		// queue it
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("loading returned command '%s'", cmd.Action.Name)}
 		ctx.Channels.CommandReturned <- filename
-	}
-	dir.Close()
-	return
-}
-
-// loadCommandsDone walks through the returned commands directory and loads
-// the commands into the scheduler
-func loadCommandsDone(ctx Context) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("loadCommandsDone() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving loadCommandsDone()"}.Debug()
-	}()
-	dir, err := os.Open(ctx.Directories.Command.Done)
-	dirContent, err := dir.Readdir(-1)
-	if err != nil {
-		panic(err)
-	}
-	// loop over the content of the directory
-	for _, DirEntry := range dirContent {
-		if !DirEntry.Mode().IsRegular() {
-			// ignore non file
-			continue
-		}
-		filename := ctx.Directories.Command.Done + "/" + DirEntry.Name()
-		cmd, err := mig.CmdFromFile(filename)
-		if err != nil {
-			panic(err)
-		}
-		// queue it
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("loading returned command '%s'", cmd.Action.Name)}
-		ctx.Channels.CommandDone <- filename
 	}
 	dir.Close()
 	return

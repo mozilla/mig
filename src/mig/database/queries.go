@@ -468,12 +468,12 @@ func (db *DB) InsertOrUpdateAction(a mig.Action) (inserted bool, err error) {
 	}
 }
 
-// FlyAction updates the status and sent counters of an action
-func (db *DB) FlyAction(a mig.Action) (err error) {
-	_, err = db.c.Exec(`UPDATE actions SET (status, sentctr) = ($2, $3) WHERE id=$1`,
-		a.ID, a.Status, a.Counters.Sent)
+// UpdateActionStatus updates the status of an action
+func (db *DB) UpdateActionStatus(a mig.Action) (err error) {
+	_, err = db.c.Exec(`UPDATE actions SET (status) = ($2) WHERE id=$1`,
+		a.ID, a.Status)
 	if err != nil {
-		return fmt.Errorf("Failed to fly action: '%v'", err)
+		return fmt.Errorf("Failed to update action status: '%v'", err)
 	}
 	return
 }
@@ -496,9 +496,9 @@ func (db *DB) FinishAction(a mig.Action) (err error) {
 	a.FinishTime = time.Now()
 	a.Status = "completed"
 	_, err = db.c.Exec(`UPDATE actions SET (finishtime, lastupdatetime, status,
-		sentctr, returnedctr, donectr, cancelledctr, failedctr, timeoutctr)
-		= ($1, $2, $3, $4, $5, $6, $7, $8, $9) WHERE id=$10`,
-		a.FinishTime, a.LastUpdateTime, a.Status, a.Counters.Sent, a.Counters.Returned,
+		returnedctr, donectr, cancelledctr, failedctr, timeoutctr)
+		= ($1, $2, $3, $4, $5, $6, $7, $8) WHERE id=$9`,
+		a.FinishTime, a.LastUpdateTime, a.Status, a.Counters.Returned,
 		a.Counters.Done, a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut, a.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to update action: '%v'", err)
@@ -683,6 +683,38 @@ func (db *DB) InsertCommand(cmd mig.Command, agt mig.Agent) (err error) {
 		agt.ID, cmd.Status, jResults, cmd.StartTime, cmd.FinishTime)
 	if err != nil {
 		return fmt.Errorf("Error while inserting command: '%v'", err)
+	}
+	return
+}
+
+// InsertCommands writes an array of commands into the database
+func (db *DB) InsertCommands(cmds []mig.Command) (insertCount int64, err error) {
+	sql := "INSERT INTO commands (id, actionid, agentid, status, starttime) VALUES "
+	vals := []interface{}{}
+	step := 0
+	for i, cmd := range cmds {
+		if i > 0 {
+			sql += ", "
+		}
+		sql += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)",
+			i+1+step, i+2+step, i+3+step, i+4+step, i+5+step)
+		vals = append(vals, cmd.ID, cmd.Action.ID, cmd.Agent.ID, cmd.Status, cmd.StartTime)
+		step += 4
+	}
+	stmt, err := db.c.Prepare(sql)
+	if err != nil {
+		err = fmt.Errorf("Error while preparing insertion statement: '%v' in '%s'", err, sql)
+		return
+	}
+	res, err := stmt.Exec(vals...)
+	if err != nil {
+		err = fmt.Errorf("Error while inserting commands: '%v'", err)
+		return
+	}
+	insertCount, err = res.RowsAffected()
+	if err != nil {
+		err = fmt.Errorf("Error while counting inserted commands: '%v'", err)
+		return
 	}
 	return
 }

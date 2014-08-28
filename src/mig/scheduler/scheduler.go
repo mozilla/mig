@@ -99,26 +99,64 @@ func main() {
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "processNewAction() routine started"}
 
-	// Goroutine that loads and sends commands dropped into ctx.Directories.Command.Ready
+	// Goroutine that loads and sends commands dropped in ready state
+	// it uses a select and a timeout to load a batch of commands instead of
+	// sending them one by one
 	go func() {
-		for cmdPath := range ctx.Channels.CommandReady {
-			ctx.OpID = mig.GenID()
-			err := sendCommand(cmdPath, ctx)
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
+		ctx.OpID = mig.GenID()
+		readyCmd := make(map[float64]mig.Command)
+		ctr := 0
+		for {
+			select {
+			case cmd := <-ctx.Channels.CommandReady:
+				ctr++
+				readyCmd[cmd.ID] = cmd
+			case <-time.After(1 * time.Second):
+				if ctr > 0 {
+					var cmds []mig.Command
+					for id, cmd := range readyCmd {
+						cmds = append(cmds, cmd)
+						delete(readyCmd, id)
+					}
+					err := sendCommands(cmds, ctx)
+					if err != nil {
+						ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
+					}
+				}
+				// reinit
+				ctx.OpID = mig.GenID()
+				ctr = 0
 			}
 		}
 	}()
-	ctx.Channels.Log <- mig.Log{Desc: "sendCommand() routine started"}
+	ctx.Channels.Log <- mig.Log{Desc: "sendCommands() routine started"}
 
 	// Goroutine that loads commands from the ctx.Directories.Command.Returned and marks
 	// them as finished or cancelled
 	go func() {
-		for cmdPath := range ctx.Channels.CommandReturned {
-			ctx.OpID = mig.GenID()
-			err := terminateCommand(cmdPath, ctx)
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+		ctx.OpID = mig.GenID()
+		returnedCmd := make(map[uint64]string)
+		var ctr uint64 = 0
+		for {
+			select {
+			case cmdFile := <-ctx.Channels.CommandReturned:
+				ctr++
+				returnedCmd[ctr] = cmdFile
+			case <-time.After(1 * time.Second):
+				if ctr > 0 {
+					var cmdFiles []string
+					for id, cmdFile := range returnedCmd {
+						cmdFiles = append(cmdFiles, cmdFile)
+						delete(returnedCmd, id)
+					}
+					err := returnCommands(cmdFiles, ctx)
+					if err != nil {
+						ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
+					}
+				}
+				// reinit
+				ctx.OpID = mig.GenID()
+				ctr = 0
 			}
 		}
 	}()
@@ -126,13 +164,32 @@ func main() {
 
 	// Goroutine that updates an action when a command is done
 	go func() {
-		for cmdPath := range ctx.Channels.CommandDone {
-			ctx.OpID = mig.GenID()
-			err = updateAction(cmdPath, ctx)
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+		ctx.OpID = mig.GenID()
+		doneCmd := make(map[float64]mig.Command)
+		ctr := 0
+		for {
+			select {
+			case cmd := <-ctx.Channels.CommandDone:
+				ctr++
+				doneCmd[cmd.ID] = cmd
+			case <-time.After(1 * time.Second):
+				if ctr > 0 {
+					var cmds []mig.Command
+					for id, cmd := range doneCmd {
+						cmds = append(cmds, cmd)
+						delete(doneCmd, id)
+					}
+					err := updateAction(cmds, ctx)
+					if err != nil {
+						ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
+					}
+				}
+				// reinit
+				ctx.OpID = mig.GenID()
+				ctr = 0
 			}
 		}
+
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "updateAction() routine started"}
 
@@ -211,13 +268,6 @@ func initWatchers(watcher *fsnotify.Watcher, ctx Context) (err error) {
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("watcher.Watch(): %s", ctx.Directories.Action.New)}.Debug()
 
-	err = watcher.WatchFlags(ctx.Directories.Command.Ready, fsnotify.FSN_CREATE)
-	if err != nil {
-		e := fmt.Errorf("%v '%s'", err, ctx.Directories.Command.Ready)
-		panic(e)
-	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("watcher.Watch(): %s", ctx.Directories.Command.Ready)}.Debug()
-
 	err = watcher.WatchFlags(ctx.Directories.Command.InFlight, fsnotify.FSN_CREATE)
 	if err != nil {
 		e := fmt.Errorf("%v '%s'", err, ctx.Directories.Command.InFlight)
@@ -231,13 +281,6 @@ func initWatchers(watcher *fsnotify.Watcher, ctx Context) (err error) {
 		panic(e)
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("watcher.Watch(): %s", ctx.Directories.Command.Returned)}.Debug()
-
-	err = watcher.WatchFlags(ctx.Directories.Command.Done, fsnotify.FSN_CREATE)
-	if err != nil {
-		e := fmt.Errorf("%v '%s'", err, ctx.Directories.Command.Done)
-		panic(e)
-	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("watcher.Watch(): %s", ctx.Directories.Command.Done)}.Debug()
 
 	err = watcher.WatchFlags(ctx.Directories.Action.Done, fsnotify.FSN_CREATE)
 	if err != nil {
@@ -266,14 +309,10 @@ func watchDirectories(watcher *fsnotify.Watcher, ctx Context) {
 			// Use the prefix of the filename to send it to the appropriate channel
 			if strings.HasPrefix(ev.Name, ctx.Directories.Action.New) {
 				ctx.Channels.NewAction <- ev.Name
-			} else if strings.HasPrefix(ev.Name, ctx.Directories.Command.Ready) {
-				ctx.Channels.CommandReady <- ev.Name
 			} else if strings.HasPrefix(ev.Name, ctx.Directories.Command.InFlight) {
 				ctx.Channels.UpdateCommand <- ev.Name
 			} else if strings.HasPrefix(ev.Name, ctx.Directories.Command.Returned) {
 				ctx.Channels.CommandReturned <- ev.Name
-			} else if strings.HasPrefix(ev.Name, ctx.Directories.Command.Done) {
-				ctx.Channels.CommandDone <- ev.Name
 			} else if strings.HasPrefix(ev.Name, ctx.Directories.Action.Done) {
 				ctx.Channels.ActionDone <- ev.Name
 			}
@@ -316,11 +355,25 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 		return
 	}
 	if time.Now().After(action.ExpireAfter) {
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: fmt.Sprintf("removing expired action '%s'", action.Name)}
-		// delete expired action
-		os.Remove(actionPath)
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: fmt.Sprintf("action '%s' is expired. invalidating.", action.Name)}
+		err = invalidAction(ctx, action, actionPath)
+		if err != nil {
+			panic(err)
+		}
 		return
 	}
+	// find target agents for the action
+	agents, err := getTargetAgents(action, ctx)
+	action.Counters.Sent = len(agents)
+	if action.Counters.Sent == 0 {
+		err = fmt.Errorf("No agents found for target '%s'. invalidating action.", action.Target)
+		err = invalidAction(ctx, action, actionPath)
+		if err != nil {
+			panic(err)
+		}
+	}
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: fmt.Sprintf("Found %d target agents", action.Counters.Sent)}
+
 	action.Status = "preparing"
 	inserted, err := ctx.DB.InsertOrUpdateAction(action)
 	if err != nil {
@@ -356,22 +409,26 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	}
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "Action written to database"}.Debug()
 
-	// expand the action in one command per agent
-	cmdids, err := prepareCommands(action, ctx)
-	if len(cmdids) == 0 {
-		// no agents found
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "No targets found. Invalidating action."}.Info()
+	created := 0
+	for _, agent := range agents {
+		err := createCommand(ctx, action, agent)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "Failed to create commmand on agent" + agent.Name}.Err()
+			continue
+		}
+		created++
+	}
+
+	if created == 0 {
+		// no command created found
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "No command created. Invalidating action."}.Err()
 		err = invalidAction(ctx, action, actionPath)
 		if err != nil {
 			panic(err)
 		}
 		return nil
 	}
-	if err != nil && len(cmdids) > 0 {
-		panic(err)
-	}
 	// move action to flying state
-	action.Counters.Sent = len(cmdids)
 	err = flyAction(ctx, action, actionPath)
 	if err != nil {
 		panic(err)
@@ -379,82 +436,44 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	return
 }
 
-// prepareCommands transforms an action into one or many commands
-// it retrieves a list of target agents from the database, creates one
-// command for each target agent, and stores the command into ctx.Directories.Command.Ready.
-// An array of command IDs is returned
-func prepareCommands(action mig.Action, ctx Context) (cmdIDs []float64, err error) {
+// getTargetAgents retrieves an array of agents from the target of an action
+func getTargetAgents(action mig.Action, ctx Context) (agents []mig.Agent, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("prepareCommands() -> %v", e)
+			err = fmt.Errorf("getTargetAgents() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "leaving prepareCommands()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "leaving getTargetAgents()"}.Debug()
 	}()
 	timeOutPeriod, err := time.ParseDuration(ctx.Agent.TimeOut)
 	if err != nil {
 		panic(err)
 	}
 	pointInTime := time.Now().Add(-timeOutPeriod)
-	agents, err := ctx.DB.ActiveAgentsByTarget(action.Target, pointInTime)
+	agents, err = ctx.DB.ActiveAgentsByTarget(action.Target, pointInTime)
 	if err != nil {
 		panic(err)
-	}
-	if len(agents) == 0 {
-		err = fmt.Errorf("No agents in database match the target: '%s'", action.Target)
-		panic(err)
-	}
-	// loop over the list of targets and create one command for each agent queue
-	var targetedAgents []string
-	for _, agent := range agents {
-		skip := false
-		for _, q := range targetedAgents {
-			if q == agent.QueueLoc {
-				// if already done this agent, skip it
-				skip = true
-			}
-		}
-		if skip {
-			continue
-		}
-		cmdid, err := createCommand(ctx, action, agent)
-		if err != nil {
-			panic(err)
-		}
-		cmdIDs = append(cmdIDs, cmdid)
-		targetedAgents = append(targetedAgents, agent.QueueLoc)
 	}
 	return
 }
 
-func createCommand(ctx Context, action mig.Action, agent mig.Agent) (cmdid float64, err error) {
+func createCommand(ctx Context, action mig.Action, agent mig.Agent) (err error) {
+	cmdid := mig.GenID()
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("createCommand() -> %v", e)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, CommandID: cmdid, Desc: "leaving createCommand()"}.Debug()
 	}()
-	cmdid = mig.GenID()
 	cmd := mig.Command{
-		Status:    "prepared",
+		Status:    "sent",
 		Action:    action,
+		Agent:     agent,
 		ID:        cmdid,
 		StartTime: time.Now().UTC(),
 	}
 	cmd.Agent.Name = agent.Name
 	cmd.Agent.QueueLoc = agent.QueueLoc
-	data, err := json.Marshal(cmd)
-	if err != nil {
-		panic(err)
-	}
-	dest := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.Ready, action.ID, cmdid)
-	err = safeWrite(ctx, dest, data)
-	if err != nil {
-		panic(err)
-	}
-	err = ctx.DB.InsertCommand(cmd, agent)
-	if err != nil {
-		panic(err)
-	}
+	ctx.Channels.CommandReady <- cmd
 	desc := fmt.Sprintf("created command for action '%s' on agent '%s'", action.Name, agent.Name)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, CommandID: cmdid, Desc: desc}
 	return
@@ -462,56 +481,51 @@ func createCommand(ctx Context, action mig.Action, agent mig.Agent) (cmdid float
 
 // sendCommand is called when a command file is created in ctx.Directories.Command.Ready
 // it read the command, sends it to the agent via AMQP, and update the DB
-func sendCommand(cmdPath string, ctx Context) (err error) {
-	var cmd mig.Command
+func sendCommands(cmds []mig.Command, ctx Context) (err error) {
+	aid := cmds[0].ID
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("sendCommand() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, Desc: "leaving sendCommand()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: aid, Desc: "leaving sendCommand()"}.Debug()
 	}()
-	// load and parse the command. If this fail, skip it and continue.
-	cmd, err = mig.CmdFromFile(cmdPath)
-	if err != nil {
-		panic(err)
-	}
-	cmd.Status = "sent"
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command received for sending"}.Debug()
-	data, err := json.Marshal(cmd)
-	if err != nil {
-		panic(err)
-	}
-	expire := cmd.Action.ExpireAfter.Sub(cmd.Action.ValidFrom)
-	// build amqp message for sending
-	msg := amqp.Publishing{
-		DeliveryMode: amqp.Persistent,
-		Timestamp:    time.Now(),
-		ContentType:  "text/plain",
-		Expiration:   fmt.Sprintf("%d", int64(expire/time.Millisecond)),
-		Body:         []byte(data),
-	}
-	agtQueue := fmt.Sprintf("mig.agt.%s", cmd.Agent.QueueLoc)
-	// send
-	err = ctx.MQ.Chan.Publish("mig", agtQueue, true, false, msg)
-	if err != nil {
-		panic(err)
-	}
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command sent to agent queue"}.Debug()
-	// write command to InFlight directory
-	dest := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
-	err = safeWrite(ctx, dest, data)
-	if err != nil {
-		panic(err)
-	}
-	// remove original command file
-	err = os.Remove(cmdPath)
-	if err != nil {
-		panic(err)
-	}
 	// store command in database
-	err = ctx.DB.UpdateSentCommand(cmd)
+	insertCount, err := ctx.DB.InsertCommands(cmds)
 	if err != nil {
 		panic(err)
+	}
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: aid, Desc: fmt.Sprintf("%d commands inserted into database", insertCount)}
+
+	for _, cmd := range cmds {
+		data, err := json.Marshal(cmd)
+		if err != nil {
+			panic(err)
+		}
+		expire := cmd.Action.ExpireAfter.Sub(cmd.Action.ValidFrom)
+		// build amqp message for sending
+		msg := amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			Timestamp:    time.Now(),
+			ContentType:  "text/plain",
+			Expiration:   fmt.Sprintf("%d", int64(expire/time.Millisecond)),
+			Body:         []byte(data),
+		}
+		agtQueue := fmt.Sprintf("mig.agt.%s", cmd.Agent.QueueLoc)
+		// send
+		go func() {
+			err = ctx.MQ.Chan.Publish("mig", agtQueue, true, false, msg)
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "Failed to publish command to agent queue"}.Err()
+			} else {
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command sent to agent queue"}.Debug()
+			}
+		}()
+		// write command to InFlight directory
+		dest := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
+		err = safeWrite(ctx, dest, data)
+		if err != nil {
+			panic(err)
+		}
 	}
 	return
 }
@@ -538,128 +552,122 @@ func recvAgentResults(msg amqp.Delivery, ctx Context) (err error) {
 	return
 }
 
-// terminateCommand is called when a command result is dropped into ctx.Directories.Command.Returned
+// returnCommands is called when commands have returned
 // it stores the result of a command and mark it as completed/failed and then
 // send a message to the Action completion routine to update the action status
-func terminateCommand(cmdPath string, ctx Context) (err error) {
-	var cmd mig.Command
+func returnCommands(cmdFiles []string, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("terminateCommand() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "leaving terminateCommand()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving terminateCommand()"}.Debug()
 	}()
+	for _, cmdFile := range cmdFiles {
+		// load and parse the command. If this fail, skip it and continue.
+		cmd, err := mig.CmdFromFile(cmdFile)
+		if err != nil {
+			panic(err)
+		}
+		cmd.FinishTime = time.Now().UTC()
+		if cmd.Status == "sent" {
+			cmd.Status = "done"
+		}
+		// update command in database
+		go func() {
+			err = ctx.DB.FinishCommand(cmd)
+			if err != nil {
+				desc := fmt.Sprintf("failed to finish command in database: '%v'", err)
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: desc}.Err()
+			} else {
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command updated in database"}.Debug()
+			}
+		}()
 
-	// load and parse the command. If this fail, skip it and continue.
-	cmd, err = mig.CmdFromFile(cmdPath)
-	if err != nil {
-		panic(err)
+		// remove command from inflight dir
+		inflightPath := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
+		os.Remove(inflightPath)
+
+		// remove command from Returned dir
+		os.Remove(cmdFile)
+
+		// pass the command over to the Command Done channel
+		ctx.Channels.CommandDone <- cmd
 	}
-	cmd.FinishTime = time.Now().UTC()
-	if cmd.Status == "sent" {
-		cmd.Status = "done"
-	}
-	// update command in database
-	err = ctx.DB.FinishCommand(cmd)
-	if err != nil {
-		panic(err)
-	}
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command updated in database"}.Debug()
-	// write to disk to Command Done directory
-	data, err := json.Marshal(cmd)
-	if err != nil {
-		panic(err)
-	}
-	dest := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.Done, cmd.Action.ID, cmd.ID)
-	err = safeWrite(ctx, dest, data)
-	if err != nil {
-		panic(err)
-	}
-	// remove command from inflight dir
-	inflightPath := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
-	os.Remove(inflightPath)
-	// remove command from Returned dir
-	os.Remove(cmdPath)
 	return
 }
 
-// updateAction is called when a command has finished and the parent action
-// must be updated. It retrieves an action from the database, loops over the
-// commands, and if all commands have finished, marks the action as finished.
-func updateAction(cmdPath string, ctx Context) (err error) {
-	var cmd mig.Command
+// updateAction is called with an array of commands that have finished
+// Each action that needs updating is processed in a way that reduce IOs
+func updateAction(cmds []mig.Command, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("updateAction() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "leaving updateAction()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving updateAction()"}.Debug()
 	}()
 
-	// load the command file
-	cmd, err = mig.CmdFromFile(cmdPath)
-	if err != nil {
-		panic(err)
-	}
+	// there may be multiple actions to update, since commands can be mixed,
+	// so we keep a map of actions
+	actions := make(map[float64]mig.Action)
 
-	// use the action ID from the command file to get the action from the database
-	a, err := ctx.DB.ActionMetaByID(cmd.Action.ID)
-	if err != nil {
-		panic(err)
-	}
-
-	// there is only one entry in the slice, so take the first entry from
-	switch cmd.Status {
-	case "done":
-		a.Counters.Done++
-	case "cancelled":
-		a.Counters.Cancelled++
-	case "failed":
-		a.Counters.Failed++
-	case "timeout":
-		a.Counters.TimeOut++
-	default:
-		err = fmt.Errorf("unknown command status: %s", cmd.Status)
-		panic(err)
-	}
-	// regardless of returned status, increase completion counter
-	a.Counters.Returned++
-	a.LastUpdateTime = time.Now().UTC()
-
-	desc := fmt.Sprintf("updating action '%s' with results from agent '%s': "+
-		"completion=%d/%d, done=%d, cancelled=%d, failed=%d, timeout=%d. duration=%s",
-		a.Name, cmd.Agent.Name, a.Counters.Returned, a.Counters.Sent, a.Counters.Done,
-		a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut, a.LastUpdateTime.Sub(a.StartTime).String())
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, CommandID: cmd.ID, Desc: desc}
-
-	// Has the action completed?
-	if a.Counters.Returned == a.Counters.Sent {
-		err = landAction(ctx, a)
-		if err != nil {
+	for _, cmd := range cmds {
+		var a mig.Action
+		// retrieve the action from the DB if we don't already have it mapped
+		a, ok := actions[cmd.Action.ID]
+		if !ok {
+			a, err = ctx.DB.ActionMetaByID(cmd.Action.ID)
+			if err != nil {
+				panic(err)
+			}
+		}
+		// there is only one entry in the slice, so take the first entry from
+		switch cmd.Status {
+		case "done":
+			a.Counters.Done++
+		case "cancelled":
+			a.Counters.Cancelled++
+		case "failed":
+			a.Counters.Failed++
+		case "timeout":
+			a.Counters.TimeOut++
+		default:
+			err = fmt.Errorf("unknown command status: %s", cmd.Status)
 			panic(err)
 		}
-		// delete Action from ctx.Directories.Action.InFlight
-		actFile := fmt.Sprintf("%.0f.json", a.ID)
-		os.Rename(ctx.Directories.Action.InFlight+"/"+actFile, ctx.Directories.Action.Done+"/"+actFile)
-	} else {
-		// store updated action in database
-		err = ctx.DB.UpdateRunningAction(a)
-		if err != nil {
-			panic(err)
+		// regardless of returned status, increase completion counter
+		a.Counters.Returned++
+		a.LastUpdateTime = time.Now().UTC()
+
+		// store action in the map
+		actions[a.ID] = a
+
+		// in case the action is related to upgrading agents, go do stuff
+		if cmd.Status == "done" {
+			go markUpgradedAgents(cmd, ctx)
 		}
 	}
-
-	// in case the action is related to upgrading agents, do stuff
-	if cmd.Status == "done" {
-		// this can fail for many reason, do not panic on err return
-		err = markUpgradedAgents(cmd, ctx)
-		if err != nil {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, CommandID: cmd.ID, Desc: fmt.Sprintf("%v", err)}.Err()
+	for _, a := range actions {
+		// Has the action completed?
+		if a.Counters.Returned == a.Counters.Sent {
+			err = landAction(ctx, a)
+			if err != nil {
+				panic(err)
+			}
+			// delete Action from ctx.Directories.Action.InFlight
+			actFile := fmt.Sprintf("%.0f.json", a.ID)
+			os.Rename(ctx.Directories.Action.InFlight+"/"+actFile, ctx.Directories.Action.Done+"/"+actFile)
+		} else {
+			// store updated action in database
+			err = ctx.DB.UpdateRunningAction(a)
+			if err != nil {
+				panic(err)
+			}
+			desc := fmt.Sprintf("updated action '%s': completion=%d/%d, done=%d, cancelled=%d, failed=%d, timeout=%d, duration=%s",
+				a.Name, a.Counters.Returned, a.Counters.Sent, a.Counters.Done,
+				a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut, a.LastUpdateTime.Sub(a.StartTime).String())
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: desc}
 		}
 	}
-
-	// remove the command from the spool
-	os.Remove(cmdPath)
-
 	return
 }
 
