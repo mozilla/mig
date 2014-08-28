@@ -344,7 +344,9 @@ func (db *DB) Last10Actions() (actions []mig.Action, err error) {
 }
 
 // ActionByID retrieves an action from the database using its ID
+// If the query fails, the returned action will have ID -1
 func (db *DB) ActionByID(id float64) (a mig.Action, err error) {
+	a.ID = -1
 	var jDesc, jThreat, jOps, jSig []byte
 	err = db.c.QueryRow(`SELECT id, name, target, description, threat, operations,
 		validfrom, expireafter, starttime, finishtime, lastupdatetime,

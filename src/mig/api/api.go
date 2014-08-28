@@ -411,7 +411,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 	if actionID > 0 {
 		a, err = ctx.DB.ActionByID(actionID)
 		if err != nil {
-			if fmt.Sprintf("%v", err) == "Error while retrieving action: 'sql: no rows in result set'" {
+			if a.ID == -1 {
 				// not found, return 404
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),
