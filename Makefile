@@ -183,19 +183,14 @@ rpm-utils: mig-action-generator
 test: mig-agent
 	$(BINDIR)/mig-agent-latest -m=filechecker '{"/etc/passwd":{"regex":{"this is an arbitrary string to describe this check":["^ulfrhasbeenhacked", "^rootkit.+/sbin/nologin"],"another arbitrary string":["iamaregex[0-9]"]}}}'
 
-clean:
-	rm -rf bin
-	rm -rf tmp
-	rm *.rpm
-	rm *.deb
-	find src/ -maxdepth 1 -mindepth 1 ! -name mig -exec rm -rf {} \;
-
-clean-all: clean
-	rm -rf packages
-
 clean-agent:
 	find bin/ -name mig-agent* -exec rm {} \;
 	rm -rf packages
 	rm -rf tmp
+
+clean: clean-agent
+	rm -rf bin
+	rm -rf tmp
+	find src/ -maxdepth 1 -mindepth 1 ! -name mig -exec rm -rf {} \;
 
 .PHONY: clean clean-all clean-agent go_get_deps_into_system mig-agent-386 mig-agent-amd64 agent-install-script agent-cron
