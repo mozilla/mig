@@ -57,6 +57,8 @@ CREATE TABLE agents (
 ALTER TABLE public.agents OWNER TO migadmin;
 ALTER TABLE ONLY agents
     ADD CONSTRAINT agents_pkey PRIMARY KEY (id);
+CREATE INDEX agents_heartbeattime_idx ON agents(heartbeattime DESC);
+CREATE INDEX agents_queueloc_pid_idx ON agents(queueloc, pid);
 
 CREATE TABLE agtmodreq (
     moduleid numeric NOT NULL,
