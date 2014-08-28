@@ -361,9 +361,6 @@ func (db *DB) ActionByID(id float64) (a mig.Action, err error) {
 		err = fmt.Errorf("Error while retrieving action: '%v'", err)
 		return
 	}
-	if err == sql.ErrNoRows {
-		return
-	}
 	err = json.Unmarshal(jDesc, &a.Description)
 	if err != nil {
 		err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
@@ -691,17 +688,19 @@ func (db *DB) InsertCommand(cmd mig.Command, agt mig.Agent) (err error) {
 
 // InsertCommands writes an array of commands into the database
 func (db *DB) InsertCommands(cmds []mig.Command) (insertCount int64, err error) {
-	sql := "INSERT INTO commands (id, actionid, agentid, status, starttime) VALUES "
+	emptyCmdResults, _ := json.Marshal(cmds[0].Results)
+	futureDate := time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
+	sql := "INSERT INTO commands (id, actionid, agentid, status, starttime, finishtime, results) VALUES "
 	vals := []interface{}{}
 	step := 0
 	for i, cmd := range cmds {
 		if i > 0 {
 			sql += ", "
 		}
-		sql += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)",
-			i+1+step, i+2+step, i+3+step, i+4+step, i+5+step)
-		vals = append(vals, cmd.ID, cmd.Action.ID, cmd.Agent.ID, cmd.Status, cmd.StartTime)
-		step += 4
+		sql += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+			i+1+step, i+2+step, i+3+step, i+4+step, i+5+step, i+6+step, i+7+step)
+		vals = append(vals, cmd.ID, cmd.Action.ID, cmd.Agent.ID, cmd.Status, cmd.StartTime, futureDate, emptyCmdResults)
+		step += 6
 	}
 	stmt, err := db.c.Prepare(sql)
 	if err != nil {
