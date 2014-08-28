@@ -163,13 +163,13 @@ func (r Runner) ValidateParameters() (err error) {
 - Totalhits is the total number of checklist hits
 */
 type statistics struct {
-	Checkcount  int    `json:"checkcount"`
-	Filescount  int    `json:"filescount"`
-	Openfailed  int    `json:"openfailed"`
-	Checksmatch int    `json:"checksmatch"`
-	Uniquefiles int    `json:"uniquefiles"`
-	Totalhits   int    `json:"totalhits"`
-	Exectime    string `json:"exectime"`
+	Checkcount  float64 `json:"checkcount"`
+	Filescount  float64 `json:"filescount"`
+	Openfailed  float64 `json:"openfailed"`
+	Checksmatch float64 `json:"checksmatch"`
+	Uniquefiles float64 `json:"uniquefiles"`
+	Totalhits   float64 `json:"totalhits"`
+	Exectime    string  `json:"exectime"`
 }
 
 // stats is a global variable
@@ -187,11 +187,12 @@ var stats statistics
 // files is an slice of string that contains paths of matching files
 // regex is a regular expression
 type filecheck struct {
-	id, path, method, test          string
-	testcode, filecount, matchcount int
-	hasmatched                      bool
-	files                           map[string]int
-	regex                           *regexp.Regexp
+	id, path, method, test string
+	testcode               uint64
+	filecount, matchcount  float64
+	hasmatched             bool
+	files                  map[string]float64
+	regex                  *regexp.Regexp
 }
 
 // Results contains the details of what was inspected on the file system.
@@ -259,9 +260,9 @@ type Results struct {
 
 // singleresult contains information on the result of a single test
 type singleresult struct {
-	Filecount  int            `json:"filecount"`
-	Matchcount int            `json:"matchcount"`
-	Files      map[string]int `json:"files"`
+	Filecount  float64            `json:"filecount"`
+	Matchcount float64            `json:"matchcount"`
+	Files      map[string]float64 `json:"files"`
 }
 
 // newResults allocates a Results structure
@@ -303,9 +304,9 @@ func (r Runner) Run(Args []byte) (resStr string) {
 	}
 
 	// walk through the parameters and generate a checklist of filechecks
-	checklist := make(map[int]filecheck)
-	todolist := make(map[int]filecheck)
-	i := 0
+	checklist := make(map[float64]filecheck)
+	todolist := make(map[float64]filecheck)
+	var i float64 = 0
 	for path, methods := range r.Parameters {
 		for method, identifiers := range methods {
 			for identifier, tests := range identifiers {
@@ -347,7 +348,7 @@ func (r Runner) Run(Args []byte) (resStr string) {
 	}
 	// enter each root one by one
 	for _, root := range roots {
-		interestedlist := make(map[int]filecheck)
+		interestedlist := make(map[float64]filecheck)
 		err = pathWalk(root, checklist, todolist, interestedlist)
 		if err != nil {
 			panic(err)
@@ -434,7 +435,7 @@ func createCheck(path, method, identifier, test string) (check filecheck, err er
 		panic(err)
 	}
 	// allocate the map
-	check.files = make(map[string]int)
+	check.files = make(map[string]float64)
 	// init the variables
 	check.hasmatched = false
 	check.filecount = 0
@@ -492,7 +493,7 @@ exit:
 //	  current path but not yet active
 // return:
 //      - nil on success, error on error
-func pathWalk(path string, checklist, todolist, interestedlist map[int]filecheck) (err error) {
+func pathWalk(path string, checklist, todolist, interestedlist map[float64]filecheck) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("pathWalk() -> %v", e)
@@ -694,7 +695,7 @@ func pathIncludes(path, pattern string) bool {
 // passed to inspectFile
 // '/etc/' will grep into /etc/ without going further down. '/etc/*' will go further down.
 // '/etc/*sswd' or '/etc/*yum*/*.repo' work as expected.
-func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err error) {
+func evaluateFile(file string, interestedlist, checklist map[float64]filecheck) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("evaluateFile() -> %v", e)
@@ -711,8 +712,8 @@ func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err
 	}
 	// that one is a file, see if it matches one of the pattern
 	inspect := false
-	checkBitmask := 0
-	var activechecks []int
+	var checkBitmask uint64 = 0
+	var activechecks []float64
 	for id, check := range interestedlist {
 		match := false
 		subfile := file
@@ -789,7 +790,7 @@ func evaluateFile(file string, interestedlist, checklist map[int]filecheck) (err
 //      - checklist is the global list of checklist
 // returns:
 //      - nil on success, error on failure
-func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist map[int]filecheck) (err error) {
+func inspectFile(fd *os.File, activechecks []float64, checkBitmask uint64, checklist map[float64]filecheck) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("inspectFile() -> %v", e)
@@ -802,7 +803,7 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 	}
 	if (checkBitmask & checkRegex) != 0 {
 		// build a list of checklist of check type 'contains'
-		var ReList []int
+		var ReList []float64
 		for _, id := range activechecks {
 			if (checklist[id].testcode & checkRegex) != 0 {
 				ReList = append(ReList, id)
@@ -820,7 +821,7 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 	}
 	if (checkBitmask & checkFilename) != 0 {
 		// build a list of checklist of check type 'contains'
-		var ReList []int
+		var ReList []float64
 		for _, id := range activechecks {
 			if (checklist[id].testcode & checkFilename) != 0 {
 				ReList = append(ReList, id)
@@ -942,7 +943,7 @@ func inspectFile(fd *os.File, activechecks []int, checkBitmask int, checklist ma
 //      - hashType is an integer that define the type of hash
 // return:
 //      - hexhash, the hex encoded hash of the file found at fp
-func getHash(fd *os.File, hashType int) (hexhash string, err error) {
+func getHash(fd *os.File, hashType float64) (hexhash string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("getHash() -> %v", e)
@@ -1001,7 +1002,7 @@ func getHash(fd *os.File, hashType int) (hexhash string, err error) {
 //      - checklist is a map of Check
 // returns:
 //      - IsVerified: true if a match is found, false otherwise
-func verifyHash(file string, hash string, check int, activechecks []int, checklist map[int]filecheck) (IsVerified bool) {
+func verifyHash(file string, hash string, check float64, activechecks []float64, checklist map[float64]filecheck) (IsVerified bool) {
 	IsVerified = false
 	for _, id := range activechecks {
 		tmpcheck := checklist[id]
@@ -1027,7 +1028,7 @@ func verifyHash(file string, hash string, check int, activechecks []int, checkli
 //      - checklist is a map of Check
 // return:
 //      - hasmatched is a boolean set to true if at least one regexp matches
-func matchRegexOnFile(fd *os.File, ReList []int, checklist map[int]filecheck) (hasmatched bool, err error) {
+func matchRegexOnFile(fd *os.File, ReList []float64, checklist map[float64]filecheck) (hasmatched bool, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("matchRegexOnFile() -> %v", e)
@@ -1035,7 +1036,7 @@ func matchRegexOnFile(fd *os.File, ReList []int, checklist map[int]filecheck) (h
 	}()
 	hasmatched = false
 	// temp map to store the results
-	results := make(map[int]int)
+	results := make(map[float64]float64)
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
@@ -1077,7 +1078,7 @@ func matchRegexOnFile(fd *os.File, ReList []int, checklist map[int]filecheck) (h
 //      - checklist is a map of Check
 // return:
 //      - hasmatched is a boolean set to true if at least one regexp matches
-func matchRegexOnName(filename string, ReList []int, checklist map[int]filecheck) (hasmatched bool) {
+func matchRegexOnName(filename string, ReList []float64, checklist map[float64]filecheck) (hasmatched bool) {
 	hasmatched = false
 	for _, id := range ReList {
 		tmpcheck := checklist[id]
@@ -1096,14 +1097,14 @@ func matchRegexOnName(filename string, ReList []int, checklist map[int]filecheck
 
 // buildResults iterates on the map of checklist and print the results to stdout (if
 // debug is set) and into JSON format
-func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err error) {
+func buildResults(checklist map[float64]filecheck, t0 time.Time) (resStr string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("buildResults() -> %v", e)
 		}
 	}()
 	res := newResults()
-	history := make(map[string]int)
+	history := make(map[string]float64)
 
 	// iterate through the checklist and parse the results
 	// into a Response object
@@ -1116,7 +1117,7 @@ func buildResults(checklist map[int]filecheck, t0 time.Time) (resStr string, err
 				if debug {
 					fmt.Printf("\t- %d hits on %s\n", hits, file)
 				}
-				stats.Totalhits += hits
+				stats.Totalhits += float64(hits)
 				if _, ok := history[file]; !ok {
 					stats.Uniquefiles++
 				}
@@ -1218,10 +1219,10 @@ func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string
 					}
 					for file, cnt := range results.Elements[path][method][id][value].Files {
 						verb := "match"
-						if results.Elements[path][method][id][value].Matchcount > 1 {
+						if cnt > 1 {
 							verb = "matches"
 						}
-						res := fmt.Sprintf("%d %s in '%s' on '%s' for filechecker '%s':'%s':'%s'",
+						res := fmt.Sprintf("%.0f %s in '%s' on '%s' for filechecker '%s':'%s':'%s'",
 							cnt, verb, file, value, path, method, id)
 						prints = append(prints, res)
 					}
@@ -1233,7 +1234,7 @@ func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string
 		for _, we := range results.Errors {
 			prints = append(prints, we)
 		}
-		stat := fmt.Sprintf("Statistics: %d checks tested on %d files. %d failed to open. %d checks matched on %d files. %d total hits. ran in %s.",
+		stat := fmt.Sprintf("Statistics: %.0f checks tested on %.0f files. %.0f failed to open. %.0f checks matched on %.0f files. %.0f total hits. ran in %s.",
 			results.Statistics.Checkcount, results.Statistics.Filescount, results.Statistics.Openfailed, results.Statistics.Checksmatch, results.Statistics.Uniquefiles,
 			results.Statistics.Totalhits, results.Statistics.Exectime)
 		prints = append(prints, stat)
