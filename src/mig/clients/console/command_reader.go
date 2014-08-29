@@ -195,7 +195,7 @@ func commandPrintResults(cmd mig.Command, match, showAgent bool) (err error) {
 					if useShortNames {
 						agtname = shorten(agtname)
 					}
-					fmt.Printf("%s\t%s\n", agtname, res)
+					fmt.Printf("%s %s\n", agtname, res)
 				} else {
 					fmt.Println(res)
 				}
