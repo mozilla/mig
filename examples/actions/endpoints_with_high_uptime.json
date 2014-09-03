@@ -3,7 +3,7 @@
     "description": {
         "author": "Julien Vehent",
         "email": "ulfr@mozilla.com",
-        "revision": 201408261000
+        "revision": 201409031000
     },
     "target": "agents.os = 'linux'",
     "threat": {
@@ -15,9 +15,12 @@
         {
             "module": "filechecker",
             "parameters": {
-                "/proc/uptime": {
-                    "regex": {
-                        "Look for high uptime": [
+                "searches": {
+                    "uptimesearch": {
+                        "paths": [
+                            "/proc/uptime"
+                        ],
+                        "regexes": [
                             "^[5-9]{1}[0-9]{7,}\\."
                         ]
                     }

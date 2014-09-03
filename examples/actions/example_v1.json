@@ -6,7 +6,7 @@
         "url": "https://example.net/url_to_something#useful",
         "revision": 201408261000
     },
-    "target": "agents.os = 'linux'",
+    "target": "linux",
     "threat": {
         "level": "alert",
         "type": "system",
@@ -119,5 +119,5 @@
         }
 
     ],
-    "syntaxversion": 2
+    "syntaxversion": 1
 }
