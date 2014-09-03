@@ -407,11 +407,11 @@ func createCheck(path, method, identifier, test string) (check filecheck, err er
 	case "regex":
 		check.testcode = checkRegex
 		// compile the value into a regex
-		check.regex = regexp.MustCompile(test)
+		check.regex = regexp.MustCompilePOSIX(test)
 	case "filename":
 		check.testcode = checkFilename
 		// compile the value into a regex
-		check.regex = regexp.MustCompile(test)
+		check.regex = regexp.MustCompilePOSIX(test)
 	case "md5":
 		check.testcode = checkMD5
 	case "sha1":
