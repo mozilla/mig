@@ -90,15 +90,15 @@ func (r Runner) ValidateParameters() (err error) {
 			return fmt.Errorf("The syntax of label '%s' is invalid. Must match regex ^[a-zA-Z0-9_-]{1,64}$", label)
 		}
 		for _, r := range s.Regexes {
-			_, err := regexp.CompilePOSIX(r)
+			_, err := regexp.Compile(r)
 			if err != nil {
-				return fmt.Errorf("Invalid regexp '%s'. Must be a POSIX regexp. Compilation failed with '%v'", r, err)
+				return fmt.Errorf("Invalid regexp '%s'. Must be a regexp. Compilation failed with '%v'", r, err)
 			}
 		}
 		for _, r := range s.Filenames {
-			_, err := regexp.CompilePOSIX(r)
+			_, err := regexp.Compile(r)
 			if err != nil {
-				return fmt.Errorf("Invalid filename regexp '%s'. Must be a POSIX regexp. Compilation failed with '%v'", r, err)
+				return fmt.Errorf("Invalid filename regexp '%s'. Must be a regexp. Compilation failed with '%v'", r, err)
 			}
 		}
 		hashre := regexp.MustCompile("^[a-fA-F0-9]{32,128}$")
@@ -264,7 +264,7 @@ func newFileCheck(label, path, method, test string, code uint64) *filecheck {
 	fc.test = test
 	fc.code = code
 	if code == checkRegex || code == checkFilename {
-		fc.regex = regexp.MustCompilePOSIX(test)
+		fc.regex = regexp.MustCompile(test)
 	}
 	return &fc
 }
