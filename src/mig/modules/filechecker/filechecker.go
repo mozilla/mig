@@ -46,110 +46,167 @@ type Runner struct {
 	Results    Results
 }
 
-// Parameters contains a list of file checks that has the following representation:
-//       Parameters {
-//      	path "path1" {
-//      		method "name1" {
-//      			check "id1" [
-//      				test "value1"
-//      				test "value2"
-//      				...
-//      			],
-//      			check "id2" [
-//      				test "value3"
-//      			]
-//      		}
-//      		method "name 2" {
-//      			...
-//      		}
-//      	}
-//      	path "path2" {
-//      		...
-//      	}
-//       }
-//
-// JSON sample:
-// 	{
-//		"/usr/*bin/*": {
-//			"filename": {
-//				"module names": [
-//					"atddd",
-//					"cupsdd",
-//					"cupsddh",
-//					"ksapdd",
-//					"kysapdd",
-//					"skysapdd",
-//					"xfsdxd"
-//				]
-//			},
-//			"md5": {
-//				"atddd": [
-//					"fade6e3ab4b396553b191f23d8c04cf1"
-//				],
-//				"cupsdd": [
-//					"ce607e782faa5ace379c13a5de8052a3"
-//				],
-//				"ksapdd": [
-//					"8cdb7abd20cf64764812cfccc90cb3dc"
-//				],
-//				"ksyapdd": [
-//					"f3709e031a37d79773e757d37fe91fe4"
-//				],
-//				"skysapdd": [
-//					"6739ca4a835c7976089e2f00150f252b"
-//				],
-//				"xfsdxd": [
-//					"bbff498590d545cbc82007ec38d97d5a"
-//				]
-//			}
-//		}
-// 	}
-//
-// The path supports pattern matching using Go's filepath.Match() syntax.
-// example: "/home/*/.ssh/*" or "/*bin/" or "/etc/*yum*/*.repo"
-//
-// It also supports non-recursive checks by ending the path with a separator.
-// example: "/etc/" will search into all the files inside of /etc/<anything>,
-// but not deeper. It is similar to the command `find /etc -maxdepth 1 -type f`
-//
-// To run a recursive check, end the path with a wildcard.
-// example: "/etc/*" will go down all of the subdirectories of /etc/,
-// similar to the command `find /etc -type f`
-type Parameters map[string]map[string]map[string][]string
+type Parameters struct {
+	Searches  map[string]search `json:"searches,omitempty"`
+	Condition string            `json:"condition,omitempty"`
+}
+
+type search struct {
+	Description string   `json:"description,omitempty"`
+	Paths       []string `json:"paths"`
+	Regexes     []string `json:"regexes,omitempty"`
+	Filenames   []string `json:"filenames,omitempty"`
+	MD5         []string `json:"md5,omitempty"`
+	SHA1        []string `json:"sha1,omitempty"`
+	SHA256      []string `json:"sha256,omitempty"`
+	SHA384      []string `json:"sha384,omitempty"`
+	SHA512      []string `json:"sha512,omitempty"`
+	SHA3_224    []string `json:"sha3_224,omitempty"`
+	SHA3_256    []string `json:"sha3_256,omitempty"`
+	SHA3_384    []string `json:"sha3_384,omitempty"`
+	SHA3_512    []string `json:"sha3_512,omitempty"`
+	Options     options  `json:"options,omitempty"`
+}
+
+type options struct {
+	MaxDepth float64 `json:"maxdepth,omitempty"`
+	CrossFS  bool    `json:"crossfs,omitempty"`
+}
 
 // Create a new Parameters
 func newParameters() *Parameters {
-	p := make(Parameters)
+	var p Parameters
+	p.Searches = make(map[string]search)
 	return &p
 }
 
 // validate a Parameters
 func (r Runner) ValidateParameters() (err error) {
-	for path, methods := range r.Parameters {
-		if string(path) == "" {
-			return fmt.Errorf("Invalid path parameter. Expected string")
+	var labels []string
+	for label, s := range r.Parameters.Searches {
+		labels = append(labels, label)
+		labelre := regexp.MustCompile("^[a-zA-Z0-9_-]{1,64}$")
+		if !labelre.MatchString(label) {
+			return fmt.Errorf("The syntax of label '%s' is invalid. Must match regex ^[a-zA-Z0-9_-]{1,64}$", label)
 		}
-		for method, identifiers := range methods {
-			if string(method) == "" {
-				return fmt.Errorf("Invalid method parameter. Expected string")
+		for _, r := range s.Regexes {
+			_, err := regexp.CompilePOSIX(r)
+			if err != nil {
+				return fmt.Errorf("Invalid regexp '%s'. Must be a POSIX regexp. Compilation failed with '%v'", r, err)
 			}
-			switch method {
-			case "filename", "regex", "md5", "sha1", "sha256", "sha384", "sha512",
-				"sha3_224", "sha3_256", "sha3_384", "sha3_512":
-				err = nil
-			default:
-				return fmt.Errorf("Invalid method '%s'", method)
+		}
+		for _, r := range s.Filenames {
+			_, err := regexp.CompilePOSIX(r)
+			if err != nil {
+				return fmt.Errorf("Invalid filename regexp '%s'. Must be a POSIX regexp. Compilation failed with '%v'", r, err)
 			}
-			for identifier, tests := range identifiers {
-				if string(identifier) == "" {
-					return fmt.Errorf("Invalid identifier parameter. Expected string")
-				}
-				for _, test := range tests {
-					if string(test) == "" {
-						return fmt.Errorf("Invalid test parameter. Expected string")
+		}
+		hashre := regexp.MustCompile("^[a-fA-F0-9]{32,128}$")
+		for _, hash := range s.MD5 {
+			if len(hash) != 32 {
+				return fmt.Errorf("Invalid length for MD5 hash '%s'. Must be 32 characters", hash)
+			}
+			if !hashre.MatchString(hash) {
+				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			}
+		}
+		for _, hash := range s.SHA1 {
+			if len(hash) != 40 {
+				return fmt.Errorf("Invalid length for SHA1 hash '%s'. Must be 40 characters", hash)
+			}
+			if !hashre.MatchString(hash) {
+				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			}
+		}
+		for _, hash := range s.SHA256 {
+			if len(hash) != 64 {
+				return fmt.Errorf("Invalid length for SHA256 hash '%s'. Must be 64 characters", hash)
+			}
+			if !hashre.MatchString(hash) {
+				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			}
+		}
+		for _, hash := range s.SHA384 {
+			if len(hash) != 96 {
+				return fmt.Errorf("Invalid length for SHA384 hash '%s'. Must be 96 characters", hash)
+			}
+			if !hashre.MatchString(hash) {
+				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			}
+		}
+		for _, hash := range s.SHA512 {
+			if len(hash) != 128 {
+				return fmt.Errorf("Invalid length for SHA512 hash '%s'. Must be 128 characters", hash)
+			}
+			if !hashre.MatchString(hash) {
+				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			}
+		}
+		for _, hash := range s.SHA3_224 {
+			if len(hash) != 56 {
+				return fmt.Errorf("Invalid length for SHA3_224 hash '%s'. Must be 56 characters", hash)
+			}
+			if !hashre.MatchString(hash) {
+				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			}
+		}
+		for _, hash := range s.SHA3_256 {
+			if len(hash) != 64 {
+				return fmt.Errorf("Invalid length for SHA3_256 hash '%s'. Must be 64 characters", hash)
+			}
+			if !hashre.MatchString(hash) {
+				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			}
+		}
+		for _, hash := range s.SHA3_384 {
+			if len(hash) != 96 {
+				return fmt.Errorf("Invalid length for SHA3_384 hash '%s'. Must be 96 characters", hash)
+			}
+			if !hashre.MatchString(hash) {
+				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			}
+		}
+		for _, hash := range s.SHA3_512 {
+			if len(hash) != 128 {
+				return fmt.Errorf("Invalid length for MD5 hash '%s'. Must be 128 characters", hash)
+			}
+			if !hashre.MatchString(hash) {
+				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			}
+		}
+	}
+	if r.Parameters.Condition != "" {
+		// evaluate the condition
+		condcomp := strings.Split(r.Parameters.Condition, " ")
+		lencond := len(condcomp)
+		opre := regexp.MustCompile("(?i)^(and|or)$")
+		hasLabel := false
+		for pos, comp := range condcomp {
+			// is the current component a label?
+			for _, label := range labels {
+				if comp == label || comp == "!"+label {
+					if pos > 0 && hasLabel {
+						return fmt.Errorf("Invalid condition. Labels must be separated by operators at pos %d", pos)
 					}
+					hasLabel = true
+					goto next
 				}
 			}
+			// is the current component an operator?
+			if opre.MatchString(comp) {
+				// check that operator is not first or last
+				if pos == 0 || pos == lencond-1 {
+					return fmt.Errorf("Invalid condition. A condition cannot start or stop with an operator")
+				}
+				if !hasLabel {
+					return fmt.Errorf("Invalid condition. Operator '%s' must be preceded by a label at pos. %d", comp, pos)
+				}
+				hasLabel = false
+				goto next
+			}
+			// if we are here, the component is invalid
+			return fmt.Errorf("Invalid component '%s' in condition. Must be a valid label or an operator (and|or).", comp)
+		next:
 		}
 	}
 	return
@@ -176,23 +233,40 @@ type statistics struct {
 var stats statistics
 
 // Representation of a filecheck.
-// id is a string that identifies the check
+// label is a string that identifies the search
 // path is the file system path to inspect
 // method is the name of the type of check
 // test is the value of the check, such as a md5 hash
-// testcode is the type of test in integer form
+// code is the type of test in integer form
 // filecount is the total number of files inspected for each Check
 // matchcount is a counter of positive results for this Check
 // hasmatched is a boolean set to True when the Check has matched once or more
 // files is an slice of string that contains paths of matching files
 // regex is a regular expression
 type filecheck struct {
-	id, path, method, test string
-	testcode               uint64
-	filecount, matchcount  float64
-	hasmatched             bool
-	files                  map[string]float64
-	regex                  *regexp.Regexp
+	label, path, method, test string
+	code                      uint64
+	filecount, matchcount     float64
+	hasmatched                bool
+	files                     map[string]float64
+	regex                     *regexp.Regexp
+}
+
+func newFileCheck(label, path, method, test string, code uint64) *filecheck {
+	var fc filecheck
+	fc.files = make(map[string]float64)
+	fc.hasmatched = false
+	fc.filecount = 0
+	fc.matchcount = 0
+	fc.label = label
+	fc.path = path
+	fc.method = method
+	fc.test = test
+	fc.code = code
+	if code == checkRegex || code == checkFilename {
+		fc.regex = regexp.MustCompilePOSIX(test)
+	}
+	return &fc
 }
 
 // Results contains the details of what was inspected on the file system.
@@ -307,20 +381,20 @@ func (r Runner) Run(Args []byte) (resStr string) {
 	checklist := make(map[float64]filecheck)
 	todolist := make(map[float64]filecheck)
 	var i float64 = 0
-	for path, methods := range r.Parameters {
-		for method, identifiers := range methods {
-			for identifier, tests := range identifiers {
-				for _, test := range tests {
-					check, err := createCheck(path, method, identifier, test)
-					if err != nil {
-						panic(err)
-					}
-					checklist[i] = check
-					todolist[i] = check
-					i++
-					stats.Checkcount++
-				}
+	for label, search := range r.Parameters.Searches {
+		checks, err := createChecks(label, search)
+		if err != nil {
+			panic(err)
+		}
+		for _, check := range checks {
+			if debug {
+				fmt.Printf("check %.0f: label='%s'; path='%s'; method='%s'; test='%s'\n",
+					i, check.label, check.path, check.method, check.test)
 			}
+			checklist[i] = check
+			todolist[i] = check
+			i++
+			stats.Checkcount++
 		}
 	}
 
@@ -393,53 +467,58 @@ const (
 )
 
 // createCheck creates a new filecheck
-func createCheck(path, method, identifier, test string) (check filecheck, err error) {
+func createChecks(label string, s search) (checks []filecheck, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("createCheck() -> %v", e)
+			err = fmt.Errorf("createChecks() -> %v", e)
 		}
 	}()
-	check.id = identifier
-	check.path = path
-	check.method = method
-	check.test = test
-	switch method {
-	case "regex":
-		check.testcode = checkRegex
-		// compile the value into a regex
-		check.regex = regexp.MustCompilePOSIX(test)
-	case "filename":
-		check.testcode = checkFilename
-		// compile the value into a regex
-		check.regex = regexp.MustCompilePOSIX(test)
-	case "md5":
-		check.testcode = checkMD5
-	case "sha1":
-		check.testcode = checkSHA1
-	case "sha256":
-		check.testcode = checkSHA256
-	case "sha384":
-		check.testcode = checkSHA384
-	case "sha512":
-		check.testcode = checkSHA512
-	case "sha3_224":
-		check.testcode = checkSHA3_224
-	case "sha3_256":
-		check.testcode = checkSHA3_256
-	case "sha3_384":
-		check.testcode = checkSHA3_384
-	case "sha3_512":
-		check.testcode = checkSHA3_512
-	default:
-		err := fmt.Sprintf("ParseCheck: Invalid method '%s'", method)
-		panic(err)
+	for _, path := range s.Paths {
+		for _, re := range s.Regexes {
+			check := newFileCheck(label, path, "regex", re, checkRegex)
+			checks = append(checks, *check)
+		}
+		for _, re := range s.Filenames {
+			check := newFileCheck(label, path, "filename", re, checkFilename)
+			checks = append(checks, *check)
+		}
+		for _, hash := range s.MD5 {
+			check := newFileCheck(label, path, "md5", hash, checkMD5)
+			checks = append(checks, *check)
+		}
+		for _, hash := range s.SHA1 {
+			check := newFileCheck(label, path, "sha1", hash, checkSHA1)
+			checks = append(checks, *check)
+		}
+		for _, hash := range s.SHA256 {
+			check := newFileCheck(label, path, "sha256", hash, checkSHA256)
+			checks = append(checks, *check)
+		}
+		for _, hash := range s.SHA384 {
+			check := newFileCheck(label, path, "sha384", hash, checkSHA384)
+			checks = append(checks, *check)
+		}
+		for _, hash := range s.SHA512 {
+			check := newFileCheck(label, path, "sha512", hash, checkSHA512)
+			checks = append(checks, *check)
+		}
+		for _, hash := range s.SHA3_224 {
+			check := newFileCheck(label, path, "sha3_224", hash, checkSHA3_224)
+			checks = append(checks, *check)
+		}
+		for _, hash := range s.SHA3_256 {
+			check := newFileCheck(label, path, "sha3_256", hash, checkSHA3_256)
+			checks = append(checks, *check)
+		}
+		for _, hash := range s.SHA3_384 {
+			check := newFileCheck(label, path, "sha3_384", hash, checkSHA3_384)
+			checks = append(checks, *check)
+		}
+		for _, hash := range s.SHA3_512 {
+			check := newFileCheck(label, path, "sha3_512", hash, checkSHA3_512)
+			checks = append(checks, *check)
+		}
 	}
-	// allocate the map
-	check.files = make(map[string]float64)
-	// init the variables
-	check.hasmatched = false
-	check.filecount = 0
-	check.matchcount = 0
 	return
 }
 
@@ -752,7 +831,7 @@ func evaluateFile(file string, interestedlist, checklist map[float64]filecheck) 
 				fmt.Printf("evaluateFile: activated check id '%d' '%s' on '%s'\n", id, check.path, file)
 			}
 			activechecks = append(activechecks, id)
-			checkBitmask |= check.testcode
+			checkBitmask |= check.code
 			inspect = true
 		} else {
 			if debug {
@@ -805,7 +884,7 @@ func inspectFile(fd *os.File, activechecks []float64, checkBitmask uint64, check
 		// build a list of checklist of check type 'contains'
 		var ReList []float64
 		for _, id := range activechecks {
-			if (checklist[id].testcode & checkRegex) != 0 {
+			if (checklist[id].code & checkRegex) != 0 {
 				ReList = append(ReList, id)
 			}
 		}
@@ -823,7 +902,7 @@ func inspectFile(fd *os.File, activechecks []float64, checkBitmask uint64, check
 		// build a list of checklist of check type 'contains'
 		var ReList []float64
 		for _, id := range activechecks {
-			if (checklist[id].testcode & checkFilename) != 0 {
+			if (checklist[id].code & checkFilename) != 0 {
 				ReList = append(ReList, id)
 			}
 		}
@@ -1108,9 +1187,9 @@ func buildResults(checklist map[float64]filecheck, t0 time.Time) (resStr string,
 
 	// iterate through the checklist and parse the results
 	// into a Response object
-	for _, check := range checklist {
+	for id, check := range checklist {
 		if debug {
-			fmt.Printf("Main: Check '%s' returned %d positive match\n", check.id, check.matchcount)
+			fmt.Printf("Main: Check %s:%d returned %d positive match\n", check.label, id, check.matchcount)
 		}
 		if check.hasmatched {
 			for file, hits := range check.files {
@@ -1135,23 +1214,23 @@ func buildResults(checklist map[float64]filecheck, t0 time.Time) (resStr string,
 		if _, ok := res.Elements[check.path]; !ok {
 			res.Elements[check.path] = map[string]map[string]map[string]singleresult{
 				check.method: map[string]map[string]singleresult{
-					check.id: map[string]singleresult{
+					check.label: map[string]singleresult{
 						check.test: r,
 					},
 				},
 			}
 		} else if _, ok := res.Elements[check.path][check.method]; !ok {
 			res.Elements[check.path][check.method] = map[string]map[string]singleresult{
-				check.id: map[string]singleresult{
+				check.label: map[string]singleresult{
 					check.test: r,
 				},
 			}
-		} else if _, ok := res.Elements[check.path][check.method][check.id]; !ok {
-			res.Elements[check.path][check.method][check.id] = map[string]singleresult{
+		} else if _, ok := res.Elements[check.path][check.method][check.label]; !ok {
+			res.Elements[check.path][check.method][check.label] = map[string]singleresult{
 				check.test: r,
 			}
-		} else if _, ok := res.Elements[check.path][check.method][check.id][check.test]; !ok {
-			res.Elements[check.path][check.method][check.id][check.test] = r
+		} else if _, ok := res.Elements[check.path][check.method][check.label][check.test]; !ok {
+			res.Elements[check.path][check.method][check.label][check.test] = r
 		}
 	}
 
@@ -1203,27 +1282,27 @@ func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string
 	}
 	for path, _ := range results.Elements {
 		for method, _ := range results.Elements[path] {
-			for id, _ := range results.Elements[path][method] {
-				for value, _ := range results.Elements[path][method][id] {
+			for label, _ := range results.Elements[path][method] {
+				for value, _ := range results.Elements[path][method][label] {
 					if matchOnly {
-						if results.Elements[path][method][id][value].Matchcount < 1 {
+						if results.Elements[path][method][label][value].Matchcount < 1 {
 							// go to next value
 							continue
 						}
 					}
-					if len(results.Elements[path][method][id][value].Files) == 0 {
+					if len(results.Elements[path][method][label][value].Files) == 0 {
 						res := fmt.Sprintf("0 match on '%s' in check '%s':'%s':'%s'",
-							value, path, method, id)
+							value, path, method, label)
 						prints = append(prints, res)
 						continue
 					}
-					for file, cnt := range results.Elements[path][method][id][value].Files {
+					for file, cnt := range results.Elements[path][method][label][value].Files {
 						verb := "match"
 						if cnt > 1 {
 							verb = "matches"
 						}
 						res := fmt.Sprintf("%.0f %s in '%s' on '%s' for filechecker '%s':'%s':'%s'",
-							cnt, verb, file, value, path, method, id)
+							cnt, verb, file, value, path, method, label)
 						prints = append(prints, res)
 					}
 				}
@@ -1240,4 +1319,51 @@ func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string
 		prints = append(prints, stat)
 	}
 	return
+}
+
+// a helper to convert v1 syntax to v2 syntax
+func ConvertParametersV1toV2(input []byte) Parameters {
+	v1 := make(map[string]map[string]map[string][]string)
+	v2 := newParameters()
+	err := json.Unmarshal(input, &v1)
+	if err != nil {
+		panic(err)
+	}
+	for path, _ := range v1 {
+		for method, _ := range v1[path] {
+			for label, _ := range v1[path][method] {
+				var s search
+				s.Paths = append(s.Paths, path)
+				slabel := strings.Replace(label, " ", "", -1)
+				for _, value := range v1[path][method][label] {
+					switch method {
+					case "filename":
+						s.Filenames = append(s.Filenames, value)
+					case "regex":
+						s.Regexes = append(s.Regexes, value)
+					case "md5":
+						s.MD5 = append(s.MD5, value)
+					case "sha1":
+						s.SHA1 = append(s.SHA1, value)
+					case "sha256":
+						s.SHA256 = append(s.SHA256, value)
+					case "sha384":
+						s.SHA384 = append(s.SHA384, value)
+					case "sha512":
+						s.SHA512 = append(s.SHA512, value)
+					case "sha3_224":
+						s.SHA3_224 = append(s.SHA3_224, value)
+					case "sha3_256":
+						s.SHA3_256 = append(s.SHA3_256, value)
+					case "sha3_384":
+						s.SHA3_384 = append(s.SHA3_384, value)
+					case "sha3_512":
+						s.SHA3_512 = append(s.SHA3_512, value)
+					}
+				}
+				v2.Searches[slabel] = s
+			}
+		}
+	}
+	return *v2
 }

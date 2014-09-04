@@ -3,7 +3,7 @@
     "description": {
         "author": "Julien Vehent",
         "email": "ulfr@mozilla.com",
-        "revision": 201408261000
+        "revision": 201409031800
     },
     "target": "agents.os = 'windows'",
     "threat": {
@@ -14,20 +14,22 @@
         {
             "module": "filechecker",
             "parameters": {
-                "C:\\Windows\\System32\\drivers\\etc\\hosts": {
-                    "regex": {
-                        "should match": [
-                            "localhost",
-                            "127.0.0.1"
-                        ]
-                    }
+                "etchosts": {
+                    "paths": [
+                        "C:\\Windows\\System32\\drivers\\etc\\hosts"
+                    ],
+                    "regexes": [
+                        "localhost",
+                        "127.0.0.1"
+                    ]
                 },
-                "C:\\Windows\\System32\\": {
-                    "md5": {
-                        "should not match": [
-                            "c6e35b4cdad5ee02f14215facc710c85"
-                        ]
-                    }
+                "systemsearch": {
+                    "paths": [
+                        "C:\\Windows\\System32\\"
+                    ],
+                    "md5": [
+                        "c6e35b4cdad5ee02f14215facc710c85"
+                    ]
                 }
             }
         }

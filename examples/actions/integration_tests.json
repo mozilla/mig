@@ -3,7 +3,7 @@
     "description": {
         "author": "Julien Vehent",
         "email": "ulfr@mozilla.com",
-        "revision": 201408261000
+        "revision": 201409031000
     },
     "target": "agents.os = 'linux'",
     "threat": {
@@ -14,42 +14,51 @@
         {
             "module": "filechecker",
             "parameters": {
-                "/home/*/.ssh/*": {
-                    "regex": {
-                        "should not match": [
+                "searches": {
+                    "sshnotmatch": {
+                        "paths": [
+                            "/home/*/.ssh/*"
+                        ],
+                        "regexes": [
                             "should not match"
                         ]
-                    }
-                },
-                "/etc/*yum*/*.repo": {
-                    "regex": {
-                        "should match": [
+                    },
+                    "yumshouldmatch": {
+                        "paths": [
+                            "/etc/*yum*/*.repo"
+                        ],
+                        "regexes": [
                             "^gpgcheck=1$"
                         ]
-                    }
-                },
-                "/etc*": {
-                    "regex": {
-                        "should match": [
+                    },
+                    "etcshouldmatch": {
+                        "paths": [
+                            "/etc/"
+                        ],
+                        "regexes": [
                             "^jvehent:"
                         ]
-                    }
-                },
-                "/etc/shadow": {
-                    "regex": {
-                        "should not match": [
+                    },
+                    "shadownotmatch": {
+                        "paths": [
+                            "/etc/shadow"
+                        ],
+                        "regexes": [
                             "^shouldnotmatch$"
                         ],
-                        "should match": [
-                            "^root:"
+                        "filenames": [
+                            "^bob$"
                         ]
                     },
-                    "filename": {
-                        "should match": [
-                            "^\\/etc\\/shadow$"
+                    "shadowmatch": {
+                        "paths": [
+                            "/etc/shadow"
                         ],
-                        "should not match": [
-                            "^bob$"
+                        "regexes": [
+                            "^root:"
+                        ],
+                        "filenames": [
+                            "^shadow$"
                         ]
                     }
                 }
