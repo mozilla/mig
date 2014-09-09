@@ -98,9 +98,9 @@ func main() {
 	case "agent":
 		err := configLoad(*config)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Not using external configuration: %s. Continuing startup.\n", err)
+			fmt.Fprintf(os.Stderr, "[info] Using builtin conf. No external conf file found.\n")
 		} else {
-			fmt.Fprintf(os.Stderr, "Configuration loaded from %s\n", *config)
+			fmt.Fprintf(os.Stderr, "[info] Using external conf from %s\n", *config)
 		}
 		err = runAgent(*foreground, *upgrading, *debug)
 		if err != nil {
