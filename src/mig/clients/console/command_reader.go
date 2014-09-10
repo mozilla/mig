@@ -62,7 +62,7 @@ func commandReader(input string, ctx Context) (err error) {
 			fmt.Println("error: ", err)
 			break
 		}
-		orders := strings.Split(input, " ")
+		orders := strings.Split(strings.TrimSpace(input), " ")
 		switch orders[0] {
 		case "exit":
 			fmt.Printf("exit\n")

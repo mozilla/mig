@@ -64,6 +64,8 @@ func main() {
 	var api = flag.String("a", "undef", "API base url (ex: http://localhost:1664/api/v1/)")
 	var shortnames = flag.Bool("s", false, "Shorten all agent names to first and last 5 characters)")
 	flag.Parse()
+	// append a space after completion
+	readline.CompletionAppendChar = 0x20
 
 	if *shortnames {
 		useShortNames = true
@@ -85,7 +87,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	fmt.Printf("\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", ctx.API.URL)
 	for {
 		// completion
@@ -109,7 +110,7 @@ func main() {
 			fmt.Println("error: ", err)
 			break
 		}
-		orders := strings.Split(input, " ")
+		orders := strings.Split(strings.TrimSpace(input), " ")
 		switch orders[0] {
 		case "action":
 			if len(orders) == 2 {

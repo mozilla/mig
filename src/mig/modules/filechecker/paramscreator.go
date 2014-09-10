@@ -186,7 +186,6 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 			}
 			fmt.Printf("Stored %s %s\n", checkType, checkValue)
 		}
-	store:
 		p.Searches[label] = search
 		fmt.Println("Stored search", label)
 	}

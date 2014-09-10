@@ -53,8 +53,9 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 	prompt := "\x1b[33;1mlauncher>\x1b[0m "
 	for {
 		// completion
-		var symbols = []string{"addoperation", "exit", "help", "init", "json", "launch", "load", "details",
-			"filechecker", "setname", "settarget", "settimes", "sign", "times"}
+		var symbols = []string{"addoperation", "deloperation", "exit", "help", "init",
+			"json", "launch", "load", "details", "filechecker",
+			"setname", "settarget", "settimes", "sign", "times"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -73,7 +74,7 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 			fmt.Println("error: ", err)
 			break
 		}
-		orders := strings.Split(input, " ")
+		orders := strings.Split(strings.TrimSpace(input), " ")
 		switch orders[0] {
 		case "addoperation":
 			if len(orders) != 2 {
