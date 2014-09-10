@@ -245,8 +245,8 @@ Additionally, the MIG console may need to import the modules as well in order
 to use the `HasResultsPrinter` interface. To do so, add the same imports into
 the `import()` section of `src/mig/clients/console/console.go`.
 
-Additional module interfaces
-============================
+Optional module interfaces
+==========================
 
 HasResultsPrinter
 ~~~~~~~~~~~~~~~~~
@@ -272,3 +272,44 @@ And a module implementation would have the function:
 		...
 		return
 	}
+
+HasParamsCreator
+~~~~~~~~~~~~~~~~
+
+`HasParamsCreator` can be implemented by a module to provide interactive
+parameters creation in the MIG Console. It doesn't accept any input value,
+but prompts the user for the correct parameters, and returns a Parameters
+structure back to the caller.
+It can be implemented in various ways, as long as it prompt the user in the
+terminal using something like `fmt.Scanln()`.
+
+The interface is defined as:
+
+.. code:: go
+
+	type HasParamsCreator interface {
+		ParamsCreator() (interface{}, error)
+	}
+
+A module implementation would have the function:
+
+.. code:: go
+
+   func (r Runner) ParamsCreator() (interface{}, error) {
+		// init blank parameters
+		p := newParameters()
+
+		// prompt the user for various parameters
+		...
+
+		// validate and return params as an interface
+		r.Parameters = *p
+		err := r.ValidateParameters()
+		if err != nil {
+			panic(err)
+		}
+		return p
+	}
+
+The `filechecker` module implements this interface and can be used as an
+example.

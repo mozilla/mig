@@ -65,13 +65,13 @@ type search struct {
 	SHA3_256    []string `json:"sha3_256,omitempty"`
 	SHA3_384    []string `json:"sha3_384,omitempty"`
 	SHA3_512    []string `json:"sha3_512,omitempty"`
-	Options     options  `json:"options,omitempty"`
+	//Options     options  `json:"options,omitempty"`
 }
 
-type options struct {
-	MaxDepth float64 `json:"maxdepth,omitempty"`
-	CrossFS  bool    `json:"crossfs,omitempty"`
-}
+//type options struct {
+//	MaxDepth float64 `json:"maxdepth,omitempty"`
+//	CrossFS  bool    `json:"crossfs,omitempty"`
+//}
 
 // Create a new Parameters
 func newParameters() *Parameters {
@@ -85,93 +85,74 @@ func (r Runner) ValidateParameters() (err error) {
 	var labels []string
 	for label, s := range r.Parameters.Searches {
 		labels = append(labels, label)
-		labelre := regexp.MustCompile("^[a-zA-Z0-9_-]{1,64}$")
-		if !labelre.MatchString(label) {
-			return fmt.Errorf("The syntax of label '%s' is invalid. Must match regex ^[a-zA-Z0-9_-]{1,64}$", label)
+		err = validateLabel(label)
+		if err != nil {
+			return
 		}
 		for _, r := range s.Regexes {
-			_, err := regexp.Compile(r)
+			err = validateRegex(r)
 			if err != nil {
-				return fmt.Errorf("Invalid regexp '%s'. Must be a regexp. Compilation failed with '%v'", r, err)
+				return
 			}
 		}
 		for _, r := range s.Filenames {
-			_, err := regexp.Compile(r)
+			err = validateRegex(r)
 			if err != nil {
-				return fmt.Errorf("Invalid filename regexp '%s'. Must be a regexp. Compilation failed with '%v'", r, err)
+				return
 			}
 		}
-		hashre := regexp.MustCompile("^[a-fA-F0-9]{32,128}$")
 		for _, hash := range s.MD5 {
-			if len(hash) != 32 {
-				return fmt.Errorf("Invalid length for MD5 hash '%s'. Must be 32 characters", hash)
-			}
-			if !hashre.MatchString(hash) {
-				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			err = validateHash(hash, checkMD5)
+			if err != nil {
+				return
 			}
 		}
 		for _, hash := range s.SHA1 {
-			if len(hash) != 40 {
-				return fmt.Errorf("Invalid length for SHA1 hash '%s'. Must be 40 characters", hash)
-			}
-			if !hashre.MatchString(hash) {
-				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			err = validateHash(hash, checkSHA1)
+			if err != nil {
+				return
 			}
 		}
 		for _, hash := range s.SHA256 {
-			if len(hash) != 64 {
-				return fmt.Errorf("Invalid length for SHA256 hash '%s'. Must be 64 characters", hash)
-			}
-			if !hashre.MatchString(hash) {
-				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			err = validateHash(hash, checkSHA256)
+			if err != nil {
+				return
 			}
 		}
 		for _, hash := range s.SHA384 {
-			if len(hash) != 96 {
-				return fmt.Errorf("Invalid length for SHA384 hash '%s'. Must be 96 characters", hash)
-			}
-			if !hashre.MatchString(hash) {
-				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			err = validateHash(hash, checkSHA384)
+			if err != nil {
+				return
 			}
 		}
 		for _, hash := range s.SHA512 {
-			if len(hash) != 128 {
-				return fmt.Errorf("Invalid length for SHA512 hash '%s'. Must be 128 characters", hash)
-			}
-			if !hashre.MatchString(hash) {
-				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			err = validateHash(hash, checkSHA512)
+			if err != nil {
+				return
 			}
 		}
 		for _, hash := range s.SHA3_224 {
-			if len(hash) != 56 {
-				return fmt.Errorf("Invalid length for SHA3_224 hash '%s'. Must be 56 characters", hash)
-			}
-			if !hashre.MatchString(hash) {
-				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			err = validateHash(hash, checkSHA3_224)
+			if err != nil {
+				return
 			}
 		}
 		for _, hash := range s.SHA3_256 {
-			if len(hash) != 64 {
-				return fmt.Errorf("Invalid length for SHA3_256 hash '%s'. Must be 64 characters", hash)
-			}
-			if !hashre.MatchString(hash) {
-				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			err = validateHash(hash, checkSHA3_256)
+			if err != nil {
+				return
 			}
 		}
 		for _, hash := range s.SHA3_384 {
-			if len(hash) != 96 {
-				return fmt.Errorf("Invalid length for SHA3_384 hash '%s'. Must be 96 characters", hash)
-			}
-			if !hashre.MatchString(hash) {
-				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			err = validateHash(hash, checkSHA3_384)
+			if err != nil {
+				return
 			}
 		}
 		for _, hash := range s.SHA3_512 {
-			if len(hash) != 128 {
-				return fmt.Errorf("Invalid length for MD5 hash '%s'. Must be 128 characters", hash)
-			}
-			if !hashre.MatchString(hash) {
-				return fmt.Errorf("Invalid checksum format for hash '%s'. Must be an hexadecimal string.", hash)
+			err = validateHash(hash, checkSHA3_512)
+			if err != nil {
+				return
 			}
 		}
 	}
@@ -208,6 +189,54 @@ func (r Runner) ValidateParameters() (err error) {
 			return fmt.Errorf("Invalid component '%s' in condition. Must be a valid label or an operator (and|or).", comp)
 		next:
 		}
+	}
+	return
+}
+
+func validateLabel(label string) (err error) {
+	labelre := regexp.MustCompile("^[a-zA-Z0-9_-]{1,64}$")
+	if !labelre.MatchString(label) {
+		return fmt.Errorf("The syntax of label '%s' is invalid. Must match regex ^[a-zA-Z0-9_-]{1,64}$", label)
+	}
+	return
+}
+
+func validateRegex(regex string) (err error) {
+	_, err = regexp.Compile(regex)
+	if err != nil {
+		return fmt.Errorf("Invalid regexp '%s'. Must be a regexp. Compilation failed with '%v'", regex, err)
+	}
+	return
+}
+
+func validateHash(hash string, hashType uint64) (err error) {
+	hash = strings.ToUpper(hash)
+	var re string
+	switch hashType {
+	case checkMD5:
+		re = "^[A-F0-9]{32}$"
+	case checkSHA1:
+		re = "^[A-F0-9]{40}$"
+	case checkSHA256:
+		re = "^[A-F0-9]{64}$"
+	case checkSHA384:
+		re = "^[A-F0-9]{96}$"
+	case checkSHA512:
+		re = "^[A-F0-9]{128}$"
+	case checkSHA3_224:
+		re = "^[A-F0-9]{56}$"
+	case checkSHA3_256:
+		re = "^[A-F0-9]{64}$"
+	case checkSHA3_384:
+		re = "^[A-F0-9]{96}$"
+	case checkSHA3_512:
+		re = "^[A-F0-9]{128}$"
+	default:
+		return fmt.Errorf("Invalid hash type %d for hash '%s'", hashType, hash)
+	}
+	hashre := regexp.MustCompile(re)
+	if !hashre.MatchString(hash) {
+		return fmt.Errorf("Invalid checksum format for hash '%s'. Must match regex %s", hash, re)
 	}
 	return
 }
@@ -483,38 +512,47 @@ func createChecks(label string, s search) (checks []filecheck, err error) {
 			checks = append(checks, *check)
 		}
 		for _, hash := range s.MD5 {
+			hash = strings.ToUpper(hash)
 			check := newFileCheck(label, path, "md5", hash, checkMD5)
 			checks = append(checks, *check)
 		}
 		for _, hash := range s.SHA1 {
+			hash = strings.ToUpper(hash)
 			check := newFileCheck(label, path, "sha1", hash, checkSHA1)
 			checks = append(checks, *check)
 		}
 		for _, hash := range s.SHA256 {
+			hash = strings.ToUpper(hash)
 			check := newFileCheck(label, path, "sha256", hash, checkSHA256)
 			checks = append(checks, *check)
 		}
 		for _, hash := range s.SHA384 {
+			hash = strings.ToUpper(hash)
 			check := newFileCheck(label, path, "sha384", hash, checkSHA384)
 			checks = append(checks, *check)
 		}
 		for _, hash := range s.SHA512 {
+			hash = strings.ToUpper(hash)
 			check := newFileCheck(label, path, "sha512", hash, checkSHA512)
 			checks = append(checks, *check)
 		}
 		for _, hash := range s.SHA3_224 {
+			hash = strings.ToUpper(hash)
 			check := newFileCheck(label, path, "sha3_224", hash, checkSHA3_224)
 			checks = append(checks, *check)
 		}
 		for _, hash := range s.SHA3_256 {
+			hash = strings.ToUpper(hash)
 			check := newFileCheck(label, path, "sha3_256", hash, checkSHA3_256)
 			checks = append(checks, *check)
 		}
 		for _, hash := range s.SHA3_384 {
+			hash = strings.ToUpper(hash)
 			check := newFileCheck(label, path, "sha3_384", hash, checkSHA3_384)
 			checks = append(checks, *check)
 		}
 		for _, hash := range s.SHA3_512 {
+			hash = strings.ToUpper(hash)
 			check := newFileCheck(label, path, "sha3_512", hash, checkSHA3_512)
 			checks = append(checks, *check)
 		}
@@ -1068,7 +1106,7 @@ func getHash(fd *os.File, hashType float64) (hexhash string, err error) {
 		h.Write(buf[:block])
 		offset += int64(block)
 	}
-	hexhash = fmt.Sprintf("%x", h.Sum(nil))
+	hexhash = fmt.Sprintf("%X", h.Sum(nil))
 	return
 }
 
@@ -1319,51 +1357,4 @@ func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string
 		prints = append(prints, stat)
 	}
 	return
-}
-
-// a helper to convert v1 syntax to v2 syntax
-func ConvertParametersV1toV2(input []byte) Parameters {
-	v1 := make(map[string]map[string]map[string][]string)
-	v2 := newParameters()
-	err := json.Unmarshal(input, &v1)
-	if err != nil {
-		panic(err)
-	}
-	for path, _ := range v1 {
-		for method, _ := range v1[path] {
-			for label, _ := range v1[path][method] {
-				var s search
-				s.Paths = append(s.Paths, path)
-				slabel := strings.Replace(label, " ", "", -1)
-				for _, value := range v1[path][method][label] {
-					switch method {
-					case "filename":
-						s.Filenames = append(s.Filenames, value)
-					case "regex":
-						s.Regexes = append(s.Regexes, value)
-					case "md5":
-						s.MD5 = append(s.MD5, value)
-					case "sha1":
-						s.SHA1 = append(s.SHA1, value)
-					case "sha256":
-						s.SHA256 = append(s.SHA256, value)
-					case "sha384":
-						s.SHA384 = append(s.SHA384, value)
-					case "sha512":
-						s.SHA512 = append(s.SHA512, value)
-					case "sha3_224":
-						s.SHA3_224 = append(s.SHA3_224, value)
-					case "sha3_256":
-						s.SHA3_256 = append(s.SHA3_256, value)
-					case "sha3_384":
-						s.SHA3_384 = append(s.SHA3_384, value)
-					case "sha3_512":
-						s.SHA3_512 = append(s.SHA3_512, value)
-					}
-				}
-				v2.Searches[slabel] = s
-			}
-		}
-	}
-	return *v2
 }

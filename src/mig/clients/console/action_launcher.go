@@ -35,6 +35,7 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 	var a mig.Action
 	if tpl.ID == 0 {
 		fmt.Println("Entering action launcher with empty template")
+		a.SyntaxVersion = mig.ActionVersion
 	} else {
 		// reinit the fields that we don't reuse
 		a.Name = tpl.Name
@@ -52,8 +53,8 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 	prompt := "\x1b[33;1mlauncher>\x1b[0m "
 	for {
 		// completion
-		var symbols = []string{"exit", "help", "json", "launch", "load", "details",
-			"settarget", "settimes", "sign", "times"}
+		var symbols = []string{"addoperation", "exit", "help", "init", "json", "launch", "load", "details",
+			"filechecker", "setname", "settarget", "settimes", "sign", "times"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -74,6 +75,38 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 		}
 		orders := strings.Split(input, " ")
 		switch orders[0] {
+		case "addoperation":
+			if len(orders) != 2 {
+				fmt.Println("Wrong arguments. Expects 'addoperation <module_name>'")
+				fmt.Println("example: addoperation filechecker")
+				break
+			}
+			// attempt to call ParamsCreator from the requested module
+			// ParamsCreator takes care of retrieving using input
+			var operation mig.Operation
+			operation.Module = orders[1]
+			if _, ok := mig.AvailableModules[operation.Module]; ok {
+				// instanciate and call module parameters creation function
+				modRunner := mig.AvailableModules[operation.Module]()
+				if _, ok := modRunner.(mig.HasParamsCreator); !ok {
+					fmt.Println(operation.Module, "module does not provide a parameters creator.")
+					fmt.Println("You can write your action by hand and import it using 'load <file>'")
+					break
+				}
+				operation.Parameters, err = modRunner.(mig.HasParamsCreator).ParamsCreator()
+				if err != nil {
+					fmt.Printf("Parameters creation failed with error: %v\n", err)
+					break
+				}
+				a.Operations = append(a.Operations, operation)
+				opjson, err := json.MarshalIndent(operation, "", "  ")
+				if err != nil {
+					panic(err)
+				}
+				fmt.Printf("Inserting %s operation with parameters:\n%s\n", operation.Module, opjson)
+			} else {
+				fmt.Println("Module", operation.Module, "is not available in this console")
+			}
 		case "details":
 			fmt.Printf("Action id %.0f named '%s'\nTarget '%s'\n"+
 				"Description: Author '%s <%s>'; Revision '%.0f'; URL '%s'\n"+
@@ -93,10 +126,12 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 			fmt.Printf(`The following orders are available:
 exit			exit this mode
 help			show this help
+addoperation <module>	append a new operation of type <module> to the action operations
 json <pretty>		show the json of the action
 launch <nofollow>	launch the action. to return before completion, add "nofollow"
 load <path>		load an action from a file at <path>
 details			display the action details
+setname <name>		set the name of the action
 settarget <target>	set the target
 settimes <start> <stop>	set the validity and expiration dates
 sign			PGP sign the action
@@ -111,11 +146,19 @@ times			show the various timestamps of the action
 		case "launch":
 			follow := true
 			if len(orders) > 1 {
-				if orders[1] == "follow" {
+				if orders[1] == "nofollow" {
 					follow = false
 				} else {
 					fmt.Printf("Unknown option '%s'\n", orders[1])
 				}
+			}
+			if a.Name == "" {
+				fmt.Println("Action has no name. Define one using 'setname <name>'")
+				break
+			}
+			if a.Target == "" {
+				fmt.Println("Action has no target. Define one using 'settarget <target>'")
+				break
 			}
 			if !hasTimes {
 				fmt.Printf("Times are not defined. Setting validity from now until +%s\n", defaultExpiration)
@@ -165,12 +208,18 @@ times			show the various timestamps of the action
 			}
 			a.PGPSignatures = append(a.PGPSignatures, pgpsig)
 			hasSignatures = true
-		case "settarget":
-			if len(orders) != 2 {
-				fmt.Println("Wrong arguments. Must be 'settarget <some_target_string_without_spaces>'")
+		case "setname":
+			if len(orders) < 2 {
+				fmt.Println("Wrong arguments. Must be 'setname <some_name>'")
 				break
 			}
-			a.Target = orders[1]
+			a.Name = strings.Join(orders[1:], " ")
+		case "settarget":
+			if len(orders) < 2 {
+				fmt.Println("Wrong arguments. Must be 'settarget <some_target_string>'")
+				break
+			}
+			a.Target = strings.Join(orders[1:], " ")
 		case "settimes":
 			// set the dates
 			if len(orders) != 3 {

@@ -19,6 +19,9 @@ import (
 	"time"
 )
 
+// ActionVersion is the version of the syntax that is expected
+const ActionVersion uint16 = 2
+
 // an Action is the json object that is created by an investigator
 // and provided to the MIG platform. It must be PGP signed.
 type Action struct {
@@ -132,8 +135,8 @@ func (a Action) Validate() (err error) {
 	if a.Target == "" {
 		return errors.New("Action.Target is empty. Expecting string.")
 	}
-	if a.SyntaxVersion != 2 {
-		return errors.New("Wrong Syntax Version integer. Expection version 2.")
+	if a.SyntaxVersion != ActionVersion {
+		return fmt.Errorf("Wrong Syntax Version integer. Expection version %d", ActionVersion)
 	}
 	if a.ValidFrom.String() == "" {
 		return errors.New("Action.ValidFrom is empty. Expecting string.")

@@ -13,11 +13,6 @@ import (
 	"strings"
 
 	"github.com/bobappleyard/readline"
-
-	_ "mig/modules/agentdestroy"
-	_ "mig/modules/connected"
-	_ "mig/modules/filechecker"
-	_ "mig/modules/upgrade"
 )
 
 // commandReader retrieves an command from the API using its numerical ID

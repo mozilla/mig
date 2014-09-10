@@ -68,3 +68,8 @@ type Moduler interface {
 type HasResultsPrinter interface {
 	PrintResults([]byte, bool) ([]string, error)
 }
+
+// HasParamsCreator implements a function that creates module parameters
+type HasParamsCreator interface {
+	ParamsCreator() (interface{}, error)
+}
