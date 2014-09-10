@@ -14,6 +14,7 @@ import (
 	"mig/pgp/sign"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -108,16 +109,27 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 			} else {
 				fmt.Println("Module", operation.Module, "is not available in this console")
 			}
+		case "deloperation":
+			if len(orders) != 2 {
+				fmt.Println("Wrong arguments. Expects 'deloperation <opnum>'")
+				fmt.Println("example: deloperation 0")
+				break
+			}
+			opnum, err := strconv.Atoi(orders[1])
+			if err != nil || opnum < 0 || opnum > len(a.Operations)-1 {
+				fmt.Println("error: <opnum> must be a positive integer between 0 and", len(a.Operations)-1)
+				break
+			}
+			a.Operations = append(a.Operations[:opnum], a.Operations[opnum+1:]...)
 		case "details":
-			fmt.Printf("Action id %.0f named '%s'\nTarget '%s'\n"+
-				"Description: Author '%s <%s>'; Revision '%.0f'; URL '%s'\n"+
-				"Threat: Type '%s', Level '%s', Family '%s', Reference '%s'\n",
+			fmt.Printf("ID       %.0f\nName     %s\nTarget   %s\nAuthor   %s <%s>\n"+
+				"Revision %.0f\nURL      %s\nThreat Type %s, Level %s, Family %s, Reference %s\n",
 				a.ID, a.Name, a.Target, a.Description.Author, a.Description.Email,
 				a.Description.Revision, a.Description.URL,
 				a.Threat.Type, a.Threat.Level, a.Threat.Family, a.Threat.Ref)
-			fmt.Printf("Operations: %d -> ", len(a.Operations))
-			for _, op := range a.Operations {
-				fmt.Printf("%s; ", op.Module)
+			fmt.Printf("%d operations: ", len(a.Operations))
+			for i, op := range a.Operations {
+				fmt.Printf("%d=%s; ", i, op.Module)
 			}
 			fmt.Printf("\n")
 		case "exit":
@@ -125,13 +137,14 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 			goto exit
 		case "help":
 			fmt.Printf(`The following orders are available:
+addoperation <module>	append a new operation of type <module> to the action operations
+deloperation <opnum>	remove operation numbered <opnum> from operations array, count starts at zero
+details			display the action details
 exit			exit this mode
 help			show this help
-addoperation <module>	append a new operation of type <module> to the action operations
 json <pretty>		show the json of the action
 launch <nofollow>	launch the action. to return before completion, add "nofollow"
 load <path>		load an action from a file at <path>
-details			display the action details
 setname <name>		set the name of the action
 settarget <target>	set the target
 settimes <start> <stop>	set the validity and expiration dates
