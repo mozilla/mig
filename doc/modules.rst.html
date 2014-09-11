@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <link href="doc/docstyle.css" rel="stylesheet" />
+    <title>MIG Modules</title>
+    <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
+</head>
+<body>
+    <h1>MIG Modules</h1>
+    <aside class="topic contents" id="table-of-contents">
+        <h1>Table of Contents</h1>
+        <ul class="auto-toc">
+            <li><a href="#module-logic">1   Module logic</a></li>
+            <li><a href="#the-example-module">2   The <cite>Example</cite> module</a></li>
+            <li><a href="#implementation-requirements">3   Implementation requirements</a></li>
+            <li><a href="#use-a-module">4   Use a module</a></li>
+            <li>
+                <p><a href="#optional-module-interfaces">5   Optional module interfaces</a></p>
+                <ul class="auto-toc">
+                    <li><a href="#hasresultsprinter">5.1   HasResultsPrinter</a></li>
+                    <li><a href="#hasparamscreator">5.2   HasParamsCreator</a></li>
+                </ul>
+            </li>
+        </ul>
+    </aside>
+    <p>In this document, we explain how modules are written and integrated into MIG.</p>
+    <p>The reception of a command by an agent triggers the execution of modules. A module is a Go package that is imported into the agent at compilation, and that performs a very specific set of tasks. For example, the <cite>filechecker</cite> module provides a way to scan a file system for files that contain regexes, match a checksum, ... Another module is called <cite>connected</cite>, and looks for IP addresses currently connected to an endpoint. <cite>user</cite> is a module to manages users, etc...</p>
+    <p>Module are somewhat autonomous. They can be developped outside of the MIG code base, and only imported during compilation of the agent. Go does not provide a way to load external libraries, so modules are shipped within the agent's static binary, and not as separate files.</p>
+    <section id="module-logic">
+        <h2>1   Module logic</h2>
+        <p>A module registers itself at runtime via the init() function, which calls <cite>mig.RegisterModule</cite> with a module name and an instance of the <cite>Runner</cite> variable. The agent uses the list populated by <cite>mig.RegisterModule</cite> to keep track of the available modules. When a command is received from the scheduler by the agent, the agent goes through the list of operations, and looks for an available module to execute each operation.</p>
+        <pre><code class="go"><span class="c1">// in src/mig/agent/agent.go
+</span><span class="o">...</span>
+
+<span class="k">for</span> <span class="nx">counter</span><span class="p">,</span> <span class="nx">operation</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">cmd</span><span class="p">.</span><span class="nx">Action</span><span class="p">.</span><span class="nx">Operations</span> <span class="p">{</span>
+    <span class="o">...</span>
+    <span class="c1">// check that the module is available and pass the command to the execution channel
+</span>    <span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">mig</span><span class="p">.</span><span class="nx">AvailableModules</span><span class="p">[</span><span class="nx">operation</span><span class="p">.</span><span class="nx">Module</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+        <span class="nx">ctx</span><span class="p">.</span><span class="nx">Channels</span><span class="p">.</span><span class="nx">RunAgentCommand</span> <span class="o">&lt;-</span> <span class="nx">currentOp</span>
+        <span class="nx">opsCounter</span><span class="o">++</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre>
+        <p>If a module is available to run an operation, the agent executes a fork of itself to run the module. This is done by calling the agent binary with the flag <strong>-m</strong>, followed by the name of the module, and the module parameters provided by the command.</p>
+        <p>This can easily be done on the command line directly:</p>
+        <pre><code class="bash"><span class="nv">$ </span>/sbin/mig-agent -m example <span class="s1">'{"gethostname": true, "getaddresses": true, "lookuphost": "www.google.com"}'</span>
+<span class="o">{</span><span class="s2">"elements"</span>:<span class="o">{</span><span class="s2">"hostname"</span>:<span class="s2">"fedbox2.subdomain.example.net"</span>...........</code></pre>
+        <p>When the agent is invoked with a <strong>-m</strong> flag that is not set to <cite>agent</cite>, it will attempt to run a module instead of running in agent mode. The snippet of code below is then executed:</p>
+        <pre><code class="go"><span class="c1">// runModuleDirectly executes a module and displays the results on stdout
+</span><span class="kd">func</span> <span class="nx">runModuleDirectly</span><span class="p">(</span><span class="nx">mode</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">args</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">mig</span><span class="p">.</span><span class="nx">AvailableModules</span><span class="p">[</span><span class="nx">mode</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+        <span class="c1">// instanciate and call module
+</span>        <span class="nx">modRunner</span> <span class="o">:=</span> <span class="nx">mig</span><span class="p">.</span><span class="nx">AvailableModules</span><span class="p">[</span><span class="nx">mode</span><span class="p">]()</span>
+        <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">modRunner</span><span class="p">.(</span><span class="nx">mig</span><span class="p">.</span><span class="nx">Moduler</span><span class="p">).</span><span class="nx">Run</span><span class="p">(</span><span class="nx">args</span><span class="p">))</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">"Unknown module"</span><span class="p">,</span> <span class="nx">mode</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">return</span>
+<span class="p">}</span></code></pre>
+        <p>The code above shows how the agent find the right module to run. A module implements the <cite>mig.Moduler</cite> interface, which implements a function named <cite>Run()</cite>. The agent simply invokes the <cite>Run()</cite> function of the module using the information provided during the registration.</p>
+    </section>
+    <section id="the-example-module">
+        <h2>2   The <cite>Example</cite> module</h2>
+        <p>An example module that can be used as a template is available in <a href="../src/mig/modules/example/example.go">src/mig/modules/example/</a>. We will study its structure to understand how modules are written and executed.</p>
+        <p>The main function of a module is called <cite>Run()</cite>. It takes one argument: an array of bytes that unmarshals into a JSON struct of parameters. The module takes care of unmarshalling into the proper struct, and validates the parameters using a function called <cite>ValidateParameters()</cite>.</p>
+        <p>The agent has no idea what parameters format a module expects. And different modules have different parameters. From the point of view of the agent, module parameters are treated as an <cite>interface{}</cite>, such that the content of the interface doesn't matter to the agent, as long as it is valid JSON (this requirement is enforced by the database).</p>
+        <p>For more details on the <cite>action</cite> and <cite>command</cite> formats used by MIG, read <a href="concepts.rst">Concepts &amp; Internal Components</a>.</p>
+        <p>The JSON sample below show an action that calls the <cite>example</cite> module. The</p>
+        <pre><code class="json"><span class="p">{</span>
+    <span class="nt">"... action fields ..."</span>
+    <span class="s2">"operations"</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">"module"</span><span class="p">:</span> <span class="s2">"example"</span><span class="p">,</span>
+            <span class="nt">"parameters"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">"gethostname"</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+                <span class="nt">"getaddresses"</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+                <span class="nt">"lookuphost"</span><span class="p">:</span> <span class="s2">"www.google.com"</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span></code></pre>
+        <p>The content of the <cite>parameters</cite> field is passed <cite>Run()</cite> as an array of bytes. Inside the module, <cite>Run()</cite> unmarshals and validates the parameters into its internal format.</p>
+        <pre><code class="go"><span class="c1">// Runner gives access to the exported functions and structs of the module
+</span><span class="kd">type</span> <span class="nx">Runner</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">Parameters</span> <span class="nx">params</span>
+    <span class="nx">Results</span>    <span class="nx">results</span>
+<span class="p">}</span>
+
+<span class="c1">// a simple parameters structure, the format is arbitrary
+</span><span class="kd">type</span> <span class="nx">params</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">GetHostname</span>  <span class="kt">bool</span>   <span class="s">`json:"gethostname"`</span>
+    <span class="nx">GetAddresses</span> <span class="kt">bool</span>   <span class="s">`json:"getaddresses"`</span>
+    <span class="nx">LookupHost</span>   <span class="kt">string</span> <span class="s">`json:"lookuphost"`</span>
+<span class="p">}</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">Run</span><span class="p">(</span><span class="nx">Args</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+    <span class="c1">// arguments are passed as an array of bytes, the module has to unmarshal that
+</span>    <span class="c1">// into the proper structure of parameters, then validate it.
+</span>    <span class="nx">err</span> <span class="o">:=</span> <span class="nx">json</span><span class="p">.</span><span class="nx">Unmarshal</span><span class="p">(</span><span class="nx">Args</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">"%v"</span><span class="p">,</span> <span class="nx">err</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">buildResults</span><span class="p">()</span>
+    <span class="p">}</span>
+    <span class="nx">err</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">ValidateParameters</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">"%v"</span><span class="p">,</span> <span class="nx">err</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">buildResults</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ... do more stuff here
+</span>    <span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">buildResults</span><span class="p">()</span>
+<span class="p">}</span></code></pre>
+        <p>Now all the module has to do, is perform the work, and return the results as a JSON string.</p>
+    </section>
+    <section id="implementation-requirements">
+        <h2>3   Implementation requirements</h2>
+        <p>All modules must implement the <strong>mig.Moduler</strong> interface, defined in the <a href="../src/mig/agent.go">MIG package</a>:</p>
+        <pre><code class="go"><span class="c1">// Moduler provides the interface to a Module
+</span><span class="kd">type</span> <span class="nx">Moduler</span> <span class="kd">interface</span> <span class="p">{</span>
+    <span class="nx">Run</span><span class="p">([]</span><span class="kt">byte</span><span class="p">)</span> <span class="kt">string</span>
+    <span class="nx">ValidateParameters</span><span class="p">()</span> <span class="kt">error</span>
+<span class="p">}</span></code></pre>
+        <ul>
+            <li>a module must implement a <strong>Runner</strong> type and register a new instance of it as part of the init process. The name (here <cite>example</cite>) used in the call to RegisterModule must be unique. Two modules cannot share the same name, otherwise the agent will panic at runtime.</li>
+        </ul>
+        <pre><code class="go"><span class="kd">type</span> <span class="nx">Runner</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">Parameters</span> <span class="nx">params</span>
+    <span class="nx">Results</span>    <span class="nx">results</span>
+<span class="p">}</span>
+<span class="kd">func</span> <span class="nx">init</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">mig</span><span class="p">.</span><span class="nx">RegisterModule</span><span class="p">(</span><span class="s">"example"</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nb">new</span><span class="p">(</span><span class="nx">Runner</span><span class="p">)</span>
+    <span class="p">})</span>
+<span class="p">}</span></code></pre>
+        <p><cite>params</cite> and <cite>results</cite> are local structures specific to the module.</p>
+        <ul>
+            <li><cite>Runner</cite> must implement two functions: <strong>Run()</strong> and <strong>ValidateParameters()</strong>.</li>
+            <li><cite>Run()</cite> takes a single argument: a <strong>[]byte</strong> of the encoded JSON Parameters, and returns a single string, typically a marshalled JSON string.</li>
+        </ul>
+        <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">Run</span><span class="p">(</span><span class="nx">Args</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+    <span class="o">...</span>
+    <span class="k">return</span>
+<span class="p">}</span></code></pre>
+        <ul>
+            <li><cite>ValidateParameters()</cite> does not take any argument, and returns a single error when validation fails.</li>
+        </ul>
+        <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">ValidateParameters</span><span class="p">()</span> <span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="o">...</span>
+    <span class="k">return</span>
+<span class="p">}</span></code></pre>
+        <ul>
+            <li>a module must have a registration name that is unique</li>
+        </ul>
+    </section>
+    <section id="use-a-module">
+        <h2>4   Use a module</h2>
+        <p>To use a module, you only need to anonymously import it into the configuration of the agent. The example agent configuration at <a href="../conf/mig-agent-conf.go.inc">conf/mig-agent-conf.go.inc</a> shows how modules need to be imported using the underscore character:</p>
+        <pre><code class="go"><span class="kn">import</span><span class="p">(</span>
+    <span class="s">"mig"</span>
+    <span class="s">"time"</span>
+
+    <span class="nx">_</span> <span class="s">"mig/modules/filechecker"</span>
+    <span class="nx">_</span> <span class="s">"mig/modules/connected"</span>
+    <span class="nx">_</span> <span class="s">"mig/modules/upgrade"</span>
+    <span class="nx">_</span> <span class="s">"mig/modules/agentdestroy"</span>
+    <span class="nx">_</span> <span class="s">"mig/modules/example"</span>
+<span class="p">)</span></code></pre>
+        <p>Additionally, the MIG console may need to import the modules as well in order to use the <cite>HasResultsPrinter</cite> interface. To do so, add the same imports into the <cite>import()</cite> section of <cite>src/mig/clients/console/console.go</cite>.</p>
+    </section>
+    <section id="optional-module-interfaces">
+        <h2>5   Optional module interfaces</h2>
+        <section id="hasresultsprinter">
+            <h3>5.1   HasResultsPrinter</h3>
+            <p><cite>HasResultsPrinter</cite> is an interface used to allow a module <cite>Runner</cite> to implement the <strong>PrintResults()</strong> function. <cite>PrintResults()</cite> can be used to return the results of a module as an array of string, for pretty display in the MIG Console.</p>
+            <p>The interface is defined as:</p>
+            <pre><code class="go"><span class="kd">type</span> <span class="nx">HasResultsPrinter</span> <span class="kd">interface</span> <span class="p">{</span>
+    <span class="nx">PrintResults</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">([]</span><span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+<span class="p">}</span></code></pre>
+            <p>And a module implementation would have the function:</p>
+            <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">PrintResults</span><span class="p">(</span><span class="nx">rawResults</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">matchOnly</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">(</span><span class="nx">prints</span> <span class="p">[]</span><span class="kt">string</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="o">...</span>
+    <span class="k">return</span>
+<span class="p">}</span></code></pre>
+        </section>
+        <section id="hasparamscreator">
+            <h3>5.2   HasParamsCreator</h3>
+            <p><cite>HasParamsCreator</cite> can be implemented by a module to provide interactive parameters creation in the MIG Console. It doesn't accept any input value, but prompts the user for the correct parameters, and returns a Parameters structure back to the caller. It can be implemented in various ways, as long as it prompt the user in the terminal using something like <cite>fmt.Scanln()</cite>.</p>
+            <p>The interface is defined as:</p>
+            <pre><code class="go"><span class="kd">type</span> <span class="nx">HasParamsCreator</span> <span class="kd">interface</span> <span class="p">{</span>
+    <span class="nx">ParamsCreator</span><span class="p">()</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span>
+<span class="p">}</span></code></pre>
+            <p>A module implementation would have the function:</p>
+            <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">ParamsCreator</span><span class="p">()</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+     <span class="c1">// init blank parameters
+</span>     <span class="nx">p</span> <span class="o">:=</span> <span class="nx">newParameters</span><span class="p">()</span>
+
+     <span class="c1">// prompt the user for various parameters
+</span>     <span class="o">...</span>
+
+     <span class="c1">// validate and return params as an interface
+</span>     <span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span> <span class="p">=</span> <span class="o">*</span><span class="nx">p</span>
+     <span class="nx">err</span> <span class="o">:=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">ValidateParameters</span><span class="p">()</span>
+     <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+         <span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+     <span class="p">}</span>
+     <span class="k">return</span> <span class="nx">p</span>
+ <span class="p">}</span></code></pre>
+            <p>The <cite>filechecker</cite> module implements this interface and can be used as an example.</p>
+        </section>
+    </section>
+</body>
+</html>

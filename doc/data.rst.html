@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <link href="doc/docstyle.css" rel="stylesheet" />
+    <title>MIG Data</title>
+    <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
+</head>
+<body>
+    <h1>MIG Data</h1>
+    <aside class="topic contents" id="table-of-contents">
+        <h1>Table of Contents</h1>
+        <ul class="auto-toc">
+            <li><a href="#scheduler-spool">1   Scheduler Spool</a></li>
+            <li>
+                <p><a href="#postgresql-schema">2   Postgresql Schema</a></p>
+                <ul class="auto-toc">
+                    <li><a href="#entity-relationship-diagram">2.1   Entity-Relationship Diagram</a></li>
+                    <li><a href="#structure-tables">2.2   Structure &amp; Tables</a></li>
+                    <li><a href="#database-creation-script">2.3   Database creation script</a></li>
+                </ul>
+            </li>
+            <li>
+                <p><a href="#queries">3   Queries</a></p>
+                <ul class="auto-toc">
+                    <li><a href="#adding-investigators">3.1   Adding Investigators</a></li>
+                    <li><a href="#finding-offline-agents">3.2   Finding offline agents</a></li>
+                    <li><a href="#finding-double-agents">3.3   Finding double agents</a></li>
+                </ul>
+            </li>
+        </ul>
+    </aside>
+    <section id="scheduler-spool">
+        <h2>1   Scheduler Spool</h2>
+        <p>MIG data is stored both on the file system of the scheduler, and in mongodb. On the scheduler, each action and command are stored individually in a text file in /var/cache/mig (by default).</p>
+        <pre><code class="bash"><span class="nv">$ </span>tree -d /var/cache/mig/
+/var/cache/mig/
+├── action
+│   ├── <span class="k">done</span>
+│   ├── inflight
+│   ├── invalid
+│   └── new
+└── <span class="nb">command</span>
+    ├── <span class="k">done</span>
+    ├── inflight
+    ├── ready
+    └── returned
+
+10 directories</code></pre>
+    </section>
+    <section id="postgresql-schema">
+        <h2>2   Postgresql Schema</h2>
+        <section id="entity-relationship-diagram">
+            <h3>2.1   Entity-Relationship Diagram</h3>
+            <img src=".files/ER-diagram.png" />
+        </section>
+        <section id="structure-tables">
+            <h3>2.2   Structure &amp; Tables</h3>
+            <p>The <cite>actions</cite> table contains the detail of each action ran by the MIG platform. Its structure contains the base action fields found in the json format of an action, plus a number of additional fields such as timestamps and counters.</p>
+            <pre><code class="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="n">actions</span> <span class="p">(</span>
+    <span class="n">id</span> <span class="nb">numeric</span> <span class="k">PRIMARY</span> <span class="k">KEY</span><span class="p">,</span>
+    <span class="n">name</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">2048</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">target</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">2048</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">description</span> <span class="n">json</span><span class="p">,</span>
+    <span class="n">threat</span> <span class="n">json</span><span class="p">,</span>
+    <span class="n">operations</span> <span class="n">json</span><span class="p">,</span>
+    <span class="n">validfrom</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">expireafter</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">starttime</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span><span class="p">,</span>
+    <span class="n">finishtime</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span><span class="p">,</span>
+    <span class="n">lastupdatetime</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span><span class="p">,</span>
+    <span class="n">status</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">256</span><span class="p">),</span>
+    <span class="n">sentctr</span> <span class="nb">integer</span><span class="p">,</span>
+    <span class="n">returnedctr</span> <span class="nb">integer</span><span class="p">,</span>
+    <span class="n">donectr</span> <span class="nb">integer</span><span class="p">,</span>
+    <span class="n">cancelledctr</span> <span class="nb">integer</span><span class="p">,</span>
+    <span class="n">failedctr</span> <span class="nb">integer</span><span class="p">,</span>
+    <span class="n">timeoutctr</span> <span class="nb">integer</span><span class="p">,</span>
+    <span class="n">pgpsignatures</span> <span class="n">json</span><span class="p">,</span>
+    <span class="n">syntaxversion</span> <span class="nb">integer</span>
+<span class="p">);</span></code></pre>
+            <p>The <cite>agents</cite> table contains the registrations of each agents known of the MIG platform.</p>
+            <pre><code class="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="n">agents</span> <span class="p">(</span>
+    <span class="n">id</span> <span class="nb">numeric</span> <span class="k">PRIMARY</span> <span class="k">KEY</span><span class="p">,</span>
+    <span class="n">name</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">2048</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">queueloc</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">2048</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">os</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">2048</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="k">version</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">2048</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">pid</span> <span class="nb">integer</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">starttime</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">destructiontime</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span><span class="p">,</span>
+    <span class="n">heartbeattime</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">status</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">256</span><span class="p">),</span>
+    <span class="n">environment</span> <span class="n">json</span>
+<span class="p">);</span></code></pre>
+            <p>The <cite>commands</cite> table contains each action sent to each agent.</p>
+            <pre><code class="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="n">commands</span> <span class="p">(</span>
+    <span class="n">id</span> <span class="nb">numeric</span> <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">actionid</span> <span class="nb">numeric</span> <span class="k">references</span> <span class="n">actions</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">agentid</span> <span class="nb">numeric</span> <span class="k">references</span> <span class="n">agents</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">status</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">256</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">results</span> <span class="n">json</span><span class="p">,</span>
+    <span class="n">starttime</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">finishtime</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span>
+<span class="p">);</span></code></pre>
+            <p><cite>investigators</cite> have a table that contains their public PGP key, and can be used when verifying signatures and generating ACLs.</p>
+            <pre><code class="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="n">investigators</span> <span class="p">(</span>
+    <span class="n">id</span> <span class="nb">numeric</span> <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">name</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">pgpfingerprint</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">publickey</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">65536</span><span class="p">)</span>
+<span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">UNIQUE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">investigators</span> <span class="p">(</span><span class="n">pgpfingerprint</span><span class="p">);</span></code></pre>
+            <p>The <cite>signatures</cite> table is a junction between an action and the investigators that signed the action.</p>
+            <pre><code class="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="n">signatures</span> <span class="p">(</span>
+    <span class="n">actionid</span> <span class="nb">numeric</span> <span class="k">references</span> <span class="n">actions</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">investigatorid</span> <span class="nb">numeric</span> <span class="k">references</span> <span class="n">investigators</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">pgpsignature</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">4096</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span>
+<span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">UNIQUE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">signatures</span> <span class="p">(</span><span class="n">actionid</span><span class="p">,</span> <span class="n">investigatorid</span><span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">signatures</span> <span class="p">(</span><span class="n">actionid</span><span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">signatures</span> <span class="p">(</span><span class="n">investigatorid</span><span class="p">);</span></code></pre>
+            <p>Agents modules are registered in the <cite>modules</cite> table.</p>
+            <pre><code class="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="n">modules</span> <span class="p">(</span>
+    <span class="n">id</span> <span class="nb">numeric</span> <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">name</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">256</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span>
+<span class="p">);</span></code></pre>
+            <p>ACLs are managed in two junction tables. First, the <cite>agtmodreq</cite> table contains the minimum weight an action must have to run a particular module on a given agent.</p>
+            <pre><code class="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="n">agtmodreq</span> <span class="p">(</span>
+    <span class="n">moduleid</span> <span class="nb">numeric</span> <span class="k">references</span> <span class="n">modules</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">agentid</span> <span class="nb">numeric</span> <span class="k">references</span> <span class="n">agents</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">minimumweight</span> <span class="nb">integer</span> <span class="k">NOT</span> <span class="k">NULL</span>
+<span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">UNIQUE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">agtmodreq</span> <span class="p">(</span><span class="n">moduleid</span><span class="p">,</span> <span class="n">agentid</span><span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">agtmodreq</span> <span class="p">(</span><span class="n">moduleid</span><span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">agtmodreq</span> <span class="p">(</span><span class="n">agentid</span><span class="p">);</span></code></pre>
+            <p>Second, the <cite>invagtmodperm</cite> table give a weight to an investigator for a module on an agent. This model allows for very fine grained permissions management.</p>
+            <pre><code class="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="n">invagtmodperm</span> <span class="p">(</span>
+    <span class="n">investigatorid</span> <span class="nb">numeric</span> <span class="k">references</span> <span class="n">investigators</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">agentid</span> <span class="nb">numeric</span> <span class="k">references</span> <span class="n">agents</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">moduleid</span> <span class="nb">numeric</span> <span class="k">references</span> <span class="n">modules</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">weight</span> <span class="nb">integer</span> <span class="k">NOT</span> <span class="k">NULL</span>
+<span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">UNIQUE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">invagtmodperm</span> <span class="p">(</span><span class="n">investigatorid</span><span class="p">,</span> <span class="n">agentid</span><span class="p">,</span> <span class="n">moduleid</span><span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">invagtmodperm</span> <span class="p">(</span><span class="n">investigatorid</span><span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">invagtmodperm</span> <span class="p">(</span><span class="n">agentid</span><span class="p">);</span>
+<span class="k">CREATE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">invagtmodperm</span> <span class="p">(</span><span class="n">moduleid</span><span class="p">);</span></code></pre>
+        </section>
+        <section id="database-creation-script">
+            <h3>2.3   Database creation script</h3>
+            <pre source="doc/.files/createdb.sh"><code class="bash"><span class="c">#! /usr/bin/env bash
+</span><span class="o">[</span> ! -x <span class="k">$(</span>which sudo<span class="k">)</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"sudo isn't available, that won't work"</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>1
+
+
+<span class="k">for </span>user in <span class="s2">"migadmin"</span> <span class="s2">"migapi"</span> <span class="s2">"migscheduler"</span>; <span class="k">do
+    </span><span class="nv">pass</span><span class="o">=</span><span class="k">$(</span>&lt; /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c<span class="k">${</span><span class="nv">1</span><span class="k">:-</span><span class="nv">32</span><span class="k">})</span>
+    sudo su postgres -c <span class="s2">"psql -c 'CREATE ROLE $user;'"</span> 1&gt;/dev/null
+    <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"ERROR: user creation failed."</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>123
+    sudo su postgres -c <span class="s2">"psql -c \"ALTER ROLE $user WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD '$pass';\""</span> 1&gt;/dev/null
+    <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"ERROR: user creation failed."</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>123
+    <span class="nb">echo</span> <span class="s2">"Created user $user with password '$pass'"</span>
+<span class="k">done
+</span>sudo su postgres -c <span class="s2">"psql -c 'CREATE DATABASE mig OWNER migadmin;'"</span> 1&gt;/dev/null
+<span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"ERROR: database creation failed."</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>123
+
+<span class="nv">createdbtemp</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span>
+cat &gt; <span class="nv">$createdbtemp</span> <span class="s">&lt;&lt; EOF
+CREATE TABLE actions (
+    id numeric NOT NULL,
+    name character varying(2048) NOT NULL,
+    target character varying(2048) NOT NULL,
+    description json,
+    threat json,
+    operations json,
+    validfrom timestamp with time zone NOT NULL,
+    expireafter timestamp with time zone NOT NULL,
+    starttime timestamp with time zone,
+    finishtime timestamp with time zone,
+    lastupdatetime timestamp with time zone,
+    status character varying(256),
+    sentctr integer,
+    returnedctr integer,
+    donectr integer,
+    cancelledctr integer,
+    failedctr integer,
+    timeoutctr integer,
+    pgpsignatures json,
+    syntaxversion integer
+);
+ALTER TABLE public.actions OWNER TO migadmin;
+ALTER TABLE ONLY actions
+    ADD CONSTRAINT actions_pkey PRIMARY KEY (id);
+
+CREATE TABLE agents (
+    id numeric NOT NULL,
+    name character varying(2048) NOT NULL,
+    queueloc character varying(2048) NOT NULL,
+    os character varying(2048) NOT NULL,
+    version character varying(2048) NOT NULL,
+    pid integer NOT NULL,
+    starttime timestamp with time zone NOT NULL,
+    destructiontime timestamp with time zone,
+    heartbeattime timestamp with time zone NOT NULL,
+    status character varying(255),
+    environment json
+);
+ALTER TABLE public.agents OWNER TO migadmin;
+ALTER TABLE ONLY agents
+    ADD CONSTRAINT agents_pkey PRIMARY KEY (id);
+CREATE INDEX agents_heartbeattime_idx ON agents(heartbeattime DESC);
+CREATE INDEX agents_queueloc_pid_idx ON agents(queueloc, pid);
+
+CREATE TABLE agtmodreq (
+    moduleid numeric NOT NULL,
+    agentid numeric NOT NULL,
+    minimumweight integer NOT NULL
+);
+ALTER TABLE public.agtmodreq OWNER TO migadmin;
+CREATE UNIQUE INDEX agtmodreq_moduleid_agentid_idx ON agtmodreq USING btree (moduleid, agentid);
+CREATE INDEX agtmodreq_agentid_idx ON agtmodreq USING btree (agentid);
+CREATE INDEX agtmodreq_moduleid_idx ON agtmodreq USING btree (moduleid);
+
+CREATE TABLE commands (
+    id numeric NOT NULL,
+    actionid numeric NOT NULL,
+    agentid numeric NOT NULL,
+    status character varying(255) NOT NULL,
+    results json,
+    starttime timestamp with time zone NOT NULL,
+    finishtime timestamp with time zone
+);
+ALTER TABLE public.commands OWNER TO migadmin;
+ALTER TABLE ONLY commands
+    ADD CONSTRAINT commands_pkey PRIMARY KEY (id);
+
+CREATE TABLE invagtmodperm (
+    investigatorid numeric NOT NULL,
+    agentid numeric NOT NULL,
+    moduleid numeric NOT NULL,
+    weight integer NOT NULL
+);
+ALTER TABLE public.invagtmodperm OWNER TO migadmin;
+CREATE UNIQUE INDEX invagtmodperm_investigatorid_agentid_moduleid_idx ON invagtmodperm USING btree (investigatorid, agentid, moduleid);
+CREATE INDEX invagtmodperm_agentid_idx ON invagtmodperm USING btree (agentid);
+CREATE INDEX invagtmodperm_investigatorid_idx ON invagtmodperm USING btree (investigatorid);
+CREATE INDEX invagtmodperm_moduleid_idx ON invagtmodperm USING btree (moduleid);
+
+CREATE TABLE investigators (
+    id bigserial NOT NULL,
+    name character varying(1024) NOT NULL,
+    pgpfingerprint character varying(128),
+    publickey bytea
+);
+ALTER TABLE public.investigators OWNER TO migadmin;
+ALTER TABLE ONLY investigators
+    ADD CONSTRAINT investigators_pkey PRIMARY KEY (id);
+CREATE UNIQUE INDEX investigators_pgpfingerprint_idx ON investigators USING btree (pgpfingerprint);
+
+CREATE TABLE modules (
+    id numeric NOT NULL,
+    name character varying(256) NOT NULL
+);
+ALTER TABLE public.modules OWNER TO migadmin;
+ALTER TABLE ONLY modules
+    ADD CONSTRAINT modules_pkey PRIMARY KEY (id);
+
+CREATE TABLE signatures (
+    actionid numeric NOT NULL,
+    investigatorid numeric NOT NULL,
+    pgpsignature character varying(4096) NOT NULL
+);
+ALTER TABLE public.signatures OWNER TO migadmin;
+CREATE UNIQUE INDEX signatures_actionid_investigatorid_idx ON signatures USING btree (actionid, investigatorid);
+CREATE INDEX signatures_actionid_idx ON signatures USING btree (actionid);
+CREATE INDEX signatures_investigatorid_idx ON signatures USING btree (investigatorid);
+
+ALTER TABLE ONLY agtmodreq
+    ADD CONSTRAINT agtmodreq_moduleid_fkey FOREIGN KEY (moduleid) REFERENCES modules(id);
+
+ALTER TABLE ONLY commands
+    ADD CONSTRAINT commands_actionid_fkey FOREIGN KEY (actionid) REFERENCES actions(id);
+
+ALTER TABLE ONLY commands
+    ADD CONSTRAINT commands_agentid_fkey FOREIGN KEY (agentid) REFERENCES agents(id);
+
+ALTER TABLE ONLY invagtmodperm
+    ADD CONSTRAINT invagtmodperm_agentid_fkey FOREIGN KEY (agentid) REFERENCES agents(id);
+
+ALTER TABLE ONLY invagtmodperm
+    ADD CONSTRAINT invagtmodperm_investigatorid_fkey FOREIGN KEY (investigatorid) REFERENCES investigators(id);
+
+ALTER TABLE ONLY invagtmodperm
+    ADD CONSTRAINT invagtmodperm_moduleid_fkey FOREIGN KEY (moduleid) REFERENCES modules(id);
+
+ALTER TABLE ONLY signatures
+    ADD CONSTRAINT signatures_actionid_fkey FOREIGN KEY (actionid) REFERENCES actions(id);
+
+ALTER TABLE ONLY signatures
+    ADD CONSTRAINT signatures_investigatorid_fkey FOREIGN KEY (investigatorid) REFERENCES investigators(id);
+EOF</span>
+
+chmod 777 <span class="nv">$createdbtemp</span>
+sudo su postgres -c <span class="s2">"psql -d mig -f $createdbtemp"</span> 1&gt;/dev/null
+<span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"ERROR: tables creation failed."</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>123
+rm <span class="s2">"$createdbtemp"</span>
+
+<span class="nv">granttmp</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span>
+cat &gt; <span class="nv">$granttmp</span> <span class="s">&lt;&lt; EOF
+GRANT ALL PRIVILEGES ON DATABASE mig TO migadmin;
+
+\c mig
+
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO migscheduler;
+GRANT INSERT, UPDATE ON actions, commands, agents, signatures TO migscheduler;
+
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO migapi;
+GRANT INSERT ON actions, signatures TO migapi;
+EOF</span>
+
+chmod 777 <span class="nv">$granttmp</span>
+sudo su postgres -c <span class="s2">"psql -f $granttmp"</span> 1&gt;/dev/null
+<span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"ERROR: grants failed."</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>123
+rm <span class="s2">"$granttmp"</span>
+
+<span class="nb">echo</span> <span class="s2">"MIG Database created successfully."</span></code></pre>
+        </section>
+    </section>
+    <section id="queries">
+        <h2>3   Queries</h2>
+        <section id="adding-investigators">
+            <h3>3.1   Adding Investigators</h3>
+            <p>In the future, this will probably be automated via the API. But for now, and until we have a strong authentication mechanism for API calls, it must be done manually in the database.</p>
+            <p>Adapt the query below to add a new investigator.</p>
+            <pre><code class="sql"><span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">investigators</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">pgpfingerprint</span><span class="p">)</span>
+<span class="k">VALUES</span> <span class="p">(</span><span class="s1">'Bob Kelso'</span><span class="p">,</span> <span class="s1">'E608......'</span><span class="p">);</span></code></pre>
+        </section>
+        <section id="finding-offline-agents">
+            <h3>3.2   Finding offline agents</h3>
+            <p>The following query retrieves a list of agents that have been online over the last 30 days, but have not sent a heartbeat in the last 5 minutes.</p>
+            <pre><code class="sql"><span class="k">SELECT</span> <span class="k">DISTINCT</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">agents</span>
+<span class="k">WHERE</span> <span class="n">name</span> <span class="k">IN</span> <span class="p">(</span>
+    <span class="k">SELECT</span> <span class="k">DISTINCT</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">agents</span>
+    <span class="k">WHERE</span> <span class="n">heartbeattime</span> <span class="o">&gt;=</span> <span class="n">NOW</span><span class="p">()</span> <span class="o">-</span> <span class="nb">interval</span> <span class="s1">'30 days'</span>
+<span class="p">)</span> <span class="k">AND</span> <span class="n">name</span> <span class="k">NOT</span> <span class="k">IN</span> <span class="p">(</span>
+    <span class="k">SELECT</span> <span class="k">DISTINCT</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">agents</span>
+    <span class="k">WHERE</span> <span class="n">heartbeattime</span> <span class="o">&gt;=</span> <span class="n">NOW</span><span class="p">()</span> <span class="o">-</span> <span class="nb">interval</span> <span class="s1">'5 minutes'</span>
+<span class="p">)</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">name</span><span class="p">;</span></code></pre>
+        </section>
+        <section id="finding-double-agents">
+            <h3>3.3   Finding double agents</h3>
+            <p>Sometimes during upgrades the older agent isn't shut down. You can find these endpoints with double agents in the database because each agent sends separate heartbeats for the same endpoint:</p>
+            <pre><code class="sql"><span class="k">SELECT</span> <span class="k">COUNT</span><span class="p">(</span><span class="n">queueloc</span><span class="p">),</span> <span class="n">queueloc</span> <span class="k">FROM</span> <span class="n">agents</span>
+<span class="k">WHERE</span> <span class="n">heartbeattime</span> <span class="o">&gt;=</span> <span class="n">NOW</span><span class="p">()</span> <span class="o">-</span> <span class="nb">INTERVAL</span> <span class="s1">'10 minutes'</span>
+<span class="k">GROUP</span> <span class="k">BY</span> <span class="n">queueloc</span> <span class="k">HAVING</span> <span class="k">COUNT</span><span class="p">(</span><span class="n">queueloc</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
+<span class="k">ORDER</span> <span class="k">BY</span> <span class="k">count</span><span class="p">(</span><span class="n">queueloc</span><span class="p">)</span> <span class="k">DESC</span><span class="p">;</span></code></pre>
+            <p>This query will list all the agents sorted by the count of agents heartbeatting on each endpoint:</p>
+            <pre>| count  |             name
+|--------+--------------------------------------
+| 3      | puppet3.private.dc1.example.net
+| 2      | mv1.mv.example.net
+| 2      | memcache1.webapp.dc1.example.net
+| 2      | ip2.dc.example.net
+| 2      | command.private.corp.dc1.example.net</pre>
+        </section>
+    </section>
+</body>
+</html>

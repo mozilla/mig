@@ -8,6 +8,8 @@ src/mig/agent/configuration.go
 doc/*
 !doc/*.rst
 !doc/.files
+!doc/*.rst.html
+!doc/docstyle.css
 *.a
 *.so
 *.o
