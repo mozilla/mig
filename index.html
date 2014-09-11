@@ -16,135 +16,66 @@
     <header>
       <div class="container">
         <h1>MIG: Mozilla InvestiGator</h1>
-        <h2>OpSec&#39;s platform for investigative surgery of remote endpoints.</h2>
-
+        <h2>Mozilla OpSec&#39;s platform real-time digital forensic and incident response on remote endpoints.</h2>
         <section id="downloads">
-          <a href="https://github.com/mozilla/mig/zipball/master" class="btn">Download as .zip</a>
-          <a href="https://github.com/mozilla/mig/tarball/master" class="btn">Download as .tar.gz</a>
-          <a href="https://github.com/mozilla/mig" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+          <table><tr>
+            <td>
+              <a href="https://github.com/mozilla/mig" class="btn">Source Code</a>
+              <a href="doc.html" class="btn">Documentation</a>
+              <a href="about.html" class="btn">About</a>
+            </td>
+            <td>
+              <p><img src="http://4u.1nw.eu/mig-logo-transparent.png" alt="MIG logo" width="500"></p>
+            </td>
+          </tr></table>
         </section>
       </div>
     </header>
 
     <div class="container">
       <section id="main_content">
-        <h1>
-<a name="mig-mozilla-investigator" class="anchor" href="#mig-mozilla-investigator"><span class="octicon octicon-link"></span></a>MIG: Mozilla InvestiGator</h1>
-
-<p>MIG is a platform to perform investigative surgery on remote endpoints. It enables investigators to obtain information from large numbers of systems in parallel, thus accelerating investigation of incidents.</p>
-
-<p><img src="http://4u.1nw.eu/mig-logo-transparent.png" alt="MIG logo"></p>
-
-<p>MIG is designed to provide strong security primitives:</p>
-
-<ul>
-<li>Access control is ensured by requiring GPG signatures on all actions. Sensitive actions can also request signatures from multiple investigators. An attacker who takes over the central server will be able to read non-sensitive data, but will not be able to send actions to agents. The GPG keys are securely kept by their investigators.</li>
-<li>Privacy is respected by never retrieving raw data from endpoints. When MIG is ran on laptops or phones, end-users can request reports on the operations performed on their devices. The 2-man-rule for sensitive actions also protect from rogue investigators invading privacy.</li>
-<li>Reliability is built in. No component is critical. If an agent crashes, it will attempt to recover and reconnect to the platform indefinitely. If the platform crashes, a new platform can be rebuilt rapidly without backups.</li>
-</ul><p>MIG privileges a model where requesting information from endpoints is fast and simple. It does not attempt to record everything all the time. Instead, it assumes that when an information will be needed, it will be easy to retrieve it.</p>
-
-<p>It's an army of Sherlock Holmes, ready to interrogate your endpoints within seconds.</p>
-
-<p>For example: an investigator launches an action to search for an apache module
-that matches a given md5 value. MIG will register the action, find all the
-relevant targets and send commands to each target with the detail of the
-action. Each agent then individually run the action using built-in modules
-locally, and sends the results back to the MIG platform.</p>
-
-<p>Agents are designed to be lightweight, secure, and easy to deploy. All
-parameters are built into the agent at compile time, include the list of
-investigator's public keys. The agent binary is statically compiled for a target
-platform and can be shipped without any external dependency.</p>
-
-<p>MIG is designed to be fast, and asynchronous. It uses AMQP to distribute actions
-to endpoints, and relies on Go channels to prevent components from blocking.
-Running actions and commands are stored on disk cache, and don't rely on running
-processes for reliability.</p>
-
-<p>Speed is a strong requirement. Most actions will only take a few hundreds
-milliseconds to run. Larger ones, for example when looking for a hash in a large
-directory, should run in less than a minute.</p>
-
-<p>Check out this 6 minutes presentation for background:</p>
-
-<p><a href="http://www.youtube.com/watch?v=uwrJ6Mtc4S0"><img src="http://img.youtube.com/vi/uwrJ6Mtc4S0/0.jpg" alt="MIG youtube video"></a></p>
-
-<h2>
-<a name="goals" class="anchor" href="#goals"><span class="octicon octicon-link"></span></a>Goals</h2>
-
-<ul>
-<li>Query a pool of endpoints to verify the presence of a specific indicators
-(similar to IOC, but we use a different format)</li>
-<li>Provide response mechanisms to lock down compromised endpoints</li>
-<li>Periodically verify endpoint's compliance with the Security Policies</li>
-</ul><h2>
-<a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h2>
-
-<ul>
-<li>Provide strong authentication of investigators
-
-<ul>
-<li>Actions must have a valid GPG signature, each investigator has a different
-key, for tracking.</li>
-</ul>
-</li>
-<li>Provide a way to inspect remote systems for indicators of compromise (IOC).
-At the moment, this is limited to :
-
-<ul>
-<li>file by name</li>
-<li>file content by regex</li>
-<li>file hashes: md5, sha1, sha256, sha384, sha512, sha3_224,sha3_256,
-sha3_384, sha3_512</li>
-</ul>
-</li>
-<li>Protect data security, investigate without intruding:
-
-<ul>
-<li>Raw data must not be readily available to investigators</li>
-</ul>
-</li>
-</ul><p>Todo list:</p>
-
-<ul>
-<li>More agent modules
-
-<ul>
-<li>low level devices (memory, file system blocks, network cards)</li>
-<li>established connections</li>
-<li>firewall rules</li>
-<li>lots more ...</li>
-</ul>
-</li>
-<li>Provide response mechanisms, including:
-
-<ul>
-<li>dynamic firewall rules additions &amp; removal</li>
-<li>system password changes</li>
-<li>process execution (execve) &amp; destruction (kill)</li>
-</ul>
-</li>
-<li>Input/Output IOCs, Yara, ... through the API</li>
-<li>Output results in standard format for alerting</li>
-</ul><h2>
-<a name="documentation" class="anchor" href="#documentation"><span class="octicon octicon-link"></span></a>Documentation</h2>
-
-<p>All documentation is available in the 'doc' directory.</p>
-
-<h2>
-<a name="bug--issue-tracker" class="anchor" href="#bug--issue-tracker"><span class="octicon octicon-link"></span></a>Bug &amp; Issue tracker</h2>
-
-<p>We use Bugzilla to track the work on MIG.</p>
-
-<ul>
-<li>List open bugs: <a href="https://bugzilla.mozilla.org/showdependencytree.cgi?id=896480&amp;hide_resolved=1">Bugzilla MIG</a>
-</li>
-<li>Create a new bug: <a href="https://bugzilla.mozilla.org/enter_bug.cgi?product=mozilla.org&amp;component=Security%20Assurance%3A%20Operations">Bugzilla OpSec</a>
-</li>
-</ul>
+        <table><tr><td>
+            <p>MIG is a platform to perform investigative surgery on remote endpoints. It enables investigators to obtain information from large numbers of systems in parallel, thus accelerating investigation of incidents.</p>
+            <p>MIG is composed of agents installed on all systems of an infrastructure. The agents can be queried in real-time using a messenging protocol implemented in the MIG Scheduler. MIG has an API, a database, RabbitMQ relays and a console client. It allows investigators to send actions to pools of agents, and check for indicator of compromision, verify the state of a configuration, block an account, create a firewall rule, update a blacklist and so on.</p> 
+            <p>It's an army of Sherlock Holmes, ready to interrogate your endpoints within seconds.</p>
+        </td><td>
+            <a href="http://www.youtube.com/watch?v=wJwj5YB6FFA"><img src="http://img.youtube.com/vi/wJwj5YB6FFA/0.jpg" /></a>
+        </td></tr></table>
+        
+            <h2>Concepts</h2>
+            <p>
+            <h3>Query the infrastructure within seconds</h3>
+            For example: an investigator launches an action to search for an apache module
+            that matches a given md5 value. MIG will register the action, find all the
+            relevant targets and send commands to each target agent with the detail of the
+            action. Each agent then individually runs the action using built-in modules,
+            and sends the results back to the MIG platform.
+            <br /><br />
+            <h3>Easy to deploy, easy to operate</h3>
+            Agents are designed to be lightweight, secure, and easy to deploy. All
+            parameters are built into the agent at compile time, include the list of
+            investigator's public keys. The agent binary is statically compiled for a target
+            platform and can be shipped without any external dependency. Deploying an agent
+            is as easy as running<br />
+            <b>wget -O /sbin/mig-agent https://fileserver/mig-agent && sudo /sbin/mig-agent</b>
+            <br /><br />
+            <h3>Fast and asynchronous</h3>
+            MIG is designed to be fast, and asynchronous. It uses AMQP to distribute actions
+            to endpoints, and relies on Go channels to prevent components from blocking.
+            Running actions and commands are stored on disk cache, and don't rely on running
+            processes for reliability.
+            <br /><br />
+            Speed is a strong requirement. Most actions will only take a few hundreds
+            milliseconds to run. Larger ones, for example when looking for a hash in a large
+            directory, should run in less than a minute or two.
+            <br /><br />
+            <h3>Strong security primitives</h3>
+            Privacy and security are paramount. Agents never send raw data back to the
+            platform, but only reply to questions instead. All actions are signed by GPG
+            keys that are not stored in the platform, thus preventing a compromision from
+            taking over the entire infrastructure.
+            </p>
       </section>
     </div>
-
-    
   </body>
 </html>
