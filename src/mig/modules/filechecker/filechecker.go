@@ -1082,13 +1082,13 @@ func getHash(fd *os.File, hashType float64) (hexhash string, err error) {
 	case checkSHA512:
 		h = sha512.New()
 	case checkSHA3_224:
-		h = sha3.NewKeccak224()
+		h = sha3.New224()
 	case checkSHA3_256:
-		h = sha3.NewKeccak256()
+		h = sha3.New256()
 	case checkSHA3_384:
-		h = sha3.NewKeccak384()
+		h = sha3.New384()
 	case checkSHA3_512:
-		h = sha3.NewKeccak512()
+		h = sha3.New512()
 	default:
 		err := fmt.Sprintf("getHash: Unkown hash type %d", hashType)
 		panic(err)

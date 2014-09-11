@@ -93,6 +93,7 @@ go_get_deps_into_system:
 
 go_get_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
+	$(GOGETTER) code.google.com/p/go.crypto/sha3
 	$(GOGETTER) github.com/streadway/amqp
 	$(GOGETTER) github.com/lib/pq
 	$(GOGETTER) github.com/howeyc/fsnotify
@@ -103,10 +104,13 @@ go_get_deps:
 	$(GOGETTER) bitbucket.org/kardianos/service
 	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
 	$(GOGETTER) camlistore.org/pkg/misc/pinentry
-	$(GOGETTER) github.com/bobappleyard/readline
 	$(GOGETTER) github.com/ccding/go-stun/stun
 ifeq ($(OS),windows)
 	$(GOGETTER) code.google.com/p/winsvc/eventlog
+endif
+ifeq ($(OS),darwin)
+	$(GOGETTER) github.com/bobappleyard/readline
+	echo 'make sure that you have readline installed via {port,brew} install readline'
 endif
 
 install: mig-agent mig-scheduler
