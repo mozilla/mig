@@ -43,11 +43,6 @@ INSTALL		:= install
 
 all: mig-agent mig-scheduler mig-action-generator mig-action-verifier
 
-doc:
-	for doc in $$(ls doc/*.rst); do \
-		rst2html5 --stylesheet=doc/docstyle.css "$$doc" > "$$doc.html"; \
-	done
-
 mig-agent:
 	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi

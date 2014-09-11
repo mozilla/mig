@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <link href="docstyle.css" rel="stylesheet" />
+    <title>MIG API</title>
+    <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
+</head>
+<body>
+    <h1>MIG API</h1>
+    <aside class="topic contents" id="table-of-contents">
+        <h1>Table of Contents</h1>
+        <ul class="auto-toc">
+            <li>
+                <p><a href="#api-endpoints">1   API endpoints</a></p>
+                <ul class="auto-toc">
+                    <li><a href="#get-dashboard">1.1   GET /dashboard</a></li>
+                    <li><a href="#get-action">1.2   GET /action</a></li>
+                    <li><a href="#get-command">1.3   GET /command</a></li>
+                    <li><a href="#get-search">1.4   GET /search</a></li>
+                    <li><a href="#get-agent-dashboard">1.5   GET /agent/dashboard</a></li>
+                    <li><a href="#post-action-create">1.6   POST /action/create/</a></li>
+                    <li><a href="#post-action-cancel">1.7   POST /action/cancel/</a></li>
+                    <li><a href="#post-command-cancel">1.8   POST /command/cancel/</a></li>
+                </ul>
+            </li>
+            <li>
+                <p><a href="#data-transformation">2   Data transformation</a></p>
+                <ul class="auto-toc">
+                    <li><a href="#compliance-items">2.1   Compliance Items</a></li>
+                </ul>
+            </li>
+        </ul>
+    </aside>
+    <p>Interactions between an investigator (a human being) and the MIG platform are performed through a REST API. The API exposes functions to create actions, retrieve results, and generally monitor the activity of the agents.</p>
+    <p>The API follows the core principles of REST, and provides discoverable endpoints. The document format follows the <a href="http://amundsen.com/media-types/collection/">Collection+JSON - Hypermedia Type</a>.</p>
+    <section id="api-endpoints">
+        <h2>1   API endpoints</h2>
+        <p>The API root is at <cite>/api/v1</cite>. All the endpoints described below are reachable behind the root.</p>
+        <section id="get-dashboard">
+            <h3>1.1   GET /dashboard</h3>
+            <ul>
+                <li>Description: display a list of the last 10 scheduled actions, with links to the corresponding commands.</li>
+                <li>Parameters: none</li>
+                <li>Example:</li>
+            </ul>
+            <pre><code class="bash"><span class="nv">$ </span>curl http://localhost:1664/api/v1/dashboard</code></pre>
+        </section>
+        <section id="get-action">
+            <h3>1.2   GET /action</h3>
+            <ul>
+                <li>Description: retrieve an action by its ID. Include links to related commands.</li>
+                <li>
+                    <dl>
+                        <dt>Parameters:</dt>
+                        <dd>
+                            <ul>
+                                <li><cite>actionid</cite>: a uint64 that identifies an action by its ID</li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+                <li>Example:</li>
+            </ul>
+            <pre><code class="bash">curl http://localhost:1664/api/v1/action?actionid<span class="o">=</span>6019232215298562584</code></pre>
+        </section>
+        <section id="get-command">
+            <h3>1.3   GET /command</h3>
+            <ul>
+                <li>Description: retrieve a command by its ID. Include link to related action.</li>
+                <li>
+                    <dl>
+                        <dt>Parameters:</dt>
+                        <dd>
+                            <ul>
+                                <li><cite>commandid</cite>: a uint64 that identifies a command by its ID</li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+                <li>Example:</li>
+            </ul>
+            <pre><code class="bash">curl http://localhost:1664/api/v1/command?commandid<span class="o">=</span>6019232259520546404</code></pre>
+        </section>
+        <section id="get-search">
+            <h3>1.4   GET /search</h3>
+            <ul>
+                <li>Description: search for actions, commands or agents.</li>
+                <li>
+                    <dl>
+                        <dt>Parameters:</dt>
+                        <dd>
+                            <ul>
+                                <li><cite>before</cite>: return results recorded before this RFC3339 date</li>
+                                <li><cite>after</cite>: return results recorded after this RFC3339 date"},</li>
+                                <li><cite>type</cite>: type defines what the search is looking for. must be <cite>action</cite>, <cite>command</cite> or <cite>agent</cite></li>
+                                <li><cite>report</cite>: if set, return results in the given report format (valid for <cite>command</cite> type only)</li>
+                                <li><cite>agentname</cite>: filter results on the agent name</li>
+                                <li><cite>actionname</cite>: filter results on the action name (valid for <cite>command</cite> and <cite>action</cite> types only)</li>
+                                <li><cite>actionid</cite>: filter results on the action ID (valid for <cite>command</cite> and <cite>action</cite> types only)</li>
+                                <li><cite>commandid</cite>: filter results on the command ID (valid for <cite>command</cite> type only)</li>
+                                <li><cite>status</cite>: filter on internal status (valid for <cite>command</cite> and <cite>agent</cite> only)</li>
+                                <li><cite>threatfamily</cite>: filter results of the threat family of the action</li>
+                                <li><cite>limit</cite>: limit the number of results to 10 by default</li>
+                                <li><cite>foundanything</cite>: filter commands on the <cite>foundanything</cite> boolean of their results (valid for <cite>command</cite> type only)</li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+                <li>Examples:</li>
+            </ul>
+            <p>Generate a compliance report from <cite>compliance</cite> action ran over the last 24 hours. For more information on the <cite>compliance</cite> format, see section 2.</p>
+            <pre><code class="bash">curl http://localhost:1664/api/v1/search?type<span class="o">=</span><span class="nb">command</span>&amp;threatfamily<span class="o">=</span>compliance&amp;status<span class="o">=</span><span class="k">done</span>&amp;report<span class="o">=</span>complianceitems&amp;limit<span class="o">=</span>100000&amp;after<span class="o">=</span>2014-05-30T00:00:00-04:00&amp;before<span class="o">=</span>2014-05-30T23:59:59-04:00</code></pre>
+            <p>List the agents that have sent a heartbeat in the last hour.</p>
+            <pre><code class="bash">curl http://localhost:1664/api/v1/search?type<span class="o">=</span>agent&amp;after<span class="o">=</span>2014-05-30T15:00:00-04:00&amp;limit<span class="o">=</span>200</code></pre>
+            <p>Find actions ran between two dates (limited to 10 results as is the default).</p>
+            <pre><code class="bash">curl http://localhost:1664/api/v1/search?type<span class="o">=</span>action&amp;status<span class="o">=</span>sent&amp;after<span class="o">=</span>2014-05-01T00:00:00-00:00&amp;before<span class="o">=</span>2014-05-30T00:00:00-00:00</code></pre>
+        </section>
+        <section id="get-agent-dashboard">
+            <h3>1.5   GET /agent/dashboard</h3>
+            <p>not implemented</p>
+        </section>
+        <section id="post-action-create">
+            <h3>1.6   POST /action/create/</h3>
+            <ul>
+                <li>Description: send a signed action to the API for submission to the scheduler.</li>
+                <li>
+                    <dl>
+                        <dt>Parameters: (POST body)</dt>
+                        <dd>
+                            <ul>
+                                <li><cite>action</cite>: a signed action in JSON format</li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+                <li>Example:</li>
+            </ul>
+            <pre><code class="bash">./bin/linux/amd64/mig-action-generator -i examples/actions/linux-backdoor.json -k jvehent@mozilla.com -posturl<span class="o">=</span>http://localhost:1664/api/v1/action/create/</code></pre>
+        </section>
+        <section id="post-action-cancel">
+            <h3>1.7   POST /action/cancel/</h3>
+            <p>not implemented</p>
+        </section>
+        <section id="post-command-cancel">
+            <h3>1.8   POST /command/cancel/</h3>
+            <p>not implemented</p>
+        </section>
+    </section>
+    <section id="data-transformation">
+        <h2>2   Data transformation</h2>
+        <p>The API implements several data transformation functions between the base format of <cite>action</cite> and <cite>command</cite>, and reporting formats.</p>
+        <section id="compliance-items">
+            <h3>2.1   Compliance Items</h3>
+            <p>The compliance item format is used to measure the compliance of a target with particular requirement. A single compliance item represent the compliance of one target (host) with one check (test + value).</p>
+            <p>In MIG, an <cite>action</cite> can contain compliance checks. An <cite>action</cite> creates one <cite>command</cite> per <cite>agent</cite>. Upon completion, the agent stores the results in the <cite>command.results</cite>. To visualize the results of an action, an investigator must look at the results of each command generated by that action.</p>
+            <p>To generate compliance items, the API takes the results from commands, and creates one item per result. Therefore, a single action that creates hundreds of commands could, in turn, generate thousands of compliance items.</p>
+            <p>The format for compliance items is simple, to be easily graphed and aggregated.</p>
+            <pre><code class="javascript"><span class="p">{</span>
+    <span class="s2">"target"</span><span class="o">:</span> <span class="s2">"server1.prod.example.net"</span><span class="p">,</span>
+    <span class="s2">"policy"</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">"level"</span><span class="o">:</span> <span class="s2">"medium"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="o">:</span> <span class="s2">"system"</span><span class="p">,</span>
+        <span class="s2">"url"</span><span class="o">:</span> <span class="s2">"https://link.to.compliance.reference/index.html"</span>
+    <span class="p">},</span>
+    <span class="s2">"check"</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">"description"</span><span class="o">:</span> <span class="s2">"compliance check for openssh"</span><span class="p">,</span>
+        <span class="s2">"location"</span><span class="o">:</span> <span class="s2">"/etc/ssh/sshd_config"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="o">:</span> <span class="s2">"check for verbose logging (logs fingerprints)"</span><span class="p">,</span>
+        <span class="s2">"test"</span><span class="o">:</span> <span class="p">{</span>
+            <span class="s2">"type"</span><span class="o">:</span> <span class="s2">"regex"</span><span class="p">,</span>
+            <span class="s2">"value"</span><span class="o">:</span> <span class="s2">"(?i)^loglevel verbose$"</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="s2">"compliance"</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="s2">"link"</span><span class="o">:</span> <span class="s2">"http://localhost:1664/api/v1/command?commandid=6019232265601776819"</span><span class="p">,</span>
+    <span class="s2">"timestamp"</span><span class="o">:</span> <span class="s2">"2014-05-30T14:55:41.907745Z"</span>
+<span class="p">}</span></code></pre>
+            <p>When using the parameter <cite>&amp;report=complianceitems</cite>, the <cite>search</cite> endpoint of the API will generate a list of compliance items from the results of the search.</p>
+        </section>
+    </section>
+</body>
+</html>
