@@ -37,44 +37,43 @@
         <table><tr><td>
             <p>MIG is a platform to perform investigative surgery on remote endpoints. It enables investigators to obtain information from large numbers of systems in parallel, thus accelerating investigation of incidents.</p>
             <p>MIG is composed of agents installed on all systems of an infrastructure. The agents can be queried in real-time using a messenging protocol implemented in the MIG Scheduler. MIG has an API, a database, RabbitMQ relays and a console client. It allows investigators to send actions to pools of agents, and check for indicator of compromision, verify the state of a configuration, block an account, create a firewall rule, update a blacklist and so on.</p> 
-            <p>It's an army of Sherlock Holmes, ready to interrogate your endpoints within seconds.</p>
         </td><td>
-            <iframe width="560" height="315" src="https://www.youtube.com/embed/wJwj5YB6FFA" frameborder="0" allowfullscreen></iframe>
+            <iframe width="500" height="315" src="https://www.youtube.com/embed/wJwj5YB6FFA" frameborder="0" allowfullscreen></iframe>
         </td></tr></table>
-        
-            <h2>Concepts</h2>
-            <p>
-            <h3>Query the infrastructure within seconds</h3>
-            For example: an investigator launches an action to search for an apache module
-            that matches a given md5 value. MIG will register the action, find all the
-            relevant targets and send commands to each target agent with the detail of the
-            action. Each agent then individually runs the action using built-in modules,
-            and sends the results back to the MIG platform.
-            <br /><br />
-            <h3>Easy to deploy, easy to operate</h3>
-            Agents are designed to be lightweight, secure, and easy to deploy. All
-            parameters are built into the agent at compile time, include the list of
-            investigator's public keys. The agent binary is statically compiled for a target
-            platform and can be shipped without any external dependency. Deploying an agent
-            is as easy as running<br />
-            <b>wget -O /sbin/mig-agent https://fileserver/mig-agent && sudo /sbin/mig-agent</b>
-            <br /><br />
-            <h3>Fast and asynchronous</h3>
-            MIG is designed to be fast, and asynchronous. It uses AMQP to distribute actions
-            to endpoints, and relies on Go channels to prevent components from blocking.
-            Running actions and commands are stored on disk cache, and don't rely on running
-            processes for reliability.
-            <br /><br />
-            Speed is a strong requirement. Most actions will only take a few hundreds
-            milliseconds to run. Larger ones, for example when looking for a hash in a large
-            directory, should run in less than a minute or two.
-            <br /><br />
-            <h3>Strong security primitives</h3>
-            Privacy and security are paramount. Agents never send raw data back to the
-            platform, but only reply to questions instead. All actions are signed by GPG
-            keys that are not stored in the platform, thus preventing a compromision from
-            taking over the entire infrastructure.
-            </p>
+        <p>It's an army of Sherlock Holmes, ready to interrogate your infrastructure within seconds.</p>
+        <h2>Concepts</h2>
+        <p>
+        <h3>Search for IOCs in real-time</h3>
+        For example: an investigator launches an action to search for an apache module
+        that matches a given md5 value. MIG will register the action, find all the
+        relevant targets and send commands to each target agent with the detail of the
+        action. Each agent then individually runs the action using built-in modules,
+        and sends the results back to the MIG platform.
+        <br /><br />
+        <h3>Easy to deploy, easy to operate</h3>
+        Agents are designed to be lightweight, secure, and easy to deploy. All
+        parameters are built into the agent at compile time, include the list of
+        investigator's public keys. The agent binary is statically compiled for a target
+        platform and can be shipped without any external dependency. Deploying an agent
+        is as easy as running<br />
+        <b>wget -O /sbin/mig-agent https://fileserver/mig-agent && sudo /sbin/mig-agent</b>
+        <br /><br />
+        <h3>Fast and asynchronous</h3>
+        MIG is designed to be fast, and asynchronous. It uses AMQP to distribute actions
+        to endpoints, and relies on Go channels to prevent components from blocking.
+        Running actions and commands are stored on disk cache, and don't rely on running
+        processes for reliability.
+        <br /><br />
+        Speed is a strong requirement. Most actions will only take a few hundreds
+        milliseconds to run. Larger ones, for example when looking for a hash in a large
+        directory, should run in less than a minute or two.
+        <br /><br />
+        <h3>Strong security primitives</h3>
+        Privacy and security are paramount. Agents never send raw data back to the
+        platform, but only reply to questions instead. All actions are signed by GPG
+        keys that are not stored in the platform, thus preventing a compromision from
+        taking over the entire infrastructure.
+        </p>
       </section>
     </div>
   </body>
