@@ -43,6 +43,11 @@ INSTALL		:= install
 
 all: mig-agent mig-scheduler mig-action-generator mig-action-verifier
 
+doc:
+	for doc in $$(ls doc/*.rst); do \
+		rst2html5 --stylesheet=doc/docstyle.css "$$doc" > "$$doc.html"; \
+	done
+
 mig-agent:
 	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
@@ -201,4 +206,4 @@ clean: clean-agent
 	rm -rf tmp
 	find src/ -maxdepth 1 -mindepth 1 ! -name mig -exec rm -rf {} \;
 
-.PHONY: clean clean-all clean-agent go_get_deps_into_system mig-agent-386 mig-agent-amd64 agent-install-script agent-cron
+.PHONY: clean clean-all clean-agent doc go_get_deps_into_system mig-agent-386 mig-agent-amd64 agent-install-script agent-cron
