@@ -10,7 +10,7 @@ import(
 	"time"
 
     _ "mig/modules/filechecker"
-    _ "mig/modules/connected"
+    _ "mig/modules/netstat"
     _ "mig/modules/upgrade"
     _ "mig/modules/agentdestroy"
     _ "mig/modules/example"

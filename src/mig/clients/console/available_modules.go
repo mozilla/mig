@@ -7,7 +7,7 @@ package main
 
 import (
 	_ "mig/modules/agentdestroy"
-	_ "mig/modules/connected"
 	_ "mig/modules/filechecker"
+	_ "mig/modules/netstat"
 	_ "mig/modules/upgrade"
 )
