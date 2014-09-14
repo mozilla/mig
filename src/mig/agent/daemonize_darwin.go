@@ -16,7 +16,7 @@ import (
 // On MacOS, launchd takes care of keeping processes alive. The daemonization
 // procedure consist of installing and starting the service, then exiting.
 // Launchd will take care of daemonizing the agent
-func daemonize(orig_ctx Context) (ctx Context, err error) {
+func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
