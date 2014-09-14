@@ -70,7 +70,6 @@ func getSysInfo() (hostname, domain, osname, osversion string, err error) {
 	buf := bytes.NewReader(out)
 	reader := bufio.NewReader(buf)
 	iter := 0
-	fmt.Println("parsing systeminfo output")
 	for {
 		lineBytes, _, err := reader.ReadLine()
 		// don't loop more than 2000 times
@@ -78,7 +77,6 @@ func getSysInfo() (hostname, domain, osname, osversion string, err error) {
 			goto exit
 		}
 		line := fmt.Sprintf("%s", lineBytes)
-		fmt.Println(line)
 		if strings.Contains(line, "OS Name:") {
 			out := strings.SplitN(line, ":", 2)
 			if len(out) == 2 {
