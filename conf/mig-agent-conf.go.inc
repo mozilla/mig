@@ -16,6 +16,14 @@ import(
     _ "mig/modules/example"
 )
 
+// some tags that are useful to differentiate agents. You can add whatever
+// you want in this struct, it will be sent by the agent in each heartbeat
+var TAGS = struct {
+	Operator string `json:"operator"`
+}{
+	"MyFavoriteAdminTeam",
+}
+
 // restart the agent on failures, don't let it die
 var ISIMMORTAL bool = true
 

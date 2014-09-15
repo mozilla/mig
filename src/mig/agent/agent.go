@@ -531,6 +531,7 @@ func heartbeat(ctx Context) (err error) {
 		QueueLoc:  ctx.Agent.QueueLoc,
 		StartTime: time.Now(),
 		Env:       ctx.Agent.Env,
+		Tags:      ctx.Agent.Tags,
 	}
 
 	// loop forever

@@ -35,6 +35,7 @@ type Context struct {
 		Hostname, OS, QueueLoc, UID, BinPath, RunDir string
 		Respawn                                      bool
 		Env                                          mig.AgentEnv
+		Tags                                         interface{}
 	}
 	Channels struct {
 		// internal
@@ -75,6 +76,7 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
 	}()
+	ctx.Agent.Tags = TAGS
 
 	ctx.Logging, err = mig.InitLogger(LOGGINGCONF, "mig-agent")
 	if err != nil {

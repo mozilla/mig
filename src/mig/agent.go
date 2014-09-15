@@ -14,18 +14,19 @@ import (
 // Agent stores the description of an agent and serves as a canvas
 // for heartbeat messages
 type Agent struct {
-	ID              float64   `json:"id,omitempty"`
-	Name            string    `json:"name"`
-	QueueLoc        string    `json:"queueloc"`
-	OS              string    `json:"os,omitempty"`
-	Version         string    `json:"version,omitempty"`
-	PID             int       `json:"pid,omitempty"`
-	StartTime       time.Time `json:"starttime,omitempty"`
-	DestructionTime time.Time `json:"destructiontime,omitempty"`
-	HeartBeatTS     time.Time `json:"heartbeatts,omitempty"`
-	Status          string    `json:"status,omitempty"`
-	Authorized      bool      `json:"authorized,omitempty"`
-	Env             AgentEnv  `json:"environment,omitempty"`
+	ID              float64     `json:"id,omitempty"`
+	Name            string      `json:"name"`
+	QueueLoc        string      `json:"queueloc"`
+	OS              string      `json:"os,omitempty"`
+	Version         string      `json:"version,omitempty"`
+	PID             int         `json:"pid,omitempty"`
+	StartTime       time.Time   `json:"starttime,omitempty"`
+	DestructionTime time.Time   `json:"destructiontime,omitempty"`
+	HeartBeatTS     time.Time   `json:"heartbeatts,omitempty"`
+	Status          string      `json:"status,omitempty"`
+	Authorized      bool        `json:"authorized,omitempty"`
+	Env             AgentEnv    `json:"environment,omitempty"`
+	Tags            interface{} `json:"tags,omitempty"`
 }
 
 // AgentEnv stores basic information of the endpoint
