@@ -98,7 +98,7 @@ func main() {
 	case "agent":
 		err := configLoad(*config)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[info] Using builtin conf. No external conf file found.\n")
+			fmt.Fprintf(os.Stderr, "[info] Using builtin conf. %v\n", err)
 		} else {
 			fmt.Fprintf(os.Stderr, "[info] Using external conf from %s\n", *config)
 		}
@@ -110,9 +110,9 @@ func main() {
 		*foreground = true
 		err := configLoad(*config)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Not using external configuration: %s. Continuing startup.\n", err)
+			fmt.Fprintf(os.Stderr, "[info] Using builtin conf. %v\n", err)
 		} else {
-			fmt.Fprintf(os.Stderr, "Configuration loaded from %s\n", *config)
+			fmt.Fprintf(os.Stderr, "[info] Using external conf from %s\n", *config)
 		}
 		err = runAgentCheckin(*foreground, *upgrading, *debug)
 		if err != nil {
