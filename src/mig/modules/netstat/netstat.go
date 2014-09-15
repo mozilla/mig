@@ -40,26 +40,40 @@ type params struct {
 }
 
 type results struct {
-	LocalMAC      []result `json:"localmac,omitempty"`
-	LocalIP       []result `json:"localip,omitempty"`
-	NeighborMAC   []result `json:"neighbormac,omitempty"`
-	NeighborIP    []result `json:"neighborip,omitempty"`
-	ConnectedIP   []result `json:"connectedip,omitempty"`
-	ListeningPort []result `json:"listeningport,omitempty"`
-	FoundAnything bool     `json:"foundanything"`
-	Success       bool     `json:"success"`
-	Errors        []string `json:"errors,omitempty"`
+	LocalMAC      map[string]result `json:"localmac,omitempty"`
+	LocalIP       map[string]result `json:"localip,omitempty"`
+	NeighborMAC   map[string]result `json:"neighbormac,omitempty"`
+	NeighborIP    map[string]result `json:"neighborip,omitempty"`
+	ConnectedIP   map[string]result `json:"connectedip,omitempty"`
+	ListeningPort map[string]result `json:"listeningport,omitempty"`
+	FoundAnything bool              `json:"foundanything"`
+	Success       bool              `json:"success"`
+	Errors        []string          `json:"errors,omitempty"`
 }
 
 type result struct {
-	Item          string `json:"item"`
-	Found         bool   `json:"found"`
-	LocalMACAddr  string `json:"localmacaddr,omitempty"`
-	RemoteMACAddr string `json:"remotemacaddr,omitempty"`
-	LocalAddr     string `json:"localaddr,omitempty"`
-	LocalPort     string `json:"localport,omitempty"`
-	RemoteAddr    string `json:"remoteaddr,omitempty"`
-	RemotePort    string `json:"remoteport,omitempty"`
+	Found    bool      `json:"found"`
+	Elements []element `json:"element"`
+}
+
+type element struct {
+	LocalMACAddr  string  `json:"localmacaddr,omitempty"`
+	RemoteMACAddr string  `json:"remotemacaddr,omitempty"`
+	LocalAddr     string  `json:"localaddr,omitempty"`
+	LocalPort     float64 `json:"localport,omitempty"`
+	RemoteAddr    string  `json:"remoteaddr,omitempty"`
+	RemotePort    float64 `json:"remoteport,omitempty"`
+}
+
+func newResults() *results {
+	var r results
+	r.LocalMAC = make(map[string]result)
+	r.LocalIP = make(map[string]result)
+	r.NeighborMAC = make(map[string]result)
+	r.NeighborIP = make(map[string]result)
+	r.ConnectedIP = make(map[string]result)
+	r.ListeningPort = make(map[string]result)
+	return &r
 }
 
 func (r Runner) ValidateParameters() (err error) {
@@ -123,7 +137,7 @@ func validateIP(val string) error {
 func validatePort(val string) error {
 	port, err := strconv.Atoi(val)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s is not a valid port", val)
 	}
 	if port < 0 || port > 65535 {
 		return fmt.Errorf("port out of range. must be between 1 and 65535")
@@ -152,58 +166,60 @@ func (r Runner) Run(args []byte) (resStr string) {
 	if err != nil {
 		panic(err)
 	}
+
+	r.Results = *newResults()
+
 	for _, val := range r.Parameters.LocalMAC {
 		var result result
-		result.Item = val
-		result.Found, result.LocalMACAddr, err = HasLocalMAC(val)
+		result.Found, result.Elements, err = HasLocalMAC(val)
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
-		r.Results.LocalMAC = append(r.Results.LocalMAC, result)
+		r.Results.LocalMAC[val] = result
 		if result.Found {
 			r.Results.FoundAnything = true
 		}
 	}
 	for _, val := range r.Parameters.NeighborMAC {
 		var result result
-		result.Item = val
-		result.Found, result.RemoteMACAddr, result.RemoteAddr, err = HasSeenMac(val)
+		result.Found, result.Elements, err = HasSeenMac(val)
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
-		r.Results.NeighborMAC = append(r.Results.NeighborMAC, result)
+		r.Results.NeighborMAC[val] = result
 		if result.Found {
 			r.Results.FoundAnything = true
 		}
 	}
 	for _, val := range r.Parameters.LocalIP {
 		var result result
-		result.Item = val
-		result.Found, result.LocalAddr, err = HasLocalIP(val)
+		result.Found, result.Elements, err = HasLocalIP(val)
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
-		r.Results.LocalIP = append(r.Results.LocalIP, result)
+		r.Results.LocalIP[val] = result
 		if result.Found {
 			r.Results.FoundAnything = true
 		}
 	}
 	for _, val := range r.Parameters.ConnectedIP {
-		result, err := HasIPConnected(val)
+		var result result
+		result.Found, result.Elements, err = HasIPConnected(val)
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
-		r.Results.ConnectedIP = append(r.Results.ConnectedIP, result)
+		r.Results.ConnectedIP[val] = result
 		if result.Found {
 			r.Results.FoundAnything = true
 		}
 	}
-	for _, val := range r.Parameters.ListeningPort {
-		result, err := HasListeningPort(val)
+	for _, port := range r.Parameters.ListeningPort {
+		var result result
+		result.Found, result.Elements, err = HasListeningPort(port)
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
-		r.Results.ListeningPort = append(r.Results.ListeningPort, result)
+		r.Results.ListeningPort[port] = result
 		if result.Found {
 			r.Results.FoundAnything = true
 		}
@@ -218,60 +234,74 @@ func (r Runner) Run(args []byte) (resStr string) {
 	return
 }
 
-// HasLocalMac compares an input mac address with the mac addresses
-// of the local interfaces, and returns found=true when found
-func HasLocalMAC(macstr string) (found bool, addr string, err error) {
+// HasLocalMac returns the mac addresses that match an input MAC regex
+func HasLocalMAC(macstr string) (found bool, elements []element, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("HasLocalMac() -> %v", e)
+		}
+	}()
 	found = false
 	re, err := regexp.Compile("(?i)" + macstr)
 	if err != nil {
-		return found, addr, err
+		panic(err)
 	}
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return found, addr, err
+		panic(err)
 	}
 	for _, iface := range ifaces {
 		if re.MatchString(iface.HardwareAddr.String()) {
 			found = true
-			addr = iface.HardwareAddr.String()
-			return found, addr, err
+			var el element
+			el.LocalMACAddr = iface.HardwareAddr.String()
+			elements = append(elements, el)
 		}
 	}
-	return found, addr, err
+	return
 }
 
 // HasLocalIP compares an input ip address with the ip addresses
 // of the local interfaces, and returns found=true when found
-func HasLocalIP(ipStr string) (found bool, addr string, err error) {
+func HasLocalIP(ipStr string) (found bool, elements []element, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("HasLocalIP() -> %v", e)
+		}
+	}()
 	found = false
 	if strings.IndexAny(ipStr, "/") > 0 {
 		_, ipnet, err := net.ParseCIDR(ipStr)
 		if err != nil {
-			return found, addr, err
+			panic(err)
 		}
 		ifaceAddrs, err := net.InterfaceAddrs()
 		if err != nil {
-			return found, addr, err
+			panic(err)
 		}
 		for _, ifaceAddr := range ifaceAddrs {
-			addr = strings.Split(ifaceAddr.String(), "/")[0]
+			addr := strings.Split(ifaceAddr.String(), "/")[0]
 			if ipnet.Contains(net.ParseIP(addr)) {
 				found = true
-				return found, addr, err
+				var el element
+				el.LocalAddr = addr
+				elements = append(elements, el)
 			}
 		}
-		return found, addr, err
+		return found, elements, err
 	}
 	ifaceAddrs, err := net.InterfaceAddrs()
 	if err != nil {
-		return found, addr, err
+		panic(err)
 	}
 	for _, ifaceAddr := range ifaceAddrs {
-		addr = strings.Split(ifaceAddr.String(), "/")[0]
+		addr := strings.Split(ifaceAddr.String(), "/")[0]
 		if ipStr == addr {
 			found = true
-			return found, addr, err
+			var el element
+			el.LocalAddr = addr
+			elements = append(elements, el)
 		}
 	}
-	return found, addr, err
+	return
 }

@@ -17,23 +17,31 @@ import (
 
 // HasSeenMac on windows looks at the output of `arp -a` for a matching mac address
 // and returns its MAC and IP address if found
-func HasSeenMac(val string) (found bool, macaddr, addr string, err error) {
+func HasSeenMac(val string) (found bool, elements []element, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("HasSeenMac() -> %v", e)
+		}
+	}()
 	found = false
 	out, err := exec.Command("arp", "-a").Output()
 	if err != nil {
-		return found, macaddr, addr, err
+		panic(err)
 	}
 	// arp -a has a static format:
 	// <IP Address>) <Mac Address> <Type>
 	// fedbox (172.21.0.3) at 8c:70:5a:c8:be:50 on en1 ifscope [ethernet]
 	re, err := regexp.Compile(val)
 	if err != nil {
-		return found, macaddr, addr, err
+		panic(err)
 	}
 	buf := bytes.NewReader(out)
 	reader := bufio.NewReader(buf)
 	for {
 		lineBytes, _, err := reader.ReadLine()
+		if err != nil {
+			panic(err)
+		}
 		line := fmt.Sprintf("%s", lineBytes)
 		fields := strings.Fields(line)
 		if len(fields) < 3 {
@@ -44,20 +52,21 @@ func HasSeenMac(val string) (found bool, macaddr, addr string, err error) {
 		convertedMac := strings.Replace(fields[1], "-", ":", 5)
 		if re.MatchString(fields[1]) || re.MatchString(convertedMac) {
 			found = true
-			addr = fields[0]
-			macaddr = convertedMac
-			return found, macaddr, addr, err
+			var el element
+			el.RemoteAddr = fields[0]
+			el.RemoteMACAddr = convertedMac
+			elements = append(elements, el)
 		}
 	}
 	return
 }
 
-func HasIPConnected(val string) (r result, err error) {
+func HasIPConnected(val string) (found bool, elements []element, err error) {
 	err = fmt.Errorf("HasIPConnected() is not implemented on %s", runtime.GOOS)
 	return
 }
 
-func HasListeningPort(val string) (r result, err error) {
+func HasListeningPort(port string) (found bool, elements []element, err error) {
 	err = fmt.Errorf("HasListeningPort() is not implemented on %s", runtime.GOOS)
 	return
 }

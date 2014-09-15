@@ -16,18 +16,24 @@ import (
 
 // HasSeenMac on linux looks for a matching mac address in /proc/net/arp
 // and returns its MAC and IP address if found
-func HasSeenMac(val string) (found bool, macaddr, addr string, err error) {
+func HasSeenMac(val string) (found bool, elements []element, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("HasSeenMac() -> %v", e)
+		}
+	}()
 	found = false
 	fd, err := os.Open("/proc/net/arp")
+	defer fd.Close()
 	if err != nil {
-		return found, macaddr, addr, err
+		panic(err)
 	}
 	// /proc/net/arp has a static format:
 	// IP address       HW type     Flags       HW address            Mask     Device
 	// we split the string on fields, and compare field #4 with our search regex
 	re, err := regexp.Compile(val)
 	if err != nil {
-		return found, macaddr, addr, err
+		panic(err)
 	}
 	scanner := bufio.NewScanner(fd)
 	scanner.Scan() // skip the header
@@ -41,21 +47,21 @@ func HasSeenMac(val string) (found bool, macaddr, addr string, err error) {
 		}
 		if re.MatchString(fields[3]) {
 			found = true
-			addr = fields[0]
-			macaddr = fields[3]
-			return found, macaddr, addr, err
+			var el element
+			el.RemoteAddr = fields[0]
+			el.RemoteMACAddr = fields[3]
+			elements = append(elements, el)
 		}
 	}
-	fd.Close()
 	return
 }
 
-func HasIPConnected(val string) (r result, err error) {
+func HasIPConnected(val string) (found bool, elements []element, err error) {
 	err = fmt.Errorf("HasIPConnected() is not implemented on %s", runtime.GOOS)
 	return
 }
 
-func HasListeningPort(val string) (r result, err error) {
+func HasListeningPort(port string) (found bool, elements []element, err error) {
 	err = fmt.Errorf("HasListeningPort() is not implemented on %s", runtime.GOOS)
 	return
 }
