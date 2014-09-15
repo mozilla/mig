@@ -61,7 +61,8 @@ CREATE TABLE agents (
     destructiontime timestamp with time zone,
     heartbeattime timestamp with time zone NOT NULL,
     status character varying(255),
-    environment json
+    environment json,
+    tags json
 );
 ALTER TABLE public.agents OWNER TO migadmin;
 ALTER TABLE ONLY agents
