@@ -32,6 +32,7 @@ type moduleResult struct {
 }
 
 type moduleOp struct {
+	err        error
 	id         float64
 	mode       string
 	params     interface{}
@@ -136,7 +137,7 @@ func runModuleDirectly(mode string, args []byte) (err error) {
 		modRunner := mig.AvailableModules[mode]()
 		fmt.Println(modRunner.(mig.Moduler).Run(args))
 	} else {
-		fmt.Println("Unknown module", mode)
+		fmt.Printf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	return
 }
@@ -361,11 +362,14 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 		if _, ok := mig.AvailableModules[operation.Module]; ok {
 			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("calling module '%s'", operation.Module)}.Debug()
 			ctx.Channels.RunAgentCommand <- currentOp
-			opsCounter++
 			runningOps[currentOp.id] = currentOp
 		} else {
+			// no module is available, return an error
+			currentOp.err = fmt.Errorf("module '%s' is not available", operation.Module)
+			runningOps[currentOp.id] = currentOp
 			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("module '%s' not available", operation.Module)}
 		}
+		opsCounter++
 	}
 
 	// start the goroutine that will receive the results
@@ -473,6 +477,19 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 	// create the slice of results and insert each incoming
 	// result at the right position: operation[0] => results[0]
 	cmd.Results = make([]interface{}, opsCounter)
+
+	// process failed operations first
+	for _, op := range runningOps {
+		if op.err != nil {
+			ctx.Channels.Log <- mig.Log{OpID: op.id, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "process error for module"}.Debug()
+			cmd.Status = "failed"
+			err = json.Unmarshal([]byte(fmt.Sprintf(`{"errors": ["%v"]}`, op.err)), &cmd.Results[op.position])
+			if err != nil {
+				panic(err)
+			}
+			resultReceived++
+		}
+	}
 
 	// for each result received, populate the content of cmd.Results with it
 	// stop when we received all the expected results
