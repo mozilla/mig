@@ -57,6 +57,7 @@ func HasSeenMac(val string) (found bool, elements []element, err error) {
 			el.RemoteMACAddr = convertedMac
 			elements = append(elements, el)
 		}
+		stats.Examined++
 	}
 	return
 }

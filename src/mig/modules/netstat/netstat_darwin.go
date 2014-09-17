@@ -40,7 +40,7 @@ func HasSeenMac(val string) (found bool, elements []element, err error) {
 	for {
 		lineBytes, _, err := reader.ReadLine()
 		if err != nil {
-			panic(err)
+			continue
 		}
 		line := fmt.Sprintf("%s", lineBytes)
 		fields := strings.Fields(line)
@@ -57,6 +57,7 @@ func HasSeenMac(val string) (found bool, elements []element, err error) {
 			el.RemoteMACAddr = fields[3]
 			elements = append(elements, el)
 		}
+		stats.Examined++
 	}
 	return
 }
