@@ -107,7 +107,8 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 				}
 				fmt.Printf("Inserting %s operation with parameters:\n%s\n", operation.Module, opjson)
 			} else {
-				fmt.Println("Module", operation.Module, "is not available in this console")
+				fmt.Println("Module", operation.Module, "is not available in this console...")
+				fmt.Println("You can write your action by hand and import it using 'load <file>'")
 			}
 		case "deloperation":
 			if len(orders) != 2 {
