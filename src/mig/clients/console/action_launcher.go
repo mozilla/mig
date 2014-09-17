@@ -55,7 +55,7 @@ func actionLauncher(tpl mig.Action, ctx Context) (err error) {
 	for {
 		// completion
 		var symbols = []string{"addoperation", "deloperation", "exit", "help", "init",
-			"json", "launch", "load", "details", "filechecker",
+			"json", "launch", "load", "details", "filechecker", "netstat",
 			"setname", "settarget", "settimes", "sign", "times"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
