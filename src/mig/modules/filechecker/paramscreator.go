@@ -92,6 +92,7 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 			}
 			if input == "help" {
 				fmt.Printf("%s\n", help)
+				continue
 			}
 			arr := strings.SplitN(input, " ", 2)
 			if len(arr) != 2 {
