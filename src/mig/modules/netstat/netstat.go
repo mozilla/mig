@@ -419,6 +419,10 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 				el.RemoteMACAddr, el.RemoteAddr, val)
 			prints = append(prints, resStr)
 		}
+		if len(res.Elements) == 0 {
+			resStr := fmt.Sprintf("did not find anything for netstat neighbormac:'%s'", val)
+			prints = append(prints, resStr)
+		}
 	}
 	for val, res := range results.LocalIP {
 		if foundOnly && !res.Found {
@@ -426,6 +430,10 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 		}
 		for _, el := range res.Elements {
 			resStr := fmt.Sprintf("found local ip %s for netstat localip:'%s'", el.LocalAddr, val)
+			prints = append(prints, resStr)
+		}
+		if len(res.Elements) == 0 {
+			resStr := fmt.Sprintf("did not find anything for netstat localip:'%s'", val)
 			prints = append(prints, resStr)
 		}
 	}
@@ -438,6 +446,10 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 				el.RemoteAddr, el.RemotePort, el.LocalAddr, el.LocalPort, val)
 			prints = append(prints, resStr)
 		}
+		if len(res.Elements) == 0 {
+			resStr := fmt.Sprintf("did not find anything for netstat connectedip:'%s'", val)
+			prints = append(prints, resStr)
+		}
 	}
 	for val, res := range results.ListeningPort {
 		if foundOnly && !res.Found {
@@ -445,6 +457,10 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 		}
 		for _, el := range res.Elements {
 			resStr := fmt.Sprintf("found listening port %.0f for netstat listeningport:'%s'", el.LocalPort, val)
+			prints = append(prints, resStr)
+		}
+		if len(res.Elements) == 0 {
+			resStr := fmt.Sprintf("did not find anything for netstat listeningport:'%s'", val)
 			prints = append(prints, resStr)
 		}
 	}
