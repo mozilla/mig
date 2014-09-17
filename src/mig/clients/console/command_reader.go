@@ -43,7 +43,7 @@ func commandReader(input string, ctx Context) (err error) {
 	prompt := "\x1b[36;1mcommand " + cmdid[len(cmdid)-3:len(cmdid)] + ">\x1b[0m "
 	for {
 		// completion
-		var symbols = []string{"exit", "help", "json", "match", "pretty", "r", "results"}
+		var symbols = []string{"exit", "help", "json", "found", "pretty", "r", "results"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -73,7 +73,7 @@ exit		exit this mode
 help		show this help
 json		show the json of the command
 r		refresh the command (get latest version from upstream)
-results <match>	print the results. if "match" is set, only print results that have at least one match
+results <found>	print the results. if "found" is set, only print results that have at least one found
 `)
 		case "json":
 			var cjson []byte
@@ -89,15 +89,15 @@ results <match>	print the results. if "match" is set, only print results that ha
 			}
 			fmt.Println("Reload succeeded")
 		case "results":
-			match := false
+			found := false
 			if len(orders) > 1 {
-				if orders[1] == "match" {
-					match = true
+				if orders[1] == "found" {
+					found = true
 				} else {
 					fmt.Printf("Unknown option '%s'\n", orders[1])
 				}
 			}
-			err = commandPrintResults(cmd, match, false)
+			err = commandPrintResults(cmd, found, false)
 			if err != nil {
 				panic(err)
 			}
@@ -160,7 +160,7 @@ func valueToCommand(v interface{}) (cmd mig.Command, err error) {
 	return
 }
 
-func commandPrintResults(cmd mig.Command, match, showAgent bool) (err error) {
+func commandPrintResults(cmd mig.Command, found, showAgent bool) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("commandPrintResults() -> %v", e)
@@ -180,7 +180,7 @@ func commandPrintResults(cmd mig.Command, match, showAgent bool) (err error) {
 		modRunner := mig.AvailableModules[moduleName]()
 		// look for a result printer in the module
 		if _, ok := modRunner.(mig.HasResultsPrinter); ok {
-			results, err := modRunner.(mig.HasResultsPrinter).PrintResults(buf, match)
+			results, err := modRunner.(mig.HasResultsPrinter).PrintResults(buf, found)
 			if err != nil {
 				panic(err)
 			}

@@ -42,7 +42,7 @@ func actionReader(input string, ctx Context) (err error) {
 	for {
 		// completion
 		var symbols = []string{"command", "copy", "counters", "details", "exit", "foundsomething", "foundnothing",
-			"grep", "help", "investigators", "json", "ls", "match", "pretty", "r", "results", "times"}
+			"grep", "help", "investigators", "json", "ls", "found", "pretty", "r", "results", "times"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -368,16 +368,16 @@ func actionPrintResults(a mig.Action, links []cljs.Link, orders []string) (err e
 			err = fmt.Errorf("actionPrintResuls() -> %v", e)
 		}
 	}()
-	match := false
+	found := false
 	if len(orders) > 1 {
-		if orders[1] == "match" {
-			match = true
+		if orders[1] == "found" {
+			found = true
 		} else {
 			fmt.Printf("Unknown option '%s'\n", orders[1])
 		}
 	}
-	if match {
-		// if we want matches, use the search api, it's faster than
+	if found {
+		// if we want foundes, use the search api, it's faster than
 		// iterating through each link when we have thousands of them
 		targetURL := ctx.API.URL + "search?type=command&limit=1000000&foundanything=true"
 		targetURL += "&actionid=" + fmt.Sprintf("%.0f", a.ID)
@@ -408,7 +408,7 @@ func actionPrintResults(a mig.Action, links []cljs.Link, orders []string) (err e
 			if err != nil {
 				panic(err)
 			}
-			err = commandPrintResults(cmd, match, true)
+			err = commandPrintResults(cmd, found, true)
 			if err != nil {
 				panic(err)
 			}

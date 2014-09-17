@@ -1308,11 +1308,11 @@ func buildResults(checklist map[float64]filecheck, t0 time.Time) (resStr string,
 	return
 }
 
-// PrintResults() returns results in a human-readable format. if matchOnly is set,
+// PrintResults() returns results in a human-readable format. if foundOnly is set,
 // only results that have at least one match are returned.
-// If matchOnly is not set, all results are returned, along with errors and
+// If foundOnly is not set, all results are returned, along with errors and
 // statistics.
-func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string, err error) {
+func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string, err error) {
 	var results Results
 	err = json.Unmarshal(rawResults, &results)
 	if err != nil {
@@ -1322,32 +1322,28 @@ func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string
 		for method, _ := range results.Elements[path] {
 			for label, _ := range results.Elements[path][method] {
 				for value, _ := range results.Elements[path][method][label] {
-					if matchOnly {
+					if foundOnly {
 						if results.Elements[path][method][label][value].Matchcount < 1 {
 							// go to next value
 							continue
 						}
 					}
 					if len(results.Elements[path][method][label][value].Files) == 0 {
-						res := fmt.Sprintf("0 match on '%s' in check '%s':'%s':'%s'",
+						res := fmt.Sprintf("0 found on '%s' in check '%s':'%s':'%s'",
 							value, path, method, label)
 						prints = append(prints, res)
 						continue
 					}
 					for file, cnt := range results.Elements[path][method][label][value].Files {
-						verb := "match"
-						if cnt > 1 {
-							verb = "matches"
-						}
-						res := fmt.Sprintf("%.0f %s in '%s' on '%s' for filechecker '%s':'%s':'%s'",
-							cnt, verb, file, value, path, method, label)
+						res := fmt.Sprintf("%.0f found in '%s' on '%s' for filechecker '%s':'%s':'%s'",
+							cnt, file, value, path, method, label)
 						prints = append(prints, res)
 					}
 				}
 			}
 		}
 	}
-	if !matchOnly {
+	if !foundOnly {
 		for _, we := range results.Errors {
 			prints = append(prints, we)
 		}
