@@ -409,9 +409,11 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	}
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "Action written to database"}.Debug()
 
+	// create an array of empty results to serve as default for all commands
+	emptyResults := make([]mig.ModuleResult, len(action.Operations))
 	created := 0
 	for _, agent := range agents {
-		err := createCommand(ctx, action, agent)
+		err := createCommand(ctx, action, agent, emptyResults)
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "Failed to create commmand on agent" + agent.Name}.Err()
 			continue
@@ -456,7 +458,7 @@ func getTargetAgents(action mig.Action, ctx Context) (agents []mig.Agent, err er
 	return
 }
 
-func createCommand(ctx Context, action mig.Action, agent mig.Agent) (err error) {
+func createCommand(ctx Context, action mig.Action, agent mig.Agent, emptyResults []mig.ModuleResult) (err error) {
 	cmdid := mig.GenID()
 	defer func() {
 		if e := recover(); e != nil {
@@ -464,15 +466,13 @@ func createCommand(ctx Context, action mig.Action, agent mig.Agent) (err error) 
 		}
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, CommandID: cmdid, Desc: "leaving createCommand()"}.Debug()
 	}()
-	cmd := mig.Command{
-		Status:    "sent",
-		Action:    action,
-		Agent:     agent,
-		ID:        cmdid,
-		StartTime: time.Now().UTC(),
-	}
-	cmd.Agent.Name = agent.Name
-	cmd.Agent.QueueLoc = agent.QueueLoc
+	var cmd mig.Command
+	cmd.Status = "sent"
+	cmd.Action = action
+	cmd.Agent = agent
+	cmd.ID = cmdid
+	cmd.StartTime = time.Now().UTC()
+	cmd.Results = emptyResults
 	ctx.Channels.CommandReady <- cmd
 	desc := fmt.Sprintf("created command for action '%s' on agent '%s'", action.Name, agent.Name)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, CommandID: cmdid, Desc: desc}

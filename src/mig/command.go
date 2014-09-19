@@ -14,13 +14,13 @@ import (
 )
 
 type Command struct {
-	ID         float64       `json:"id"`
-	Action     Action        `json:"action,omitempty"`
-	Agent      Agent         `json:"agent,omitempty"`
-	Status     string        `json:"status"`
-	Results    []interface{} `json:"results"`
-	StartTime  time.Time     `json:"starttime"`
-	FinishTime time.Time     `json:"finishtime"`
+	ID         float64        `json:"id"`
+	Action     Action         `json:"action"`
+	Agent      Agent          `json:"agent"`
+	Status     string         `json:"status"`
+	Results    []ModuleResult `json:"results"`
+	StartTime  time.Time      `json:"starttime"`
+	FinishTime time.Time      `json:"finishtime"`
 }
 
 // FromFile reads a command from a local file on the file system
