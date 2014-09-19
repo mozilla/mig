@@ -145,7 +145,7 @@ The format for compliance items is simple, to be easily graphed and aggregated.
 .. code:: javascript
 
 	{
-		"target": "server1.prod.example.net",
+		"target": "agents.name='server1.prod.example.net'",
 		"policy": {
 			"level": "medium",
 			"name": "system",

@@ -158,6 +158,25 @@ The parameters are:
   queries, like running an action against a specific operating system, or
   against an endpoint that has a given public IP, etc...
 
+  The most simple query that targets all agents is `name like '%'` (the `%`
+  character is a wildcard in SQL pattern matching). Targetting by OS family can
+  be done on the `os` parameters such as `os='linux'` or `os='darwin'`.
+
+  Combining conditions is also trivial: `version='201409171023+c4d6f50.prod'
+  and heartbeattime > NOW() - interval '1 minute'` will only target agents that
+  run a specific version and have sent a heartbeat during the last minute.
+
+  Complex queries are also possible.
+  For example: imagine an action with ID 1 launched against 10,000 endpoints,
+  which returned 300 endpoints with positive results. We want to launch action
+  2 on those 300 endpoints only. It can be accomplished with the following
+  `target` condition. (note: you can reuse this condition by simply changing
+  the value of `actionid`)
+
+.. code:: sql
+
+	id IN (select agentid from commands, json_array_elements(commands.results) as r where actionid=1 and r#>>'{foundanything}' = 'true')
+
 .. _`agents`: data.rst.html#entity-relationship-diagram
 
 * **description** and **threat**: additional fields to describe the action
