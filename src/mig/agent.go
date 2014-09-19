@@ -5,11 +5,7 @@
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 package mig
 
-import (
-	"fmt"
-	"os"
-	"time"
-)
+import "time"
 
 // Agent stores the description of an agent and serves as a canvas
 // for heartbeat messages
@@ -45,32 +41,4 @@ type NAT struct {
 	IP         string `json:"ip,omitempty"`
 	Result     string `json:"result,omitempty"`
 	StunServer string `json:"stunserver,omitempty"`
-}
-
-// AvailableModules stores a list of activated module with their runner
-var AvailableModules = make(map[string]func() interface{})
-
-// RegisterModule adds a module to the list of available modules
-func RegisterModule(name string, runner func() interface{}) {
-	if _, exist := AvailableModules[name]; exist {
-		fmt.Fprintf(os.Stderr, "RegisterModule: a module named '%s' has already been registered.\nAre you trying to import the same module twice?\n", name)
-		os.Exit(1)
-	}
-	AvailableModules[name] = runner
-}
-
-// Moduler provides the interface to a Module
-type Moduler interface {
-	Run([]byte) string
-	ValidateParameters() error
-}
-
-// HasResultsPrinter implements functions used by module to print information
-type HasResultsPrinter interface {
-	PrintResults([]byte, bool) ([]string, error)
-}
-
-// HasParamsCreator implements a function that creates module parameters
-type HasParamsCreator interface {
-	ParamsCreator() (interface{}, error)
 }
