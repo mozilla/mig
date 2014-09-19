@@ -92,6 +92,8 @@ CREATE TABLE commands (
 ALTER TABLE public.commands OWNER TO migadmin;
 ALTER TABLE ONLY commands
     ADD CONSTRAINT commands_pkey PRIMARY KEY (id);
+CREATE INDEX commands_agentid ON commands(agentid DESC);
+CREATE INDEX commands_actionid ON commands(actionid DESC);
 
 CREATE TABLE invagtmodperm (
     investigatorid numeric NOT NULL,
