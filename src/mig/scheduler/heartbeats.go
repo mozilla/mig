@@ -25,25 +25,26 @@ func pickUpAliveAgents(ctx Context) (err error) {
 	}()
 
 	// get a list of all agents that have a keepalive between ctx.Agent.TimeOut and now
-	timeOutPeriod, err := time.ParseDuration(ctx.Agent.TimeOut)
+	agtTimeOut, err := time.ParseDuration(ctx.Agent.TimeOut)
 	if err != nil {
 		panic(err)
 	}
-	pointInTime := time.Now().Add(-timeOutPeriod)
-	agents, err := ctx.DB.AgentsActiveSince(pointInTime)
+	expirationDate := time.Now().Add(-agtTimeOut)
+	agents, err := ctx.DB.AgentsActiveSince(expirationDate)
 	if err != nil {
 		panic(err)
 	}
 
-	desc := fmt.Sprintf("pickUpAliveAgents(): found %d active agents", len(agents))
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+	desc := fmt.Sprintf("Starting %d agents listeners. This may take a while", len(agents))
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}
 
 	for _, agt := range agents {
-		err = startAgentListener(agt, ctx)
+		err = startAgentListener(agt, agtTimeOut, ctx)
 		if err != nil {
 			panic(err)
 		}
 	}
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "All agents listeners started successfully"}
 	return
 }
 
@@ -80,8 +81,7 @@ func startActiveAgentsChannel(ctx Context) (activeAgentsChan <-chan amqp.Deliver
 	return
 }
 
-// getHeartbeats processes the registration messages sent by agents that just
-// came online. Such messages are stored in MongoDB and used to locate agents.
+// getHeartbeats processes the heartbeat messages sent by agents
 func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -95,17 +95,17 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	desc := fmt.Sprintf("Received heartbeat for Agent '%s' OS '%s' QueueLoc '%s'", agt.Name, agt.OS, agt.QueueLoc)
-	ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
+	//desc := fmt.Sprintf("Received heartbeat for Agent '%s' OS '%s' QueueLoc '%s'", agt.Name, agt.OS, agt.QueueLoc)
+	//ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 
 	// discard expired heartbeats
 	agtTimeOut, err := time.ParseDuration(ctx.Agent.TimeOut)
 	if err != nil {
 		panic(err)
 	}
-	considerationDate := time.Now().Add(-agtTimeOut)
-	if agt.HeartBeatTS.Before(considerationDate) {
-		desc = fmt.Sprintf("Expired heartbeat received from Agent '%s'", agt.Name)
+	expirationDate := time.Now().Add(-agtTimeOut)
+	if agt.HeartBeatTS.Before(expirationDate) {
+		desc := fmt.Sprintf("Expired heartbeat received from Agent '%s'", agt.Name)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Notice()
 		return
 	}
@@ -117,11 +117,11 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 		panic(err)
 	}
 	if !ok {
-		desc = fmt.Sprintf("getHeartbeats(): Agent '%s' is not authorized", agt.Name)
+		desc := fmt.Sprintf("getHeartbeats(): Agent '%s' is not authorized", agt.Name)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Warning()
 		return
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Received valid keepalive from agent '%s'", agt.Name)}.Debug()
+	//ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Received valid keepalive from agent '%s'", agt.Name)}.Debug()
 
 	// write to database in a goroutine to avoid blocking
 	go func() {
@@ -132,7 +132,7 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 	}()
 
 	// start a listener for this agent, if needed
-	err = startAgentListener(agt, ctx)
+	err = startAgentListener(agt, agtTimeOut, ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -153,7 +153,7 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 }
 
 // startAgentsListener will create an AMQP consumer for this agent if none exist
-func startAgentListener(agt mig.Agent, ctx Context) (err error) {
+func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("startAgentListener() -> %v", e)
@@ -187,18 +187,33 @@ func startAgentListener(agt mig.Agent, ctx Context) (err error) {
 		panic(err)
 	}
 
-	// start a goroutine for this queue
+	// start a goroutine for this queue, with a timer that expires it after agtTimeOut
 	go func() {
-		desc := fmt.Sprintf("Starting listener for agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
+		desc := fmt.Sprintf("Starting new listener for agent '%s' on queue '%s'", agt.Name, agt.QueueLoc)
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-		for msg := range agentChan {
+		select {
+		case msg := <-agentChan:
+			// process incoming heartbeat messages
 			ctx.OpID = mig.GenID()
-			desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-			err = recvAgentResults(msg, ctx)
+			//desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
+			//ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+			err := recvAgentResults(msg, ctx)
 			if err != nil {
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
 				// TODO: agent is sending bogus results, do something about it
+			}
+		case <-time.After(agtTimeOut):
+			// expire listener and exit goroutine
+			desc := fmt.Sprintf("Listener timeout triggered for agent '%s'", agt.Name)
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+			goto exit
+		}
+	exit:
+		for i, q := range activeAgentsList {
+			if q == agt.QueueLoc {
+				// remove queue from active list
+				activeAgentsList = append(activeAgentsList[:i], activeAgentsList[i+1:]...)
+				break
 			}
 		}
 	}()
