@@ -63,6 +63,29 @@
                     }
                 }
             }
+        },
+        {
+            "module": "netstat",
+            "parameters": {
+                "connectedip": [
+                    "0.0.0.0/0"
+                ],
+                "listeningport": [
+                    "22"
+                ],
+                "localip": [
+                    "0.0.0.0/0"
+                ],
+                "localmac": [
+                    "^[0-9a-f]"
+                ],
+                "neighborip": [
+                    "0.0.0.0/0"
+                ],
+                "neighbormac": [
+                    "^[0-9a-f]"
+                ]
+            }
         }
     ],
     "syntaxversion": 2
