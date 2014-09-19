@@ -108,8 +108,8 @@ go_get_deps:
 ifeq ($(OS),windows)
 	$(GOGETTER) code.google.com/p/winsvc/eventlog
 endif
-ifeq ($(OS),darwin)
 	$(GOGETTER) github.com/bobappleyard/readline
+ifeq ($(OS),darwin)
 	echo 'make sure that you have readline installed via {port,brew} install readline'
 endif
 
