@@ -201,8 +201,8 @@ External Go dependencies can be resolved by running `make go_get_deps`:
 	...
 
 Each component of MIG can be built independently with 'make mig-action-generator', 'make mig-action-verifier',
-'make mig-scheduler', 'make mig-api', and 'make mig-agent'. To build the entire platform, simply
-run 'make'.
+'make mig-scheduler', 'make mig-api', 'make mig-console' and 'make mig-agent'.
+To build the entire platform, simply run 'make'.
 
 .. code:: bash
 
