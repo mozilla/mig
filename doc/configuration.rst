@@ -200,9 +200,9 @@ External Go dependencies can be resolved by running `make go_get_deps`:
     GOPATH=. go get -u github.com/streadway/amqp
 	...
 
-Each component of MIG can be built independently with 'make mig-action-generator',
-'make mig-scheduler' and 'make mig-agent'. To build the entire platform, simply
-run 'make'.
+Each component of MIG can be built independently with 'make mig-action-generator', 'make mig-action-verifier',
+'make mig-scheduler', 'make mig-api', 'make mig-console' and 'make mig-agent'.
+To build the entire platform, simply run 'make'.
 
 .. code:: bash
 
