@@ -11,7 +11,6 @@ import (
 	migdb "mig/database"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strconv"
 	"time"
 
@@ -38,7 +37,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving search()"}.Debug()
 	}()
-	doFoundAnythingFiltering := false
+	//doFoundAnythingFiltering := false
 	timeLayout := time.RFC3339
 	for queryParams, _ := range request.URL.Query() {
 		switch queryParams {
@@ -63,15 +62,17 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				panic("before date not in RFC3339 format")
 			}
 		case "foundanything":
-			switch request.URL.Query()["foundanything"][0] {
-			case "true", "True", "TRUE":
-				p.FoundAnything = true
-			case "false", "False", "FALSE":
-				p.FoundAnything = false
-			default:
-				panic("foundanything parameter must be true or false")
-			}
-			doFoundAnythingFiltering = true
+			// FIXME
+			panic("foundanything is temporarily not supported")
+			//switch request.URL.Query()["foundanything"][0] {
+			//case "true", "True", "TRUE":
+			//	p.FoundAnything = true
+			//case "false", "False", "FALSE":
+			//	p.FoundAnything = false
+			//default:
+			//	panic("foundanything parameter must be true or false")
+			//}
+			//doFoundAnythingFiltering = true
 		case "report":
 			switch request.URL.Query()["report"][0] {
 			case "complianceitems":
@@ -109,14 +110,6 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		}
 	} else {
 		panic("search type is missing")
-	}
-
-	// if requested, filter results on the foundanything flag
-	if doFoundAnythingFiltering && p.Type == "command" {
-		results, err = filterResultsOnFoundAnythingFlag(results.([]mig.Command), p.FoundAnything)
-		if err != nil {
-			panic(err)
-		}
 	}
 
 	// prepare the output in the requested format
@@ -191,37 +184,4 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	respond(200, resource, respWriter, request, opid)
-}
-
-// filterResultsOnFoundAnythingFlag filters an array of commands on the `foundanything` flag
-// of their results. Since one command can have multiple results, each with their own `foundanything`
-// flag, the filter will retain a command if at least one result in the command matches the
-// desired flag.
-func filterResultsOnFoundAnythingFlag(commands []mig.Command, foundanything bool) (filteredCommands []mig.Command, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("filterResultsOnFoundAnythingFlag() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving filterResultsOnFoundAnythingFlag()"}.Debug()
-	}()
-	for _, cmd := range commands {
-		doAppend := false
-		for _, result := range cmd.Results {
-			if result == nil {
-				continue
-			}
-			reflection := reflect.ValueOf(result)
-			resultMap := reflection.Interface().(map[string]interface{})
-			if _, ok := resultMap["foundanything"]; ok {
-				rFound := reflect.ValueOf(resultMap["foundanything"])
-				if rFound.Bool() == foundanything {
-					doAppend = true
-				}
-			}
-		}
-		if doAppend {
-			filteredCommands = append(filteredCommands, cmd)
-		}
-	}
-	return
 }
