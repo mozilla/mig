@@ -191,23 +191,27 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 	go func() {
 		desc := fmt.Sprintf("Starting new listener for agent '%s' on queue '%s'", agt.Name, agt.QueueLoc)
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-		select {
-		case msg := <-agentChan:
-			// process incoming heartbeat messages
-			ctx.OpID = mig.GenID()
-			//desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
-			//ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-			err := recvAgentResults(msg, ctx)
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
-				// TODO: agent is sending bogus results, do something about it
+		for {
+			select {
+			case msg := <-agentChan:
+				// process incoming heartbeat messages
+				ctx.OpID = mig.GenID()
+				//desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
+				//ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+				err := recvAgentResults(msg, ctx)
+				if err != nil {
+					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
+					// TODO: agent is sending bogus results, do something about it
+				}
+			case <-time.After(agtTimeOut):
+				// expire listener and exit goroutine
+				desc := fmt.Sprintf("Listener timeout triggered for agent '%s'", agt.Name)
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}
+				goto exit
 			}
-		case <-time.After(agtTimeOut):
-			// expire listener and exit goroutine
-			desc := fmt.Sprintf("Listener timeout triggered for agent '%s'", agt.Name)
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-			goto exit
 		}
+		desc = fmt.Sprintf("Closing heartbeat goroutine for agent '%s'", agt.Name)
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}
 	exit:
 		for i, q := range activeAgentsList {
 			if q == agt.QueueLoc {
