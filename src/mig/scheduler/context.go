@@ -113,7 +113,7 @@ func Init(path string) (ctx Context, err error) {
 		panic(err)
 	}
 
-	ctx, err = initBroker(ctx)
+	ctx, err = initRelay(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -190,13 +190,13 @@ func initDB(orig_ctx Context) (ctx Context, err error) {
 	return
 }
 
-// initBroker() sets up the connection to the RabbitMQ broker
-func initBroker(orig_ctx Context) (ctx Context, err error) {
+// initRelay() sets up the connection to the RabbitMQ broker
+func initRelay(orig_ctx Context) (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("initBroker() -> %v", e)
+			err = fmt.Errorf("initRelay() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving initBroker()"}.Debug()
+		ctx.Channels.Log <- mig.Log{Desc: "leaving initRelay()"}.Debug()
 	}()
 
 	ctx = orig_ctx

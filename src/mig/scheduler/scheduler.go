@@ -38,12 +38,23 @@ func main() {
 	var config = flag.String("c", "/etc/mig/scheduler.cfg", "Load configuration from file")
 	flag.Parse()
 
+	_, err := os.Stat(*config)
+	if os.IsNotExist(err) {
+		fmt.Printf("FATAL: no configuration file found at %s\n", *config)
+		os.Exit(7)
+	}
+	if err != nil {
+		fmt.Printf("FATAL: failed to read configuration file from %s\n", *config)
+		os.Exit(8)
+	}
+
 	// The context initialization takes care of parsing the configuration,
 	// and creating connections to database, message broker, syslog, ...
 	fmt.Fprintf(os.Stderr, "Initializing Scheduler context...")
 	ctx, err := Init(*config)
 	if err != nil {
-		panic(err)
+		fmt.Printf("\nFATAL: %v\n", err)
+		os.Exit(9)
 	}
 	fmt.Fprintf(os.Stderr, "OK\n")
 
