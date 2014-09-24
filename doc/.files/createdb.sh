@@ -1,9 +1,11 @@
 #! /usr/bin/env bash
 [ ! -x $(which sudo) ] && echo "sudo isn't available, that won't work" && exit 1
 
+pass=""
+[ ! -z $1 ] && pass=$1 && echo "using predefined password '$pass'"
 
 for user in "migadmin" "migapi" "migscheduler"; do
-    pass=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
+    [ -z $pass ] && pass=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
     sudo su postgres -c "psql -c 'CREATE ROLE $user;'" 1>/dev/null
     [ $? -ne 0 ] && echo "ERROR: user creation failed." && exit 123
     sudo su postgres -c "psql -c \"ALTER ROLE $user WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD '$pass';\"" 1>/dev/null
