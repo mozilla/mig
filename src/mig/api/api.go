@@ -35,10 +35,10 @@ func main() {
 	// The context initialization takes care of parsing the configuration,
 	// and creating connections to database, syslog, ...
 	fmt.Fprintf(os.Stderr, "Initializing API context...")
-	var err error
-	ctx, err = Init(*config)
+	ctx, err := Init(*config)
 	if err != nil {
-		panic(err)
+		fmt.Printf("\nFATAL: %v\n", err)
+		os.Exit(9)
 	}
 	fmt.Fprintf(os.Stderr, "OK\n")
 

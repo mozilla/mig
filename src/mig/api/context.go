@@ -59,7 +59,6 @@ func Init(path string) (ctx Context, err error) {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("Init() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving Init()"}.Debug()
 	}()
 
 	err = gcfg.ReadFileInto(&ctx, path)
