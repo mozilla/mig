@@ -82,15 +82,26 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-
+		var cmd mig.Command
 		// launch each operation consecutively
 		for _, op := range action.Operations {
 			args, err := json.Marshal(op.Parameters)
 			if err != nil {
 				panic(err)
 			}
-			runModuleDirectly(op.Module, args)
+			out := runModuleDirectly(op.Module, args)
+			var res mig.ModuleResult
+			err = json.Unmarshal([]byte(out), &res)
+			if err != nil {
+				panic(err)
+			}
+			cmd.Results = append(cmd.Results, res)
 		}
+		jCmd, err := json.MarshalIndent(cmd.Results, "", "  ")
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("%s\n", jCmd)
 		goto exit
 	}
 
@@ -125,19 +136,19 @@ func main() {
 			tmparg = tmparg + arg
 		}
 		args := []byte(tmparg)
-		runModuleDirectly(*mode, args)
+		fmt.Printf("%s", runModuleDirectly(*mode, args))
 	}
 exit:
 }
 
 // runModuleDirectly executes a module and displays the results on stdout
-func runModuleDirectly(mode string, args []byte) (err error) {
+func runModuleDirectly(mode string, args []byte) (out string) {
 	if _, ok := mig.AvailableModules[mode]; ok {
 		// instanciate and call module
 		modRunner := mig.AvailableModules[mode]()
-		fmt.Println(modRunner.(mig.Moduler).Run(args))
+		out = modRunner.(mig.Moduler).Run(args)
 	} else {
-		fmt.Printf(`{"errors": ["module '%s' is not available"]}`, mode)
+		out = fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	return
 }
