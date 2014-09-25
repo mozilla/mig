@@ -157,7 +157,7 @@
             <p>To generate compliance items, the API takes the results from commands, and creates one item per result. Therefore, a single action that creates hundreds of commands could, in turn, generate thousands of compliance items.</p>
             <p>The format for compliance items is simple, to be easily graphed and aggregated.</p>
             <pre><code class="javascript"><span class="p">{</span>
-    <span class="s2">"target"</span><span class="o">:</span> <span class="s2">"server1.prod.example.net"</span><span class="p">,</span>
+    <span class="s2">"target"</span><span class="o">:</span> <span class="s2">"agents.name='server1.prod.example.net'"</span><span class="p">,</span>
     <span class="s2">"policy"</span><span class="o">:</span> <span class="p">{</span>
         <span class="s2">"level"</span><span class="o">:</span> <span class="s2">"medium"</span><span class="p">,</span>
         <span class="s2">"name"</span><span class="o">:</span> <span class="s2">"system"</span><span class="p">,</span>
