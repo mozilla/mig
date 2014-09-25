@@ -421,6 +421,7 @@ func followAction(a mig.Action, ctx Context) (err error) {
 	previousctr := 0
 	status := ""
 	attempts := 0
+	var completion float64
 	for {
 		a, _, err = getAction(fmt.Sprintf("%.0f", a.ID), ctx)
 		if err != nil {
@@ -438,9 +439,13 @@ func followAction(a mig.Action, ctx Context) (err error) {
 			fmt.Printf("action status is now '%s'\n", a.Status)
 			status = a.Status
 		}
-		if status != "init" && status != "preparing" && status != "inflight" {
-			fmt.Printf("action finished with status '%s' in %s\n",
-				status, a.LastUpdateTime.Sub(a.StartTime).String())
+		// exit follower mode if status isn't one we follow,
+		// or enough commands have returned
+		// or expiration time has passed
+		if (status != "init" && status != "preparing" && status != "inflight") ||
+			(a.Counters.Returned > 0 && a.Counters.Returned >= a.Counters.Sent) ||
+			(time.Now().After(a.ExpireAfter)) {
+			goto finish
 			break
 		}
 		// init counters
@@ -454,23 +459,24 @@ func followAction(a mig.Action, ctx Context) (err error) {
 			}
 		}
 		if a.Counters.Returned > 0 && a.Counters.Returned > previousctr {
-			if a.Counters.Returned == a.Counters.Sent {
-				fmt.Printf("100%% done, completed in %s\n", a.FinishTime.Sub(a.StartTime).String())
-				break
-			}
-			completion := (float64(a.Counters.Returned) / float64(a.Counters.Sent)) * 100
+			completion = (float64(a.Counters.Returned) / float64(a.Counters.Sent)) * 100
 			if completion > 99.9 && a.Counters.Returned != a.Counters.Sent {
 				completion = 99.9
 			}
-			fmt.Printf("%.1f%% done - %d/%d\n",
-				completion, a.Counters.Returned, a.Counters.Sent)
 			previousctr = a.Counters.Returned
 		}
 		time.Sleep(500 * time.Millisecond)
 		dotter++
 		if dotter%10 == 0 {
-			fmt.Printf("elapsed: %s\n", time.Now().Sub(a.StartTime).String())
+			fmt.Printf("%.1f%% done - %d/%d - %s\n",
+				completion, a.Counters.Returned, a.Counters.Sent,
+				time.Now().Sub(a.StartTime).String())
 		}
 	}
+finish:
+	fmt.Printf("leaving follower mode after %s\n", a.LastUpdateTime.Sub(a.StartTime).String())
+	fmt.Printf("%d sent, %d done: %d returned, %d cancelled, %d failed, %d timed out, %d still in flight\n",
+		a.Counters.Sent, a.Counters.Done, a.Counters.Returned, a.Counters.Cancelled, a.Counters.Failed,
+		a.Counters.TimeOut, a.Counters.Sent-a.Counters.Returned)
 	return
 }
