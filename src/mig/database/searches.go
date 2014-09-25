@@ -6,6 +6,7 @@
 package database
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"mig"
@@ -48,7 +49,7 @@ func NewSearchParameters() (p SearchParameters) {
 }
 
 // SearchCommands returns an array of commands that match search parameters
-func (db *DB) SearchCommands(p SearchParameters) (commands []mig.Command, err error) {
+func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands []mig.Command, err error) {
 	var minActionID float64 = 0
 	var maxActionID float64 = 18446744073709551616 //2^64
 	if p.ActionID != "∞" {
@@ -85,24 +86,47 @@ func (db *DB) SearchCommands(p SearchParameters) (commands []mig.Command, err er
 			return
 		}
 	}
-	rows, err := db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
-		actions.id, actions.name, actions.target, actions.description, actions.threat,
-		actions.operations, actions.validfrom, actions.expireafter,
-		actions.pgpsignatures, actions.syntaxversion,
-		agents.id, agents.name, agents.queueloc, agents.os, agents.version
-		FROM commands, actions, agents
-		WHERE commands.actionid=actions.id AND commands.agentid=agents.id
-		AND commands.starttime <= $1 AND commands.starttime >= $2
-		AND commands.id >= $3 AND commands.id <= $4
-		AND actions.name LIKE $5
-		AND actions.id >= $6 AND actions.id <= $7
-		AND agents.name LIKE $8
-		AND agents.id >= $9 AND agents.id <= $10
-		AND actions.threat->>'family' LIKE $11
-		AND commands.status LIKE $12
-		ORDER BY commands.id DESC LIMIT $13`,
-		p.Before, p.After, minCommandID, maxCommandID, p.ActionName, minActionID, maxActionID,
-		p.AgentName, minAgentID, maxAgentID, p.ThreatFamily, p.Status, uint64(p.Limit))
+	var rows *sql.Rows
+	if doFoundAnything {
+		rows, err = db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
+			actions.id, actions.name, actions.target, actions.description, actions.threat,
+			actions.operations, actions.validfrom, actions.expireafter,
+			actions.pgpsignatures, actions.syntaxversion,
+			agents.id, agents.name, agents.queueloc, agents.os, agents.version
+			FROM commands, actions, agents, json_array_elements(commands.results) as r
+			WHERE commands.actionid=actions.id AND commands.agentid=agents.id
+			AND commands.starttime <= $1 AND commands.starttime >= $2
+			AND commands.id >= $3 AND commands.id <= $4
+			AND actions.name LIKE $5
+			AND actions.id >= $6 AND actions.id <= $7
+			AND agents.name LIKE $8
+			AND agents.id >= $9 AND agents.id <= $10
+			AND actions.threat->>'family' LIKE $11
+			AND commands.status LIKE $12
+			AND r#>>'{foundanything}' = $13
+			ORDER BY agents.name ASC LIMIT $14`,
+			p.Before, p.After, minCommandID, maxCommandID, p.ActionName, minActionID, maxActionID,
+			p.AgentName, minAgentID, maxAgentID, p.ThreatFamily, p.Status, p.FoundAnything, uint64(p.Limit))
+	} else {
+		rows, err = db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
+			actions.id, actions.name, actions.target, actions.description, actions.threat,
+			actions.operations, actions.validfrom, actions.expireafter,
+			actions.pgpsignatures, actions.syntaxversion,
+			agents.id, agents.name, agents.queueloc, agents.os, agents.version
+			FROM commands, actions, agents
+			WHERE commands.actionid=actions.id AND commands.agentid=agents.id
+			AND commands.starttime <= $1 AND commands.starttime >= $2
+			AND commands.id >= $3 AND commands.id <= $4
+			AND actions.name LIKE $5
+			AND actions.id >= $6 AND actions.id <= $7
+			AND agents.name LIKE $8
+			AND agents.id >= $9 AND agents.id <= $10
+			AND actions.threat->>'family' LIKE $11
+			AND commands.status LIKE $12
+			ORDER BY commands.id DESC LIMIT $13`,
+			p.Before, p.After, minCommandID, maxCommandID, p.ActionName, minActionID, maxActionID,
+			p.AgentName, minAgentID, maxAgentID, p.ThreatFamily, p.Status, uint64(p.Limit))
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while finding commands: '%v'", err)
 		return

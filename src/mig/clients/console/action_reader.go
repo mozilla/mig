@@ -41,7 +41,7 @@ func actionReader(input string, ctx Context) (err error) {
 	prompt := "\x1b[31;1maction " + aid[len(aid)-3:len(aid)] + ">\x1b[0m "
 	for {
 		// completion
-		var symbols = []string{"command", "copy", "counters", "details", "exit", "foundsomething", "foundnothing",
+		var symbols = []string{"command", "copy", "counters", "details", "exit", "foundanything", "foundnothing",
 			"grep", "help", "investigators", "json", "ls", "found", "pretty", "r", "results", "times"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
@@ -84,7 +84,7 @@ func actionReader(input string, ctx Context) (err error) {
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
-		case "foundsomething":
+		case "foundanything":
 			err = searchFoundAnything(a, true, ctx)
 			if err != nil {
 				panic(err)
@@ -99,8 +99,9 @@ func actionReader(input string, ctx Context) (err error) {
 command <id>	jump to command reader mode for command <id>
 copy		enter action launcher mode using current action as template
 counters	display the counters of the action
-exit		exit this mode
-foundsomething	list commands and agents that have found something
+details		display the details of the action, including status & times
+exit		exit this mode (also works with ctrl+d)
+foundanything	list commands and agents that have found something
 foundnothing	list commands and agents that have found nothing
 help		show this help
 investigators   print the list of investigators that signed the action
@@ -108,8 +109,9 @@ json         	show the json of the action
 ls <filter>	returns the list of commands with their status
 		'filter' is a pipe separated string of filter:
 		ex: ls | grep server1.(dom1|dom2) | grep -v example.net
-details		display the details of the action, including status & times
 r		refresh the action (get latest version from upstream)
+results <found> display results of all commands, limit to results that have
+                found something is <found> is declared
 times		show the various timestamps of the action
 `)
 		case "investigators":

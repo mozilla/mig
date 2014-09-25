@@ -41,6 +41,7 @@ func main() {
 		os.Exit(9)
 	}
 	fmt.Fprintf(os.Stderr, "OK\n")
+	ctx.Channels.Log <- mig.Log{Desc: "Context initialization done"}
 
 	// Goroutine that handles events, such as logs and panics,
 	// and decides what to do with them
@@ -56,7 +57,7 @@ func main() {
 			}
 		}
 	}()
-	ctx.Channels.Log <- mig.Log{Desc: "mig.ProcessLog() routine started"}
+	ctx.Channels.Log <- mig.Log{Desc: "Logger routine started"}
 
 	// register routes
 	r := mux.NewRouter()
@@ -73,6 +74,8 @@ func main() {
 	s.HandleFunc("/command/cancel/", cancelCommand).Methods("POST")
 	s.HandleFunc("/agent", getAgent).Methods("GET")
 	s.HandleFunc("/dashboard", getDashboard).Methods("GET")
+
+	ctx.Channels.Log <- mig.Log{Desc: "Starting HTTP handler"}
 
 	// all set, start the http handler
 	http.Handle("/", r)
@@ -108,6 +111,7 @@ func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, 
 func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -217,6 +221,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 // describeCreateAction returns a resource that describes how to POST new actions
 func describeCreateAction(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -347,6 +352,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 // describeCancelAction returns a resource that describes how to cancel an action
 func describeCancelAction(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -372,6 +378,7 @@ func describeCancelAction(respWriter http.ResponseWriter, request *http.Request)
 // cancelAction receives an action ID and issue a cancellation order
 func cancelAction(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -389,6 +396,7 @@ func cancelAction(respWriter http.ResponseWriter, request *http.Request) {
 func getAction(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -449,6 +457,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -502,6 +511,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 // describeCancelCommand returns a resource that describes how to cancel a command
 func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -527,6 +537,7 @@ func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request
 // cancelCommand receives an action ID and a command ID and issues a cancellation order
 func cancelCommand(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -542,6 +553,7 @@ func cancelCommand(respWriter http.ResponseWriter, request *http.Request) {
 
 func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -593,6 +605,7 @@ func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 
 func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {

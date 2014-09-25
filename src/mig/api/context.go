@@ -60,13 +60,12 @@ func Init(path string) (ctx Context, err error) {
 			err = fmt.Errorf("Init() -> %v", e)
 		}
 	}()
+	ctx.Channels.Log = make(chan mig.Log, 37)
 
 	err = gcfg.ReadFileInto(&ctx, path)
 	if err != nil {
 		panic(err)
 	}
-
-	ctx.Channels.Log = make(chan mig.Log, 37)
 
 	ctx.Server.BaseURL = ctx.Server.Host + ctx.Server.BaseRoute
 

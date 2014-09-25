@@ -11,6 +11,7 @@ import (
 	migdb "mig/database"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 func search(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
 	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
 	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
 	resource := cljs.New(loc)
 	p := migdb.NewSearchParameters()
@@ -37,8 +39,10 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving search()"}.Debug()
 	}()
-	//doFoundAnythingFiltering := false
+	doFoundAnything := false
 	timeLayout := time.RFC3339
+	truere := regexp.MustCompile("(?i)^true$")
+	falsere := regexp.MustCompile("(?i)^false$")
 	for queryParams, _ := range request.URL.Query() {
 		switch queryParams {
 		case "actionname":
@@ -62,17 +66,14 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				panic("before date not in RFC3339 format")
 			}
 		case "foundanything":
-			// FIXME
-			panic("foundanything is temporarily not supported")
-			//switch request.URL.Query()["foundanything"][0] {
-			//case "true", "True", "TRUE":
-			//	p.FoundAnything = true
-			//case "false", "False", "FALSE":
-			//	p.FoundAnything = false
-			//default:
-			//	panic("foundanything parameter must be true or false")
-			//}
-			//doFoundAnythingFiltering = true
+			if truere.MatchString(request.URL.Query()["foundanything"][0]) {
+				p.FoundAnything = true
+			} else if falsere.MatchString(request.URL.Query()["foundanything"][0]) {
+				p.FoundAnything = false
+			} else {
+				panic("foundanything parameter must be true or false")
+			}
+			doFoundAnything = true
 		case "report":
 			switch request.URL.Query()["report"][0] {
 			case "complianceitems":
@@ -97,7 +98,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		p.Type = request.URL.Query()["type"][0]
 		switch p.Type {
 		case "command":
-			results, err = ctx.DB.SearchCommands(p)
+			results, err = ctx.DB.SearchCommands(p, doFoundAnything)
 		case "action":
 			results, err = ctx.DB.SearchActions(p)
 		case "agent":
