@@ -25,6 +25,7 @@ import (
 var ctx Context
 
 func main() {
+	var err error
 	cpus := runtime.NumCPU()
 	runtime.GOMAXPROCS(cpus)
 
@@ -35,7 +36,7 @@ func main() {
 	// The context initialization takes care of parsing the configuration,
 	// and creating connections to database, syslog, ...
 	fmt.Fprintf(os.Stderr, "Initializing API context...")
-	ctx, err := Init(*config)
+	ctx, err = Init(*config) //ctx is a global variable
 	if err != nil {
 		fmt.Printf("\nFATAL: %v\n", err)
 		os.Exit(9)
