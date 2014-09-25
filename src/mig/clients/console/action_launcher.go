@@ -143,7 +143,7 @@ deloperation <opnum>	remove operation numbered <opnum> from operations array, co
 details			display the action details
 exit			exit this mode
 help			show this help
-json <pretty>		show the json of the action
+json <pack>		show the json of the action
 launch <nofollow>	launch the action. to return before completion, add "nofollow"
 load <path>		load an action from a file at <path>
 setname <name>		set the name of the action
@@ -153,7 +153,20 @@ sign			PGP sign the action
 times			show the various timestamps of the action
 `)
 		case "json":
-			ajson, err := json.MarshalIndent(a, "", "  ")
+			pack := false
+			if len(orders) > 1 {
+				if orders[1] == "pack" {
+					pack = true
+				} else {
+					fmt.Printf("Unknown option '%s'\n", orders[1])
+				}
+			}
+			var ajson []byte
+			if pack {
+				ajson, err = json.Marshal(a)
+			} else {
+				ajson, err = json.MarshalIndent(a, "", "  ")
+			}
 			if err != nil {
 				panic(err)
 			}
