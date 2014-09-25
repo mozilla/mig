@@ -27,7 +27,7 @@ type moduleResult struct {
 	id       float64
 	err      error
 	status   string
-	output   interface{}
+	output   mig.ModuleResult
 	position int
 }
 
@@ -320,8 +320,9 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 			// if we have a command to return, update status and send back
 			if cmd.ID > 0 {
-				errLog := mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("%v", err)}.Err()
-				cmd.Results = append(cmd.Results, errLog)
+				var mr mig.ModuleResult
+				mr.Errors = append(mr.Errors, fmt.Sprintf("%v", err))
+				cmd.Results = append(cmd.Results, mr)
 				cmd.Status = "failed"
 				ctx.Channels.Results <- cmd
 			}
@@ -476,7 +477,7 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 
 	// create the slice of results and insert each incoming
 	// result at the right position: operation[0] => results[0]
-	cmd.Results = make([]interface{}, opsCounter)
+	cmd.Results = make([]mig.ModuleResult, opsCounter)
 
 	// process failed operations first
 	for _, op := range runningOps {

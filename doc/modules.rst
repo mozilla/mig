@@ -187,7 +187,7 @@ package`_:
 
 	type Runner struct {
 		Parameters params
-		Results    results
+		Results    mig.ModuleResult
 	}
 	func init() {
 		mig.RegisterModule("example", func() interface{} {
@@ -195,7 +195,40 @@ package`_:
 		})
 	}
 
-`params` and `results` are local structures specific to the module.
+* a module accepts **Parameters** in the format of its choice
+
+* a module must return results that fit into the structure **mig.ModuleResult**.
+
+.. code:: go
+
+	type ModuleResult struct {
+		FoundAnything bool        `json:"foundanything"`
+		Success       bool        `json:"success"`
+		Elements      interface{} `json:"elements"`
+		Statistics    interface{} `json:"statistics"`
+		Errors        []string    `json:"errors"`
+	}
+
+The following rules apply:
+
+    +---------------+-------------------------------------------------------+
+    |    Variable   | Description                                           |
+    +===============+=======================================================+
+    | FoundAnything | must be set to **true** if module ran a search that   |
+    |               | found at least on item                                |
+    +---------------+-------------------------------------------------------+
+    | Success       | must be set to **true** if module ran without fatal   |
+    |               | errors. Soft errors must not influence this value     |
+    +---------------+-------------------------------------------------------+
+    | Elements      | must contains the detailled results. the format is not|
+    |               | predefined. each module decides how to return elements|
+    +---------------+-------------------------------------------------------+
+    | Statistics    | optional statistics returned by the module, list count|
+    |               | of files inspected, execution time, etc...            |
+    +---------------+-------------------------------------------------------+
+    | Errors        | optional soft errors encountered during execution.    |
+    |               | each module decides which errors should be returned   |
+    +---------------+-------------------------------------------------------+
 
 * `Runner` must implement two functions: **Run()** and **ValidateParameters()**.
 * `Run()` takes a single argument: a **[]byte** of the encoded JSON Parameters,

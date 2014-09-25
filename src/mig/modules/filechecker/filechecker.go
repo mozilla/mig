@@ -356,6 +356,7 @@ func newFileCheck(label, path, method, test string, code uint64) *filecheck {
 //	}
 type Results struct {
 	FoundAnything bool                                                     `json:"foundanything"`
+	Success       bool                                                     `json:"success"`
 	Elements      map[string]map[string]map[string]map[string]singleresult `json:"elements"`
 	Statistics    statistics                                               `json:"statistics"`
 	Errors        []string                                                 `json:"error"`
@@ -389,6 +390,7 @@ func (r Runner) Run(Args []byte) (resStr string) {
 				res.Errors = append(res.Errors, we)
 			}
 			res.Errors = append(res.Errors, fmt.Sprintf("%v", e))
+			res.Success = false
 			err, _ := json.Marshal(res)
 			resStr = string(err[:])
 			return
@@ -1288,7 +1290,8 @@ func buildResults(checklist map[float64]filecheck, t0 time.Time) (resStr string,
 	for _, we := range walkingErrors {
 		res.Errors = append(res.Errors, we)
 	}
-
+	// execution succeeded, set Success to true
+	res.Success = true
 	if debug {
 		fmt.Printf("Tested checklist: %d\n"+
 			"Tested files:     %d\n"+

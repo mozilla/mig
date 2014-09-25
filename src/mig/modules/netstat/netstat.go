@@ -28,7 +28,7 @@ func init() {
 
 type Runner struct {
 	Parameters params
-	Results    results
+	Results    mig.ModuleResult
 }
 
 type params struct {
@@ -40,92 +40,13 @@ type params struct {
 	ListeningPort []string `json:"listeningport,omitempty"`
 }
 
-// Sample results:
-// {
-//     "foundanything": true,
-//     "connectedip": {
-//         "173.194.0.0/16": {
-//             "element": [
-//                 {
-//                     "localaddr": "172.21.0.3",
-//                     "localport": 51376,
-//                     "remoteaddr": "173.194.37.115",
-//                     "remoteport": 80
-//                 },
-//                 {
-//                     "localaddr": "172.21.0.3",
-//                     "localport": 40577,
-//                     "remoteaddr": "173.194.37.7",
-//                     "remoteport": 80
-//                 }
-//             ],
-//             "found": true
-//         }
-//     },
-//     "listeningport": {
-//         "631": {
-//             "element": [
-//                 {
-//                     "localaddr": "127.0.0.1",
-//                     "localport": 631
-//                 },
-//                 {
-//                     "localaddr": "0:1::",
-//                     "localport": 631
-//                 }
-//             ],
-//             "found": true
-//         }
-//     },
-//     "localip": {
-//         "172.21.0.0/24": {
-//             "element": [
-//                 {
-//                     "localaddr": "172.21.0.3"
-//                 }
-//             ],
-//             "found": true
-//         }
-//     },
-//     "localmac": {
-//         "^8c:70:": {
-//             "element": [
-//                 {
-//                     "localmacaddr": "8c:70:5a:c8:be:50"
-//                 }
-//             ],
-//             "found": true
-//         }
-//     },
-//     "neighbormac": {
-//         "30:05:5c:00:80:3a": {
-//             "element": [
-//                 {
-//                     "remoteaddr": "172.21.0.6",
-//                     "remotemacaddr": "30:05:5c:00:80:3a"
-//                 }
-//             ],
-//             "found": true
-//         }
-//     },
-//     "success": true
-// }
-type results struct {
-	LocalMAC      map[string]result `json:"localmac,omitempty"`
-	LocalIP       map[string]result `json:"localip,omitempty"`
-	NeighborMAC   map[string]result `json:"neighbormac,omitempty"`
-	NeighborIP    map[string]result `json:"neighborip,omitempty"`
-	ConnectedIP   map[string]result `json:"connectedip,omitempty"`
-	ListeningPort map[string]result `json:"listeningport,omitempty"`
-	FoundAnything bool              `json:"foundanything"`
-	Success       bool              `json:"success"`
-	Errors        []string          `json:"errors,omitempty"`
-	Statistics    statistics        `json:"statistics"`
-}
-
-type result struct {
-	Found    bool      `json:"found"`
-	Elements []element `json:"element"`
+type elements struct {
+	LocalMAC      map[string][]element `json:"localmac,omitempty"`
+	LocalIP       map[string][]element `json:"localip,omitempty"`
+	NeighborMAC   map[string][]element `json:"neighbormac,omitempty"`
+	NeighborIP    map[string][]element `json:"neighborip,omitempty"`
+	ConnectedIP   map[string][]element `json:"connectedip,omitempty"`
+	ListeningPort map[string][]element `json:"listeningport,omitempty"`
 }
 
 type element struct {
@@ -137,23 +58,24 @@ type element struct {
 	RemotePort    float64 `json:"remoteport,omitempty"`
 }
 
-func newResults() *results {
-	var r results
-	r.LocalMAC = make(map[string]result)
-	r.LocalIP = make(map[string]result)
-	r.NeighborMAC = make(map[string]result)
-	r.NeighborIP = make(map[string]result)
-	r.ConnectedIP = make(map[string]result)
-	r.ListeningPort = make(map[string]result)
-	return &r
+func newElements() *elements {
+	var e elements
+	e.LocalMAC = make(map[string][]element)
+	e.LocalIP = make(map[string][]element)
+	e.NeighborMAC = make(map[string][]element)
+	e.NeighborIP = make(map[string][]element)
+	e.ConnectedIP = make(map[string][]element)
+	e.ListeningPort = make(map[string][]element)
+	return &e
 }
 
 // stats is a global variable
 var stats statistics
 
 type statistics struct {
-	Examined float64 `json:"examined"`
-	Exectime string  `json:"exectime"`
+	Examined  float64 `json:"examined"`
+	Exectime  string  `json:"exectime"`
+	Totalhits float64 `json:"totalhits"`
 }
 
 func (r Runner) ValidateParameters() (err error) {
@@ -248,64 +170,59 @@ func (r Runner) Run(args []byte) (resStr string) {
 		panic(err)
 	}
 
-	r.Results = *newResults()
+	els := *newElements()
 
 	for _, val := range r.Parameters.LocalMAC {
-		var result result
-		result.Found, result.Elements, err = HasLocalMAC(val)
+		found, el, err := HasLocalMAC(val)
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
-		r.Results.LocalMAC[val] = result
-		if result.Found {
+		els.LocalMAC[val] = el
+		if found {
 			r.Results.FoundAnything = true
 		}
 	}
 	for _, val := range r.Parameters.NeighborMAC {
-		var result result
-		result.Found, result.Elements, err = HasSeenMac(val)
+		found, el, err := HasSeenMac(val)
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
-		r.Results.NeighborMAC[val] = result
-		if result.Found {
+		els.NeighborMAC[val] = el
+		if found {
 			r.Results.FoundAnything = true
 		}
 	}
 	for _, val := range r.Parameters.LocalIP {
-		var result result
-		result.Found, result.Elements, err = HasLocalIP(val)
+		found, el, err := HasLocalIP(val)
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
-		r.Results.LocalIP[val] = result
-		if result.Found {
+		els.LocalIP[val] = el
+		if found {
 			r.Results.FoundAnything = true
 		}
 	}
 	for _, val := range r.Parameters.ConnectedIP {
-		var result result
-		result.Found, result.Elements, err = HasIPConnected(val)
+		found, el, err := HasIPConnected(val)
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
-		r.Results.ConnectedIP[val] = result
-		if result.Found {
+		els.ConnectedIP[val] = el
+		if found {
 			r.Results.FoundAnything = true
 		}
 	}
 	for _, port := range r.Parameters.ListeningPort {
-		var result result
-		result.Found, result.Elements, err = HasListeningPort(port)
+		found, el, err := HasListeningPort(port)
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
-		r.Results.ListeningPort[port] = result
-		if result.Found {
+		els.ListeningPort[port] = el
+		if found {
 			r.Results.FoundAnything = true
 		}
 	}
-
+	r.Results.Elements = els
 	// calculate execution time
 	t1 := time.Now()
 	stats.Exectime = t1.Sub(t0).String()
@@ -396,77 +313,95 @@ func HasLocalIP(ipStr string) (found bool, elements []element, err error) {
 }
 
 func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string, err error) {
-	var results results
-	err = json.Unmarshal(rawResults, &results)
+	var modres mig.ModuleResult
+	err = json.Unmarshal(rawResults, &modres)
 	if err != nil {
 		panic(err)
 	}
-	for val, res := range results.LocalMAC {
-		if foundOnly && !res.Found {
+	buf, err := json.Marshal(modres)
+	if err != nil {
+		panic(err)
+	}
+	var els elements
+	err = json.Unmarshal(buf, &els)
+	if err != nil {
+		panic(err)
+	}
+	for val, res := range els.LocalMAC {
+		if foundOnly && len(res) < 1 {
 			continue
 		}
-		for _, el := range res.Elements {
+		for _, el := range res {
 			resStr := fmt.Sprintf("found local mac %s for netstat localmac:'%s'", el.LocalMACAddr, val)
 			prints = append(prints, resStr)
 		}
 	}
-	for val, res := range results.NeighborMAC {
-		if foundOnly && !res.Found {
+	for val, res := range els.NeighborMAC {
+		if foundOnly && len(res) < 1 {
 			continue
 		}
-		for _, el := range res.Elements {
+		for _, el := range res {
 			resStr := fmt.Sprintf("found neighbor mac %s %s for netstat neighbormac:'%s'",
 				el.RemoteMACAddr, el.RemoteAddr, val)
 			prints = append(prints, resStr)
 		}
-		if len(res.Elements) == 0 {
+		if len(res) == 0 {
 			resStr := fmt.Sprintf("did not find anything for netstat neighbormac:'%s'", val)
 			prints = append(prints, resStr)
 		}
 	}
-	for val, res := range results.LocalIP {
-		if foundOnly && !res.Found {
+	for val, res := range els.LocalIP {
+		if foundOnly && len(res) < 1 {
 			continue
 		}
-		for _, el := range res.Elements {
+		for _, el := range res {
 			resStr := fmt.Sprintf("found local ip %s for netstat localip:'%s'", el.LocalAddr, val)
 			prints = append(prints, resStr)
 		}
-		if len(res.Elements) == 0 {
+		if len(res) == 0 {
 			resStr := fmt.Sprintf("did not find anything for netstat localip:'%s'", val)
 			prints = append(prints, resStr)
 		}
 	}
-	for val, res := range results.ConnectedIP {
-		if foundOnly && !res.Found {
+	for val, res := range els.ConnectedIP {
+		if foundOnly && len(res) < 1 {
 			continue
 		}
-		for _, el := range res.Elements {
+		for _, el := range res {
 			resStr := fmt.Sprintf("found connected tuple %s:%.0f with local tuple %s:%.0f for netstat connectedip:'%s'",
 				el.RemoteAddr, el.RemotePort, el.LocalAddr, el.LocalPort, val)
 			prints = append(prints, resStr)
 		}
-		if len(res.Elements) == 0 {
+		if len(res) == 0 {
 			resStr := fmt.Sprintf("did not find anything for netstat connectedip:'%s'", val)
 			prints = append(prints, resStr)
 		}
 	}
-	for val, res := range results.ListeningPort {
-		if foundOnly && !res.Found {
+	for val, res := range els.ListeningPort {
+		if foundOnly && len(res) < 1 {
 			continue
 		}
-		for _, el := range res.Elements {
+		for _, el := range res {
 			resStr := fmt.Sprintf("found listening port %.0f for netstat listeningport:'%s'", el.LocalPort, val)
 			prints = append(prints, resStr)
 		}
-		if len(res.Elements) == 0 {
+		if len(res) == 0 {
 			resStr := fmt.Sprintf("did not find anything for netstat listeningport:'%s'", val)
 			prints = append(prints, resStr)
 		}
 	}
 	if !foundOnly {
-		resStr := fmt.Sprintf("Statistics: examined %.0f items in %s",
-			results.Statistics.Examined, results.Statistics.Exectime)
+		buf, err := json.Marshal(modres.Statistics)
+		if err != nil {
+			panic(err)
+		}
+		var stats statistics
+		err = json.Unmarshal(buf, &stats)
+		if err != nil {
+			panic(err)
+		}
+		resStr := fmt.Sprintf("Statistics: total hits %.0f examined %.0f items exectime %s",
+			stats.Totalhits, stats.Examined, stats.Exectime)
 		prints = append(prints, resStr)
 	}
 	return
