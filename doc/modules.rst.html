@@ -124,14 +124,57 @@
         </ul>
         <pre><code class="go"><span class="kd">type</span> <span class="nx">Runner</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">Parameters</span> <span class="nx">params</span>
-    <span class="nx">Results</span>    <span class="nx">results</span>
+    <span class="nx">Results</span>    <span class="nx">mig</span><span class="p">.</span><span class="nx">ModuleResult</span>
 <span class="p">}</span>
 <span class="kd">func</span> <span class="nx">init</span><span class="p">()</span> <span class="p">{</span>
     <span class="nx">mig</span><span class="p">.</span><span class="nx">RegisterModule</span><span class="p">(</span><span class="s">"example"</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
         <span class="k">return</span> <span class="nb">new</span><span class="p">(</span><span class="nx">Runner</span><span class="p">)</span>
     <span class="p">})</span>
 <span class="p">}</span></code></pre>
-        <p><cite>params</cite> and <cite>results</cite> are local structures specific to the module.</p>
+        <ul>
+            <li>a module accepts <strong>Parameters</strong> in the format of its choice</li>
+            <li>a module must return results that fit into the structure <strong>mig.ModuleResult</strong>.</li>
+        </ul>
+        <pre><code class="go"><span class="kd">type</span> <span class="nx">ModuleResult</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">FoundAnything</span> <span class="kt">bool</span>        <span class="s">`json:"foundanything"`</span>
+    <span class="nx">Success</span>       <span class="kt">bool</span>        <span class="s">`json:"success"`</span>
+    <span class="nx">Elements</span>      <span class="kd">interface</span><span class="p">{}</span> <span class="s">`json:"elements"`</span>
+    <span class="nx">Statistics</span>    <span class="kd">interface</span><span class="p">{}</span> <span class="s">`json:"statistics"`</span>
+    <span class="nx">Errors</span>        <span class="p">[]</span><span class="kt">string</span>    <span class="s">`json:"errors"`</span>
+<span class="p">}</span></code></pre>
+        <p>The following rules apply:</p>
+        <blockquote>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>FoundAnything</td>
+                        <td>must be set to <strong>true</strong> if module ran a search that found at least on item</td>
+                    </tr>
+                    <tr>
+                        <td>Success</td>
+                        <td>must be set to <strong>true</strong> if module ran without fatal errors. Soft errors must not influence this value</td>
+                    </tr>
+                    <tr>
+                        <td>Elements</td>
+                        <td>must contains the detailled results. the format is not predefined. each module decides how to return elements</td>
+                    </tr>
+                    <tr>
+                        <td>Statistics</td>
+                        <td>optional statistics returned by the module, list count of files inspected, execution time, etc...</td>
+                    </tr>
+                    <tr>
+                        <td>Errors</td>
+                        <td>optional soft errors encountered during execution. each module decides which errors should be returned</td>
+                    </tr>
+                </tbody>
+            </table>
+        </blockquote>
         <ul>
             <li><cite>Runner</cite> must implement two functions: <strong>Run()</strong> and <strong>ValidateParameters()</strong>.</li>
             <li><cite>Run()</cite> takes a single argument: a <strong>[]byte</strong> of the encoded JSON Parameters, and returns a single string, typically a marshalled JSON string.</li>
