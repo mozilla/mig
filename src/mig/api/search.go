@@ -142,6 +142,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 	default:
 		switch p.Type {
 		case "command":
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Command)))}
 			for _, r := range results.([]mig.Command) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("http://%s:%d%s/command?commandid=%.0f",
@@ -153,6 +154,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				}
 			}
 		case "action":
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Action)))}
 			for _, r := range results.([]mig.Action) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("http://%s:%d%s/action?actionid=%.0f",
@@ -164,6 +166,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				}
 			}
 		case "agent":
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Agent)))}
 			for _, r := range results.([]mig.Agent) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("http://%s:%d%s/agent?agentid=%.0f",
