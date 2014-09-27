@@ -196,6 +196,30 @@ clean-agent:
 	rm -rf packages
 	rm -rf tmp
 
+docker-server-build:
+	rm -rf Dockerfile
+	cp .server.Dockerfile Dockerfile
+	docker build -t mig-server:latest .
+	rm -rf Dockerfile
+
+docker-server-build-nocache:
+	rm -rf Dockerfile
+	cp .server.Dockerfile Dockerfile
+	docker build --no-cache -t mig-server:latest .
+	rm -rf Dockerfile
+
+docker-server-run:
+	docker run --detach -h mig-server -t -i mig-server:latest
+
+docker-all-build:
+	docker build -t mig-all:latest .
+
+docker-all-build-nocache:
+	docker build --no-cache -t mig-all:latest .
+
+docker-all-run:
+	docker run --detach -h mig-all -t -i mig-all:latest /bin/bash
+
 clean: clean-agent
 	rm -rf bin
 	rm -rf tmp
