@@ -37,12 +37,6 @@ CREATE TABLE actions (
     finishtime timestamp with time zone,
     lastupdatetime timestamp with time zone,
     status character varying(256),
-    sentctr integer,
-    returnedctr integer,
-    donectr integer,
-    cancelledctr integer,
-    failedctr integer,
-    timeoutctr integer,
     pgpsignatures json,
     syntaxversion integer
 );
