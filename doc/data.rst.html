@@ -70,12 +70,6 @@
     <span class="n">finishtime</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span><span class="p">,</span>
     <span class="n">lastupdatetime</span> <span class="k">timestamp</span> <span class="k">with</span> <span class="n">time</span> <span class="k">zone</span><span class="p">,</span>
     <span class="n">status</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">256</span><span class="p">),</span>
-    <span class="n">sentctr</span> <span class="nb">integer</span><span class="p">,</span>
-    <span class="n">returnedctr</span> <span class="nb">integer</span><span class="p">,</span>
-    <span class="n">donectr</span> <span class="nb">integer</span><span class="p">,</span>
-    <span class="n">cancelledctr</span> <span class="nb">integer</span><span class="p">,</span>
-    <span class="n">failedctr</span> <span class="nb">integer</span><span class="p">,</span>
-    <span class="n">timeoutctr</span> <span class="nb">integer</span><span class="p">,</span>
     <span class="n">pgpsignatures</span> <span class="n">json</span><span class="p">,</span>
     <span class="n">syntaxversion</span> <span class="nb">integer</span>
 <span class="p">);</span></code></pre>
@@ -181,12 +175,6 @@ CREATE TABLE actions (
     finishtime timestamp with time zone,
     lastupdatetime timestamp with time zone,
     status character varying(256),
-    sentctr integer,
-    returnedctr integer,
-    donectr integer,
-    cancelledctr integer,
-    failedctr integer,
-    timeoutctr integer,
     pgpsignatures json,
     syntaxversion integer
 );
