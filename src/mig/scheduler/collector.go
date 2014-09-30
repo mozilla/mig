@@ -34,7 +34,7 @@ func spoolInspection(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	err = evaluateInFlightCommands(ctx)
+	err = expireCommands(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -122,14 +122,14 @@ func loadReturnedCommands(ctx Context) (err error) {
 	return
 }
 
-// evaluateInFlightCommand loads commands in the inflight directory
+// expireCommands loads commands in the inflight directory
 // and terminate the expired ones
-func evaluateInFlightCommands(ctx Context) (err error) {
+func expireCommands(ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("evaluateInFlightCommands() -> %v", e)
+			err = fmt.Errorf("expireCommands() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving evaluateInFlightCommands()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving expireCommands()"}.Debug()
 	}()
 	dir, err := os.Open(ctx.Directories.Command.InFlight)
 	dirContent, err := dir.Readdir(-1)
@@ -149,10 +149,9 @@ func evaluateInFlightCommands(ctx Context) (err error) {
 		}
 
 		if time.Now().After(cmd.Action.ExpireAfter) {
-			desc := fmt.Sprintf("expiring action '%s' on agent '%s'", cmd.Action.Name, cmd.Agent.Name)
+			desc := fmt.Sprintf("expiring command '%s' on agent '%s'", cmd.Action.Name, cmd.Agent.Name)
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: desc}
-			// expired command must be terminated
-			cmd.Status = "cancelled"
+			cmd.Status = "expired"
 			cmd.FinishTime = time.Now().UTC()
 			// write it into the returned command directory
 			data, err := json.Marshal(cmd)

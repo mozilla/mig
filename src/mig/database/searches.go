@@ -197,8 +197,7 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 	}
 	rows, err := db.c.Query(`SELECT id, name, target, description, threat, operations,
 		validfrom, expireafter, starttime, finishtime, lastupdatetime,
-		status, sentctr, returnedctr, donectr, cancelledctr, failedctr,
-		timeoutctr, pgpsignatures, syntaxversion
+		status, pgpsignatures, syntaxversion
 		FROM actions
 		WHERE actions.starttime <= $1 AND actions.starttime >= $2
 		AND actions.name LIKE $3
@@ -215,9 +214,8 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 		var a mig.Action
 		err = rows.Scan(&a.ID, &a.Name, &a.Target,
 			&jDesc, &jThreat, &jOps, &a.ValidFrom, &a.ExpireAfter,
-			&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status, &a.Counters.Sent,
-			&a.Counters.Returned, &a.Counters.Done, &a.Counters.Cancelled,
-			&a.Counters.Failed, &a.Counters.TimeOut, &jSig, &a.SyntaxVersion)
+			&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status,
+			&jSig, &a.SyntaxVersion)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Error while retrieving action: '%v'", err)
@@ -245,6 +243,11 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+			return
+		}
+		a.Counters, err = db.GetActionCounters(a.ID)
+		if err != nil {
+			err = fmt.Errorf("Failed to retrieve action counters: '%v'", err)
 			return
 		}
 		actions = append(actions, a)

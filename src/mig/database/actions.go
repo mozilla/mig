@@ -15,13 +15,12 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// ActionByID retrieves an action from the database using its ID
-func (db *DB) Last10Actions() (actions []mig.Action, err error) {
+// LastActions retrieves the last X actions by time from the database
+func (db *DB) LastActions(limit int) (actions []mig.Action, err error) {
 	rows, err := db.c.Query(`SELECT id, name, target, description, threat, operations,
 		validfrom, expireafter, starttime, finishtime, lastupdatetime,
-		status, sentctr, returnedctr, donectr, cancelledctr, failedctr,
-		timeoutctr, pgpsignatures, syntaxversion
-		FROM actions ORDER BY starttime DESC LIMIT 10`)
+		status, pgpsignatures, syntaxversion
+		FROM actions ORDER BY starttime DESC LIMIT $1`, limit)
 	if err != nil && err != sql.ErrNoRows {
 		rows.Close()
 		err = fmt.Errorf("Error while listing actions: '%v'", err)
@@ -32,9 +31,7 @@ func (db *DB) Last10Actions() (actions []mig.Action, err error) {
 		var a mig.Action
 		err = rows.Scan(&a.ID, &a.Name, &a.Target,
 			&jDesc, &jThreat, &jOps, &a.ValidFrom, &a.ExpireAfter,
-			&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status, &a.Counters.Sent,
-			&a.Counters.Returned, &a.Counters.Done, &a.Counters.Cancelled,
-			&a.Counters.Failed, &a.Counters.TimeOut, &jSig, &a.SyntaxVersion)
+			&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status, &jSig, &a.SyntaxVersion)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Error while retrieving action: '%v'", err)
@@ -64,6 +61,10 @@ func (db *DB) Last10Actions() (actions []mig.Action, err error) {
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
 			return
 		}
+		a.Counters, err = db.GetActionCounters(a.ID)
+		if err != nil {
+			return
+		}
 		actions = append(actions, a)
 	}
 	if err := rows.Err(); err != nil {
@@ -79,13 +80,10 @@ func (db *DB) ActionByID(id float64) (a mig.Action, err error) {
 	var jDesc, jThreat, jOps, jSig []byte
 	err = db.c.QueryRow(`SELECT id, name, target, description, threat, operations,
 		validfrom, expireafter, starttime, finishtime, lastupdatetime,
-		status, sentctr, returnedctr, donectr, cancelledctr, failedctr,
-		timeoutctr, pgpsignatures, syntaxversion
+		status, pgpsignatures, syntaxversion
 		FROM actions WHERE id=$1`, id).Scan(&a.ID, &a.Name, &a.Target,
 		&jDesc, &jThreat, &jOps, &a.ValidFrom, &a.ExpireAfter,
-		&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status, &a.Counters.Sent,
-		&a.Counters.Returned, &a.Counters.Done, &a.Counters.Cancelled,
-		&a.Counters.Failed, &a.Counters.TimeOut, &jSig, &a.SyntaxVersion)
+		&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status, &jSig, &a.SyntaxVersion)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving action: '%v'", err)
 		return
@@ -110,17 +108,18 @@ func (db *DB) ActionByID(id float64) (a mig.Action, err error) {
 		err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
 		return
 	}
+	a.Counters, err = db.GetActionCounters(a.ID)
+	if err != nil {
+		return
+	}
 	return
 }
 
 // ActionMetaByID retrieves the metadata fields of an action from the database using its ID
 func (db *DB) ActionMetaByID(id float64) (a mig.Action, err error) {
 	err = db.c.QueryRow(`SELECT id, name, validfrom, expireafter, starttime, finishtime, lastupdatetime,
-		status, sentctr, returnedctr, donectr, cancelledctr, failedctr,
-		timeoutctr FROM actions WHERE id=$1`, id).Scan(&a.ID, &a.Name, &a.ValidFrom, &a.ExpireAfter,
-		&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status, &a.Counters.Sent,
-		&a.Counters.Returned, &a.Counters.Done, &a.Counters.Cancelled,
-		&a.Counters.Failed, &a.Counters.TimeOut)
+		status FROM actions WHERE id=$1`, id).Scan(&a.ID, &a.Name, &a.ValidFrom, &a.ExpireAfter,
+		&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving action: '%v'", err)
 		return
@@ -152,15 +151,11 @@ func (db *DB) InsertAction(a mig.Action) (err error) {
 	_, err = db.c.Exec(`INSERT INTO actions
 		(id, name, target, description, threat, operations,
 		validfrom, expireafter, starttime, finishtime, lastupdatetime,
-		status, sentctr, returnedctr, donectr, cancelledctr, failedctr,
-		timeoutctr, pgpsignatures, syntaxversion)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-		$14, $15, $16, $17, $18, $19, $20)`,
+		status, pgpsignatures, syntaxversion)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 		a.ID, a.Name, a.Target, jDesc, jThreat, jOperations,
 		a.ValidFrom, a.ExpireAfter, a.StartTime, a.FinishTime, a.LastUpdateTime,
-		a.Status, a.Counters.Sent, a.Counters.Returned, a.Counters.Done,
-		a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut,
-		aPGPSignatures, a.SyntaxVersion)
+		a.Status, aPGPSignatures, a.SyntaxVersion)
 	if err != nil {
 		return fmt.Errorf("Failed to store action: '%v'", err)
 	}
@@ -169,11 +164,8 @@ func (db *DB) InsertAction(a mig.Action) (err error) {
 
 // UpdateAction stores updated action fields into the database.
 func (db *DB) UpdateAction(a mig.Action) (err error) {
-	_, err = db.c.Exec(`UPDATE actions SET (starttime, lastupdatetime,
-		status, sentctr, returnedctr, donectr, cancelledctr, failedctr, timeoutctr)
-		= ($2, $3, $4, $5, $6, $7, $8, $9, $10) WHERE id=$1`,
-		a.ID, a.StartTime, a.LastUpdateTime, a.Status, a.Counters.Sent, a.Counters.Returned,
-		a.Counters.Done, a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
+	_, err = db.c.Exec(`UPDATE actions SET (starttime, lastupdatetime, status) = ($2, $3, $4) WHERE id=$1`,
+		a.ID, a.StartTime, a.LastUpdateTime, a.Status)
 	if err != nil {
 		return fmt.Errorf("Failed to update action: '%v'", err)
 	}
@@ -208,11 +200,8 @@ func (db *DB) UpdateActionStatus(a mig.Action) (err error) {
 
 // UpdateRunningAction stores updated time and counters on a running action
 func (db *DB) UpdateRunningAction(a mig.Action) (err error) {
-	_, err = db.c.Exec(`UPDATE actions SET (lastupdatetime, returnedctr,
-		donectr, cancelledctr, failedctr, timeoutctr)
-		= ($2, $3, $4, $5, $6, $7) WHERE id=$1`,
-		a.ID, a.LastUpdateTime, a.Counters.Returned, a.Counters.Done,
-		a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
+	_, err = db.c.Exec(`UPDATE actions SET (lastupdatetime) = ($2) WHERE id=$1`,
+		a.ID, a.LastUpdateTime)
 	if err != nil {
 		return fmt.Errorf("Failed to update action: '%v'", err)
 	}
@@ -223,11 +212,8 @@ func (db *DB) UpdateRunningAction(a mig.Action) (err error) {
 func (db *DB) FinishAction(a mig.Action) (err error) {
 	a.FinishTime = time.Now()
 	a.Status = "completed"
-	_, err = db.c.Exec(`UPDATE actions SET (finishtime, lastupdatetime, status,
-		returnedctr, donectr, cancelledctr, failedctr, timeoutctr)
-		= ($1, $2, $3, $4, $5, $6, $7, $8) WHERE id=$9`,
-		a.FinishTime, a.LastUpdateTime, a.Status, a.Counters.Returned,
-		a.Counters.Done, a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut, a.ID)
+	_, err = db.c.Exec(`UPDATE actions SET (finishtime, lastupdatetime, status) = ($1, $2, $3) WHERE id=$4`,
+		a.FinishTime, a.LastUpdateTime, a.Status, a.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to update action: '%v'", err)
 	}
@@ -241,6 +227,54 @@ func (db *DB) InsertSignature(aid, iid float64, sig string) (err error) {
 		VALUES($1, $2, $3)`, aid, iid, sig)
 	if err != nil {
 		return fmt.Errorf("Failed to store signature: '%v'", err)
+	}
+	return
+}
+
+func (db *DB) GetActionCounters(aid float64) (counters mig.ActionCounters, err error) {
+	rows, err := db.c.Query(`SELECT DISTINCT(status), COUNT(id) FROM commands
+		WHERE actionid = $1 GROUP BY status`, aid)
+	if err != nil && err != sql.ErrNoRows {
+		rows.Close()
+		err = fmt.Errorf("Error while retrieving counters: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var count int
+		var status string
+		err = rows.Scan(&status, &count)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Error while retrieving counter: '%v'", err)
+		}
+		switch status {
+		case mig.StatusSent:
+			counters.InFlight = count
+			counters.Sent += count
+		case mig.StatusSuccess, mig.StatusDone:
+			counters.Success = count
+			counters.Done += count
+			counters.Sent += count
+		case mig.StatusCancelled:
+			counters.Cancelled = count
+			counters.Done += count
+			counters.Sent += count
+		case mig.StatusExpired:
+			counters.Expired = count
+			counters.Done += count
+			counters.Sent += count
+		case mig.StatusFailed:
+			counters.Failed = count
+			counters.Done += count
+			counters.Sent += count
+		case mig.StatusTimeout:
+			counters.TimeOut = count
+			counters.Done += count
+			counters.Sent += count
+		}
+	}
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
 	}
 	return
 }

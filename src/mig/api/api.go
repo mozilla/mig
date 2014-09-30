@@ -640,7 +640,7 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 	resource.AddItem(sumItem)
 
 	// add the last 10 actions
-	actions, err := ctx.DB.Last10Actions()
+	actions, err := ctx.DB.LastActions(10)
 	if err != nil {
 		panic(err)
 	}

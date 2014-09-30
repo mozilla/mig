@@ -427,7 +427,7 @@ func followAction(a mig.Action, ctx Context) (err error) {
 		if err != nil {
 			attempts++
 			time.Sleep(1 * time.Second)
-			if attempts == 30 {
+			if attempts >= 30 {
 				panic("failed to retrieve action after 30 seconds. launch may have failed")
 			}
 			continue
@@ -443,7 +443,7 @@ func followAction(a mig.Action, ctx Context) (err error) {
 		// or enough commands have returned
 		// or expiration time has passed
 		if (status != "init" && status != "preparing" && status != "inflight") ||
-			(a.Counters.Returned > 0 && a.Counters.Returned >= a.Counters.Sent) ||
+			(a.Counters.Done > 0 && a.Counters.Done >= a.Counters.Sent) ||
 			(time.Now().After(a.ExpireAfter)) {
 			goto finish
 			break
@@ -458,25 +458,26 @@ func followAction(a mig.Action, ctx Context) (err error) {
 				fmt.Printf("%d commands have been sent\n", sent)
 			}
 		}
-		if a.Counters.Returned > 0 && a.Counters.Returned > previousctr {
-			completion = (float64(a.Counters.Returned) / float64(a.Counters.Sent)) * 100
-			if completion > 99.9 && a.Counters.Returned != a.Counters.Sent {
+		if a.Counters.Done > 0 && a.Counters.Done > previousctr {
+			completion = (float64(a.Counters.Done) / float64(a.Counters.Sent)) * 100
+			if completion > 99.9 && a.Counters.Done != a.Counters.Sent {
 				completion = 99.9
 			}
-			previousctr = a.Counters.Returned
+			previousctr = a.Counters.Done
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 		dotter++
-		if dotter%10 == 0 {
+		if dotter >= 5 {
 			fmt.Printf("%.1f%% done - %d/%d - %s\n",
-				completion, a.Counters.Returned, a.Counters.Sent,
+				completion, a.Counters.Done, a.Counters.Sent,
 				time.Now().Sub(a.StartTime).String())
+			dotter = 0
 		}
 	}
 finish:
 	fmt.Printf("leaving follower mode after %s\n", a.LastUpdateTime.Sub(a.StartTime).String())
-	fmt.Printf("%d sent, %d done: %d returned, %d cancelled, %d failed, %d timed out, %d still in flight\n",
-		a.Counters.Sent, a.Counters.Done, a.Counters.Returned, a.Counters.Cancelled, a.Counters.Failed,
-		a.Counters.TimeOut, a.Counters.Sent-a.Counters.Returned)
+	fmt.Printf("%d sent, %d done: %d returned, %d cancelled, %d expired, %d failed, %d timed out, %d still in flight\n",
+		a.Counters.Sent, a.Counters.Done, a.Counters.Done, a.Counters.Cancelled, a.Counters.Expired,
+		a.Counters.Failed, a.Counters.TimeOut, a.Counters.InFlight)
 	return
 }

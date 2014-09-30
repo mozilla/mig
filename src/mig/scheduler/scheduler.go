@@ -490,7 +490,7 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: aid, Desc: "leaving sendCommand()"}.Debug()
 	}()
-	// store command in database
+	// store all the commands into the database at once
 	insertCount, err := ctx.DB.InsertCommands(cmds)
 	if err != nil {
 		panic(err)
@@ -569,10 +569,11 @@ func returnCommands(cmdFiles []string, ctx Context) (err error) {
 		if err != nil {
 			panic(err)
 		}
-		cmd.FinishTime = time.Now().UTC()
-		if cmd.Status == "sent" {
-			cmd.Status = "done"
+		//FIXME: backward compatibility hack, must remove after Dec. 1st 2014
+		if cmd.Status == "done" {
+			cmd.Status = mig.StatusSuccess
 		}
+		cmd.FinishTime = time.Now().UTC()
 		// update command in database
 		go func() {
 			err = ctx.DB.FinishCommand(cmd)
@@ -583,7 +584,6 @@ func returnCommands(cmdFiles []string, ctx Context) (err error) {
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command updated in database"}.Debug()
 			}
 		}()
-
 		// remove command from inflight dir
 		inflightPath := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
 		os.Remove(inflightPath)
@@ -621,35 +621,27 @@ func updateAction(cmds []mig.Command, ctx Context) (err error) {
 				panic(err)
 			}
 		}
-		// there is only one entry in the slice, so take the first entry from
-		switch cmd.Status {
-		case "done":
-			a.Counters.Done++
-		case "cancelled":
-			a.Counters.Cancelled++
-		case "failed":
-			a.Counters.Failed++
-		case "timeout":
-			a.Counters.TimeOut++
-		default:
-			err = fmt.Errorf("unknown command status: %s", cmd.Status)
-			panic(err)
-		}
-		// regardless of returned status, increase completion counter
-		a.Counters.Returned++
 		a.LastUpdateTime = time.Now().UTC()
 
 		// store action in the map
 		actions[a.ID] = a
 
-		// in case the action is related to upgrading agents, go do stuff
-		if cmd.Status == "done" {
-			go markUpgradedAgents(cmd, ctx)
+		// slightly unrelated to updating the action:
+		// in case the action is about upgrading agents, do some magical stuff
+		// to continue the upgrade protocol
+		if cmd.Status == mig.StatusSuccess && len(a.Operations) > 0 {
+			if a.Operations[0].Module == "upgrade" {
+				go markUpgradedAgents(cmd, ctx)
+			}
 		}
 	}
 	for _, a := range actions {
+		a.Counters, err = ctx.DB.GetActionCounters(a.ID)
+		if err != nil {
+			panic(err)
+		}
 		// Has the action completed?
-		if a.Counters.Returned == a.Counters.Sent {
+		if a.Counters.Done == a.Counters.Sent {
 			err = landAction(ctx, a)
 			if err != nil {
 				panic(err)
@@ -663,9 +655,9 @@ func updateAction(cmds []mig.Command, ctx Context) (err error) {
 			if err != nil {
 				panic(err)
 			}
-			desc := fmt.Sprintf("updated action '%s': completion=%d/%d, done=%d, cancelled=%d, failed=%d, timeout=%d, duration=%s",
-				a.Name, a.Counters.Returned, a.Counters.Sent, a.Counters.Done,
-				a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut, a.LastUpdateTime.Sub(a.StartTime).String())
+			desc := fmt.Sprintf("updated action '%s': progress=%d/%d, success=%d, cancelled=%d, expired=%d, failed=%d, timeout=%d, duration=%s",
+				a.Name, a.Counters.Done, a.Counters.Sent, a.Counters.Success, a.Counters.Cancelled, a.Counters.Expired,
+				a.Counters.Failed, a.Counters.TimeOut, a.LastUpdateTime.Sub(a.StartTime).String())
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: desc}
 		}
 	}

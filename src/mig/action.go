@@ -39,16 +39,18 @@ type Action struct {
 	StartTime      time.Time      `json:"starttime,omitempty"`
 	FinishTime     time.Time      `json:"finishtime,omitempty"`
 	LastUpdateTime time.Time      `json:"lastupdatetime,omitempty"`
-	Counters       counters       `json:"counters,omitempty"`
+	Counters       ActionCounters `json:"counters,omitempty"`
 	SyntaxVersion  uint16         `json:"syntaxversion,omitempty"`
 }
 
 // Some counters used to track the completion of an action
-type counters struct {
+type ActionCounters struct {
 	Sent      int `json:"sent,omitempty"`
-	Returned  int `json:"returned,omitempty"`
 	Done      int `json:"done,omitempty"`
+	InFlight  int `json:"inflight,omitempty"`
+	Success   int `json:"success,omitempty"`
 	Cancelled int `json:"cancelled,omitempty"`
+	Expired   int `json:"expired,omitempty"`
 	Failed    int `json:"failed,omitempty"`
 	TimeOut   int `json:"timeout,omitempty"`
 }

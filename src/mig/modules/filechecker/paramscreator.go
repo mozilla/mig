@@ -18,8 +18,7 @@ path <path>		add a path to search.
 			example: > /etc/yum.*/*.repo
 
 regex <regex>		add a regex to check against files content
-			example: > ^root:\\$1\\$10CXRS19\\$/h
-			note that, due to JSON, \ escape characters need to be doubled \\
+			example: > ^root:\$1\$10CXRS19\$/h
 
 filename <regex>	add a regex to search against filenames
 			example: > \.sql$

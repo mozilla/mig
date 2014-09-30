@@ -14,14 +14,32 @@ import (
 )
 
 type Command struct {
-	ID         float64        `json:"id"`
-	Action     Action         `json:"action"`
-	Agent      Agent          `json:"agent"`
-	Status     string         `json:"status"`
+	ID     float64 `json:"id"`
+	Action Action  `json:"action"`
+	Agent  Agent   `json:"agent"`
+
+	// Status can be one of:
+	// sent: the command has been sent by the scheduler to the agent
+	// success: the command has successfully ran on the agent and been returned to the scheduler
+	// cancelled: the command has been cancelled by the investigator
+	// expired: the command has been expired by the scheduler
+	// failed: the command has failed on the agent and been returned to the scheduler
+	// timeout: module execution has timed out, and the agent returned the command to the scheduler
+	Status string `json:"status"`
+
 	Results    []ModuleResult `json:"results"`
 	StartTime  time.Time      `json:"starttime"`
 	FinishTime time.Time      `json:"finishtime"`
 }
+
+const (
+	StatusSent      string = "sent"
+	StatusSuccess   string = "success"
+	StatusCancelled string = "cancelled"
+	StatusExpired   string = "expired"
+	StatusFailed    string = "failed"
+	StatusTimeout   string = "timeout"
+)
 
 // FromFile reads a command from a local file on the file system
 // and return the mig.Command structure

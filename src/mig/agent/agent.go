@@ -439,7 +439,7 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command timed out. Killing it."}.Err()
 
 		// update the command status and send the response back
-		result.status = "timeout"
+		result.status = mig.StatusTimeout
 		op.resultChan <- result
 
 		// kill the command
@@ -454,7 +454,7 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command failed."}.Err()
 			// update the command status and send the response back
-			result.status = "failed"
+			result.status = mig.StatusFailed
 			op.resultChan <- result
 			panic(err)
 
@@ -465,7 +465,7 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 				panic(err)
 			}
 			// mark command status as successfully completed
-			result.status = "done"
+			result.status = mig.StatusSuccess
 			// send the results
 			op.resultChan <- result
 		}
@@ -507,7 +507,10 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 	// stop when we received all the expected results
 	for result := range resultChan {
 		ctx.Channels.Log <- mig.Log{OpID: result.id, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: "received results from module"}.Debug()
-		cmd.Status = result.status
+		// if multiple modules return different statuses, a failure status overrides a success one
+		if cmd.Status == mig.StatusSuccess && result.status != mig.StatusSuccess {
+			cmd.Status = result.status
+		}
 		cmd.Results[result.position] = result.output
 		resultReceived++
 		if resultReceived >= opsCounter {

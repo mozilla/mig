@@ -75,9 +75,9 @@ func actionReader(input string, ctx Context) (err error) {
 			}
 			goto exit
 		case "counters":
-			fmt.Printf("Sent:\t\t%d\nReturned:\t%d\nDone:\t\t%d\n"+
+			fmt.Printf("Sent:\t\t%d\nDone:\t\t%d\nIn Flight:\t%d\n"+
 				"Cancelled:\t%d\nFailed:\t\t%d\nTimeout:\t%d\n",
-				a.Counters.Sent, a.Counters.Returned, a.Counters.Done,
+				a.Counters.Sent, a.Counters.Done, a.Counters.InFlight,
 				a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
 		case "details":
 			actionPrintDetails(a)
@@ -317,10 +317,10 @@ Times          valid from %s until %s
 		fmt.Printf("%s; ", op.Module)
 	}
 	fmt.Printf("\n")
-	fmt.Printf("Counters       sent=%d; returned=%d; done=%d\n"+
-		"               cancelled=%d; failed=%d; timeout=%d\n",
-		a.Counters.Sent, a.Counters.Returned, a.Counters.Done,
-		a.Counters.Cancelled, a.Counters.Failed, a.Counters.TimeOut)
+	fmt.Printf("Counters       sent=%d; done=%d; in flight=%d\n"+
+		"               cancelled=%d; expired=%d; failed=%d; timeout=%d\n",
+		a.Counters.Sent, a.Counters.Done, a.Counters.InFlight,
+		a.Counters.Cancelled, a.Counters.Expired, a.Counters.Failed, a.Counters.TimeOut)
 	return
 }
 

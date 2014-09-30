@@ -180,26 +180,45 @@ func (db *DB) InsertCommands(cmds []mig.Command) (insertCount int64, err error) 
 	return
 }
 
-// UpdateSentCommand updates a command into the database
+// UpdateSentCommand updates a command into the database, unless its status is already
+// set to 'success'
 func (db *DB) UpdateSentCommand(cmd mig.Command) (err error) {
-	_, err = db.c.Exec(`UPDATE commands SET status=$1 WHERE id=$2`, cmd.Status, cmd.ID)
+	res, err := db.c.Exec(`UPDATE commands SET status=$1 WHERE id=$2 and status!=$3`,
+		cmd.Status, cmd.ID, mig.StatusSuccess)
 	if err != nil {
 		return fmt.Errorf("Error while updating command: '%v'", err)
+	}
+	ctr, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("Error while evaluating query results: '%v'", err)
+	}
+	if ctr != 1 {
+		return fmt.Errorf("Failed to update command status correctly, %d rows affected", ctr)
 	}
 	return
 }
 
-// FinishCommand updates a command into the database
+// FinishCommand updates a command into the database unless its status is already set
+// to 'success'. If the status has already been set to "success" (maybe by a concurrent
+// scheduler), do not update further. this prevents scheduler A from expiring a command
+// that has already succeeded and been returned to scheduler B.
 func (db *DB) FinishCommand(cmd mig.Command) (err error) {
 	jResults, err := json.Marshal(cmd.Results)
 	if err != nil {
 		return fmt.Errorf("Failed to marshal results: '%v'", err)
 	}
-	_, err = db.c.Exec(`UPDATE commands SET status=$1, results=$2,
-		finishtime=$3 WHERE id=$4`, cmd.Status, jResults,
-		cmd.FinishTime, cmd.ID)
+	res, err := db.c.Exec(`UPDATE commands SET status=$1, results=$2,
+		finishtime=$3 WHERE id=$4 AND status!=$5`, cmd.Status, jResults,
+		cmd.FinishTime, cmd.ID, mig.StatusSuccess)
 	if err != nil {
 		return fmt.Errorf("Error while updating command: '%v'", err)
+	}
+	ctr, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("Error while evaluating query results: '%v'", err)
+	}
+	if ctr != 1 {
+		return fmt.Errorf("Failed to finish command status correctly, %d rows affected", ctr)
 	}
 	return
 }
