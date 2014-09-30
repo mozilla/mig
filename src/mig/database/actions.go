@@ -251,7 +251,7 @@ func (db *DB) GetActionCounters(aid float64) (counters mig.ActionCounters, err e
 		case mig.StatusSent:
 			counters.InFlight = count
 			counters.Sent += count
-		case mig.StatusSuccess, mig.StatusDone:
+		case mig.StatusSuccess:
 			counters.Success = count
 			counters.Done += count
 			counters.Sent += count
