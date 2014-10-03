@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 BUILDREF	:= $(shell git log --pretty=format:'%h' -n 1)
-BUILDDATE	:= $(shell date +%Y%m%d%H%M)
+BUILDDATE	:= $(shell date +%Y%m%d)
 BUILDENV	:= dev
 BUILDREV	:= $(BUILDDATE)+$(BUILDREF).$(BUILDENV)
 
