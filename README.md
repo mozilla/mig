@@ -38,6 +38,9 @@ platform, but only reply to questions instead. All actions are signed by GPG
 keys that are not stored in the platform, thus preventing a compromision from
 taking over the entire infrastructure.
 
+Discussion
+----------
+Join **#mig** on [irc.mozilla.org](https://wiki.mozilla.org/IRC)
 
 Video presentation
 ------------------
