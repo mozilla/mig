@@ -9,9 +9,9 @@ MIG Data
 Scheduler Spool
 ---------------
 
-MIG data is stored both on the file system of the scheduler, and in mongodb. On
-the scheduler, each action and command are stored individually in a text file in
-/var/cache/mig (by default).
+MIG data is stored both on the file system of the scheduler, and in the database.
+On the scheduler, each action and command are stored individually in a text file
+in /var/cache/mig (by default).
 
 .. code:: bash
 
