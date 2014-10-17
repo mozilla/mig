@@ -73,7 +73,9 @@ func loadNewActions(ctx Context) (err error) {
 		filename := ctx.Directories.Action.New + "/" + DirEntry.Name()
 		a, err := mig.ActionFromFile(filename)
 		if err != nil {
-			panic(err)
+			// failing to load this file, log and skip it
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("failed to load new action file %s", filename)}.Err()
+			continue
 		}
 		if time.Now().After(a.ExpireAfter) {
 			// delete expired
@@ -112,7 +114,9 @@ func loadReturnedCommands(ctx Context) (err error) {
 		filename := ctx.Directories.Command.Returned + "/" + DirEntry.Name()
 		cmd, err := mig.CmdFromFile(filename)
 		if err != nil {
-			panic(err)
+			// failing to load this file, log and skip it
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("failed to load returned command file %s", filename)}.Err()
+			continue
 		}
 		// queue it
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("loading returned command '%s'", cmd.Action.Name)}
@@ -145,7 +149,9 @@ func expireCommands(ctx Context) (err error) {
 		filename := ctx.Directories.Command.InFlight + "/" + DirEntry.Name()
 		cmd, err := mig.CmdFromFile(filename)
 		if err != nil {
-			panic(err)
+			// failing to load this file, log and skip it
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("failed to inflight command file %s", filename)}.Err()
+			continue
 		}
 
 		if time.Now().After(cmd.Action.ExpireAfter) {
