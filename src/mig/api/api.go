@@ -273,9 +273,10 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 
 	// Init action fields
 	action.ID = mig.GenID()
-	date0 := time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
+	date0 := time.Date(0011, time.January, 11, 11, 11, 11, 11, time.UTC)
+	date1 := time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
 	action.StartTime = date0
-	action.FinishTime = date0
+	action.FinishTime = date1
 	action.LastUpdateTime = date0
 	action.Status = "init"
 
