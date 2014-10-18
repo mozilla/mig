@@ -8,23 +8,23 @@ digraph mig {
         color=white;
         "Investigator"[shape=egg label="Investigator" fontsize=12 fontcolor=white penwidth=1 style=filled fillcolor=blue fontname="Helvetica"];
         "Console"[shape=box label="Console" color=green style=filled fillcolor=black fontcolor=green fontname="Helvetica"];
-        "Legend"[shape=box color=gray fontcolor=black fontname="Helvetica" fontsize=11
+        "Legend"[shape=box color=gray fontcolor=black fontname="Helvetica" fontsize=12
             label="===== Legend =====\l
 0 - generate signed action\l
 1 - HTTP POST action\l
 2 - Generate ID, init timestamps, verify signature, set status to 'init'\l
-3 - Write action into spool\l
-4 - Verify timestamps\l
+3 - Write action into database and scheduler spool\l
+4 - Verify action timestamps\l
 5 - Find target agents, set status 'preparing', write to database\l
-6 - Generate commands\l
-7 - Process new commands\l
+6 - Generate one command per action into the scheduler spool\l
+7 - Process new commands from the scheduler spool\l
 8 - Write command to database, set status to 'sent'\l
 9 - Publish command to mig.agt queues\l
 10 - Update action in database, set status to 'inflight'\l
-11 - Push commands to agents\l
-12 - Return commands results\l
-13 - Push returned commands to scheduler\l
-14 - Process returned commands\l
+11 - Push commands from relay to agents\l
+12 - Return commands results from agents to relay\l
+13 - Push returned commands from relay to scheduler\l
+14 - Process returned commands from scheduler spool\l
 15 - Write results to database, set command status to 'success'\l
 16 - Notify action updater that command has finished\l
 17 - When all commands are done, set action status to 'done'\l
@@ -60,6 +60,7 @@ digraph mig {
     "Investigator" -> {"Console"}[label="0"];
     "Console"->"/action/create"[label="1"];
     "/action/create"->"/action/create"[label="2"];
+    "/action/create"->"Database"[label="3"];
     "/action/create"->"SchedulerSpool"[label="3"];
     "SchedulerSpool"->"processNewAction"[label="4"];
     "processNewAction"->"Database"[label="5"];

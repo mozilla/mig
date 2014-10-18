@@ -265,8 +265,11 @@ The diagram below represents the full workflow from the launch of an action by
 an investigation, to the retrieval of results from the database. The steps are
 explained in the legend of the diagram, and map to various components of MIG.
 
+View `full size diagram`_.
+
+.. _`full size diagram`: .files/action_command_flow.svg
+
 .. image:: .files/action_command_flow.svg
-	:width: 1200px
 
 Access Control Lists
 --------------------
