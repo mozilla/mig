@@ -259,6 +259,15 @@ While the result is negative, the command itself has succeeded. Had a failure
 happened on the agent, the scheduler would have been notified and the status
 would be one of "failed", "timeout" or "cancelled".
 
+Action/Commands workflow
+~~~~~~~~~~~~~~~~~~~~~~~~
+The diagram below represents the full workflow from the launch of an action by
+an investigation, to the retrieval of results from the database. The steps are
+explained in the legend of the diagram, and map to various components of MIG.
+
+.. image:: .files/action_command_flow.svg
+	:width: 1200px
+
 Access Control Lists
 --------------------
 

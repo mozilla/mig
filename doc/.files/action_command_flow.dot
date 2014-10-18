@@ -1,0 +1,79 @@
+// generate with dot -Tsvg -o action_command_flow.svg action_command_flow.dot
+digraph mig {
+    fontname="Helvetica";
+    rankdir=LR;
+    bgcolor=white;
+    subgraph cluster_investigator {
+        label="Investigators"
+        color=white;
+        "Investigator"[shape=egg label="Investigator" fontsize=12 fontcolor=white penwidth=1 style=filled fillcolor=blue fontname="Helvetica"];
+        "Console"[shape=box label="Console" color=green style=filled fillcolor=black fontcolor=green fontname="Helvetica"];
+        "Legend"[shape=box color=gray fontcolor=black fontname="Helvetica" fontsize=11
+            label="===== Legend =====\l
+0 - generate signed action\l
+1 - HTTP POST action\l
+2 - Generate ID, init timestamps, verify signature, set status to 'init'\l
+3 - Write action into spool\l
+4 - Verify timestamps\l
+5 - Find target agents, set status 'preparing', write to database\l
+6 - Generate commands\l
+7 - Process new commands\l
+8 - Write command to database, set status to 'sent'\l
+9 - Publish command to mig.agt queues\l
+10 - Update action in database, set status to 'inflight'\l
+11 - Push commands to agents\l
+12 - Return commands results\l
+13 - Push returned commands to scheduler\l
+14 - Process returned commands\l
+15 - Write results to database, set command status to 'success'\l
+16 - Notify action updater that command has finished\l
+17 - When all commands are done, set action status to 'done'\l
+18 - Retrieve action results\l
+"];
+    }
+    subgraph cluster_platform {
+        label="MIG Platform" style=solid color=gray fontcolor=black;
+        subgraph cluster_api {
+            label="API" style=dashed color=gray fontcolor=orange;
+            "/action/create"[shape=box label="/action/create" color=black style=filled fillcolor=blue fontcolor=white fontname="Helvetica"];
+            "/action?id=xyz"[shape=box label="/action?id=xyz" color=black style=filled fillcolor=blue fontcolor=white fontname="Helvetica"];
+        }
+        subgraph cluster_scheduler {
+            label="Scheduler" style=dashed color=gray fontcolor=green;
+            "SchedulerSpool"[shape=box3d label="Scheduler Spool" color=black style=filled fillcolor=white fontname="Helvetica"];
+            "processNewAction"[shape=box label="processNewAction" color=black style=filled fillcolor=orange fontname="Helvetica"];
+            "sendCommands"[shape=box label="sendCommands" color=black style=filled fillcolor=orange fontname="Helvetica"];
+            "recvAgentResults"[shape=box label="recvAgentResults" color=black style=filled fillcolor=orange fontname="Helvetica"];
+            "returnCommands"[shape=box label="returnCommands" color=black style=filled fillcolor=orange fontname="Helvetica"];
+            "updateAction"[shape=box label="updateAction" color=black style=filled fillcolor=orange fontname="Helvetica"];
+        }
+        "Database"[shape=box3d label="Database" color=black style=filled fillcolor=black fontcolor=white fontname="Helvetica" width=1 height=1];
+        "Relay"[shape=component label="Relay" color=black style=filled fillcolor=red fontcolor=white fontname="Helvetica" width=1 height=1];
+    }
+    subgraph cluster_agents {
+        label="MIG Agents"
+        "agent1"[shape=house label="agent1" color=black style=filled fillcolor=white fontname="Helvetica"];
+        "agent2"[shape=house label="agent2" color=black style=filled fillcolor=white fontname="Helvetica"];
+        "agent3"[shape=house label="agent3" color=black style=filled fillcolor=white fontname="Helvetica"];
+        "agentX"[shape=house label="agentX" color=black style=filled fillcolor=white fontname="Helvetica"];
+    }
+    "Investigator" -> {"Console"}[label="0"];
+    "Console"->"/action/create"[label="1"];
+    "/action/create"->"/action/create"[label="2"];
+    "/action/create"->"SchedulerSpool"[label="3"];
+    "SchedulerSpool"->"processNewAction"[label="4"];
+    "processNewAction"->"Database"[label="5"];
+    "processNewAction"->"SchedulerSpool"[label="6"];
+    "SchedulerSpool"->"sendCommands"[label="7"];
+    "sendCommands"->"Database"[label="8"];
+    "sendCommands"->"Relay"[label="9"];
+    "processNewAction"->"Database"[label="10"];
+    "Relay"->{"agent1", "agent2", "agent3", "agentX"}[label="11"];
+    {"agent1", "agent2", "agent3", "agentX"} -> "Relay"[label="12"];
+    "Relay"->"recvAgentResults"->"SchedulerSpool"[label="13"];
+    "SchedulerSpool"->"returnCommands"[label="14"];
+    "returnCommands"->"Database"[label="15"];
+    "returnCommands"->"updateAction"[label="16"];
+    "updateAction"->"Database"[label="17"];
+    "Investigator"->"Console"->"/action?id=xyz"->"Database"[label="18"]
+}
