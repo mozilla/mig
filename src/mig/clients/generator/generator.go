@@ -68,7 +68,7 @@ func main() {
 		// for immediate execution, set validity one minute in the past
 		a.ValidFrom = time.Now().Add(-60 * time.Second).UTC()
 	} else {
-		a.ValidFrom, err = time.Parse("2014-01-01T00:00:00.0Z", *validfrom)
+		a.ValidFrom, err = time.Parse(time.RFC3339, *validfrom)
 		if err != nil {
 			panic(err)
 		}
