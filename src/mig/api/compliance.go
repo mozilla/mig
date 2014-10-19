@@ -57,6 +57,10 @@ func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, 
 			if err != nil {
 				return items, err
 			}
+			if i > (len(cmd.Action.Operations) - 1) {
+				// skip this entry if the lookup fails
+				continue
+			}
 			switch cmd.Action.Operations[i].Module {
 			case "filechecker":
 				var r filechecker.Results
