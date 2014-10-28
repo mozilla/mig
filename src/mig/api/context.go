@@ -6,9 +6,11 @@
 package main
 
 import (
+	"bytes"
 	"code.google.com/p/gcfg"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mig"
 	migdb "mig/database"
 	"mig/pgp"
@@ -193,7 +195,7 @@ func makeKeyring() (keyring io.ReadSeeker, err error) {
 
 // getKeyring copy an io.Reader from the master keyring. If the keyring hasn't been refreshed
 // in a while, it also gets a fresh copy from the database
-func getKeyring() (kr io.ReadSeeker, err error) {
+func getKeyring() (kr io.Reader, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("getKeyring() -> %v", e)
@@ -207,11 +209,17 @@ func getKeyring() (kr io.ReadSeeker, err error) {
 			panic(err)
 		}
 		ctx.Keyring.UpdateTime = time.Now()
+	} else {
+		// rewind the master keyring
+		_, err = ctx.Keyring.Reader.Seek(0, 0)
+		if err != nil {
+			panic(err)
+		}
 	}
-	_, err = ctx.Keyring.Reader.Seek(0, 0)
+	buf, err := ioutil.ReadAll(ctx.Keyring.Reader)
 	if err != nil {
 		panic(err)
 	}
-	kr = ctx.Keyring.Reader
+	kr = bytes.NewBuffer(buf)
 	return
 }
