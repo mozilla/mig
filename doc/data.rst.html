@@ -103,7 +103,8 @@
     <span class="n">id</span> <span class="nb">numeric</span> <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
     <span class="n">name</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
     <span class="n">pgpfingerprint</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
-    <span class="n">publickey</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">65536</span><span class="p">)</span>
+    <span class="n">publickey</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">65536</span><span class="p">),</span>
+    <span class="n">status</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">256</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span>
 <span class="p">);</span>
 <span class="k">CREATE</span> <span class="k">UNIQUE</span> <span class="k">INDEX</span> <span class="k">ON</span> <span class="n">investigators</span> <span class="p">(</span><span class="n">pgpfingerprint</span><span class="p">);</span></code></pre>
             <p>The <cite>signatures</cite> table is a junction between an action and the investigators that signed the action.</p>
@@ -243,7 +244,8 @@ CREATE TABLE investigators (
     id numeric NOT NULL,
     name character varying(1024) NOT NULL,
     pgpfingerprint character varying(128),
-    publickey bytea
+    publickey bytea,
+    status character varying(255) NOT NULL
 );
 ALTER TABLE public.investigators OWNER TO migadmin;
 ALTER TABLE ONLY investigators
@@ -308,7 +310,8 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO migscheduler;
 GRANT INSERT, UPDATE ON actions, commands, agents, signatures TO migscheduler;
 
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO migapi;
-GRANT INSERT ON actions, signatures TO migapi;
+GRANT INSERT ON actions, signatures, investigators TO migapi;
+GRANT USAGE ON SEQUENCE investigators_id_seq TO migapi;
 EOF</span>
 
 chmod 777 <span class="nv">$granttmp</span>

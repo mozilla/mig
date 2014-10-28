@@ -11,11 +11,12 @@ import (
 	"fmt"
 	"io"
 	"mig/pgp/verify"
+	"strings"
 
 	"code.google.com/p/go.crypto/openpgp"
 )
 
-// TransformArmoredPubKeysToKeyring takes a list of public PGP key in armored form and transforms
+// ArmoredPubKeysToKeyring takes a list of public PGP key in armored form and transforms
 // it into a keyring that can be used in other openpgp's functions
 func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.Reader, keycount int, err error) {
 	defer func() {
@@ -33,7 +34,7 @@ func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.Reader, keycount int,
 		}
 		keycount += 1
 		if len(el) != 1 {
-			err = fmt.Errorf("Public GPG Key contains %d entities, wanted 1\n", len(el))
+			err = fmt.Errorf("Public GPG Key contains %d entities, wanted 1", len(el))
 			panic(err)
 		}
 		// serialize entities into io.Reader
@@ -46,8 +47,28 @@ func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.Reader, keycount int,
 	return
 }
 
-// TransformArmoredPubKeysToKeyring takes a list of public PGP key in armored form and transforms
-// it into a keyring that can be used in other openpgp's functions
+// LoadArmoredPubKey takes a single public key as a byte slice, validates it, and returns its
+// its fingerprint or an error
+func LoadArmoredPubKey(pubkey []byte) (pgpfingerprint string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("LoadArmoredPubKey() -> %v", e)
+		}
+	}()
+	el, err := openpgp.ReadArmoredKeyRing(bytes.NewBuffer(pubkey))
+	if err != nil {
+		panic(err)
+	}
+	if len(el) != 1 {
+		err = fmt.Errorf("Public GPG Key contains %d entities, wanted 1", len(el))
+		panic(err)
+	}
+	entity := el[0]
+	fp := hex.EncodeToString(entity.PrimaryKey.Fingerprint[:])
+	pgpfingerprint = strings.ToUpper(fp)
+	return
+}
+
 func GetFingerprintFromSignature(data string, signature string, keyring io.Reader) (fingerprint string, err error) {
 	defer func() {
 		if e := recover(); e != nil {

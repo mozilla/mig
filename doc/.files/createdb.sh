@@ -98,7 +98,8 @@ CREATE TABLE investigators (
     id numeric NOT NULL,
     name character varying(1024) NOT NULL,
     pgpfingerprint character varying(128),
-    publickey bytea
+    publickey bytea,
+    status character varying(255) NOT NULL
 );
 ALTER TABLE public.investigators OWNER TO migadmin;
 ALTER TABLE ONLY investigators
@@ -163,7 +164,8 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO migscheduler;
 GRANT INSERT, UPDATE ON actions, commands, agents, signatures TO migscheduler;
 
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO migapi;
-GRANT INSERT ON actions, signatures TO migapi;
+GRANT INSERT ON actions, signatures, investigators TO migapi;
+GRANT USAGE ON SEQUENCE investigators_id_seq TO migapi;
 EOF
 
 chmod 777 $granttmp
