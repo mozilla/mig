@@ -12,7 +12,6 @@ import (
 	"mig"
 	"mig/pgp"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -81,11 +80,10 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	action.Status = "init"
 
 	// load keyring and validate action
-	keyring, err := os.Open(ctx.PGP.Home + "/pubring.gpg")
+	keyring, err := getKeyring()
 	if err != nil {
 		panic(err)
 	}
-	defer keyring.Close()
 
 	err = action.Validate()
 	if err != nil {
@@ -109,11 +107,10 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	for _, sig := range action.PGPSignatures {
 		// TODO: opening the keyring in a loop is really ugly. rewind!
-		k, err := os.Open(ctx.PGP.Home + "/pubring.gpg")
+		k, err := getKeyring()
 		if err != nil {
 			panic(err)
 		}
-		defer k.Close()
 		fp, err := pgp.GetFingerprintFromSignature(astr, sig, k)
 		if err != nil {
 			panic(err)

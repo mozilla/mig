@@ -13,6 +13,33 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// ActiveInvestigators returns a slice of investigators keys marked as active
+func (db *DB) ActiveInvestigatorsKeys() (keys []string, err error) {
+	rows, err := db.c.Query("SELECT publickey FROM investigators WHERE status='active'")
+	if err != nil && err != sql.ErrNoRows {
+		rows.Close()
+		err = fmt.Errorf("Error while listing active investigators keys: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows { // having an empty DB is not an issue
+		return
+	}
+	for rows.Next() {
+		var key []byte
+		err = rows.Scan(&key)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Error while retrieving investigator key: '%v'", err)
+			return
+		}
+		keys = append(keys, string(key))
+	}
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete active investigators query: '%v'", err)
+	}
+	return
+}
+
 // InvestigatorByID searches the database for an investigator with a given ID
 func (db *DB) InvestigatorByID(iid float64) (inv mig.Investigator, err error) {
 	err = db.c.QueryRow("SELECT id, name, pgpfingerprint, publickey FROM investigators WHERE id=$1",

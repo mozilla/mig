@@ -58,7 +58,6 @@
                 <p><a href="#api-configuration">6   API configuration</a></p>
                 <ul class="auto-toc">
                     <li><a href="#location">6.1   Location</a></li>
-                    <li><a href="#gnupg-pubring">6.2   GnuPG pubring</a></li>
                 </ul>
             </li>
         </ul>
@@ -525,27 +524,6 @@ baseroute = "/api/v1"</pre>
             <p><cite>ip</cite> and <cite>port</cite> define the socket the API will be listening on. <cite>host</cite> is the public URL of the API, that clients will be connecting to. <cite>baseroute</cite> is the location of the base of the API, without the trailing slash.</p>
             <p>In this example, to reach the home of the API, we would point our browser to <cite>http://localhost:12345/api/v1/</cite>.</p>
             <p>Note that the API does not support SSL, or authentication (for now). This need to be configured on a reverse proxy in front of it.</p>
-        </section>
-        <section id="gnupg-pubring">
-            <h3>6.2   GnuPG pubring</h3>
-            <p>The API uses a gnupg pubring to validate incoming actions. The pubring can be created as a single file, without other gnupg files, and provided to the API in the configuration file.</p>
-            <p>To create a pubring, use the following command:</p>
-            <pre><code class="bash"><span class="nv">$ </span>mkdir /tmp/api-gpg
-
-<span class="c"># export the public keys into a file
-</span><span class="nv">$ </span>gpg --export -a bob@example.net john@example.com &gt; /tmp/api-gpg/pubkeys.pem
-
-<span class="c"># import the public keys into a new pubring
-</span><span class="nv">$ </span>gpg --homedir /tmp/api-gpg/ --import /tmp/api-gpg/pubkeys.pem
-gpg: key AF67CB21: public key <span class="s2">"Bob Kelso &lt;bob@example.net&gt;"</span> imported
-gpg: key DEF98214: public key <span class="s2">"John Smith &lt;john@example.com&gt;"</span> imported
-gpg: Total number processed: 2
-gpg:               imported: 2  <span class="o">(</span>RSA: 2<span class="o">)</span></code></pre>
-            <p>The file in /tmp/api-gpg/pubring.gpg can be passed to the API</p>
-            <blockquote>
-                <pre>[pgp]
-    pubring = "/tmp/api-gpg/pubring.gpg"</pre>
-            </blockquote>
         </section>
     </section>
 </body>

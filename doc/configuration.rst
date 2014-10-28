@@ -770,34 +770,3 @@ In this example, to reach the home of the API, we would point our browser to
 
 Note that the API does not support SSL, or authentication (for now). This need
 to be configured on a reverse proxy in front of it.
-
-GnuPG pubring
-~~~~~~~~~~~~~
-
-The API uses a gnupg pubring to validate incoming actions. The pubring can be
-created as a single file, without other gnupg files, and provided to the API in
-the configuration file.
-
-To create a pubring, use the following command:
-
-.. code:: bash
-
-	$ mkdir /tmp/api-gpg
-
-	# export the public keys into a file
-	$ gpg --export -a bob@example.net john@example.com > /tmp/api-gpg/pubkeys.pem
-
-	# import the public keys into a new pubring
-	$ gpg --homedir /tmp/api-gpg/ --import /tmp/api-gpg/pubkeys.pem
-	gpg: key AF67CB21: public key "Bob Kelso <bob@example.net>" imported
-	gpg: key DEF98214: public key "John Smith <john@example.com>" imported
-	gpg: Total number processed: 2
-	gpg:               imported: 2  (RSA: 2)
-
-The file in /tmp/api-gpg/pubring.gpg can be passed to the API
-
- ::
-
-	[pgp]
-	    pubring = "/tmp/api-gpg/pubring.gpg"
-

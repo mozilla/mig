@@ -18,10 +18,10 @@ import (
 
 // ArmoredPubKeysToKeyring takes a list of public PGP key in armored form and transforms
 // it into a keyring that can be used in other openpgp's functions
-func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.Reader, keycount int, err error) {
+func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.ReadSeeker, keycount int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("ArmoredePubKeysToKeyRing() -> %v", e)
+			err = fmt.Errorf("ArmoredPubKeysToKeyRing() -> %v", e)
 		}
 	}()
 	var buf bytes.Buffer
