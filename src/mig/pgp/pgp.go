@@ -7,13 +7,12 @@ package pgp
 
 import (
 	"bytes"
+	"code.google.com/p/go.crypto/openpgp"
+	"code.google.com/p/go.crypto/openpgp/armor"
 	"encoding/hex"
 	"fmt"
 	"io"
-	"mig/pgp/verify"
 	"strings"
-
-	"code.google.com/p/go.crypto/openpgp"
 )
 
 // ArmoredPubKeysToKeyring takes a list of public PGP key in armored form and transforms
@@ -75,7 +74,7 @@ func GetFingerprintFromSignature(data string, signature string, keyring io.Reade
 			err = fmt.Errorf("GetFingerprintFromSignature() -> %v", e)
 		}
 	}()
-	_, entity, err := verify.Verify(data, signature, keyring)
+	_, entity, err := Verify(data, signature, keyring)
 	if err != nil {
 		panic(err)
 	}

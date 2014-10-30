@@ -12,7 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	"mig"
-	"mig/pgp/sign"
+	"mig/pgp"
 	"net/http"
 	"net/url"
 	"os"
@@ -119,7 +119,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pgpsig, err := sign.Sign(str, *key, secringFile)
+	pgpsig, err := pgp.Sign(str, *key, secringFile)
 	if err != nil {
 		panic(err)
 	}

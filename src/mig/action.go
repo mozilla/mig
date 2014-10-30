@@ -14,7 +14,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"mig/pgp"
-	"mig/pgp/verify"
 	"strconv"
 	"time"
 )
@@ -169,7 +168,7 @@ func (a Action) VerifySignatures(keyring io.Reader) (err error) {
 		return errors.New("Failed to stringify action")
 	}
 	for _, sig := range a.PGPSignatures {
-		valid, _, err := verify.Verify(astr, sig, keyring)
+		valid, _, err := pgp.Verify(astr, sig, keyring)
 		if err != nil {
 			return errors.New("Failed to verify PGP Signature")
 		}
