@@ -115,3 +115,39 @@ func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) 
 	}
 	return
 }
+
+// InsertSchedulerInvestigator creates a new migscheduler investigator in the database
+// and returns its ID, or an error if the insertion failed, or if the investigator already exists
+func (db *DB) InsertSchedulerInvestigator(inv mig.Investigator) (iid float64, err error) {
+	_, err = db.c.Exec(`INSERT INTO investigators
+		(name, pgpfingerprint, publickey, privatekey, status)
+		VALUES ($1, $2, $3, $4, 'active')`,
+		inv.Name, inv.PGPFingerprint, inv.PublicKey, inv.PrivateKey)
+	if err != nil {
+		if err.Error() == `pq: duplicate key value violates unique constraint "investigators_pgpfingerprint_idx"` {
+			return iid, fmt.Errorf("Investigator's PGP Fingerprint already exists in database")
+		}
+		return iid, fmt.Errorf("Failed to create investigator: '%v'", err)
+	}
+	iid, err = db.InvestigatorByFingerprint(inv.PGPFingerprint)
+	if err != nil {
+		return iid, fmt.Errorf("Failed to retrieve investigator ID: '%v'", err)
+	}
+	return
+}
+
+// GetSchedulerPrivKey returns the first active private key found for user migscheduler
+func (db *DB) GetSchedulerPrivKey() (key []byte, err error) {
+	err = db.c.QueryRow(`SELECT privatekey FROM investigators
+		WHERE name ='migscheduler' AND status='active'
+		ORDER BY id ASC LIMIT 1`).Scan(&key)
+	if err != nil && err != sql.ErrNoRows {
+		err = fmt.Errorf("Error while retrieving scheduler private key: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows { // having an empty DB is not an issue
+		err = fmt.Errorf("no private key found for migscheduler")
+		return
+	}
+	return
+}

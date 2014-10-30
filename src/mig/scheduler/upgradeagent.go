@@ -9,8 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mig"
-	"mig/pgp/sign"
-	"os"
+	"mig/pgp"
 	"reflect"
 	"time"
 )
@@ -169,9 +168,8 @@ func destroyAgent(agent mig.Agent, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	secringFile, err := os.Open(ctx.PGP.Home + "/secring.gpg")
-	defer secringFile.Close()
-	pgpsig, err := sign.Sign(str, ctx.PGP.KeyID, secringFile)
+	secring, err := getSecring(ctx)
+	pgpsig, err := pgp.Sign(str, ctx.PGP.PrivKeyID, secring)
 	if err != nil {
 		panic(err)
 	}

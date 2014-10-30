@@ -433,32 +433,19 @@ PGP
 ~~~
 
 The scheduler uses a PGP key to sign agent destruction actions during the agent
-upgrade protocol. Therefore, when deployed a scheduler, a key must be generated
-with the command `gpg --gen-key`.
+upgrade protocol. Due to the limited scope of that key, it is stored in the
+database to facilitate deployment and provisioning of multiple schedulers.
 
-The fingerprint of the key must then be added in two places:
+Upon startup, the scheduler will look for an investigator named `migscheduler`
+and retrieve its private key to use it in action signing. If no investigator is
+found, it generates one and inserts it into the database, such that other
+schedulers can use it as well.
 
-1. In the scheduler configuration file `mig-scheduler.cfg`.
+At the time, the scheduler public key must be manually added into the agent
+configuration. This will be changed in the future when ACLs and investigators
+can be dynamically distributed to agents.
 
-First, obtain the fingerprint using the `gpg` command line.
-
-.. code:: bash
-
-	$ gpg --fingerprint --with-colons 'MIG scheduler stage1 (NOT PRODUCTION)' |grep '^fpr'|cut -f 10 -d ':'
-	1E644752FB76B77245B1694E556CDD7B07E9D5D6
-
-Then add the fingerprint in the scheduler configuration file.
-
- ::
-
-	[pgp]
-		keyid = "1E644752FB76B77245B1694E556CDD7B07E9D5D6i
-	    pubring = "/tmp/api-gpg/pubring.gpg"
-
-Note: the `pubring` creation is described in the API configuration section
-below.
-
-2. In the ACL of the agent configuration file `conf/mig-agent-conf.go`:
+In the ACL of the agent configuration file `conf/mig-agent-conf.go`:
 
  ::
 

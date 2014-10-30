@@ -46,6 +46,33 @@ func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.ReadSeeker, keycount 
 	return
 }
 
+// ArmoredPrivKeyToKeyring takes a single private PGP key in armored form and transforms
+// it into a keyring that can be used in other openpgp's functions
+func ArmoredPrivKeyToKeyring(privkey []byte) (keyring io.ReadSeeker, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("ArmoredPrivKeyToKeyRing() -> %v", e)
+		}
+	}()
+	var buf bytes.Buffer
+	// Load PGP private key
+	el, err := openpgp.ReadArmoredKeyRing(bytes.NewBuffer(privkey))
+	if err != nil {
+		panic(err)
+	}
+	if len(el) != 1 {
+		err = fmt.Errorf("Public GPG Key contains %d entities, wanted 1", len(el))
+		panic(err)
+	}
+	// serialize entities into io.Reader
+	err = el[0].Serialize(&buf)
+	if err != nil {
+		panic(err)
+	}
+	keyring = bytes.NewReader(buf.Bytes())
+	return
+}
+
 // LoadArmoredPubKey takes a single public key as a byte slice, validates it, and returns its
 // its fingerprint or an error
 func LoadArmoredPubKey(pubkey []byte) (pgpfingerprint string, err error) {
@@ -79,5 +106,58 @@ func GetFingerprintFromSignature(data string, signature string, keyring io.Reade
 		panic(err)
 	}
 	fingerprint = hex.EncodeToString(entity.PrimaryKey.Fingerprint[:])
+	return
+}
+
+func GenerateKeyPair(name, desc, email string) (pubkey, privkey []byte, fp string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("GenerateKeyPair() -> %v", e)
+		}
+	}()
+	// generate a private key
+	ent, err := openpgp.NewEntity(name, desc, email, nil)
+	if err != nil {
+		panic(err)
+	}
+	// serialize the private key
+	pkbuf := bytes.NewBuffer(nil)
+	err = ent.SerializePrivate(pkbuf, nil)
+	if err != nil {
+		panic(err)
+	}
+	buf := bytes.NewBuffer(nil)
+	ewrbuf, err := armor.Encode(buf, openpgp.PrivateKeyType, nil)
+	if err != nil {
+		panic(err)
+	}
+	_, err = ewrbuf.Write(pkbuf.Bytes())
+	if err != nil {
+		panic(err)
+	}
+	ewrbuf.Close()
+	privkey = buf.Bytes()
+	// serialize the public key
+	pkbuf = bytes.NewBuffer(nil)
+	err = ent.Serialize(pkbuf)
+	if err != nil {
+		panic(err)
+	}
+	buf = bytes.NewBuffer(nil)
+	ewrbuf, err = armor.Encode(buf, openpgp.PublicKeyType, nil)
+	if err != nil {
+		panic(err)
+	}
+	_, err = ewrbuf.Write(pkbuf.Bytes())
+	if err != nil {
+		panic(err)
+	}
+	ewrbuf.Close()
+	pubkey = buf.Bytes()
+	// validate the public key and obtain a fingerprint from it
+	fp, err = LoadArmoredPubKey(pubkey)
+	if err != nil {
+		panic(err)
+	}
 	return
 }

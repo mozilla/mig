@@ -10,4 +10,6 @@ type Investigator struct {
 	Name           string  `json:"name"`
 	PGPFingerprint string  `json:"pgpfingerprint"`
 	PublicKey      []byte  `json:"publickey,omitempty"`
+	PrivateKey     []byte  `json:"privatekey,omitempty"`
+	Status         string  `json:"status"`
 }
