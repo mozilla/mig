@@ -11,7 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mig"
-	"mig/pgp/sign"
+	"mig/pgp"
 	"net/url"
 	"os"
 	"strconv"
@@ -325,7 +325,7 @@ func computeSignature(a mig.Action, ctx Context) (pgpsig string, err error) {
 	if err != nil {
 		panic(err)
 	}
-	pgpsig, err = sign.Sign(str, ctx.GPG.KeyID, secringFile)
+	pgpsig, err = pgp.Sign(str, ctx.GPG.KeyID, secringFile)
 	if err != nil {
 		panic(err)
 	}
