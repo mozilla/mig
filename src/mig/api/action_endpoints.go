@@ -106,7 +106,6 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	for _, sig := range action.PGPSignatures {
-		// TODO: opening the keyring in a loop is really ugly. rewind!
 		k, err := getKeyring()
 		if err != nil {
 			panic(err)

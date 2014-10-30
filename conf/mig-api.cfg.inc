@@ -6,9 +6,6 @@
     host = "http://localhost:12345"
     baseroute = "/api/v1"
 
-[pgp]
-    home = "/var/cache/mig/.gnupg/"
-
 [directories]
     spool = "/var/cache/mig/"
     tmp = "/var/tmp/"

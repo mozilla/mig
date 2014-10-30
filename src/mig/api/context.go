@@ -6,15 +6,13 @@
 package main
 
 import (
-	"bytes"
 	"code.google.com/p/gcfg"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mig"
 	migdb "mig/database"
-	"mig/pgp"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -41,6 +39,7 @@ type Context struct {
 	DB      migdb.DB
 	Keyring struct {
 		Reader     io.ReadSeeker
+		Mutex      sync.Mutex
 		UpdateTime time.Time
 	}
 	Postgres struct {
@@ -169,57 +168,5 @@ func initDB(orig_ctx Context) (ctx Context, err error) {
 		panic(err)
 	}
 	ctx.Channels.Log <- mig.Log{Desc: "Database connection opened"}
-	return
-}
-
-// makeKeyring retrieves GPG keys of active investigators from the database and makes
-// a GPG keyring out of it
-func makeKeyring() (keyring io.ReadSeeker, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("makeKeyring() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving makeKeyring()"}.Debug()
-	}()
-	keys, err := ctx.DB.ActiveInvestigatorsKeys()
-	if err != nil {
-		panic(err)
-	}
-	keyring, keycount, err := pgp.ArmoredPubKeysToKeyring(keys)
-	if err != nil {
-		panic(err)
-	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("loaded %d keys from active investigators", keycount)}.Debug()
-	return
-}
-
-// getKeyring copy an io.Reader from the master keyring. If the keyring hasn't been refreshed
-// in a while, it also gets a fresh copy from the database
-func getKeyring() (kr io.Reader, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("getKeyring() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving getKeyring()"}.Debug()
-	}()
-	// refresh keyring from DB every 5 minutes
-	if ctx.Keyring.UpdateTime.Before(time.Now().Add(-5 * time.Minute)) {
-		ctx.Keyring.Reader, err = makeKeyring()
-		if err != nil {
-			panic(err)
-		}
-		ctx.Keyring.UpdateTime = time.Now()
-	} else {
-		// rewind the master keyring
-		_, err = ctx.Keyring.Reader.Seek(0, 0)
-		if err != nil {
-			panic(err)
-		}
-	}
-	buf, err := ioutil.ReadAll(ctx.Keyring.Reader)
-	if err != nil {
-		panic(err)
-	}
-	kr = bytes.NewBuffer(buf)
 	return
 }

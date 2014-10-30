@@ -143,6 +143,9 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	// validate the public key and obtain a fingerprint from it
 	inv.PGPFingerprint, err = pgp.LoadArmoredPubKey(inv.PublicKey)
+	if err != nil {
+		panic(err)
+	}
 	// create the investigator in database
 	inv.ID, err = ctx.DB.InsertInvestigator(inv)
 	if err != nil {
