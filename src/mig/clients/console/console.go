@@ -229,13 +229,13 @@ func getAPIResource(t string, ctx Context) (resource *cljs.Resource, err error) 
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("HTTP %d: %v (code %s)", resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		return
+	}
 	resource = cljs.New("")
 	err = json.Unmarshal(body, &resource)
 	if err != nil {
-		return
-	}
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("HTTP %d: %v (code %s)", resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		return
 	}
 	return
