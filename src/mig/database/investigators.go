@@ -42,8 +42,8 @@ func (db *DB) ActiveInvestigatorsKeys() (keys []string, err error) {
 
 // InvestigatorByID searches the database for an investigator with a given ID
 func (db *DB) InvestigatorByID(iid float64) (inv mig.Investigator, err error) {
-	err = db.c.QueryRow("SELECT id, name, pgpfingerprint, publickey FROM investigators WHERE id=$1",
-		iid).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey)
+	err = db.c.QueryRow("SELECT id, name, pgpfingerprint, publickey, status FROM investigators WHERE id=$1",
+		iid).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving investigator: '%v'", err)
 		return
@@ -70,8 +70,8 @@ func (db *DB) InvestigatorByFingerprint(fp string) (iid float64, err error) {
 }
 
 //InvestigatorByActionID returns the list of investigators that signed a given action
-func (db *DB) InvestigatorByActionID(aid float64) (ivgts []mig.Investigator, err error) {
-	rows, err := db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint
+func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err error) {
+	rows, err := db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint, investigators.status
 		FROM investigators, signatures
 		WHERE signatures.actionid=$1
 		AND signatures.investigatorid=investigators.id`, aid)
@@ -81,14 +81,14 @@ func (db *DB) InvestigatorByActionID(aid float64) (ivgts []mig.Investigator, err
 		return
 	}
 	for rows.Next() {
-		var ivgt mig.Investigator
-		err = rows.Scan(&ivgt.ID, &ivgt.Name, &ivgt.PGPFingerprint)
+		var inv mig.Investigator
+		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to retrieve investigator data: '%v'", err)
 			return
 		}
-		ivgts = append(ivgts, ivgt)
+		invs = append(invs, inv)
 	}
 	if err := rows.Err(); err != nil {
 		err = fmt.Errorf("Failed to complete database query: '%v'", err)

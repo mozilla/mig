@@ -322,7 +322,7 @@ func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Inves
 		return
 	}
 	rows, err := db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
-		investigators.publickey
+		investigators.publickey, investigators.status
 		FROM commands, actions, agents, investigators, signatures
 		WHERE commands.actionid=actions.id AND commands.agentid=agents.id
 		AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
@@ -347,7 +347,7 @@ func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Inves
 	}
 	for rows.Next() {
 		var inv mig.Investigator
-		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey)
+		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to retrieve investigator data: '%v'", err)

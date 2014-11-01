@@ -91,7 +91,7 @@ func main() {
 	for {
 		// completion
 		var symbols = []string{"action", "agent", "command", "help", "exit", "showcfg", "status",
-			"search", "where", "and"}
+			"investigator", "search", "where", "and"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -137,18 +137,25 @@ func main() {
 			if err != nil {
 				log.Println(err)
 			}
+		case "investigator":
+			err = investigatorReader(input, ctx)
+			if err != nil {
+				log.Println(err)
+			}
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
 		case "help":
 			fmt.Printf(`The following orders are available:
-action <id|new>	enter action mode. if <id> is given, go to reader mode. if "new" is given, enter launcher mode.
-command <id>	enter command reader mode for command <id>
-help		show this help
-exit		leave
-search		perform a search. see "search help" for more information.
-showcfg		display running configuration
-status		display platform status: connected agents and latest actions
+action <id|new>		enter action mode. if <id> is given, go to reader mode. if "new" is given, enter launcher mode.
+agent <id>		enter agent reader mode for agent <id>
+command <id>		enter command reader mode for command <id>
+exit			leave
+help			show this help
+investigator <id>	enter investigator reader mode for investigator <id>
+search			perform a search. see "search help" for more information.
+showcfg			display running configuration
+status			display platform status: connected agents and latest actions
 `)
 		case "search":
 			err = search(input, ctx)

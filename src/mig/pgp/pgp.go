@@ -161,3 +161,29 @@ func GenerateKeyPair(name, desc, email string) (pubkey, privkey []byte, fp strin
 	}
 	return
 }
+
+func ArmorPubKey(pubkey []byte) (armoredPubKey []byte, err error) {
+	var pubkeybuf bytes.Buffer
+	// Load PGP public key
+	el, err := openpgp.ReadArmoredKeyRing(bytes.NewBuffer(pubkey))
+	if err != nil {
+		panic(err)
+	}
+	// serialize entities into io.Reader
+	err = el[0].Serialize(&pubkeybuf)
+	if err != nil {
+		panic(err)
+	}
+	armoredbuf := bytes.NewBuffer(nil)
+	ewrbuf, err := armor.Encode(armoredbuf, openpgp.PublicKeyType, nil)
+	if err != nil {
+		panic(err)
+	}
+	_, err = ewrbuf.Write(pubkeybuf.Bytes())
+	if err != nil {
+		panic(err)
+	}
+	ewrbuf.Close()
+	armoredPubKey = armoredbuf.Bytes()
+	return
+}
