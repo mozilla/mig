@@ -66,8 +66,8 @@ func investigatorReader(input string, ctx Context) (err error) {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Printf("Investigator ID %.0f\nname   %s\nstatus %s\nkey id %s\n",
-				inv.ID, inv.Name, inv.Status, inv.PGPFingerprint)
+			fmt.Printf("Investigator ID %.0f\nname     %s\nstatus   %s\nkey id   %s\ncreated  %s\nmodified %s\n",
+				inv.ID, inv.Name, inv.Status, inv.PGPFingerprint, inv.CreatedAt, inv.LastModified)
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
