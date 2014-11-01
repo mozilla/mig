@@ -118,8 +118,16 @@ GET /search
 
 	- `actionname`: filter results on string action name, accept `ILIKE` pattern
 
-	- `after`: return results recorded after this RFC3339 date. If not defined,
-	  default is to retrieve results from the last 7 days.
+	- `after`: return results recorded after this RFC3339 date, depends on type:
+
+		- `action`: select actions with a `validfrom` date greater than
+		  `after`. Default is last 7 days.
+		- `agent`: select agents that have sent a heartbeat since `after`.
+		  Default is last 7 days.
+		- `command`: select commands with a `starttime` date greated than
+		  `after`. Default is last 7 days.
+		- `investigator`: select investigators with a `createdat` date greater
+		  than `after`. Default is last 1,000 years.
 
 	- `agentid`: filter results on the agent ID
 
@@ -127,6 +135,12 @@ GET /search
 
 	- `before`: return results recorded before this RFC3339 date. If not defined,
 	  default is to retrieve results until now.
+
+		- `action`: select actions with a `expireafter` date lower than `before`
+		- `agent`: select agents that have sent a heartbeat priot to `before`
+		- `command`: select commands with a `starttime` date lower than `before`
+		- `investigator`: select investigators with a `lastmodified` date lower
+		  than `before`
 
 	- `commandid`: filter results on the command ID
 
@@ -152,7 +166,7 @@ GET /search
 		- `investigator`: active, inactive
 
 	- `threatfamily`: filter results of the threat family of the action, accept
-	  `ILIKE` pattern
+	  `ILIKE` pattern (only for types `command` and `action`)
 
 **`ILIKE` pattern**
 

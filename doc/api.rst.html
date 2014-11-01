@@ -180,10 +180,30 @@ http://localhost:1664/api/v1/investigator/create/</code></pre>
                                 </li>
                                 <li><cite>actionid</cite>: filter results on numeric action ID</li>
                                 <li><cite>actionname</cite>: filter results on string action name, accept <cite>ILIKE</cite> pattern</li>
-                                <li><cite>after</cite>: return results recorded after this RFC3339 date. If not defined, default is to retrieve results from the last 7 days.</li>
+                                <li>
+                                    <p><cite>after</cite>: return results recorded after this RFC3339 date, depends on type:</p>
+                                    <blockquote>
+                                        <ul>
+                                            <li><cite>action</cite>: select actions with a <cite>validfrom</cite> date greater than <cite>after</cite>. Default is last 7 days.</li>
+                                            <li><cite>agent</cite>: select agents that have sent a heartbeat since <cite>after</cite>. Default is last 7 days.</li>
+                                            <li><cite>command</cite>: select commands with a <cite>starttime</cite> date greated than <cite>after</cite>. Default is last 7 days.</li>
+                                            <li><cite>investigator</cite>: select investigators with a <cite>createdat</cite> date greater than <cite>after</cite>. Default is last 1,000 years.</li>
+                                        </ul>
+                                    </blockquote>
+                                </li>
                                 <li><cite>agentid</cite>: filter results on the agent ID</li>
                                 <li><cite>agentname</cite>: filter results on string agent name, accept <cite>ILIKE</cite> pattern</li>
-                                <li><cite>before</cite>: return results recorded before this RFC3339 date. If not defined, default is to retrieve results until now.</li>
+                                <li>
+                                    <p><cite>before</cite>: return results recorded before this RFC3339 date. If not defined, default is to retrieve results until now.</p>
+                                    <blockquote>
+                                        <ul>
+                                            <li><cite>action</cite>: select actions with a <cite>expireafter</cite> date lower than <cite>before</cite></li>
+                                            <li><cite>agent</cite>: select agents that have sent a heartbeat priot to <cite>before</cite></li>
+                                            <li><cite>command</cite>: select commands with a <cite>starttime</cite> date lower than <cite>before</cite></li>
+                                            <li><cite>investigator</cite>: select investigators with a <cite>lastmodified</cite> date lower than <cite>before</cite></li>
+                                        </ul>
+                                    </blockquote>
+                                </li>
                                 <li><cite>commandid</cite>: filter results on the command ID</li>
                                 <li><cite>foundanything</cite>: filter commands on the <cite>foundanything</cite> boolean of their results (only for type <cite>command</cite>, as it requires looking into results)</li>
                                 <li><cite>investigatorid</cite>: filter results on the investigator ID</li>
@@ -201,7 +221,7 @@ http://localhost:1664/api/v1/investigator/create/</code></pre>
                                         </ul>
                                     </blockquote>
                                 </li>
-                                <li><cite>threatfamily</cite>: filter results of the threat family of the action, accept <cite>ILIKE</cite> pattern</li>
+                                <li><cite>threatfamily</cite>: filter results of the threat family of the action, accept <cite>ILIKE</cite> pattern (only for types <cite>command</cite> and <cite>action</cite>)</li>
                             </ul>
                         </dd>
                     </dl>

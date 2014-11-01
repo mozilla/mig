@@ -107,12 +107,11 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 			AND agents.id >= $9 AND agents.id <= $10
 			AND investigators.id >= $11 AND investigators.id <= $12
 			AND investigators.name ILIKE $13
-			AND actions.threat->>'family' ILIKE $14
-			AND commands.status ILIKE $15
+			AND commands.status ILIKE $14
 			GROUP BY commands.id, actions.id, agents.id
-			ORDER BY commands.id DESC LIMIT $16`,
+			ORDER BY commands.id DESC LIMIT $15`,
 			p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
-			p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName, p.ThreatFamily,
+			p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
 			p.Status, uint64(p.Limit))
 	}
 	if err != nil {
@@ -131,6 +130,19 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 			err = fmt.Errorf("Failed to retrieve command: '%v'", err)
 			return
 		}
+		err = json.Unmarshal(jThreat, &cmd.Action.Threat)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
+			return
+		}
+		// Check for threatfamily, if asked
+		if p.ThreatFamily != "%" {
+			if p.ThreatFamily != cmd.Action.Threat.Family {
+				// skip this record
+				continue
+			}
+		}
 		err = json.Unmarshal(jRes, &cmd.Results)
 		if err != nil {
 			rows.Close()
@@ -141,12 +153,6 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
-			return
-		}
-		err = json.Unmarshal(jThreat, &cmd.Action.Threat)
-		if err != nil {
-			rows.Close()
-			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOps, &cmd.Action.Operations)
@@ -192,7 +198,7 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 		FROM commands, actions, agents, investigators, signatures
 		WHERE commands.actionid=actions.id AND commands.agentid=agents.id
 		AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
-		AND commands.starttime <= $1 AND commands.starttime >= $2
+		AND actions.expireafter <= $1 AND actions.validfrom >= $2
 		AND commands.id >= $3 AND commands.id <= $4
 		AND actions.name ILIKE $5
 		AND actions.id >= $6 AND actions.id <= $7
@@ -200,12 +206,11 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 		AND agents.id >= $9 AND agents.id <= $10
 		AND investigators.id >= $11 AND investigators.id <= $12
 		AND investigators.name ILIKE $13
-		AND actions.threat->>'family' ILIKE $14
-		AND actions.status ILIKE $15
+		AND actions.status ILIKE $14
 		GROUP BY actions.id
-		ORDER BY actions.id DESC LIMIT $16`,
+		ORDER BY actions.id DESC LIMIT $15`,
 		p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
-		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName, p.ThreatFamily,
+		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
 		p.Status, uint64(p.Limit))
 	if err != nil {
 		err = fmt.Errorf("Error while finding actions: '%v'", err)
@@ -223,16 +228,23 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 			err = fmt.Errorf("Error while retrieving action: '%v'", err)
 			return
 		}
-		err = json.Unmarshal(jDesc, &a.Description)
-		if err != nil {
-			rows.Close()
-			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
-			return
-		}
 		err = json.Unmarshal(jThreat, &a.Threat)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
+			return
+		}
+		// Check for threatfamily, if asked
+		if p.ThreatFamily != "%" {
+			if p.ThreatFamily != a.Threat.Family {
+				// skip this record
+				continue
+			}
+		}
+		err = json.Unmarshal(jDesc, &a.Description)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOps, &a.Operations)
@@ -277,7 +289,7 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 		FROM commands, actions, agents, investigators, signatures
 		WHERE commands.actionid=actions.id AND commands.agentid=agents.id
 		AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
-		AND commands.starttime <= $1 AND commands.starttime >= $2
+		AND agents.heartbeattime <= $1 AND agents.heartbeattime >= $2
 		AND commands.id >= $3 AND commands.id <= $4
 		AND actions.name ILIKE $5
 		AND actions.id >= $6 AND actions.id <= $7
@@ -285,12 +297,11 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 		AND agents.id >= $9 AND agents.id <= $10
 		AND investigators.id >= $11 AND investigators.id <= $12
 		AND investigators.name ILIKE $13
-		AND actions.threat->>'family' ILIKE $14
-		AND agents.status ILIKE $15
+		AND agents.status ILIKE $14
 		GROUP BY agents.id
-		ORDER BY agents.id DESC LIMIT $16`,
+		ORDER BY agents.id DESC LIMIT $15`,
 		p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
-		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName, p.ThreatFamily,
+		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
 		p.Status, uint64(p.Limit))
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
@@ -321,33 +332,45 @@ func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Inves
 	if err != nil {
 		return
 	}
-	rows, err := db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
-		investigators.publickey, investigators.status
-		FROM commands, actions, agents, investigators, signatures
-		WHERE commands.actionid=actions.id AND commands.agentid=agents.id
-		AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
-		AND commands.starttime <= $1 AND commands.starttime >= $2
-		AND commands.id >= $3 AND commands.id <= $4
-		AND actions.name ILIKE $5
-		AND actions.id >= $6 AND actions.id <= $7
-		AND agents.name ILIKE $8
-		AND agents.id >= $9 AND agents.id <= $10
-		AND investigators.id >= $11 AND investigators.id <= $12
-		AND investigators.name ILIKE $13
-		AND actions.threat->>'family' ILIKE $14
-		AND investigators.status ILIKE $15
-		GROUP BY investigators.id
-		ORDER BY investigators.id DESC LIMIT $16`,
-		p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
-		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName, p.ThreatFamily,
-		p.Status, uint64(p.Limit))
+	var rows *sql.Rows
+	if p.ActionID != "∞" || p.ActionName != "%" || p.CommandID != "∞" || p.AgentID != "∞" || p.AgentName != "%" {
+		rows, err = db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
+			investigators.status, investigators.createdat, investigators.lastmodified
+			FROM commands, actions, agents, investigators, signatures
+			WHERE commands.actionid=actions.id AND commands.agentid=agents.id
+			AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
+			AND investigators.lastmodified <= $1 AND investigators.createdat >= $2
+			AND commands.id >= $3 AND commands.id <= $4
+			AND actions.name ILIKE $5
+			AND actions.id >= $6 AND actions.id <= $7
+			AND agents.name ILIKE $8
+			AND agents.id >= $9 AND agents.id <= $10
+			AND investigators.id >= $11 AND investigators.id <= $12
+			AND investigators.name ILIKE $13
+			AND investigators.status ILIKE $14
+			GROUP BY investigators.id
+			ORDER BY investigators.id DESC LIMIT $15`,
+			p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
+			p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
+			p.Status, uint64(p.Limit))
+	} else {
+		rows, err = db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
+			investigators.status, investigators.createdat, investigators.lastmodified
+			FROM investigators
+			WHERE investigators.id >= $1 AND investigators.id <= $2
+			AND investigators.name ILIKE $3
+			AND investigators.status ILIKE $4
+			GROUP BY investigators.id
+			ORDER BY investigators.id DESC LIMIT $5`,
+			ids.minInvID, ids.maxInvID, p.InvestigatorName, p.Status, uint64(p.Limit))
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while finding investigators: '%v'", err)
 		return
 	}
 	for rows.Next() {
 		var inv mig.Investigator
-		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status)
+		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status, &inv.CreatedAt, &inv.LastModified)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to retrieve investigator data: '%v'", err)
