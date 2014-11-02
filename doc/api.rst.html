@@ -21,7 +21,8 @@
                     <li><a href="#get-command">1.5   GET /command</a></li>
                     <li><a href="#get-investigator">1.6   GET /investigator</a></li>
                     <li><a href="#post-investigator-create">1.7   POST /investigator/create/</a></li>
-                    <li><a href="#get-search">1.8   GET /search</a></li>
+                    <li><a href="#post-investigator-update">1.8   POST /investigator/update/</a></li>
+                    <li><a href="#get-search">1.9   GET /search</a></li>
                 </ul>
             </li>
             <li>
@@ -158,8 +159,27 @@
 <span class="nv">$ </span>curl -iv -F <span class="s2">"name=Bob Kelso"</span> -F <span class="nv">publickey</span><span class="o">=</span>@/tmp/pubkey
 http://localhost:1664/api/v1/investigator/create/</code></pre>
         </section>
+        <section id="post-investigator-update">
+            <h3>1.8   POST /investigator/update/</h3>
+            <ul>
+                <li>Description: update an existing investigator in the database</li>
+                <li>
+                    <dl>
+                        <dt>Parameters: (PUT body)</dt>
+                        <dd>
+                            <ul>
+                                <li><cite>id</cite>: investigator id, to identify the target investigator</li>
+                                <li><cite>status</cite>: new status of the investigator, to be updated</li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+                <li>Example:</li>
+            </ul>
+            <pre><code class="bash"><span class="nv">$ </span>curl -iv -X POST -d <span class="nv">id</span><span class="o">=</span>1234 -d <span class="nv">status</span><span class="o">=</span>disabled http://localhost:1664/api/v1/investigator/update/</code></pre>
+        </section>
         <section id="get-search">
-            <h3>1.8   GET /search</h3>
+            <h3>1.9   GET /search</h3>
             <ul>
                 <li>Description: search for actions, commands, agents or investigators.</li>
                 <li>
@@ -217,7 +237,7 @@ http://localhost:1664/api/v1/investigator/create/</code></pre>
                                             <li><cite>action</cite>: init, preparing, invalid, inflight, completed</li>
                                             <li><cite>agent</cite>: heartbeating, upgraded, destroyed, inactive</li>
                                             <li><cite>command</cite>: prepared, sent, success, timeout, cancelled, expired, failed</li>
-                                            <li><cite>investigator</cite>: active, inactive</li>
+                                            <li><cite>investigator</cite>: active, disabled</li>
                                         </ul>
                                     </blockquote>
                                 </li>

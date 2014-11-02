@@ -19,3 +19,8 @@ type Investigator struct {
 	CreatedAt      time.Time `json:"createdat"`
 	LastModified   time.Time `json:"lastmodified"`
 }
+
+const (
+	StatusActiveInvestigator   string = "active"
+	StatusDisabledInvestigator string = "disabled"
+)

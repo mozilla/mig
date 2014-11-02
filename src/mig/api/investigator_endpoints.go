@@ -161,6 +161,80 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	respond(201, resource, respWriter, request, opid)
 }
 
+// describeUpdateInvestigator returns a resource that describes how to update the status of an investigator
+func describeUpdateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
+	var err error
+	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
+	resource := cljs.New(loc)
+	defer func() {
+		if e := recover(); e != nil {
+			emsg := fmt.Sprintf("%v", e)
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
+			respond(500, resource, respWriter, request, opid)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeUpdateInvestigator()"}.Debug()
+	}()
+	err = resource.SetTemplate(cljs.Template{
+		Data: []cljs.Data{
+			{Name: "id", Value: "investigator id to update", Prompt: "Investigator ID"},
+			{Name: "status", Value: "new status of investigator", Prompt: "Investigator Status"},
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	respond(200, resource, respWriter, request, opid)
+}
+
+// updateInvestigator updates the status of an investigator in database
+func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
+	var err error
+	opid := mig.GenID()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
+	resource := cljs.New(loc)
+	defer func() {
+		if e := recover(); e != nil {
+			emsg := fmt.Sprintf("%v", e)
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
+			respond(500, resource, respWriter, request, opid)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving updateInvestigator()"}.Debug()
+	}()
+	var inv mig.Investigator
+	err = request.ParseForm()
+	if err != nil {
+		panic(err)
+	}
+	iid := request.FormValue("id")
+	if iid == "" {
+		panic("Investigator ID must not be empty")
+	}
+	inv.ID, err = strconv.ParseFloat(iid, 64)
+	if err != nil {
+		panic(err)
+	}
+	inv.Status = request.FormValue("status")
+	if inv.Status == "" {
+		panic("Investigator status must not be empty")
+	}
+	// create the investigator in database
+	err = ctx.DB.UpdateInvestigatorStatus(inv)
+	if err != nil {
+		panic(err)
+	}
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f status changed to %s", inv.ID, inv.Status)}
+	err = resource.AddItem(cljs.Item{
+		Href: fmt.Sprintf("%s/investigator?investigatorid=%.0f", ctx.Server.BaseURL, inv.ID),
+		Data: []cljs.Data{{Name: "Investigator ID " + fmt.Sprintf("%.0f", inv.ID), Value: inv}},
+	})
+	respond(200, resource, respWriter, request, opid)
+}
+
 // investigatorToItem receives a command and returns an Item in Collection+JSON
 func investigatorToItem(inv mig.Investigator) (item cljs.Item, err error) {
 	item.Href = fmt.Sprintf("%s/investigator?investigatorid=%.0f", ctx.Server.BaseURL, inv.ID)

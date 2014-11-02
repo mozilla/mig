@@ -137,6 +137,19 @@ func (db *DB) InsertSchedulerInvestigator(inv mig.Investigator) (iid float64, er
 	return
 }
 
+// UpdateInvestigatorStatus updates the status of an investigator
+func (db *DB) UpdateInvestigatorStatus(inv mig.Investigator) (err error) {
+	if inv.Status != mig.StatusActiveInvestigator && inv.Status != mig.StatusDisabledInvestigator {
+		return fmt.Errorf("Invalid investigator status '%s'", inv.Status)
+	}
+	_, err = db.c.Exec(`UPDATE investigators SET (status) = ($1) WHERE id=$2`,
+		inv.Status, inv.ID)
+	if err != nil {
+		return fmt.Errorf("Failed to update investigator: '%v'", err)
+	}
+	return
+}
+
 // GetSchedulerPrivKey returns the first active private key found for user migscheduler
 func (db *DB) GetSchedulerPrivKey() (key []byte, err error) {
 	err = db.c.QueryRow(`SELECT privatekey FROM investigators

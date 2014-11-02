@@ -17,6 +17,7 @@ import (
 	"mig/pgp"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -82,9 +83,10 @@ func investigatorReader(input string, ctx Context) (err error) {
 details			print the details of the investigator
 exit			exit this mode
 help			show this help
+lastactions <limit>	print the last actions ran by the investigator. limit=10 by default.
 pubkey			show the armored public key of the investigator
 r			refresh the investigator (get latest version from upstream)
-lastactions <limit>	print the last actions ran by the investigator. limit=10 by default.
+setstatus <status>	changes the status of the investigator to <status> (can be 'active' or 'disabled')
 `)
 		case "lastactions":
 			limit := 10
@@ -110,6 +112,18 @@ lastactions <limit>	print the last actions ran by the investigator. limit=10 by 
 				panic(err)
 			}
 			fmt.Println("Reload succeeded")
+		case "setstatus":
+			if len(orders) != 2 {
+				fmt.Println("error: must be 'setstatus <status>'. try 'help'")
+				break
+			}
+			newstatus := orders[1]
+			err = updateInvestigatorStatus(iid, newstatus)
+			if err != nil {
+				panic(err)
+			} else {
+				fmt.Println("Investigator status set to", newstatus)
+			}
 		case "":
 			break
 		default:
@@ -316,5 +330,37 @@ func investigatorCreator(ctx Context) (err error) {
 	}
 	fmt.Printf("Investigator '%s' successfully created with ID %.0f\n",
 		inv.Name, inv.ID)
+	return
+}
+
+func updateInvestigatorStatus(iid, newstatus string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("updateInvestigatorStatus() -> %v", e)
+		}
+	}()
+	postUrl := ctx.API.URL + "investigator/update/"
+	resp, err := ctx.HTTP.Client.PostForm(postUrl,
+		url.Values{"id": {iid}, "status": {newstatus}})
+	defer resp.Body.Close()
+	if err != nil {
+		panic(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var resource *cljs.Resource
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("error: HTTP %d. status update failed with error '%v' (code %s)",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
 	return
 }

@@ -70,6 +70,8 @@ func main() {
 	s.HandleFunc("/investigator", getInvestigator).Methods("GET")
 	s.HandleFunc("/investigator/create/", describeCreateInvestigator).Methods("GET")
 	s.HandleFunc("/investigator/create/", createInvestigator).Methods("POST")
+	s.HandleFunc("/investigator/update/", describeUpdateInvestigator).Methods("GET")
+	s.HandleFunc("/investigator/update/", updateInvestigator).Methods("POST")
 	s.HandleFunc("/dashboard", getDashboard).Methods("GET")
 
 	ctx.Channels.Log <- mig.Log{Desc: "Starting HTTP handler"}

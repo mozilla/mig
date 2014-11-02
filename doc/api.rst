@@ -102,6 +102,18 @@ POST /investigator/create/
 	$ curl -iv -F "name=Bob Kelso" -F publickey=@/tmp/pubkey
 	http://localhost:1664/api/v1/investigator/create/
 
+POST /investigator/update/
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: update an existing investigator in the database
+* Parameters: (PUT body)
+	- `id`: investigator id, to identify the target investigator
+	- `status`: new status of the investigator, to be updated
+* Example:
+
+.. code:: bash
+
+	$ curl -iv -X POST -d id=1234 -d status=disabled http://localhost:1664/api/v1/investigator/update/
+
 GET /search
 ~~~~~~~~~~~
 * Description: search for actions, commands, agents or investigators.
@@ -163,7 +175,7 @@ GET /search
 		- `action`: init, preparing, invalid, inflight, completed
 		- `agent`: heartbeating, upgraded, destroyed, inactive
 		- `command`: prepared, sent, success, timeout, cancelled, expired, failed
-		- `investigator`: active, inactive
+		- `investigator`: active, disabled
 
 	- `threatfamily`: filter results of the threat family of the action, accept
 	  `ILIKE` pattern (only for types `command` and `action`)
