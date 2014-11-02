@@ -34,7 +34,7 @@ type Context struct {
 	}
 	Homedir string
 	GPG     struct {
-		Home, KeyID string
+		Home, KeyID, Keyserver string
 	}
 }
 
@@ -90,8 +90,8 @@ func main() {
 	fmt.Printf("\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", ctx.API.URL)
 	for {
 		// completion
-		var symbols = []string{"action", "agent", "command", "help", "exit", "showcfg", "status",
-			"investigator", "search", "where", "and"}
+		var symbols = []string{"action", "agent", "create", "command", "help", "exit", "showcfg",
+			"status", "investigator", "search", "where", "and"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -114,31 +114,37 @@ func main() {
 		switch orders[0] {
 		case "action":
 			if len(orders) == 2 {
-				if orders[1] == "new" {
-					var a mig.Action
-					err = actionLauncher(a, ctx)
-				} else {
-					err = actionReader(input, ctx)
-				}
+				err = actionReader(input, ctx)
 				if err != nil {
 					log.Println(err)
 				}
 			} else {
-				fmt.Println("error: 'action' order takes one argument; " +
-					"either 'new' to enter launcher mode, or an action ID to enter reader mode.")
+				fmt.Println("error: missing action id in 'action <id>'")
 			}
 		case "agent":
 			err = agentReader(input, ctx)
 			if err != nil {
 				log.Println(err)
 			}
+		case "create":
+			if len(orders) == 2 {
+				switch orders[1] {
+				case "action":
+					var a mig.Action
+					err = actionLauncher(a, ctx)
+				case "investigator":
+					err = investigatorCreator(ctx)
+				default:
+					fmt.Printf("unknown order 'create %s'\n", orders[1])
+				}
+				if err != nil {
+					log.Println(err)
+				}
+			} else {
+				fmt.Println("error: missing order, must be 'create <action|investigator>'")
+			}
 		case "command":
 			err = commandReader(input, ctx)
-			if err != nil {
-				log.Println(err)
-			}
-		case "investigator":
-			err = investigatorReader(input, ctx)
 			if err != nil {
 				log.Println(err)
 			}
@@ -147,16 +153,23 @@ func main() {
 			goto exit
 		case "help":
 			fmt.Printf(`The following orders are available:
-action <id|new>		enter action mode. if <id> is given, go to reader mode. if "new" is given, enter launcher mode.
-agent <id>		enter agent reader mode for agent <id>
+action <id|new>		enter interactive action mode. if <id> is given, go to reader mode. if "new" is given, enter launcher mode.
+agent <id>		enter interactive agent reader mode for agent <id>
+create action		enter interactive action creation mode
+create investigator	create a new investigator, will prompt for name and public key
 command <id>		enter command reader mode for command <id>
 exit			leave
 help			show this help
-investigator <id>	enter investigator reader mode for investigator <id>
+investigator <id>	enter interactive investigator management mode for investigator <id>
 search			perform a search. see "search help" for more information.
 showcfg			display running configuration
-status			display platform status: connected agents and latest actions
+status			display platform status: connected agents, latest actions, ...
 `)
+		case "investigator":
+			err = investigatorReader(input, ctx)
+			if err != nil {
+				log.Println(err)
+			}
 		case "search":
 			err = search(input, ctx)
 			if err != nil {

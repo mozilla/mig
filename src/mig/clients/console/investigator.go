@@ -6,12 +6,18 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/bobappleyard/readline"
+	"github.com/jvehent/cljs"
 	"io"
+	"io/ioutil"
 	"mig"
 	"mig/pgp"
+	"mime/multipart"
+	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -197,5 +203,118 @@ func printInvestigatorLastActions(iid string, limit int) (err error) {
 				a.StartTime.Format(time.RFC3339), a.Status)
 		}
 	}
+	return
+}
+
+// investigatorCreator prompt the user for a name and the path to an armored
+// public key and calls the API to create a new investigator
+func investigatorCreator(ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("investigatorCreator() -> %v", e)
+		}
+	}()
+	var (
+		name   string
+		pubkey []byte
+	)
+	fmt.Println("Entering investigator creation mode. Please provide the full name\n" +
+		"and the public key of the new investigator.")
+	name, err = readline.String("name> ")
+	if err != nil {
+		panic(err)
+	}
+	if len(name) < 3 {
+		panic("input name too short")
+	}
+	fmt.Printf("Name: '%s'\n", name)
+	fmt.Println("Please provide a public key. You can either provide a local path to the\n" +
+		"armored public key file, or a full length PGP fingerprint.\n" +
+		"example:\npubkey> 0x716CFA6BA8EBB21E860AE231645090E64367737B")
+	input, err := readline.String("pubkey> ")
+	if err != nil {
+		panic(err)
+	}
+	re := regexp.MustCompile(`^0x[ABCDEF0-9]{8,64}$`)
+	if re.MatchString(input) {
+		var keyserver string
+		if ctx.GPG.Keyserver == "" {
+			keyserver = "http://gpg.mozilla.org"
+		}
+		fmt.Println("retrieving public key from", keyserver)
+		pubkey, err = pgp.GetArmoredKeyFromKeyServer(input, keyserver)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		fmt.Println("retrieving public key from", input)
+		pubkey, err = ioutil.ReadFile(input)
+		if err != nil {
+			panic(err)
+		}
+	}
+	fmt.Printf("%s\n", pubkey)
+	input, err = readline.String("create investigator? (y/n)> ")
+	if err != nil {
+		panic(err)
+	}
+	if input != "y" {
+		fmt.Println("abort")
+		return
+	}
+	postUrl := ctx.API.URL + "investigator/create/"
+	// build the body into buf using a multipart writer
+	buf := &bytes.Buffer{}
+	writer := multipart.NewWriter(buf)
+	// set the name form value
+	err = writer.WriteField("name", name)
+	if err != nil {
+		panic(err)
+	}
+	// set the publickey form value
+	part, err := writer.CreateFormFile("publickey", fmt.Sprintf("%s.asc", name))
+	if err != nil {
+		panic(err)
+	}
+	_, err = io.Copy(part, bytes.NewReader(pubkey))
+	if err != nil {
+		panic(err)
+	}
+	// must close the writer to write trailing boundary
+	err = writer.Close()
+	if err != nil {
+		panic(err)
+	}
+	// post the request
+	request, err := http.NewRequest("POST", postUrl, buf)
+	if err != nil {
+		panic(err)
+	}
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := ctx.HTTP.Client.Do(request)
+	if err != nil {
+		panic(err)
+	}
+	// get the investigator back from the response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var resource *cljs.Resource
+	err = json.Unmarshal(body, &resource)
+	if err != nil {
+		panic(err)
+	}
+	if resp.StatusCode != 201 {
+		err = fmt.Errorf("HTTP %d: %v (code %s)", resp.StatusCode,
+			resource.Collection.Error.Message, resource.Collection.Error.Code)
+		return
+	}
+	inv, err := valueToInvestigator(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Investigator '%s' successfully created with ID %.0f\n",
+		inv.Name, inv.ID)
 	return
 }

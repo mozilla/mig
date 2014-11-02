@@ -46,6 +46,40 @@ func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.ReadSeeker, keycount 
 	return
 }
 
+// KeyringToArmoredPubKeys reads all public keys from a keyring and returned their armored format
+// into map of keys indexed by key fingerprint
+func KeyringToArmoredPubKeys(keyring io.ReadCloser) (armoredkeys map[string][]byte, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("KeyringToArmoredPubKeys() -> %v", e)
+		}
+	}()
+	els, err := openpgp.ReadArmoredKeyRing(keyring)
+	if err != nil {
+		panic(err)
+	}
+	for _, el := range els {
+		fingerprint := hex.EncodeToString(el.PrimaryKey.Fingerprint[:])
+		var pubkeybuf bytes.Buffer
+		err = el.Serialize(&pubkeybuf)
+		if err != nil {
+			panic(err)
+		}
+		armoredbuf := bytes.NewBuffer(nil)
+		ewrbuf, err := armor.Encode(armoredbuf, openpgp.PublicKeyType, nil)
+		if err != nil {
+			panic(err)
+		}
+		_, err = ewrbuf.Write(pubkeybuf.Bytes())
+		if err != nil {
+			panic(err)
+		}
+		ewrbuf.Close()
+		armoredkeys[fingerprint] = armoredbuf.Bytes()
+	}
+	return
+}
+
 // ArmoredPrivKeyToKeyring takes a single private PGP key in armored form and transforms
 // it into a keyring that can be used in other openpgp's functions
 func ArmoredPrivKeyToKeyring(privkey []byte) (keyring io.ReadSeeker, err error) {
