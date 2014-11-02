@@ -249,14 +249,16 @@ func getAPIResource(t string, ctx Context) (resource *cljs.Resource, err error) 
 		return
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("HTTP %d: %v (code %s)", resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
-		return
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
 	}
-	resource = cljs.New("")
-	err = json.Unmarshal(body, &resource)
-	if err != nil {
-		return
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("error: HTTP %d. status update failed with error '%v' (code %s)",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
 	}
 	return
 }

@@ -62,7 +62,10 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	}()
 
 	// parse the POST body into a mig action
-	request.ParseForm()
+	err = request.ParseForm()
+	if err != nil {
+		panic(err)
+	}
 	postAction := request.FormValue("action")
 	err = json.Unmarshal([]byte(postAction), &action)
 	if err != nil {
@@ -144,7 +147,8 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	respond(201, resource, respWriter, request, opid)
+	// return a 202 Accepted. the action will be processed asynchronously, and may fail later.
+	respond(202, resource, respWriter, request, opid)
 }
 
 // describeCancelAction returns a resource that describes how to cancel an action

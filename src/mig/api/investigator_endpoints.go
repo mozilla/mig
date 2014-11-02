@@ -124,7 +124,6 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	if inv.Name == "" {
 		panic("Investigator name must not be empty")
 	}
-	fmt.Println(inv.Name)
 	// publickey is stored in a multipart post form, extract it
 	_, keyHeader, err := request.FormFile("publickey")
 	if err != nil {
@@ -149,8 +148,6 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	// create the investigator in database
 	inv.ID, err = ctx.DB.InsertInvestigator(inv)
 	if err != nil {
-		if err == fmt.Errorf(`Failed to create investigator: ''`) {
-		}
 		panic(err)
 	}
 	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "Investigator created in database"}
