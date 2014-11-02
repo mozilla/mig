@@ -129,10 +129,11 @@ dt {
   font-style: italic;
   font-weight: bold;
 }
-
+/*
 ul li {
   list-style: none;
 }
+*/
 /*
 ul li:before {
   content: ">>";

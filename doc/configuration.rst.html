@@ -58,7 +58,6 @@
                 <p><a href="#api-configuration">6   API configuration</a></p>
                 <ul class="auto-toc">
                     <li><a href="#location">6.1   Location</a></li>
-                    <li><a href="#gnupg-pubring">6.2   GnuPG pubring</a></li>
                 </ul>
             </li>
         </ul>
@@ -312,24 +311,10 @@ protocol    = "udp"</pre>
         </section>
         <section id="pgp">
             <h3>4.8   PGP</h3>
-            <p>The scheduler uses a PGP key to sign agent destruction actions during the agent upgrade protocol. Therefore, when deployed a scheduler, a key must be generated with the command <cite>gpg --gen-key</cite>.</p>
-            <p>The fingerprint of the key must then be added in two places:</p>
-            <ol type="1">
-                <li>In the scheduler configuration file <cite>mig-scheduler.cfg</cite>.</li>
-            </ol>
-            <p>First, obtain the fingerprint using the <cite>gpg</cite> command line.</p>
-            <pre><code class="bash"><span class="nv">$ </span>gpg --fingerprint --with-colons <span class="s1">'MIG scheduler stage1 (NOT PRODUCTION)'</span> |grep <span class="s1">'^fpr'</span>|cut -f 10 -d <span class="s1">':'</span>
-1E644752FB76B77245B1694E556CDD7B07E9D5D6</code></pre>
-            <p>Then add the fingerprint in the scheduler configuration file.</p>
-            <blockquote>
-                <pre>[pgp]
-    keyid = "1E644752FB76B77245B1694E556CDD7B07E9D5D6i
-    pubring = "/tmp/api-gpg/pubring.gpg"</pre>
-            </blockquote>
-            <p>Note: the <cite>pubring</cite> creation is described in the API configuration section below.</p>
-            <ol start="2" type="1">
-                <li>In the ACL of the agent configuration file <cite>conf/mig-agent-conf.go</cite>:</li>
-            </ol>
+            <p>The scheduler uses a PGP key to sign agent destruction actions during the agent upgrade protocol. Due to the limited scope of that key, it is stored in the database to facilitate deployment and provisioning of multiple schedulers.</p>
+            <p>Upon startup, the scheduler will look for an investigator named <cite>migscheduler</cite> and retrieve its private key to use it in action signing. If no investigator is found, it generates one and inserts it into the database, such that other schedulers can use it as well.</p>
+            <p>At the time, the scheduler public key must be manually added into the agent configuration. This will be changed in the future when ACLs and investigators can be dynamically distributed to agents.</p>
+            <p>In the ACL of the agent configuration file <cite>conf/mig-agent-conf.go</cite>:</p>
             <blockquote>
                 <pre>var AGENTACL = [...]string{
 `{
@@ -525,27 +510,6 @@ baseroute = "/api/v1"</pre>
             <p><cite>ip</cite> and <cite>port</cite> define the socket the API will be listening on. <cite>host</cite> is the public URL of the API, that clients will be connecting to. <cite>baseroute</cite> is the location of the base of the API, without the trailing slash.</p>
             <p>In this example, to reach the home of the API, we would point our browser to <cite>http://localhost:12345/api/v1/</cite>.</p>
             <p>Note that the API does not support SSL, or authentication (for now). This need to be configured on a reverse proxy in front of it.</p>
-        </section>
-        <section id="gnupg-pubring">
-            <h3>6.2   GnuPG pubring</h3>
-            <p>The API uses a gnupg pubring to validate incoming actions. The pubring can be created as a single file, without other gnupg files, and provided to the API in the configuration file.</p>
-            <p>To create a pubring, use the following command:</p>
-            <pre><code class="bash"><span class="nv">$ </span>mkdir /tmp/api-gpg
-
-<span class="c"># export the public keys into a file
-</span><span class="nv">$ </span>gpg --export -a bob@example.net john@example.com &gt; /tmp/api-gpg/pubkeys.pem
-
-<span class="c"># import the public keys into a new pubring
-</span><span class="nv">$ </span>gpg --homedir /tmp/api-gpg/ --import /tmp/api-gpg/pubkeys.pem
-gpg: key AF67CB21: public key <span class="s2">"Bob Kelso &lt;bob@example.net&gt;"</span> imported
-gpg: key DEF98214: public key <span class="s2">"John Smith &lt;john@example.com&gt;"</span> imported
-gpg: Total number processed: 2
-gpg:               imported: 2  <span class="o">(</span>RSA: 2<span class="o">)</span></code></pre>
-            <p>The file in /tmp/api-gpg/pubring.gpg can be passed to the API</p>
-            <blockquote>
-                <pre>[pgp]
-    pubring = "/tmp/api-gpg/pubring.gpg"</pre>
-            </blockquote>
         </section>
     </section>
 </body>
