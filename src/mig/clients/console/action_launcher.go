@@ -303,17 +303,6 @@ func computeSignature(a mig.Action, ctx Context) (pgpsig string, err error) {
 			err = fmt.Errorf("computeSignature() -> %v", e)
 		}
 	}()
-	// do a round trip through the json marshaller, this is voodoo that
-	// fixes signature verification issues down the road
-	b, err := json.Marshal(a)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(b, &a)
-	if err != nil {
-		panic(err)
-	}
-
 	secringFile, err := os.Open(ctx.GPG.Home + "/secring.gpg")
 	if err != nil {
 		panic(err)
