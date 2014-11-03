@@ -74,7 +74,7 @@ mig-api:
 
 mig-action-generator:
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/clients/generator
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/client/generator
 
 filechecker-convert:
 	$(MKDIR) -p $(BINDIR)
@@ -82,11 +82,11 @@ filechecker-convert:
 
 mig-action-verifier:
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig/clients/verifier
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig/client/verifier
 
 mig-console:
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig/clients/console
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig/client/console
 
 go_get_deps_into_system:
 	make GOGETTER="go get -u" go_get_deps
