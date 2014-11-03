@@ -1,6 +1,8 @@
 MIG: Mozilla InvestiGator
 =========================
 
+**Note: MIG is under heavy development. The code is unstable, and non-backward compatible changes are still in progress. Be warned.**
+
 MIG is OpSec's platform for investigative surgery of remote endpoints.
 
 MIG is composed of agents installed on all systems of an infrastructure. The
