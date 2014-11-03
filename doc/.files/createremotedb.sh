@@ -105,7 +105,11 @@ CREATE TABLE investigators (
     id numeric NOT NULL,
     name character varying(1024) NOT NULL,
     pgpfingerprint character varying(128),
-    publickey bytea
+    publickey bytea,
+    privatekey bytea,
+    status character varying(255) NOT NULL,
+    createdat timestamp with time zone NOT NULL,
+    lastmodified timestamp with time zone NOT NULL
 );
 ALTER TABLE public.investigators OWNER TO migadmin;
 ALTER TABLE ONLY investigators
@@ -154,11 +158,19 @@ ALTER TABLE ONLY signatures
 ALTER TABLE ONLY signatures
     ADD CONSTRAINT signatures_investigatorid_fkey FOREIGN KEY (investigatorid) REFERENCES investigators(id);
 
+-- Scheduler can read all tables, insert and select private keys in the investigators table, but cannot update investigators
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO migscheduler;
 GRANT INSERT, UPDATE ON actions, commands, agents, signatures TO migscheduler;
+GRANT INSERT ON investigators TO migscheduler;
+GRANT USAGE ON SEQUENCE investigators_id_seq TO migscheduler;
 
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO migapi;
+-- API has limited permissions, and cannot list scheduler private keys in the investigators table, but can update their statuses
+GRANT SELECT ON actions, agents, agtmodreq, commands, invagtmodperm, modules, signatures TO migapi;
+GRANT SELECT (id, name, pgpfingerprint, publickey, status, createdat, lastmodified) ON investigators TO migapi;
 GRANT INSERT ON actions, signatures TO migapi;
+GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified) ON investigators TO migapi;
+GRANT UPDATE (status, lastmodified) ON investigators TO migapi;
+GRANT USAGE ON SEQUENCE investigators_id_seq TO migapi;
 
 EOF
 

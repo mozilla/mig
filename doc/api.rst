@@ -22,14 +22,13 @@ behind the root.
 
 GET /dashboard
 ~~~~~~~~~~~~~~
-* Description: display a list of the last 10 scheduled actions, with links to
-  the corresponding commands.
+* Description: display a status dashboard of the MIG platform and agents
 * Parameters: none
 * Example:
 
 .. code:: bash
 
-	$ curl http://localhost:1664/api/v1/dashboard
+	/api/v1/dashboard
 
 GET /action
 ~~~~~~~~~~~
@@ -40,7 +39,30 @@ GET /action
 
 .. code:: bash
 
-	curl http://localhost:1664/api/v1/action?actionid=6019232215298562584
+	/api/v1/action?actionid=6019232215298562584
+
+POST /action/create/
+~~~~~~~~~~~~~~~~~~~~
+* Description: send a signed action to the API for submission to the scheduler.
+* Parameters: (POST body)
+	- `action`: a signed action in JSON format
+
+* Example: (posting using mig-action-generator)
+
+.. code:: bash
+
+	./bin/linux/amd64/mig-action-generator -i examples/actions/linux-backdoor.json -k jvehent@mozilla.com -posturl=http://localhost:1664/api/v1/action/create/
+
+GET /agent
+~~~~~~~~~~~~
+* Description: retrieve an agent by its ID
+* Parameters:
+	- `agentid`: a uint64 that identifies an agent by its ID
+* Example:
+
+.. code:: bash
+
+	/api/v1/agent?agentid=6074883012002259968
 
 GET /command
 ~~~~~~~~~~~~
@@ -51,29 +73,121 @@ GET /command
 
 .. code:: bash
 
-	curl http://localhost:1664/api/v1/command?commandid=6019232259520546404
+	/api/v1/command?commandid=6019232259520546404
+
+GET /investigator
+~~~~~~~~~~~~~~~~~
+* Description: retrieve an investigator by its ID. Include link to the
+  investigator's action history.
+* Parameters:
+	- `investigatorid`: a uint64 that identifies a command by its ID
+* Example:
+
+.. code:: bash
+
+	/api/v1/investigator?investigatorid=1
+
+POST /investigator/create/
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: create a new investigator in the database
+* Parameters: (POST body)
+	- `name`: string that represents the full name
+	- `publickey`: armored GPG public key
+* Example:
+
+.. code:: bash
+
+	$ gpg --export -a --export-options export-minimal bob_kelso@example.net > /tmp/bobpubkey
+
+	$ curl -iv -F "name=Bob Kelso" -F publickey=@/tmp/pubkey
+	http://localhost:1664/api/v1/investigator/create/
+
+POST /investigator/update/
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: update an existing investigator in the database
+* Parameters: (PUT body)
+	- `id`: investigator id, to identify the target investigator
+	- `status`: new status of the investigator, to be updated
+* Example:
+
+.. code:: bash
+
+	$ curl -iv -X POST -d id=1234 -d status=disabled http://localhost:1664/api/v1/investigator/update/
 
 GET /search
 ~~~~~~~~~~~
-* Description: search for actions, commands or agents.
+* Description: search for actions, commands, agents or investigators.
 * Parameters:
-	- `before`: return results recorded before this RFC3339 date
-	- `after`: return results recorded after this RFC3339 date"},
-	- `type`: type defines what the search is looking for. must be `action`,
-	  `command` or `agent`
-	- `report`: if set, return results in the given report format (valid for
-	  `command` type only)
-	- `agentname`: filter results on the agent name
-	- `actionname`: filter results on the action name (valid for `command` and
-	  `action` types only)
-	- `actionid`: filter results on the action ID (valid for `command` and
-	  `action` types only)
-	- `commandid`: filter results on the command ID (valid for `command` type only)
-	- `status`: filter on internal status (valid for `command` and `agent` only)
-	- `threatfamily`: filter results of the threat family of the action
-	- `limit`: limit the number of results to 10 by default
+	- `type`: define the type of item returned by the search.
+	  Valid types are: `action`, `command`, `agent` or `investigator`.
+
+		- `action`: (default) return a list of actions
+		- `command`: return a list of commands
+		- `agent`: return a list of agents that have shown activity
+		- `investigator`: return a list of investigators that have show activity
+
+	- `actionid`: filter results on numeric action ID
+
+	- `actionname`: filter results on string action name, accept `ILIKE` pattern
+
+	- `after`: return results recorded after this RFC3339 date, depends on type:
+
+		- `action`: select actions with a `validfrom` date greater than
+		  `after`. Default is last 7 days.
+		- `agent`: select agents that have sent a heartbeat since `after`.
+		  Default is last 7 days.
+		- `command`: select commands with a `starttime` date greated than
+		  `after`. Default is last 7 days.
+		- `investigator`: select investigators with a `createdat` date greater
+		  than `after`. Default is last 1,000 years.
+
+	- `agentid`: filter results on the agent ID
+
+	- `agentname`: filter results on string agent name, accept `ILIKE` pattern
+
+	- `before`: return results recorded before this RFC3339 date. If not defined,
+	  default is to retrieve results until now.
+
+		- `action`: select actions with a `expireafter` date lower than `before`
+		- `agent`: select agents that have sent a heartbeat priot to `before`
+		- `command`: select commands with a `starttime` date lower than `before`
+		- `investigator`: select investigators with a `lastmodified` date lower
+		  than `before`
+
+	- `commandid`: filter results on the command ID
+
 	- `foundanything`: filter commands on the `foundanything` boolean of their
-	  results (valid for `command` type only)
+	  results (only for type `command`, as it requires looking into results)
+
+	- `investigatorid`: filter results on the investigator ID
+
+	- `investigatorname`: filter results on string investigator name, accept
+	  `ILIKE` pattern
+
+	- `limit`: limit the number of results to 10,000 by default
+
+	- `report`: if set, return results in the given report format (see
+	  **compliance items** below)
+
+	- `status`: filter on internal status, accept `ILIKE` pattern.
+	  Status depends on the type. Below are the available statuses per type:
+
+		- `action`: init, preparing, invalid, inflight, completed
+		- `agent`: heartbeating, upgraded, destroyed, inactive
+		- `command`: prepared, sent, success, timeout, cancelled, expired, failed
+		- `investigator`: active, disabled
+
+	- `threatfamily`: filter results of the threat family of the action, accept
+	  `ILIKE` pattern (only for types `command` and `action`)
+
+**`ILIKE` pattern**
+
+Some search parameters accept Postgres's pattern matching syntax. For these
+parameters, the value is used as a SQL `ILIKE` search pattern, as described in
+`Postgres's documentation
+<http://www.postgresql.org/docs/9.4/static/functions-matching.html>`_.
+
+Note: URL encoding transform the **%** character into **%25**, its ASCII value.
 
 * Examples:
 
@@ -82,43 +196,29 @@ hours. For more information on the `compliance` format, see section 2.
 
 .. code:: bash
 
-	curl http://localhost:1664/api/v1/search?type=command&threatfamily=compliance&status=done&report=complianceitems&limit=100000&after=2014-05-30T00:00:00-04:00&before=2014-05-30T23:59:59-04:00
+	/api/v1/search?type=command&threatfamily=compliance&status=done
+	&report=complianceitems&limit=100000
+	&after=2014-05-30T00:00:00-04:00&before=2014-05-30T23:59:59-04:00
 
 List the agents that have sent a heartbeat in the last hour.
 
 .. code:: bash
 
-	curl http://localhost:1664/api/v1/search?type=agent&after=2014-05-30T15:00:00-04:00&limit=200
+	/api/v1/search?type=agent&after=2014-05-30T15:00:00-04:00&limit=200
 
 Find actions ran between two dates (limited to 10 results as is the default).
 
 .. code:: bash
 
-	curl http://localhost:1664/api/v1/search?type=action&status=sent&after=2014-05-01T00:00:00-00:00&before=2014-05-30T00:00:00-00:00
+	/api/v1/search?type=action&status=sent
+	&after=2014-05-01T00:00:00-00:00&before=2014-05-30T00:00:00-00:00
 
-GET /agent/dashboard
-~~~~~~~~~~~~~~~~~~~~
-not implemented
-
-POST /action/create/
-~~~~~~~~~~~~~~~~~~~~
-* Description: send a signed action to the API for submission to the scheduler.
-* Parameters: (POST body)
-	- `action`: a signed action in JSON format
-
-* Example:
+Find the last 10 commands signed by an investigator identified by name.
 
 .. code:: bash
 
-	./bin/linux/amd64/mig-action-generator -i examples/actions/linux-backdoor.json -k jvehent@mozilla.com -posturl=http://localhost:1664/api/v1/action/create/
+	/api/v1/search?investigatorname=%25bob%25smith%25&limit=10&type=command
 
-POST /action/cancel/
-~~~~~~~~~~~~~~~~~~~~
-not implemented
-
-POST /command/cancel/
-~~~~~~~~~~~~~~~~~~~~~
-not implemented
 
 Data transformation
 -------------------

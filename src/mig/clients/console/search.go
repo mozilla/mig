@@ -34,10 +34,10 @@ func search(input string, ctx Context) (err error) {
 	}
 	sType := ""
 	switch orders[1] {
-	case "action", "agent", "command":
+	case "action", "agent", "command", "investigator":
 		sType = orders[1]
 	case "", "help":
-		fmt.Printf(`usage: search <action|agent|command> where <parameters> [<and|or> <parameters>]
+		fmt.Printf(`usage: search <action|agent|command|investigator> where <parameters> [<and|or> <parameters>]
 The following search parameters are available:
 `)
 		return nil
@@ -103,6 +103,32 @@ The following search parameters are available:
 						name = name[0:27] + "..."
 					}
 					fmt.Printf("%20.0f   %s   %s\n", cmd.ID, name, cmd.FinishTime.Format(time.RFC3339))
+				}
+			}
+		}
+	case "investigator":
+		fmt.Println("- ID - + ----         Name         ---- + --- Status ---")
+		for _, item := range items {
+			for _, data := range item.Data {
+				if data.Name != sType {
+					continue
+				}
+				switch data.Name {
+				case "investigator":
+					inv, err := valueToInvestigator(data.Value)
+					if err != nil {
+						panic(err)
+					}
+					name := inv.Name
+					if len(name) < 30 {
+						for i := len(name); i < 30; i++ {
+							name += " "
+						}
+					}
+					if len(name) > 30 {
+						name = name[0:27] + "..."
+					}
+					fmt.Printf("%6.0f   %s   %s\n", inv.ID, name, inv.Status)
 				}
 			}
 		}

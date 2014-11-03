@@ -107,7 +107,8 @@ used when verifying signatures and generating ACLs.
 		id numeric PRIMARY KEY NOT NULL,
 		name varchar(1024) NOT NULL,
 		pgpfingerprint varchar(128) NOT NULL,
-		publickey varchar(65536)
+		publickey varchar(65536),
+		status varchar(256) NOT NULL
 	);
 	CREATE UNIQUE INDEX ON investigators (pgpfingerprint);
 

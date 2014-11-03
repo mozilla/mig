@@ -6,19 +6,21 @@
 package main
 
 import (
+	"code.google.com/p/gcfg"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/streadway/amqp"
+	"io"
 	"io/ioutil"
 	"mig"
 	migdb "mig/database"
 	"net"
 	"os"
+	"strings"
+	"sync"
 	"time"
-
-	"code.google.com/p/gcfg"
-	"github.com/streadway/amqp"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -67,7 +69,10 @@ type Context struct {
 		Chan *amqp.Channel
 	}
 	PGP struct {
-		KeyID, Home string
+		Pubring, Secring   io.ReadSeeker
+		PrivKeyID          string
+		PubMutex, SecMutex sync.Mutex
+		PubringUpdateTime  time.Time
 	}
 	Postgres struct {
 		Host, User, Password, DBName, SSLMode string
@@ -113,6 +118,11 @@ func Init(path string) (ctx Context, err error) {
 	}
 
 	ctx, err = initRelay(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	ctx, err = initSecring(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -294,6 +304,39 @@ func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx.Channels.DetectDupAgents = make(chan string, 29)
 	ctx.Channels.Log = make(chan mig.Log, 21559)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
+	return
+}
+
+// initSecring() retrieves the scheduler private key from the database and makes
+// a secring with it. If no scheduler key exists in the database, one will be
+// generated
+func initSecring(orig_ctx Context) (ctx Context, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("initSecring() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving initSecring()"}.Debug()
+	}()
+	ctx = orig_ctx
+	ctx.PGP.Secring, err = makeSecring(ctx)
+	if err != nil {
+		if strings.Contains(err.Error(), "no private key found") {
+			err = nil // reinit err, this isn't an error
+			ctx.Channels.Log <- mig.Log{Desc: "no key found in database. generating a private key for user migscheduler"}
+			// generate a private key and try again to load it, or fail
+			inv, err := makeSchedulerInvestigator(ctx)
+			if err != nil {
+				panic(err)
+			}
+			ctx.PGP.PrivKeyID = inv.PGPFingerprint
+			ctx.PGP.Secring, err = makeSecring(ctx)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			panic(err)
+		}
+	}
 	return
 }
 

@@ -6,12 +6,14 @@
 package main
 
 import (
+	"code.google.com/p/gcfg"
 	"fmt"
+	"io"
 	"mig"
 	migdb "mig/database"
 	"os"
-
-	"code.google.com/p/gcfg"
+	"sync"
+	"time"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -34,9 +36,11 @@ type Context struct {
 			Ready, InFlight, Returned, Done string
 		}
 	}
-	DB  migdb.DB
-	PGP struct {
-		Home string
+	DB      migdb.DB
+	Keyring struct {
+		Reader     io.ReadSeeker
+		Mutex      sync.Mutex
+		UpdateTime time.Time
 	}
 	Postgres struct {
 		Host, User, Password, DBName, SSLMode string

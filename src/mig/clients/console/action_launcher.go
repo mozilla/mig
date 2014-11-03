@@ -11,7 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mig"
-	"mig/pgp/sign"
+	"mig/pgp"
 	"net/url"
 	"os"
 	"strconv"
@@ -314,7 +314,7 @@ func computeSignature(a mig.Action, ctx Context) (pgpsig string, err error) {
 	if err != nil {
 		panic(err)
 	}
-	pgpsig, err = sign.Sign(str, ctx.GPG.KeyID, secringFile)
+	pgpsig, err = pgp.Sign(str, ctx.GPG.KeyID, secringFile)
 	if err != nil {
 		panic(err)
 	}
@@ -374,14 +374,14 @@ func postAction(a mig.Action, follow bool, ctx Context) (a2 mig.Action, err erro
 	if err != nil {
 		panic(err)
 	}
+	if resp.StatusCode != 202 {
+		err = fmt.Errorf("error: HTTP %d. action creation failed.", resp.StatusCode)
+		panic(err)
+	}
 	var resource *cljs.Resource
 	err = json.Unmarshal(body, &resource)
 	if err != nil {
 		panic(err)
-	}
-	if resp.StatusCode != 201 {
-		err = fmt.Errorf("HTTP %d: %v (code %s)", resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
-		return
 	}
 	a2, err = valueToAction(resource.Collection.Items[0].Data[0].Value)
 	if err != nil {

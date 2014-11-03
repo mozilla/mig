@@ -44,7 +44,7 @@ func agentReader(input string, ctx Context) (err error) {
 	prompt := "\x1b[34;1magent " + agtid[len(agtid)-3:len(agtid)] + ">\x1b[0m "
 	for {
 		// completion
-		var symbols = []string{"details", "exit", "help", "json", "pretty", "r", "lastcommands"}
+		var symbols = []string{"details", "exit", "help", "json", "pretty", "r", "lastactions"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -94,9 +94,9 @@ exit			exit this mode
 help			show this help
 json <pretty>		show the json of the agent registration
 r			refresh the agent (get latest version from upstream)
-lastcommands <limit>	print the last commands that ran on the agent. limit=10 by default.
+lastactions <limit>	print the last actions that ran on the agent. limit=10 by default.
 `)
-		case "lastcommands":
+		case "lastactions":
 			limit := 10
 			if len(orders) > 1 {
 				limit, err = strconv.Atoi(orders[1])
@@ -104,7 +104,7 @@ lastcommands <limit>	print the last commands that ran on the agent. limit=10 by 
 					panic(err)
 				}
 			}
-			err = printLastCommands(agtid, limit)
+			err = printAgentLastActions(agtid, limit)
 			if err != nil {
 				panic(err)
 			}
@@ -179,10 +179,10 @@ func valueToAgent(v interface{}) (agt mig.Agent, err error) {
 	return
 }
 
-func printLastCommands(agtid string, limit int) (err error) {
+func printAgentLastActions(agtid string, limit int) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("printLastCommands() -> %v", e)
+			err = fmt.Errorf("printAgentLastActions() -> %v", e)
 		}
 	}()
 	targetURL := fmt.Sprintf("%s/search?type=command&agentid=%s&limit=%d",

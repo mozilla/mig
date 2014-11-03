@@ -16,12 +16,13 @@
                 <ul class="auto-toc">
                     <li><a href="#get-dashboard">1.1   GET /dashboard</a></li>
                     <li><a href="#get-action">1.2   GET /action</a></li>
-                    <li><a href="#get-command">1.3   GET /command</a></li>
-                    <li><a href="#get-search">1.4   GET /search</a></li>
-                    <li><a href="#get-agent-dashboard">1.5   GET /agent/dashboard</a></li>
-                    <li><a href="#post-action-create">1.6   POST /action/create/</a></li>
-                    <li><a href="#post-action-cancel">1.7   POST /action/cancel/</a></li>
-                    <li><a href="#post-command-cancel">1.8   POST /command/cancel/</a></li>
+                    <li><a href="#post-action-create">1.3   POST /action/create/</a></li>
+                    <li><a href="#get-agent">1.4   GET /agent</a></li>
+                    <li><a href="#get-command">1.5   GET /command</a></li>
+                    <li><a href="#get-investigator">1.6   GET /investigator</a></li>
+                    <li><a href="#post-investigator-create">1.7   POST /investigator/create/</a></li>
+                    <li><a href="#post-investigator-update">1.8   POST /investigator/update/</a></li>
+                    <li><a href="#get-search">1.9   GET /search</a></li>
                 </ul>
             </li>
             <li>
@@ -40,11 +41,11 @@
         <section id="get-dashboard">
             <h3>1.1   GET /dashboard</h3>
             <ul>
-                <li>Description: display a list of the last 10 scheduled actions, with links to the corresponding commands.</li>
+                <li>Description: display a status dashboard of the MIG platform and agents</li>
                 <li>Parameters: none</li>
                 <li>Example:</li>
             </ul>
-            <pre><code class="bash"><span class="nv">$ </span>curl http://localhost:1664/api/v1/dashboard</code></pre>
+            <pre><code class="bash">/api/v1/dashboard</code></pre>
         </section>
         <section id="get-action">
             <h3>1.2   GET /action</h3>
@@ -62,10 +63,46 @@
                 </li>
                 <li>Example:</li>
             </ul>
-            <pre><code class="bash">curl http://localhost:1664/api/v1/action?actionid<span class="o">=</span>6019232215298562584</code></pre>
+            <pre><code class="bash">/api/v1/action?actionid<span class="o">=</span>6019232215298562584</code></pre>
+        </section>
+        <section id="post-action-create">
+            <h3>1.3   POST /action/create/</h3>
+            <ul>
+                <li>Description: send a signed action to the API for submission to the scheduler.</li>
+                <li>
+                    <dl>
+                        <dt>Parameters: (POST body)</dt>
+                        <dd>
+                            <ul>
+                                <li><cite>action</cite>: a signed action in JSON format</li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+                <li>Example: (posting using mig-action-generator)</li>
+            </ul>
+            <pre><code class="bash">./bin/linux/amd64/mig-action-generator -i examples/actions/linux-backdoor.json -k jvehent@mozilla.com -posturl<span class="o">=</span>http://localhost:1664/api/v1/action/create/</code></pre>
+        </section>
+        <section id="get-agent">
+            <h3>1.4   GET /agent</h3>
+            <ul>
+                <li>Description: retrieve an agent by its ID</li>
+                <li>
+                    <dl>
+                        <dt>Parameters:</dt>
+                        <dd>
+                            <ul>
+                                <li><cite>agentid</cite>: a uint64 that identifies an agent by its ID</li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+                <li>Example:</li>
+            </ul>
+            <pre><code class="bash">/api/v1/agent?agentid<span class="o">=</span>6074883012002259968</code></pre>
         </section>
         <section id="get-command">
-            <h3>1.3   GET /command</h3>
+            <h3>1.5   GET /command</h3>
             <ul>
                 <li>Description: retrieve a command by its ID. Include link to related action.</li>
                 <li>
@@ -80,71 +117,153 @@
                 </li>
                 <li>Example:</li>
             </ul>
-            <pre><code class="bash">curl http://localhost:1664/api/v1/command?commandid<span class="o">=</span>6019232259520546404</code></pre>
+            <pre><code class="bash">/api/v1/command?commandid<span class="o">=</span>6019232259520546404</code></pre>
         </section>
-        <section id="get-search">
-            <h3>1.4   GET /search</h3>
+        <section id="get-investigator">
+            <h3>1.6   GET /investigator</h3>
             <ul>
-                <li>Description: search for actions, commands or agents.</li>
+                <li>Description: retrieve an investigator by its ID. Include link to the investigator's action history.</li>
                 <li>
                     <dl>
                         <dt>Parameters:</dt>
                         <dd>
                             <ul>
-                                <li><cite>before</cite>: return results recorded before this RFC3339 date</li>
-                                <li><cite>after</cite>: return results recorded after this RFC3339 date"},</li>
-                                <li><cite>type</cite>: type defines what the search is looking for. must be <cite>action</cite>, <cite>command</cite> or <cite>agent</cite></li>
-                                <li><cite>report</cite>: if set, return results in the given report format (valid for <cite>command</cite> type only)</li>
-                                <li><cite>agentname</cite>: filter results on the agent name</li>
-                                <li><cite>actionname</cite>: filter results on the action name (valid for <cite>command</cite> and <cite>action</cite> types only)</li>
-                                <li><cite>actionid</cite>: filter results on the action ID (valid for <cite>command</cite> and <cite>action</cite> types only)</li>
-                                <li><cite>commandid</cite>: filter results on the command ID (valid for <cite>command</cite> type only)</li>
-                                <li><cite>status</cite>: filter on internal status (valid for <cite>command</cite> and <cite>agent</cite> only)</li>
-                                <li><cite>threatfamily</cite>: filter results of the threat family of the action</li>
-                                <li><cite>limit</cite>: limit the number of results to 10 by default</li>
-                                <li><cite>foundanything</cite>: filter commands on the <cite>foundanything</cite> boolean of their results (valid for <cite>command</cite> type only)</li>
-                            </ul>
-                        </dd>
-                    </dl>
-                </li>
-                <li>Examples:</li>
-            </ul>
-            <p>Generate a compliance report from <cite>compliance</cite> action ran over the last 24 hours. For more information on the <cite>compliance</cite> format, see section 2.</p>
-            <pre><code class="bash">curl http://localhost:1664/api/v1/search?type<span class="o">=</span><span class="nb">command</span>&amp;threatfamily<span class="o">=</span>compliance&amp;status<span class="o">=</span><span class="k">done</span>&amp;report<span class="o">=</span>complianceitems&amp;limit<span class="o">=</span>100000&amp;after<span class="o">=</span>2014-05-30T00:00:00-04:00&amp;before<span class="o">=</span>2014-05-30T23:59:59-04:00</code></pre>
-            <p>List the agents that have sent a heartbeat in the last hour.</p>
-            <pre><code class="bash">curl http://localhost:1664/api/v1/search?type<span class="o">=</span>agent&amp;after<span class="o">=</span>2014-05-30T15:00:00-04:00&amp;limit<span class="o">=</span>200</code></pre>
-            <p>Find actions ran between two dates (limited to 10 results as is the default).</p>
-            <pre><code class="bash">curl http://localhost:1664/api/v1/search?type<span class="o">=</span>action&amp;status<span class="o">=</span>sent&amp;after<span class="o">=</span>2014-05-01T00:00:00-00:00&amp;before<span class="o">=</span>2014-05-30T00:00:00-00:00</code></pre>
-        </section>
-        <section id="get-agent-dashboard">
-            <h3>1.5   GET /agent/dashboard</h3>
-            <p>not implemented</p>
-        </section>
-        <section id="post-action-create">
-            <h3>1.6   POST /action/create/</h3>
-            <ul>
-                <li>Description: send a signed action to the API for submission to the scheduler.</li>
-                <li>
-                    <dl>
-                        <dt>Parameters: (POST body)</dt>
-                        <dd>
-                            <ul>
-                                <li><cite>action</cite>: a signed action in JSON format</li>
+                                <li><cite>investigatorid</cite>: a uint64 that identifies a command by its ID</li>
                             </ul>
                         </dd>
                     </dl>
                 </li>
                 <li>Example:</li>
             </ul>
-            <pre><code class="bash">./bin/linux/amd64/mig-action-generator -i examples/actions/linux-backdoor.json -k jvehent@mozilla.com -posturl<span class="o">=</span>http://localhost:1664/api/v1/action/create/</code></pre>
+            <pre><code class="bash">/api/v1/investigator?investigatorid<span class="o">=</span>1</code></pre>
         </section>
-        <section id="post-action-cancel">
-            <h3>1.7   POST /action/cancel/</h3>
-            <p>not implemented</p>
+        <section id="post-investigator-create">
+            <h3>1.7   POST /investigator/create/</h3>
+            <ul>
+                <li>Description: create a new investigator in the database</li>
+                <li>
+                    <dl>
+                        <dt>Parameters: (POST body)</dt>
+                        <dd>
+                            <ul>
+                                <li><cite>name</cite>: string that represents the full name</li>
+                                <li><cite>publickey</cite>: armored GPG public key</li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+                <li>Example:</li>
+            </ul>
+            <pre><code class="bash"><span class="nv">$ </span>gpg --export -a --export-options <span class="nb">export</span>-minimal bob_kelso@example.net &gt; /tmp/bobpubkey
+
+<span class="nv">$ </span>curl -iv -F <span class="s2">"name=Bob Kelso"</span> -F <span class="nv">publickey</span><span class="o">=</span>@/tmp/pubkey
+http://localhost:1664/api/v1/investigator/create/</code></pre>
         </section>
-        <section id="post-command-cancel">
-            <h3>1.8   POST /command/cancel/</h3>
-            <p>not implemented</p>
+        <section id="post-investigator-update">
+            <h3>1.8   POST /investigator/update/</h3>
+            <ul>
+                <li>Description: update an existing investigator in the database</li>
+                <li>
+                    <dl>
+                        <dt>Parameters: (PUT body)</dt>
+                        <dd>
+                            <ul>
+                                <li><cite>id</cite>: investigator id, to identify the target investigator</li>
+                                <li><cite>status</cite>: new status of the investigator, to be updated</li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+                <li>Example:</li>
+            </ul>
+            <pre><code class="bash"><span class="nv">$ </span>curl -iv -X POST -d <span class="nv">id</span><span class="o">=</span>1234 -d <span class="nv">status</span><span class="o">=</span>disabled http://localhost:1664/api/v1/investigator/update/</code></pre>
+        </section>
+        <section id="get-search">
+            <h3>1.9   GET /search</h3>
+            <ul>
+                <li>Description: search for actions, commands, agents or investigators.</li>
+                <li>
+                    <dl>
+                        <dt>Parameters:</dt>
+                        <dd>
+                            <ul>
+                                <li>
+                                    <p><cite>type</cite>: define the type of item returned by the search. Valid types are: <cite>action</cite>, <cite>command</cite>, <cite>agent</cite> or <cite>investigator</cite>.</p>
+                                    <blockquote>
+                                        <ul>
+                                            <li><cite>action</cite>: (default) return a list of actions</li>
+                                            <li><cite>command</cite>: return a list of commands</li>
+                                            <li><cite>agent</cite>: return a list of agents that have shown activity</li>
+                                            <li><cite>investigator</cite>: return a list of investigators that have show activity</li>
+                                        </ul>
+                                    </blockquote>
+                                </li>
+                                <li><cite>actionid</cite>: filter results on numeric action ID</li>
+                                <li><cite>actionname</cite>: filter results on string action name, accept <cite>ILIKE</cite> pattern</li>
+                                <li>
+                                    <p><cite>after</cite>: return results recorded after this RFC3339 date, depends on type:</p>
+                                    <blockquote>
+                                        <ul>
+                                            <li><cite>action</cite>: select actions with a <cite>validfrom</cite> date greater than <cite>after</cite>. Default is last 7 days.</li>
+                                            <li><cite>agent</cite>: select agents that have sent a heartbeat since <cite>after</cite>. Default is last 7 days.</li>
+                                            <li><cite>command</cite>: select commands with a <cite>starttime</cite> date greated than <cite>after</cite>. Default is last 7 days.</li>
+                                            <li><cite>investigator</cite>: select investigators with a <cite>createdat</cite> date greater than <cite>after</cite>. Default is last 1,000 years.</li>
+                                        </ul>
+                                    </blockquote>
+                                </li>
+                                <li><cite>agentid</cite>: filter results on the agent ID</li>
+                                <li><cite>agentname</cite>: filter results on string agent name, accept <cite>ILIKE</cite> pattern</li>
+                                <li>
+                                    <p><cite>before</cite>: return results recorded before this RFC3339 date. If not defined, default is to retrieve results until now.</p>
+                                    <blockquote>
+                                        <ul>
+                                            <li><cite>action</cite>: select actions with a <cite>expireafter</cite> date lower than <cite>before</cite></li>
+                                            <li><cite>agent</cite>: select agents that have sent a heartbeat priot to <cite>before</cite></li>
+                                            <li><cite>command</cite>: select commands with a <cite>starttime</cite> date lower than <cite>before</cite></li>
+                                            <li><cite>investigator</cite>: select investigators with a <cite>lastmodified</cite> date lower than <cite>before</cite></li>
+                                        </ul>
+                                    </blockquote>
+                                </li>
+                                <li><cite>commandid</cite>: filter results on the command ID</li>
+                                <li><cite>foundanything</cite>: filter commands on the <cite>foundanything</cite> boolean of their results (only for type <cite>command</cite>, as it requires looking into results)</li>
+                                <li><cite>investigatorid</cite>: filter results on the investigator ID</li>
+                                <li><cite>investigatorname</cite>: filter results on string investigator name, accept <cite>ILIKE</cite> pattern</li>
+                                <li><cite>limit</cite>: limit the number of results to 10,000 by default</li>
+                                <li><cite>report</cite>: if set, return results in the given report format (see <strong>compliance items</strong> below)</li>
+                                <li>
+                                    <p><cite>status</cite>: filter on internal status, accept <cite>ILIKE</cite> pattern. Status depends on the type. Below are the available statuses per type:</p>
+                                    <blockquote>
+                                        <ul>
+                                            <li><cite>action</cite>: init, preparing, invalid, inflight, completed</li>
+                                            <li><cite>agent</cite>: heartbeating, upgraded, destroyed, inactive</li>
+                                            <li><cite>command</cite>: prepared, sent, success, timeout, cancelled, expired, failed</li>
+                                            <li><cite>investigator</cite>: active, disabled</li>
+                                        </ul>
+                                    </blockquote>
+                                </li>
+                                <li><cite>threatfamily</cite>: filter results of the threat family of the action, accept <cite>ILIKE</cite> pattern (only for types <cite>command</cite> and <cite>action</cite>)</li>
+                            </ul>
+                        </dd>
+                    </dl>
+                </li>
+            </ul>
+            <p><strong>`ILIKE` pattern</strong></p>
+            <p>Some search parameters accept Postgres's pattern matching syntax. For these parameters, the value is used as a SQL <cite>ILIKE</cite> search pattern, as described in <a href="http://www.postgresql.org/docs/9.4/static/functions-matching.html">Postgres's documentation</a>.</p>
+            <p>Note: URL encoding transform the <strong>%</strong> character into <strong>%25</strong>, its ASCII value.</p>
+            <ul>
+                <li>Examples:</li>
+            </ul>
+            <p>Generate a compliance report from <cite>compliance</cite> action ran over the last 24 hours. For more information on the <cite>compliance</cite> format, see section 2.</p>
+            <pre><code class="bash">/api/v1/search?type<span class="o">=</span><span class="nb">command</span>&amp;threatfamily<span class="o">=</span>compliance&amp;status<span class="o">=</span><span class="k">done</span>
+&amp;report<span class="o">=</span>complianceitems&amp;limit<span class="o">=</span>100000
+&amp;after<span class="o">=</span>2014-05-30T00:00:00-04:00&amp;before<span class="o">=</span>2014-05-30T23:59:59-04:00</code></pre>
+            <p>List the agents that have sent a heartbeat in the last hour.</p>
+            <pre><code class="bash">/api/v1/search?type<span class="o">=</span>agent&amp;after<span class="o">=</span>2014-05-30T15:00:00-04:00&amp;limit<span class="o">=</span>200</code></pre>
+            <p>Find actions ran between two dates (limited to 10 results as is the default).</p>
+            <pre><code class="bash">/api/v1/search?type<span class="o">=</span>action&amp;status<span class="o">=</span>sent
+&amp;after<span class="o">=</span>2014-05-01T00:00:00-00:00&amp;before<span class="o">=</span>2014-05-30T00:00:00-00:00</code></pre>
+            <p>Find the last 10 commands signed by an investigator identified by name.</p>
+            <pre><code class="bash">/api/v1/search?investigatorname<span class="o">=</span>%25bob%25smith%25&amp;limit<span class="o">=</span>10&amp;type<span class="o">=</span><span class="nb">command</span></code></pre>
         </section>
     </section>
     <section id="data-transformation">

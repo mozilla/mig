@@ -23,7 +23,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
 	opid := mig.GenID()
 	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
-	loc := fmt.Sprintf("http://%s:%d%s", ctx.Server.IP, ctx.Server.Port, request.URL.String())
+	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	p := migdb.NewSearchParameters()
 	defer func() {
@@ -49,8 +49,6 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			p.ActionName = request.URL.Query()["actionname"][0]
 		case "actionid":
 			p.ActionID = request.URL.Query()["actionid"][0]
-		case "commandid":
-			p.CommandID = request.URL.Query()["commandid"][0]
 		case "after":
 			p.After, err = time.Parse(timeLayout, request.URL.Query()["after"][0])
 			if err != nil {
@@ -65,6 +63,8 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			if err != nil {
 				panic("before date not in RFC3339 format")
 			}
+		case "commandid":
+			p.CommandID = request.URL.Query()["commandid"][0]
 		case "foundanything":
 			if truere.MatchString(request.URL.Query()["foundanything"][0]) {
 				p.FoundAnything = true
@@ -74,17 +74,21 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				panic("foundanything parameter must be true or false")
 			}
 			doFoundAnything = true
+		case "investigatorid":
+			p.InvestigatorID = request.URL.Query()["investigatorid"][0]
+		case "investigatorname":
+			p.InvestigatorName = request.URL.Query()["investigatorname"][0]
+		case "limit":
+			p.Limit, err = strconv.ParseFloat(request.URL.Query()["limit"][0], 64)
+			if err != nil {
+				panic("invalid limit parameter")
+			}
 		case "report":
 			switch request.URL.Query()["report"][0] {
 			case "complianceitems":
 				p.Report = request.URL.Query()["report"][0]
 			default:
 				panic("report not implemented")
-			}
-		case "limit":
-			p.Limit, err = strconv.ParseFloat(request.URL.Query()["limit"][0], 64)
-			if err != nil {
-				panic("invalid limit parameter")
 			}
 		case "status":
 			p.Status = request.URL.Query()["status"][0]
@@ -97,12 +101,14 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 	if _, ok := request.URL.Query()["type"]; ok {
 		p.Type = request.URL.Query()["type"][0]
 		switch p.Type {
-		case "command":
-			results, err = ctx.DB.SearchCommands(p, doFoundAnything)
 		case "action":
 			results, err = ctx.DB.SearchActions(p)
 		case "agent":
 			results, err = ctx.DB.SearchAgents(p)
+		case "command":
+			results, err = ctx.DB.SearchCommands(p, doFoundAnything)
+		case "investigator":
+			results, err = ctx.DB.SearchInvestigators(p)
 		default:
 			panic("search type is invalid")
 		}
@@ -127,8 +133,8 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		for i, item := range items {
 			err = resource.AddItem(cljs.Item{
-				Href: fmt.Sprintf("http://%s:%d%s/search?type=command?agentname=%s&commandid=%s&actionid=%s&threatfamily=compliance&report=complianceitems&after=%s&before=%s",
-					ctx.Server.IP, ctx.Server.Port, ctx.Server.BaseRoute, item.Target,
+				Href: fmt.Sprintf("%s%s/search?type=command?agentname=%s&commandid=%s&actionid=%s&threatfamily=compliance&report=complianceitems&after=%s&before=%s",
+					ctx.Server.Host, ctx.Server.BaseRoute, item.Target,
 					p.CommandID, p.ActionID, afterStr, beforeStr),
 				Data: []cljs.Data{{Name: "compliance item", Value: item}},
 			})
@@ -141,24 +147,12 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		}
 	default:
 		switch p.Type {
-		case "command":
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Command)))}
-			for _, r := range results.([]mig.Command) {
-				err = resource.AddItem(cljs.Item{
-					Href: fmt.Sprintf("http://%s:%d%s/command?commandid=%.0f",
-						ctx.Server.IP, ctx.Server.Port, ctx.Server.BaseRoute, r.ID),
-					Data: []cljs.Data{{Name: p.Type, Value: r}},
-				})
-				if err != nil {
-					panic(err)
-				}
-			}
 		case "action":
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Action)))}
 			for _, r := range results.([]mig.Action) {
 				err = resource.AddItem(cljs.Item{
-					Href: fmt.Sprintf("http://%s:%d%s/action?actionid=%.0f",
-						ctx.Server.IP, ctx.Server.Port, ctx.Server.BaseRoute, r.ID),
+					Href: fmt.Sprintf("%s%s/action?actionid=%.0f",
+						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
 					Data: []cljs.Data{{Name: p.Type, Value: r}},
 				})
 				if err != nil {
@@ -169,8 +163,32 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Agent)))}
 			for _, r := range results.([]mig.Agent) {
 				err = resource.AddItem(cljs.Item{
-					Href: fmt.Sprintf("http://%s:%d%s/agent?agentid=%.0f",
-						ctx.Server.IP, ctx.Server.Port, ctx.Server.BaseRoute, r.ID),
+					Href: fmt.Sprintf("%s%s/agent?agentid=%.0f",
+						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
+					Data: []cljs.Data{{Name: p.Type, Value: r}},
+				})
+				if err != nil {
+					panic(err)
+				}
+			}
+		case "command":
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Command)))}
+			for _, r := range results.([]mig.Command) {
+				err = resource.AddItem(cljs.Item{
+					Href: fmt.Sprintf("%s%s/command?commandid=%.0f",
+						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
+					Data: []cljs.Data{{Name: p.Type, Value: r}},
+				})
+				if err != nil {
+					panic(err)
+				}
+			}
+		case "investigator":
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d investigators", len(results.([]mig.Investigator)))}
+			for _, r := range results.([]mig.Investigator) {
+				err = resource.AddItem(cljs.Item{
+					Href: fmt.Sprintf("%s%s/investigator?investigatorid=%.0f",
+						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
 					Data: []cljs.Data{{Name: p.Type, Value: r}},
 				})
 				if err != nil {
