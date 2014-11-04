@@ -115,6 +115,7 @@ ALTER TABLE public.investigators OWNER TO migadmin;
 ALTER TABLE ONLY investigators
     ADD CONSTRAINT investigators_pkey PRIMARY KEY (id);
 CREATE UNIQUE INDEX investigators_pgpfingerprint_idx ON investigators USING btree (pgpfingerprint);
+CREATE SEQUENCE investigators_id_seq START 1;
 
 CREATE TABLE modules (
     id numeric NOT NULL,

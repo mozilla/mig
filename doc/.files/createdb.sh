@@ -1,11 +1,12 @@
 #! /usr/bin/env bash
 [ ! -x $(which sudo) ] && echo "sudo isn't available, that won't work" && exit 1
 
+genpass=1
 pass=""
-[ ! -z $1 ] && pass=$1 && echo "using predefined password '$pass'"
+[ ! -z $1 ] && pass=$1 && echo "using predefined password '$pass'" && genpass=0
 
 for user in "migadmin" "migapi" "migscheduler"; do
-    [ -z $pass ] && pass=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
+    [ $genpass -gt 0 ] && pass=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
     sudo su postgres -c "psql -c 'CREATE ROLE $user;'" 1>/dev/null
     [ $? -ne 0 ] && echo "ERROR: user creation failed." && exit 123
     sudo su postgres -c "psql -c \"ALTER ROLE $user WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD '$pass';\"" 1>/dev/null
@@ -108,6 +109,7 @@ ALTER TABLE public.investigators OWNER TO migadmin;
 ALTER TABLE ONLY investigators
     ADD CONSTRAINT investigators_pkey PRIMARY KEY (id);
 CREATE UNIQUE INDEX investigators_pgpfingerprint_idx ON investigators USING btree (pgpfingerprint);
+CREATE SEQUENCE investigators_id_seq START 1;
 
 CREATE TABLE modules (
     id numeric NOT NULL,
