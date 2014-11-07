@@ -1,5 +1,14 @@
 ; Sample MIG API configuration file
 
+[authentication]
+    # turn this on after initial setup, once you have at least
+    # one investigator created
+    enabled = off
+
+    # when validating token timestamps, accept a timestamp that is
+    # within this duration of the local clock
+    tokenduration = 10m
+
 [server]
     # local listening ip
     ip = "127.0.0.1"

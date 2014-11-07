@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mig"
+	"mig/client"
 	"strconv"
 	"strings"
 	"time"
@@ -19,7 +19,7 @@ import (
 
 // agentReader retrieves an agent from the api
 // and enters prompt mode to analyze it
-func agentReader(input string, ctx Context) (err error) {
+func agentReader(input string, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("agentReader() -> %v", e)
@@ -29,8 +29,11 @@ func agentReader(input string, ctx Context) (err error) {
 	if len(inputArr) < 2 {
 		panic("wrong order format. must be 'agent <agentid>'")
 	}
-	agtid := inputArr[1]
-	agt, err := getAgent(agtid, ctx)
+	agtid, err := strconv.ParseFloat(inputArr[1], 64)
+	if err != nil {
+		panic(err)
+	}
+	agt, err := cli.GetAgent(agtid)
 	if err != nil {
 		panic(err)
 	}
@@ -41,7 +44,7 @@ func agentReader(input string, ctx Context) (err error) {
 		agtname = shorten(agtname)
 	}
 	fmt.Printf("Agent %.0f named '%s'\n", agt.ID, agtname)
-	prompt := "\x1b[34;1magent " + agtid[len(agtid)-3:len(agtid)] + ">\x1b[0m "
+	prompt := fmt.Sprintf("\x1b[34;1magent %.0f>\x1b[0m ", uint64(agtid)%1000)
 	for {
 		// completion
 		var symbols = []string{"details", "exit", "help", "json", "pretty", "r", "lastactions"}
@@ -66,7 +69,7 @@ func agentReader(input string, ctx Context) (err error) {
 		orders := strings.Split(input, " ")
 		switch orders[0] {
 		case "details":
-			agt, err = getAgent(agtid, ctx)
+			agt, err = cli.GetAgent(agtid)
 			if err != nil {
 				panic(err)
 			}
@@ -104,7 +107,7 @@ lastactions <limit>	print the last actions that ran on the agent. limit=10 by de
 					panic(err)
 				}
 			}
-			err = printAgentLastActions(agtid, limit)
+			err = printAgentLastCommands(agtid, limit, cli)
 			if err != nil {
 				panic(err)
 			}
@@ -124,7 +127,7 @@ lastactions <limit>	print the last actions that ran on the agent. limit=10 by de
 			}
 			fmt.Printf("%s\n", agtjson)
 		case "r":
-			agt, err = getAgent(agtid, ctx)
+			agt, err = cli.GetAgent(agtid)
 			if err != nil {
 				panic(err)
 			}
@@ -141,53 +144,14 @@ exit:
 	return
 }
 
-func getAgent(agtid string, ctx Context) (agt mig.Agent, err error) {
+func printAgentLastCommands(agtid float64, limit int, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("getAgent() -> %v", e)
+			err = fmt.Errorf("printAgentLastCommands() -> %v", e)
 		}
 	}()
-	targetURL := ctx.API.URL + "agent?agentid=" + agtid
-	resource, err := getAPIResource(targetURL, ctx)
-	if err != nil {
-		panic(err)
-	}
-	if resource.Collection.Items[0].Data[0].Name != "agent" {
-		panic("API returned something that is not an agent... something's wrong.")
-	}
-	agt, err = valueToAgent(resource.Collection.Items[0].Data[0].Value)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-func valueToAgent(v interface{}) (agt mig.Agent, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("valueToAgent() -> %v", e)
-		}
-	}()
-	bData, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(bData, &agt)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-func printAgentLastActions(agtid string, limit int) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("printAgentLastActions() -> %v", e)
-		}
-	}()
-	targetURL := fmt.Sprintf("%s/search?type=command&agentid=%s&limit=%d",
-		ctx.API.URL, agtid, limit)
-	resource, err := getAPIResource(targetURL, ctx)
+	target := fmt.Sprintf("search?type=command&agentid=%.0f&limit=%d", agtid, limit)
+	resource, err := cli.GetAPIResource(target)
 	if err != nil {
 		panic(err)
 	}
@@ -197,7 +161,7 @@ func printAgentLastActions(agtid string, limit int) (err error) {
 			if data.Name != "command" {
 				continue
 			}
-			cmd, err := valueToCommand(data.Value)
+			cmd, err := client.ValueToCommand(data.Value)
 			if err != nil {
 				panic(err)
 			}

@@ -8,16 +8,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/bobappleyard/readline"
 	"io"
 	"mig"
+	"mig/client"
+	"strconv"
 	"strings"
-
-	"github.com/bobappleyard/readline"
 )
 
 // commandReader retrieves an command from the API using its numerical ID
 // and enters prompt mode to analyze it
-func commandReader(input string, ctx Context) (err error) {
+func commandReader(input string, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("commandReader() -> %v", e)
@@ -27,8 +28,11 @@ func commandReader(input string, ctx Context) (err error) {
 	if len(inputArr) < 2 {
 		panic("wrong order format. must be 'command <commandid>'")
 	}
-	cmdid := inputArr[1]
-	cmd, err := getCommand(cmdid, ctx)
+	cmdid, err := strconv.ParseFloat(inputArr[1], 64)
+	if err != nil {
+		panic(err)
+	}
+	cmd, err := cli.GetCommand(cmdid)
 	if err != nil {
 		panic(err)
 	}
@@ -40,7 +44,7 @@ func commandReader(input string, ctx Context) (err error) {
 	}
 	fmt.Printf("Command %.0f ran on agent '%s' based on action '%s'\n",
 		cmd.ID, agtname, cmd.Action.Name)
-	prompt := "\x1b[36;1mcommand " + cmdid[len(cmdid)-3:len(cmdid)] + ">\x1b[0m "
+	prompt := fmt.Sprintf("\x1b[36;1mcommand %.0f>\x1b[0m ", uint64(cmdid)%1000)
 	for {
 		// completion
 		var symbols = []string{"exit", "help", "json", "found", "pretty", "r", "results"}
@@ -83,7 +87,7 @@ results <found>	print the results. if "found" is set, only print results that ha
 			}
 			fmt.Printf("%s\n", cjson)
 		case "r":
-			cmd, err = getCommand(cmdid, ctx)
+			cmd, err = cli.GetCommand(cmdid)
 			if err != nil {
 				panic(err)
 			}
@@ -110,53 +114,6 @@ results <found>	print the results. if "found" is set, only print results that ha
 	}
 exit:
 	fmt.Printf("\n")
-	return
-}
-
-func getCommand(cmdid string, ctx Context) (cmd mig.Command, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("getCommand() -> %v", e)
-		}
-	}()
-	targetURL := ctx.API.URL + "command?commandid=" + cmdid
-	return getCommandByURL(targetURL, ctx)
-}
-
-func getCommandByURL(target string, ctx Context) (cmd mig.Command, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("getCommandByURL() -> %v", e)
-		}
-	}()
-	resource, err := getAPIResource(target, ctx)
-	if err != nil {
-		panic(err)
-	}
-	if resource.Collection.Items[0].Data[0].Name != "command" {
-		panic("API returned something that is not a command... something's wrong.")
-	}
-	cmd, err = valueToCommand(resource.Collection.Items[0].Data[0].Value)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-func valueToCommand(v interface{}) (cmd mig.Command, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("valueToCommand() -> %v", e)
-		}
-	}()
-	bData, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(bData, &cmd)
-	if err != nil {
-		panic(err)
-	}
 	return
 }
 
@@ -208,7 +165,7 @@ func commandPrintShort(data interface{}) (idstr, agtname, duration, status strin
 			err = fmt.Errorf("commandPrintShort() -> %v", e)
 		}
 	}()
-	cmd, err := valueToCommand(data)
+	cmd, err := client.ValueToCommand(data)
 	if err != nil {
 		panic(err)
 	}

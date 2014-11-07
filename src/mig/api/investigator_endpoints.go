@@ -19,8 +19,7 @@ import (
 // getInvestigator takes an investigatorid and returns an investigator
 func getInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -28,7 +27,7 @@ func getInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 			emsg := fmt.Sprintf("%v", e)
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getInvestigator()"}.Debug()
 	}()
@@ -48,7 +47,7 @@ func getInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),
 					Message: fmt.Sprintf("Investigator ID '%.0f' not found", iid)})
-				respond(404, resource, respWriter, request, opid)
+				respond(404, resource, respWriter, request)
 				return
 			} else {
 				panic(err)
@@ -59,7 +58,7 @@ func getInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("Invalid Investigator ID '%.0f'", iid)})
-		respond(400, resource, respWriter, request, opid)
+		respond(400, resource, respWriter, request)
 		return
 	}
 	// store the results in the resource
@@ -68,14 +67,13 @@ func getInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(investigatorItem)
-	respond(200, resource, respWriter, request, opid)
+	respond(200, resource, respWriter, request)
 }
 
 // describeCreateInvestigator returns a resource that describes how to create an investigator
 func describeCreateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -83,7 +81,7 @@ func describeCreateInvestigator(respWriter http.ResponseWriter, request *http.Re
 			emsg := fmt.Sprintf("%v", e)
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCreateInvestigator()"}.Debug()
 	}()
@@ -96,14 +94,13 @@ func describeCreateInvestigator(respWriter http.ResponseWriter, request *http.Re
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request, opid)
+	respond(200, resource, respWriter, request)
 }
 
 // createInvestigator creates an investigator into the database
 func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -111,7 +108,7 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 			emsg := fmt.Sprintf("%v", e)
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving createInvestigator()"}.Debug()
 	}()
@@ -155,14 +152,13 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		Href: fmt.Sprintf("%s/investigator?investigatorid=%.0f", ctx.Server.BaseURL, inv.ID),
 		Data: []cljs.Data{{Name: "Investigator ID " + fmt.Sprintf("%.0f", inv.ID), Value: inv}},
 	})
-	respond(201, resource, respWriter, request, opid)
+	respond(201, resource, respWriter, request)
 }
 
 // describeUpdateInvestigator returns a resource that describes how to update the status of an investigator
 func describeUpdateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -170,7 +166,7 @@ func describeUpdateInvestigator(respWriter http.ResponseWriter, request *http.Re
 			emsg := fmt.Sprintf("%v", e)
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeUpdateInvestigator()"}.Debug()
 	}()
@@ -183,14 +179,13 @@ func describeUpdateInvestigator(respWriter http.ResponseWriter, request *http.Re
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request, opid)
+	respond(200, resource, respWriter, request)
 }
 
 // updateInvestigator updates the status of an investigator in database
 func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -198,7 +193,7 @@ func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 			emsg := fmt.Sprintf("%v", e)
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving updateInvestigator()"}.Debug()
 	}()
@@ -229,7 +224,7 @@ func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		Href: fmt.Sprintf("%s/investigator?investigatorid=%.0f", ctx.Server.BaseURL, inv.ID),
 		Data: []cljs.Data{{Name: "Investigator ID " + fmt.Sprintf("%.0f", inv.ID), Value: inv}},
 	})
-	respond(200, resource, respWriter, request, opid)
+	respond(200, resource, respWriter, request)
 }
 
 // investigatorToItem receives a command and returns an Item in Collection+JSON

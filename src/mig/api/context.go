@@ -20,7 +20,11 @@ import (
 // database and logging. It also contains some statistics.
 // Context is intended as a single structure that can be passed around easily.
 type Context struct {
-	OpID     float64 // ID of the current operation, used for tracking
+	Authentication struct {
+		Enabled       bool
+		TokenDuration string
+		duration      time.Duration
+	}
 	Channels struct {
 		Log chan mig.Log
 	}
@@ -51,8 +55,6 @@ type Context struct {
 		Port                     int
 		Host, BaseRoute, BaseURL string
 	}
-	Stats struct {
-	}
 	Logging mig.Logging
 }
 
@@ -72,6 +74,10 @@ func Init(path string) (ctx Context, err error) {
 	}
 
 	ctx.Server.BaseURL = ctx.Server.Host + ctx.Server.BaseRoute
+	ctx.Authentication.duration, err = time.ParseDuration(ctx.Authentication.TokenDuration)
+	if err != nil {
+		panic(err)
+	}
 
 	ctx.Logging, err = mig.InitLogger(ctx.Logging, "mig-api")
 	if err != nil {

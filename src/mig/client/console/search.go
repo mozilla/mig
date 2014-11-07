@@ -7,12 +7,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/jvehent/cljs"
 	"mig"
+	"mig/client"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/jvehent/cljs"
 )
 
 type searchParameters struct {
@@ -22,7 +22,7 @@ type searchParameters struct {
 }
 
 // search runs a search for actions, commands or agents
-func search(input string, ctx Context) (err error) {
+func search(input string, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("search() -> %v", e)
@@ -48,13 +48,13 @@ The following search parameters are available:
 	if err != nil {
 		panic(err)
 	}
-	items, err := runSearchQuery(sp, ctx)
+	items, err := runSearchQuery(sp, cli)
 	if err != nil {
 		panic(err)
 	}
 	switch sType {
 	case "agent":
-		agents, err := filterAgentItems(sp, items, ctx)
+		agents, err := filterAgentItems(sp, items, cli)
 		if err != nil {
 			panic(err)
 		}
@@ -89,7 +89,7 @@ The following search parameters are available:
 					}
 					fmt.Printf("%s   %s   %s\n", idstr, name, datestr)
 				case "command":
-					cmd, err := valueToCommand(data.Value)
+					cmd, err := client.ValueToCommand(data.Value)
 					if err != nil {
 						panic(err)
 					}
@@ -115,7 +115,7 @@ The following search parameters are available:
 				}
 				switch data.Name {
 				case "investigator":
-					inv, err := valueToInvestigator(data.Value)
+					inv, err := client.ValueToInvestigator(data.Value)
 					if err != nil {
 						panic(err)
 					}
@@ -213,15 +213,15 @@ func parseSearchQuery(orders []string) (sp searchParameters, err error) {
 }
 
 // runSearchQuery executes a search string against the API
-func runSearchQuery(sp searchParameters, ctx Context) (items []cljs.Item, err error) {
+func runSearchQuery(sp searchParameters, cli client.Client) (items []cljs.Item, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("runSearchQuery() -> %v", e)
 		}
 	}()
 	fmt.Println("Search query:", sp.query)
-	targetURL := ctx.API.URL + sp.query
-	resource, err := getAPIResource(targetURL, ctx)
+	target := sp.query
+	resource, err := cli.GetAPIResource(target)
 	if err != nil {
 		panic(err)
 	}
@@ -229,7 +229,7 @@ func runSearchQuery(sp searchParameters, ctx Context) (items []cljs.Item, err er
 	return
 }
 
-func filterAgentItems(sp searchParameters, items []cljs.Item, ctx Context) (agents []mig.Agent, err error) {
+func filterAgentItems(sp searchParameters, items []cljs.Item, cli client.Client) (agents []mig.Agent, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("filterAgentItems() -> %v", e)
@@ -242,7 +242,7 @@ func filterAgentItems(sp searchParameters, items []cljs.Item, ctx Context) (agen
 			}
 			switch sp.sType {
 			case "agent":
-				agt, err := valueToAgent(data.Value)
+				agt, err := client.ValueToAgent(data.Value)
 				if err != nil {
 					panic(err)
 				}

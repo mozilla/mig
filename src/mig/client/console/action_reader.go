@@ -8,17 +8,18 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"mig"
-	"strings"
-
 	"github.com/bobappleyard/readline"
 	"github.com/jvehent/cljs"
+	"io"
+	"mig"
+	"mig/client"
+	"strconv"
+	"strings"
 )
 
 // actionReader retrieves an action from the API using its numerical ID
 // and enters prompt mode to analyze it
-func actionReader(input string, ctx Context) (err error) {
+func actionReader(input string, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("actionReader() -> %v", e)
@@ -28,8 +29,11 @@ func actionReader(input string, ctx Context) (err error) {
 	if len(inputArr) < 2 {
 		panic("wrong order format. must be 'action <actionid>'")
 	}
-	aid := inputArr[1]
-	a, links, err := getAction(aid, ctx)
+	aid, err := strconv.ParseFloat(inputArr[1], 64)
+	if err != nil {
+		panic(err)
+	}
+	a, links, err := cli.GetAction(aid)
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +42,7 @@ func actionReader(input string, ctx Context) (err error) {
 	fmt.Println("Entering action reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Action: '%s'.\nLaunched by '%s' on '%s'.\nStatus '%s'.\n",
 		a.Name, investigators, a.StartTime, a.Status)
-	prompt := "\x1b[31;1maction " + aid[len(aid)-3:len(aid)] + ">\x1b[0m "
+	prompt := fmt.Sprintf("\x1b[31;1maction %.0f>\x1b[0m ", uint64(aid)%1000)
 	for {
 		// completion
 		var symbols = []string{"command", "copy", "counters", "details", "exit", "foundanything", "foundnothing",
@@ -64,12 +68,12 @@ func actionReader(input string, ctx Context) (err error) {
 		orders := strings.Split(strings.TrimSpace(input), " ")
 		switch orders[0] {
 		case "command":
-			err = commandReader(input, ctx)
+			err = commandReader(input, cli)
 			if err != nil {
 				panic(err)
 			}
 		case "copy":
-			err = actionLauncher(a, ctx)
+			err = actionLauncher(a, cli)
 			if err != nil {
 				panic(err)
 			}
@@ -85,12 +89,12 @@ func actionReader(input string, ctx Context) (err error) {
 			fmt.Printf("exit\n")
 			goto exit
 		case "foundanything":
-			err = searchFoundAnything(a, true, ctx)
+			err = searchFoundAnything(a, true, cli)
 			if err != nil {
 				panic(err)
 			}
 		case "foundnothing":
-			err = searchFoundAnything(a, false, ctx)
+			err = searchFoundAnything(a, false, cli)
 			if err != nil {
 				panic(err)
 			}
@@ -131,13 +135,13 @@ times		show the various timestamps of the action
 				panic(err)
 			}
 		case "r":
-			a, links, err = getAction(aid, ctx)
+			a, links, err = cli.GetAction(aid)
 			if err != nil {
 				panic(err)
 			}
 			fmt.Println("Reload succeeded")
 		case "results":
-			err = actionPrintResults(a, links, orders)
+			err = actionPrintResults(a, links, orders, cli)
 			if err != nil {
 				panic(err)
 			}
@@ -157,58 +161,19 @@ exit:
 	return
 }
 
-func getAction(aid string, ctx Context) (a mig.Action, links []cljs.Link, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("getAction() -> %v", e)
-		}
-	}()
-	targetURL := ctx.API.URL + "action?actionid=" + aid
-	resource, err := getAPIResource(targetURL, ctx)
-	if err != nil {
-		panic(err)
-	}
-	if resource.Collection.Items[0].Data[0].Name != "action" {
-		panic("API returned something that is not an action... something's wrong.")
-	}
-	a, err = valueToAction(resource.Collection.Items[0].Data[0].Value)
-	if err != nil {
-		panic(err)
-	}
-	links = resource.Collection.Items[0].Links
-	return
-}
-
-func valueToAction(v interface{}) (a mig.Action, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("valueToAction() -> %v", e)
-		}
-	}()
-	bData, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(bData, &a)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-func searchFoundAnything(a mig.Action, wantFound bool, ctx Context) (err error) {
+func searchFoundAnything(a mig.Action, wantFound bool, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("searchFoundAnything() -> %v", e)
 		}
 	}()
-	targetURL := ctx.API.URL + "search?type=command&limit=1000000&actionid=" + fmt.Sprintf("%.0f", a.ID)
+	target := "search?type=command&limit=1000000&actionid=" + fmt.Sprintf("%.0f", a.ID)
 	if wantFound {
-		targetURL += "&foundanything=true"
+		target += "&foundanything=true"
 	} else {
-		targetURL += "&foundanything=false"
+		target += "&foundanything=false"
 	}
-	resource, err := getAPIResource(targetURL, ctx)
+	resource, err := cli.GetAPIResource(target)
 	if err != nil {
 		panic(err)
 	}
@@ -218,7 +183,7 @@ func searchFoundAnything(a mig.Action, wantFound bool, ctx Context) (err error) 
 			if data.Name != "command" {
 				continue
 			}
-			cmd, err := valueToCommand(data.Value)
+			cmd, err := client.ValueToCommand(data.Value)
 			if err != nil {
 				panic(err)
 			}
@@ -245,7 +210,7 @@ func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, err 
 			err = fmt.Errorf("actionPrintShort() -> %v", e)
 		}
 	}()
-	a, err := valueToAction(data)
+	a, err := client.ValueToAction(data)
 	if err != nil {
 		panic(err)
 	}
@@ -364,7 +329,7 @@ func actionPrintLinks(links []cljs.Link, orders []string) (err error) {
 	return
 }
 
-func actionPrintResults(a mig.Action, links []cljs.Link, orders []string) (err error) {
+func actionPrintResults(a mig.Action, links []cljs.Link, orders []string, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("actionPrintResuls() -> %v", e)
@@ -381,9 +346,9 @@ func actionPrintResults(a mig.Action, links []cljs.Link, orders []string) (err e
 	if found {
 		// if we want foundes, use the search api, it's faster than
 		// iterating through each link when we have thousands of them
-		targetURL := ctx.API.URL + "search?type=command&limit=1000000&foundanything=true"
-		targetURL += "&actionid=" + fmt.Sprintf("%.0f", a.ID)
-		resource, err := getAPIResource(targetURL, ctx)
+		target := "search?type=command&limit=1000000&foundanything=true"
+		target += "&actionid=" + fmt.Sprintf("%.0f", a.ID)
+		resource, err := cli.GetAPIResource(target)
 		if err != nil {
 			panic(err)
 		}
@@ -392,7 +357,7 @@ func actionPrintResults(a mig.Action, links []cljs.Link, orders []string) (err e
 				if data.Name != "command" {
 					continue
 				}
-				cmd, err := valueToCommand(data.Value)
+				cmd, err := client.ValueToCommand(data.Value)
 				if err != nil {
 					panic(err)
 				}
@@ -405,8 +370,12 @@ func actionPrintResults(a mig.Action, links []cljs.Link, orders []string) (err e
 	} else {
 		for _, link := range links {
 			// TODO: replace the url parsing hack with proper link creation in API response
-			cmdid := strings.Split(link.Href, "=")[1]
-			cmd, err := getCommand(cmdid, ctx)
+			id := strings.Split(link.Href, "=")[1]
+			cmdid, err := strconv.ParseFloat(id, 64)
+			if err != nil {
+				panic(err)
+			}
+			cmd, err := cli.GetCommand(cmdid)
 			if err != nil {
 				panic(err)
 			}

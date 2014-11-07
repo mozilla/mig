@@ -10,84 +10,60 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mig"
+	"mig/client"
 	migdb "mig/database"
-	"net/http"
 	"os"
-	"os/user"
-	"runtime"
 	"strings"
 
-	"code.google.com/p/gcfg"
 	"github.com/bobappleyard/readline"
-	"github.com/jvehent/cljs"
 )
 
-type Context struct {
-	API struct {
-		URL string
-	}
-	HTTP struct {
-		Client http.Client
-	}
-	Homedir string
-	GPG     struct {
-		Home, KeyID, Keyserver string
-	}
-}
-
-var ctx Context
 var useShortNames bool
 
 func main() {
 	var err error
-	fmt.Println("\x1b[32;1m" + `
-## ##                                     _.---._     .---.
-# # # /-\ ---||  |    /\         __...---' .---. '---'-.   '.
-#   #|   | / ||  |   /--\    .-''__.--' _.'( | )'.  '.  '._ :
-#   # \_/ ---| \_ \_/    \ .'__-'_ .--'' ._'---'_.-.  '.   '-'.
-     ###                         ~ -._ -._''---. -.    '-._   '.
-      # |\ |\    /---------|          ~ -.._ _ _ _ ..-_ '.  '-._''--.._
-      # | \| \  / |- |__ | |                       -~ -._  '-.  -. '-._''--.._.--''.
-     ###|  \  \/  ---__| | |                            ~ ~-.__     -._  '-.__   '. '.
-          #####                                               ~~ ~---...__ _    ._ .' '.
-          #      /\  --- /-\ |--|----                                    ~  ~--.....--~
-          # ### /--\  | |   ||-\  //
-          #####/    \ |  \_/ |  \//__
-` + "\x1b[0m")
-
-	ctx.Homedir = findHomedir()
+	homedir := client.FindHomedir()
 	// command line options
-	var config = flag.String("c", ctx.Homedir+"/.migconsole", "Load configuration from file")
-	var api = flag.String("a", "undef", "API base url (ex: http://localhost:1664/api/v1/)")
+	var config = flag.String("c", homedir+"/.migconsole", "Load configuration from file")
 	var shortnames = flag.Bool("s", false, "Shorten all agent names to first and last 5 characters)")
+	var quiet = flag.Bool("q", false, "don't display banners and prompts")
 	flag.Parse()
-	// append a space after completion
-	readline.CompletionAppendChar = 0x20
 
-	if *shortnames {
-		useShortNames = true
-	}
-	if *api != "undef" {
-		ctx.API.URL = *api
-	} else {
-		err := gcfg.ReadFileInto(&ctx, *config)
+	// silence extra output
+	out := os.Stdout
+	if *quiet {
+		out.Close()
+		out, err = os.Open(os.DevNull)
 		if err != nil {
 			panic(err)
 		}
 	}
-	ctx.GPG.Home, err = findGPGHome(ctx)
+	defer out.Close()
+
+	fmt.Fprintf(out, "\x1b[32;1m"+banner+"\x1b[0m")
+
+	// append a space after completion
+	readline.CompletionAppendChar = 0x20
+
+	// shorten names for obfuscation, useful during demoes
+	if *shortnames {
+		useShortNames = true
+	}
+
+	// instanciate an API client
+	conf, err := client.ReadConfiguration(*config)
 	if err != nil {
 		panic(err)
 	}
+	cli := client.NewClient(conf)
 
-	err = printStatus(ctx)
+	err = printStatus(cli)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", ctx.API.URL)
+	fmt.Fprintf(out, "\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", cli.Conf.API.URL)
 	for {
 		// completion
 		var symbols = []string{"action", "agent", "create", "command", "help", "exit", "showcfg",
@@ -114,7 +90,7 @@ func main() {
 		switch orders[0] {
 		case "action":
 			if len(orders) == 2 {
-				err = actionReader(input, ctx)
+				err = actionReader(input, cli)
 				if err != nil {
 					log.Println(err)
 				}
@@ -122,7 +98,7 @@ func main() {
 				fmt.Println("error: missing action id in 'action <id>'")
 			}
 		case "agent":
-			err = agentReader(input, ctx)
+			err = agentReader(input, cli)
 			if err != nil {
 				log.Println(err)
 			}
@@ -131,9 +107,9 @@ func main() {
 				switch orders[1] {
 				case "action":
 					var a mig.Action
-					err = actionLauncher(a, ctx)
+					err = actionLauncher(a, cli)
 				case "investigator":
-					err = investigatorCreator(ctx)
+					err = investigatorCreator(cli)
 				default:
 					fmt.Printf("unknown order 'create %s'\n", orders[1])
 				}
@@ -144,7 +120,7 @@ func main() {
 				fmt.Println("error: missing order, must be 'create <action|investigator>'")
 			}
 		case "command":
-			err = commandReader(input, ctx)
+			err = commandReader(input, cli)
 			if err != nil {
 				log.Println(err)
 			}
@@ -166,20 +142,20 @@ showcfg			display running configuration
 status			display platform status: connected agents, latest actions, ...
 `)
 		case "investigator":
-			err = investigatorReader(input, ctx)
+			err = investigatorReader(input, cli)
 			if err != nil {
 				log.Println(err)
 			}
 		case "search":
-			err = search(input, ctx)
+			err = search(input, cli)
 			if err != nil {
 				log.Println(err)
 			}
 		case "showcfg":
 			fmt.Printf("homedir = %s\n[api]\n    url = %s\n[gpg]\n    home = %s\n    keyid = %s\n",
-				ctx.API.URL, ctx.Homedir, ctx.GPG.Home, ctx.GPG.KeyID)
+				cli.Conf.API.URL, cli.Conf.Homedir, cli.Conf.GPG.Home, cli.Conf.GPG.KeyID)
 		case "status":
-			err = printStatus(ctx)
+			err = printStatus(cli)
 			if err != nil {
 				log.Println(err)
 			}
@@ -191,86 +167,16 @@ status			display platform status: connected agents, latest actions, ...
 		readline.AddHistory(input)
 	}
 exit:
-	fmt.Printf(`
-            .-._   _ _ _ _ _ _ _ _
- .-''-.__.-'Oo  '-' ' ' ' ' ' ' ' '-.
-'.___ '    .   .--_'-' '-' '-' _'-' '._
- V: V 'vv-'   '_   '.       .'  _..' '.'.
-   '=.____.=_.--'   :_.__.__:_   '.   : :
-           (((____.-'        '-.  /   : :
-                             (((-'\ .' /
-                           _____..'  .'
-                          '-._____.-'
-              Gators are going back underwater.
-`)
+	fmt.Fprintf(out, footer)
 }
 
-func findHomedir() string {
-	if runtime.GOOS == "darwin" {
-		return os.Getenv("HOME")
-	} else {
-		// find keyring in default location
-		u, err := user.Current()
-		if err != nil {
-			panic(err)
-		}
-		return u.HomeDir
-	}
-}
-
-// findGPGHome looks for the GnuPG home directory
-func findGPGHome(ctx Context) (home string, err error) {
-	if ctx.GPG.Home != "" {
-		home = ctx.GPG.Home
-	} else {
-		var gnupghome string
-		gnupghome = os.Getenv("GNUPGHOME")
-		if gnupghome == "" {
-			gnupghome = "/.gnupg"
-		}
-		home = ctx.Homedir + gnupghome
-	}
-	for _, loc := range [3]string{home, home + "/pubring.gpg", home + "/secring.gpg"} {
-		_, err := os.Stat(loc)
-		if err != nil {
-			log.Fatalf("'%s' not found\n", loc)
-		}
-	}
-	return
-}
-
-func getAPIResource(t string, ctx Context) (resource *cljs.Resource, err error) {
-	resp, err := ctx.HTTP.Client.Get(t)
-	if err != nil {
-		return
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	if len(body) > 1 {
-		err = json.Unmarshal(body, &resource)
-		if err != nil {
-			panic(err)
-		}
-	}
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("error: HTTP %d. status update failed with error '%v' (code %s)",
-			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
-		panic(err)
-	}
-	return
-}
-
-func printStatus(ctx Context) (err error) {
+func printStatus(cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("printStatus() -> %v", e)
 		}
 	}()
-	targetURL := ctx.API.URL + "dashboard"
-	st, err := getAPIResource(targetURL, ctx)
+	st, err := cli.GetAPIResource("dashboard")
 	if err != nil {
 		panic(err)
 	}
@@ -346,3 +252,31 @@ func shorten(p string) string {
 	}
 	return out
 }
+
+var banner string = `
+## ##                                     _.---._     .---.
+# # # /-\ ---||  |    /\         __...---' .---. '---'-.   '.
+#   #|   | / ||  |   /--\    .-''__.--' _.'( | )'.  '.  '._ :
+#   # \_/ ---| \_ \_/    \ .'__-'_ .--'' ._'---'_.-.  '.   '-'.
+     ###                         ~ -._ -._''---. -.    '-._   '.
+      # |\ |\    /---------|          ~ -.._ _ _ _ ..-_ '.  '-._''--.._
+      # | \| \  / |- |__ | |                       -~ -._  '-.  -. '-._''--.._.--''.
+     ###|  \  \/  ---__| | |                            ~ ~-.__     -._  '-.__   '. '.
+          #####                                               ~~ ~---...__ _    ._ .' '.
+          #      /\  --- /-\ |--|----                                    ~  ~--.....--~
+          # ### /--\  | |   ||-\  //
+          #####/    \ |  \_/ |  \//__
+`
+
+var footer string = `
+            .-._   _ _ _ _ _ _ _ _
+ .-''-.__.-'Oo  '-' ' ' ' ' ' ' ' '-.
+'.___ '    .   .--_'-' '-' '-' _'-' '._
+ V: V 'vv-'   '_   '.       .'  _..' '.'.
+   '=.____.=_.--'   :_.__.__:_   '.   : :
+           (((____.-'        '-.  /   : :
+                             (((-'\ .' /
+                           _____..'  .'
+                          '-._____.-'
+              Gators are going back underwater.
+`

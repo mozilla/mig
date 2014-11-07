@@ -56,8 +56,12 @@ func (db *DB) InvestigatorByID(iid float64) (inv mig.Investigator, err error) {
 
 // InvestigatorByFingerprint searches the database for an investigator that
 // has a given fingerprint
-func (db *DB) InvestigatorByFingerprint(fp string) (iid float64, err error) {
-	err = db.c.QueryRow("SELECT id FROM investigators WHERE LOWER(pgpfingerprint)=LOWER($1)", fp).Scan(&iid)
+func (db *DB) InvestigatorByFingerprint(fp string) (inv mig.Investigator, err error) {
+	err = db.c.QueryRow(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
+		investigators.publickey, investigators.status, investigators.createdat, investigators.lastmodified
+		FROM investigators WHERE LOWER(pgpfingerprint)=LOWER($1)`,
+		fp).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status,
+		&inv.CreatedAt, &inv.LastModified)
 	if err != nil && err != sql.ErrNoRows {
 		err = fmt.Errorf("Error while finding investigator: '%v'", err)
 		return
@@ -110,10 +114,11 @@ func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) 
 		}
 		return iid, fmt.Errorf("Failed to create investigator: '%v'", err)
 	}
-	iid, err = db.InvestigatorByFingerprint(inv.PGPFingerprint)
+	inv, err = db.InvestigatorByFingerprint(inv.PGPFingerprint)
 	if err != nil {
-		return iid, fmt.Errorf("Failed to retrieve investigator ID: '%v'", err)
+		return 0, fmt.Errorf("Failed to retrieve investigator ID: '%v'", err)
 	}
+	iid = inv.ID
 	return
 }
 
@@ -130,10 +135,11 @@ func (db *DB) InsertSchedulerInvestigator(inv mig.Investigator) (iid float64, er
 		}
 		return iid, fmt.Errorf("Failed to create investigator: '%v'", err)
 	}
-	iid, err = db.InvestigatorByFingerprint(inv.PGPFingerprint)
+	inv, err = db.InvestigatorByFingerprint(inv.PGPFingerprint)
 	if err != nil {
-		return iid, fmt.Errorf("Failed to retrieve investigator ID: '%v'", err)
+		return 0, fmt.Errorf("Failed to retrieve investigator ID: '%v'", err)
 	}
+	iid = inv.ID
 	return
 }
 

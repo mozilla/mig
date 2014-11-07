@@ -7,23 +7,22 @@ package main
 
 import (
 	"fmt"
+	"github.com/jvehent/cljs"
 	"mig"
 	"net/http"
 	"strconv"
-
-	"github.com/jvehent/cljs"
 )
 
 func getAgent(respWriter http.ResponseWriter, request *http.Request) {
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	var err error
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAgentsDashboard()"}.Debug()
 	}()
@@ -43,7 +42,7 @@ func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),
 					Message: fmt.Sprintf("Agent ID '%.0f' not found", agentID)})
-				respond(404, resource, respWriter, request, opid)
+				respond(404, resource, respWriter, request)
 				return
 			} else {
 				panic(err)
@@ -54,7 +53,7 @@ func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("Invalid Agent ID '%.0f'", agentID)})
-		respond(400, resource, respWriter, request, opid)
+		respond(400, resource, respWriter, request)
 		return
 	}
 	// store the results in the resource
@@ -63,7 +62,7 @@ func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(agentItem)
-	respond(200, resource, respWriter, request, opid)
+	respond(200, resource, respWriter, request)
 }
 
 // agentToItem receives an agent and returns an Item in Collection+JSON

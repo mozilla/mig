@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"mig"
 	"mig/pgp"
+	"strings"
 	"time"
 )
 
@@ -68,5 +69,49 @@ func getKeyring() (kr io.Reader, err error) {
 		panic(err)
 	}
 	kr = bytes.NewBuffer(buf)
+	return
+}
+
+// verifySignedToken verifies the signature from an authentication token and return
+// the investigator that signed it
+func verifySignedToken(token string) (inv mig.Investigator, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("verifySignedToken() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving verifySignedToken()"}.Debug()
+	}()
+	parts := strings.Split(token, ";")
+	if len(parts) != 3 {
+		panic("invalid token format")
+	}
+	// verify that token timestamp is recent enough
+	tstr := parts[0]
+	ts, err := time.Parse("2006-01-02T15:04:05Z", tstr)
+	if err != nil {
+		panic(err)
+	}
+	early := time.Now().Add(-ctx.Authentication.duration)
+	late := time.Now().Add(ctx.Authentication.duration)
+	if ts.Before(early) || ts.After(late) {
+		panic("token timestamp is not within acceptable time limits")
+	}
+	nonce := parts[1]
+	sig := parts[2]
+	keyring, err := getKeyring()
+	if err != nil {
+		panic(err)
+	}
+	fp, err := pgp.GetFingerprintFromSignature(tstr+";"+nonce+"\n", sig, keyring)
+	if err != nil {
+		panic(err)
+	}
+	if fp == "" {
+		panic("token verification failed")
+	}
+	inv, err = ctx.DB.InvestigatorByFingerprint(fp)
+	if err != nil {
+		panic(err)
+	}
 	return
 }

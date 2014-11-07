@@ -17,8 +17,7 @@ import (
 // getCommand takes an actionid and a commandid and returns a command
 func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
@@ -26,7 +25,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 			emsg := fmt.Sprintf("%v", e)
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getCommand()"}.Debug()
 	}()
@@ -46,7 +45,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),
 					Message: fmt.Sprintf("Command ID '%.0f' not found", commandID)})
-				respond(404, resource, respWriter, request, opid)
+				respond(404, resource, respWriter, request)
 				return
 			} else {
 				panic(err)
@@ -57,7 +56,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("Invalid Command ID '%.0f'", commandID)})
-		respond(400, resource, respWriter, request, opid)
+		respond(400, resource, respWriter, request)
 		return
 	}
 	// store the results in the resource
@@ -66,24 +65,24 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(commandItem)
-	respond(200, resource, respWriter, request, opid)
+	respond(200, resource, respWriter, request)
 }
 
 // describeCancelCommand returns a resource that describes how to cancel a command
 func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request) {
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	var err error
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCancelCommand()"}.Debug()
 	}()
-	err := resource.SetTemplate(cljs.Template{
+	err = resource.SetTemplate(cljs.Template{
 		Data: []cljs.Data{
 			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
 			{Name: "commandid", Value: "[0-9]{1,20}", Prompt: "Command ID"},
@@ -92,24 +91,7 @@ func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request, opid)
-}
-
-// cancelCommand receives an action ID and a command ID and issues a cancellation order
-func cancelCommand(respWriter http.ResponseWriter, request *http.Request) {
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
-	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
-	resource := cljs.New(loc)
-	defer func() {
-		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request, opid)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving cancelCommand()"}.Debug()
-	}()
-	respond(501, resource, respWriter, request, opid)
+	respond(200, resource, respWriter, request)
 }
 
 // commandToItem receives a command and returns an Item in Collection+JSON

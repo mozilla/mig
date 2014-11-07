@@ -160,9 +160,32 @@ func (a Action) Validate() (err error) {
 	return
 }
 
+// Sign computes and returns the GPG signature of a MIG action in its stringified form
+func (a Action) Sign(keyid string, secring io.Reader) (sig string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("Sign() -> %v", e)
+		}
+	}()
+	str, err := a.String()
+	if err != nil {
+		panic(err)
+	}
+	sig, err = pgp.Sign(str, keyid, secring)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
 // VerifySignatures verifies that the Action contains valid signatures from
 // known investigators. It does not verify permissions.
 func (a Action) VerifySignatures(keyring io.Reader) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("VerifySignatures() -> %v", e)
+		}
+	}()
 	astr, err := a.String()
 	if err != nil {
 		return errors.New("Failed to stringify action")

@@ -7,15 +7,14 @@ package pgp
 
 import (
 	"bytes"
+	"camlistore.org/pkg/misc/gpgagent"
+	"camlistore.org/pkg/misc/pinentry"
+	"code.google.com/p/go.crypto/openpgp"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
 	"strings"
-
-	"camlistore.org/pkg/misc/gpgagent"
-	"camlistore.org/pkg/misc/pinentry"
-	"code.google.com/p/go.crypto/openpgp"
 )
 
 // Sign signs a string with a key identified by a key fingerprint or an email address

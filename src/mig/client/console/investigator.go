@@ -13,7 +13,7 @@ import (
 	"github.com/jvehent/cljs"
 	"io"
 	"io/ioutil"
-	"mig"
+	"mig/client"
 	"mig/pgp"
 	"mime/multipart"
 	"net/http"
@@ -26,7 +26,7 @@ import (
 
 // investigatorReader retrieves an agent from the api
 // and enters prompt mode to analyze it
-func investigatorReader(input string, ctx Context) (err error) {
+func investigatorReader(input string, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("investigatorReader() -> %v", e)
@@ -36,15 +36,18 @@ func investigatorReader(input string, ctx Context) (err error) {
 	if len(inputArr) < 2 {
 		panic("wrong order format. must be 'investigator <investigatorid>'")
 	}
-	iid := inputArr[1]
-	inv, err := getInvestigator(iid, ctx)
+	iid, err := strconv.ParseFloat(inputArr[1], 64)
+	if err != nil {
+		panic(err)
+	}
+	inv, err := cli.GetInvestigator(iid)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println("Entering investigator mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Investigator %.0f named '%s'\n", inv.ID, inv.Name)
-	prompt := "\x1b[35;1minv " + iid + ">\x1b[0m "
+	prompt := fmt.Sprintf("\x1b[35;1minv %.0f>\x1b[0m ", iid)
 	for {
 		// completion
 		var symbols = []string{"details", "exit", "help", "pubkey", "r", "lastactions"}
@@ -69,10 +72,6 @@ func investigatorReader(input string, ctx Context) (err error) {
 		orders := strings.Split(input, " ")
 		switch orders[0] {
 		case "details":
-			inv, err = getInvestigator(iid, ctx)
-			if err != nil {
-				panic(err)
-			}
 			fmt.Printf("Investigator ID %.0f\nname     %s\nstatus   %s\nkey id   %s\ncreated  %s\nmodified %s\n",
 				inv.ID, inv.Name, inv.Status, inv.PGPFingerprint, inv.CreatedAt, inv.LastModified)
 		case "exit":
@@ -96,7 +95,7 @@ setstatus <status>	changes the status of the investigator to <status> (can be 'a
 					panic(err)
 				}
 			}
-			err = printInvestigatorLastActions(iid, limit)
+			err = printInvestigatorLastActions(iid, limit, cli)
 			if err != nil {
 				panic(err)
 			}
@@ -107,7 +106,7 @@ setstatus <status>	changes the status of the investigator to <status> (can be 'a
 			}
 			fmt.Printf("%s\n", armoredPubKey)
 		case "r":
-			inv, err = getInvestigator(iid, ctx)
+			inv, err = cli.GetInvestigator(iid)
 			if err != nil {
 				panic(err)
 			}
@@ -118,7 +117,7 @@ setstatus <status>	changes the status of the investigator to <status> (can be 'a
 				break
 			}
 			newstatus := orders[1]
-			err = updateInvestigatorStatus(iid, newstatus)
+			err = updateInvestigatorStatus(iid, newstatus, cli)
 			if err != nil {
 				panic(err)
 			} else {
@@ -136,52 +135,14 @@ exit:
 	return
 }
 
-func getInvestigator(iid string, ctx Context) (inv mig.Investigator, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("getInvestigator() -> %v", e)
-		}
-	}()
-	targetURL := ctx.API.URL + "investigator?investigatorid=" + iid
-	resource, err := getAPIResource(targetURL, ctx)
-	if err != nil {
-		panic(err)
-	}
-	if resource.Collection.Items[0].Data[0].Name != "investigator" {
-		panic("API returned something that is not an investigator... something's wrong.")
-	}
-	inv, err = valueToInvestigator(resource.Collection.Items[0].Data[0].Value)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-func valueToInvestigator(v interface{}) (inv mig.Investigator, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("valueToInvestigator) -> %v", e)
-		}
-	}()
-	bData, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(bData, &inv)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-func printInvestigatorLastActions(iid string, limit int) (err error) {
+func printInvestigatorLastActions(iid float64, limit int, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("printInvestigatorLastActions() -> %v", e)
 		}
 	}()
-	targetURL := fmt.Sprintf("%s/search?type=action&investigatorid=%s&limit=%d", ctx.API.URL, iid, limit)
-	resource, err := getAPIResource(targetURL, ctx)
+	target := fmt.Sprintf("search?type=action&investigatorid=%.0f&limit=%d", iid, limit)
+	resource, err := cli.GetAPIResource(target)
 	if err != nil {
 		panic(err)
 	}
@@ -191,7 +152,7 @@ func printInvestigatorLastActions(iid string, limit int) (err error) {
 			if data.Name != "action" {
 				continue
 			}
-			a, err := valueToAction(data.Value)
+			a, err := client.ValueToAction(data.Value)
 			if err != nil {
 				panic(err)
 			}
@@ -222,7 +183,7 @@ func printInvestigatorLastActions(iid string, limit int) (err error) {
 
 // investigatorCreator prompt the user for a name and the path to an armored
 // public key and calls the API to create a new investigator
-func investigatorCreator(ctx Context) (err error) {
+func investigatorCreator(cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("investigatorCreator() -> %v", e)
@@ -252,7 +213,7 @@ func investigatorCreator(ctx Context) (err error) {
 	re := regexp.MustCompile(`^0x[ABCDEF0-9]{8,64}$`)
 	if re.MatchString(input) {
 		var keyserver string
-		if ctx.GPG.Keyserver == "" {
+		if cli.Conf.GPG.Keyserver == "" {
 			keyserver = "http://gpg.mozilla.org"
 		}
 		fmt.Println("retrieving public key from", keyserver)
@@ -276,7 +237,7 @@ func investigatorCreator(ctx Context) (err error) {
 		fmt.Println("abort")
 		return
 	}
-	postUrl := ctx.API.URL + "investigator/create/"
+	postUrl := cli.Conf.API.URL + "/investigator/create/"
 	// build the body into buf using a multipart writer
 	buf := &bytes.Buffer{}
 	writer := multipart.NewWriter(buf)
@@ -305,7 +266,7 @@ func investigatorCreator(ctx Context) (err error) {
 		panic(err)
 	}
 	request.Header.Set("Content-Type", writer.FormDataContentType())
-	resp, err := ctx.HTTP.Client.Do(request)
+	resp, err := cli.API.Do(request)
 	if err != nil {
 		panic(err)
 	}
@@ -324,7 +285,7 @@ func investigatorCreator(ctx Context) (err error) {
 			resource.Collection.Error.Message, resource.Collection.Error.Code)
 		return
 	}
-	inv, err := valueToInvestigator(resource.Collection.Items[0].Data[0].Value)
+	inv, err := client.ValueToInvestigator(resource.Collection.Items[0].Data[0].Value)
 	if err != nil {
 		panic(err)
 	}
@@ -333,15 +294,15 @@ func investigatorCreator(ctx Context) (err error) {
 	return
 }
 
-func updateInvestigatorStatus(iid, newstatus string) (err error) {
+func updateInvestigatorStatus(iid float64, newstatus string, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("updateInvestigatorStatus() -> %v", e)
 		}
 	}()
-	postUrl := ctx.API.URL + "investigator/update/"
-	resp, err := ctx.HTTP.Client.PostForm(postUrl,
-		url.Values{"id": {iid}, "status": {newstatus}})
+	postUrl := cli.Conf.API.URL + "/investigator/update/"
+	resp, err := cli.API.PostForm(postUrl,
+		url.Values{"id": {fmt.Sprintf("%.0f", iid)}, "status": {newstatus}})
 	defer resp.Body.Close()
 	if err != nil {
 		panic(err)

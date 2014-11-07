@@ -8,15 +8,15 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/gorilla/context"
+	"github.com/gorilla/mux"
+	"github.com/jvehent/cljs"
 	"mig"
 	migdb "mig/database"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
-
-	"github.com/gorilla/mux"
-	"github.com/jvehent/cljs"
 )
 
 var ctx Context
@@ -60,24 +60,24 @@ func main() {
 	// register routes
 	r := mux.NewRouter()
 	s := r.PathPrefix(ctx.Server.BaseRoute).Subrouter()
-	s.HandleFunc("/", getHome).Methods("GET")
-	s.HandleFunc("/search", search).Methods("GET")
-	s.HandleFunc("/action", getAction).Methods("GET")
-	s.HandleFunc("/action/create/", describeCreateAction).Methods("GET")
-	s.HandleFunc("/action/create/", createAction).Methods("POST")
-	s.HandleFunc("/command", getCommand).Methods("GET")
-	s.HandleFunc("/agent", getAgent).Methods("GET")
-	s.HandleFunc("/investigator", getInvestigator).Methods("GET")
-	s.HandleFunc("/investigator/create/", describeCreateInvestigator).Methods("GET")
-	s.HandleFunc("/investigator/create/", createInvestigator).Methods("POST")
-	s.HandleFunc("/investigator/update/", describeUpdateInvestigator).Methods("GET")
-	s.HandleFunc("/investigator/update/", updateInvestigator).Methods("POST")
-	s.HandleFunc("/dashboard", getDashboard).Methods("GET")
+	s.HandleFunc("/", authenticate(getHome)).Methods("GET")
+	s.HandleFunc("/search", authenticate(search)).Methods("GET")
+	s.HandleFunc("/action", authenticate(getAction)).Methods("GET")
+	s.HandleFunc("/action/create/", authenticate(describeCreateAction)).Methods("GET")
+	s.HandleFunc("/action/create/", authenticate(createAction)).Methods("POST")
+	s.HandleFunc("/command", authenticate(getCommand)).Methods("GET")
+	s.HandleFunc("/agent", authenticate(getAgent)).Methods("GET")
+	s.HandleFunc("/investigator", authenticate(getInvestigator)).Methods("GET")
+	s.HandleFunc("/investigator/create/", authenticate(describeCreateInvestigator)).Methods("GET")
+	s.HandleFunc("/investigator/create/", authenticate(createInvestigator)).Methods("POST")
+	s.HandleFunc("/investigator/update/", authenticate(describeUpdateInvestigator)).Methods("GET")
+	s.HandleFunc("/investigator/update/", authenticate(updateInvestigator)).Methods("POST")
+	s.HandleFunc("/dashboard", authenticate(getDashboard)).Methods("GET")
 
 	ctx.Channels.Log <- mig.Log{Desc: "Starting HTTP handler"}
 
 	// all set, start the http handler
-	http.Handle("/", r)
+	http.Handle("/", context.ClearHandler(r))
 	listenAddr := fmt.Sprintf("%s:%d", ctx.Server.IP, ctx.Server.Port)
 	err = http.ListenAndServe(listenAddr, nil)
 	if err != nil {
@@ -85,8 +85,80 @@ func main() {
 	}
 }
 
+// invNameType defines a type to store the name of an investigator in the request context
+type invNameType string
+
+const authenticatedInvName invNameType = ""
+
+// invIDType defines a type to store the ID of an investigator in the request context
+type invIDType float64
+
+const authenticatedInvID invIDType = 0
+
+// opIDType defines a type for the operation ID
+type opIDType float64
+
+const opID opIDType = 0
+
+// getOpID returns an operation ID from a request context, and if not found, generate one
+func getOpID(r *http.Request) float64 {
+	if opid := context.Get(r, opID); opid != nil {
+		return opid.(float64)
+	}
+	return mig.GenID()
+}
+
+// handler defines the type returned by the authenticate function
+type handler func(w http.ResponseWriter, r *http.Request)
+
+// authenticate is called prior to processing incoming requests. it implements the client
+// authentication logic, which mostly consist of validating GPG signed tokens and setting the
+// identity of the signer in the request context
+func authenticate(pass handler) handler {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var (
+			err error
+			inv mig.Investigator
+		)
+		opid := getOpID(r)
+		context.Set(r, opID, opid)
+		if !ctx.Authentication.Enabled {
+			inv.Name = "authdisabled"
+			inv.ID = 0
+			goto authorized
+		}
+		if r.Header.Get("X-PGPAUTHORIZATION") == "" {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("[auth missing] %s", r.URL.String())}.Err()
+			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: "X-PGPAUTHORIZATION header not found"})
+			respond(401, resource, w, r)
+			return
+		}
+		inv, err = verifySignedToken(r.Header.Get("X-PGPAUTHORIZATION"))
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("[auth failed] %s %v", r.URL.String(), err)}.Err()
+			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Authorization verification failed with error '%v'", err)})
+			respond(401, resource, w, r)
+			return
+		}
+	authorized:
+		// store investigator identity in request context
+		context.Set(r, authenticatedInvName, inv.Name)
+		context.Set(r, authenticatedInvID, inv.ID)
+		ctx.Channels.Log <- mig.Log{
+			OpID: opid,
+			Desc: fmt.Sprintf("[authenticated name='%s' id='%.0f'] %s",
+				inv.Name, inv.ID, r.URL.String()),
+		}
+		// accept request
+		pass(w, r)
+	}
+}
+
 // respond builds a Collection+JSON body and sends it to the client
-func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, request *http.Request, opid float64) (err error) {
+func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, request *http.Request) (err error) {
+	opid := getOpID(request)
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
@@ -99,6 +171,7 @@ func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, 
 	}
 
 	respWriter.Header().Set("Content-Type", "application/json")
+	respWriter.Header().Set("Cache-Control", "no-cache")
 	respWriter.WriteHeader(code)
 	respWriter.Write(body)
 
@@ -109,15 +182,14 @@ func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, 
 // available in the API, as well as some status information
 func getHome(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getHome()"}.Debug()
 	}()
@@ -142,6 +214,14 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 		Rel:  "create investigator",
 		Href: fmt.Sprintf("%s/investigator/create/", ctx.Server.BaseURL),
 		Name: "POST endpoint to create an investigator"})
+	if err != nil {
+		panic(err)
+	}
+
+	err = resource.AddLink(cljs.Link{
+		Rel:  "update investigator",
+		Href: fmt.Sprintf("%s/investigator/update/", ctx.Server.BaseURL),
+		Name: "POST endpoint to update an investigator"})
 	if err != nil {
 		panic(err)
 	}
@@ -221,19 +301,19 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
-	respond(200, resource, respWriter, request, opid)
+	respond(200, resource, respWriter, request)
 }
 
 func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	var err error
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getDashboard()"}.Debug()
 	}()
@@ -277,7 +357,7 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		resource.AddItem(actionItem)
 	}
-	respond(200, resource, respWriter, request, opid)
+	respond(200, resource, respWriter, request)
 }
 
 // agentsSumToItem receives an AgentsSum and returns an Item
@@ -295,12 +375,5 @@ func agentsSummaryToItem(sum []migdb.AgentsSum, count, double, disappeared float
 		{Name: "endpoints running 2 or more agents", Value: double},
 		{Name: "endpoints that have disappeared over last 7 days", Value: disappeared},
 	}
-	links := make([]cljs.Link, 0)
-	link := cljs.Link{
-		Rel:  "agents dashboard",
-		Href: fmt.Sprintf("%s/agents/dashboard", ctx.Server.BaseURL),
-	}
-	links = append(links, link)
-	item.Links = links
 	return
 }

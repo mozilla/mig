@@ -8,18 +8,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/bobappleyard/readline"
 	"io"
-	"io/ioutil"
 	"mig"
-	"mig/pgp"
-	"net/url"
-	"os"
+	"mig/client"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/bobappleyard/readline"
-	"github.com/jvehent/cljs"
 )
 
 // default expiration is 60 seconds
@@ -27,7 +22,7 @@ var defaultExpiration = "60s"
 
 // actionLauncher prepares an action for launch, either by starting with an empty
 // template, or by loading an existing action from the api or the local disk
-func actionLauncher(tpl mig.Action, ctx Context) (err error) {
+func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("actionLauncher() -> %v", e)
@@ -201,19 +196,27 @@ times			show the various timestamps of the action
 				hasTimes = true
 			}
 			if !hasSignatures {
-				pgpsig, err := computeSignature(a, ctx)
+				asig, err := cli.SignAction(a)
 				if err != nil {
 					panic(err)
 				}
-				a.PGPSignatures = append(a.PGPSignatures, pgpsig)
+				a = asig
 				hasSignatures = true
 			}
-			a, err = postAction(a, follow, ctx)
+			a, err = cli.PostAction(a)
 			if err != nil {
 				panic(err)
 			}
+			fmt.Printf("Action '%s' successfully launched with ID '%.0f' on target '%s'\n",
+				a.Name, a.ID, a.Target)
+			if follow {
+				err = followAction(a, cli)
+				if err != nil {
+					panic(err)
+				}
+			}
 			fmt.Println("")
-			_ = actionReader(fmt.Sprintf("action %.0f", a.ID), ctx)
+			_ = actionReader(fmt.Sprintf("action %.0f", a.ID), cli)
 			goto exit
 		case "load":
 			if len(orders) != 2 {
@@ -230,11 +233,11 @@ times			show the various timestamps of the action
 				fmt.Println("Times must be set prior to signing")
 				break
 			}
-			pgpsig, err := computeSignature(a, ctx)
+			asig, err := cli.SignAction(a)
 			if err != nil {
 				panic(err)
 			}
-			a.PGPSignatures = append(a.PGPSignatures, pgpsig)
+			a = asig
 			hasSignatures = true
 		case "setname":
 			if len(orders) < 2 {
@@ -297,108 +300,7 @@ exit:
 	return
 }
 
-func computeSignature(a mig.Action, ctx Context) (pgpsig string, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("computeSignature() -> %v", e)
-		}
-	}()
-	secringFile, err := os.Open(ctx.GPG.Home + "/secring.gpg")
-	if err != nil {
-		panic(err)
-	}
-	defer secringFile.Close()
-
-	// compute the signature
-	str, err := a.String()
-	if err != nil {
-		panic(err)
-	}
-	pgpsig, err = pgp.Sign(str, ctx.GPG.KeyID, secringFile)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Signature computed successfully")
-	return
-}
-
-func validateAction(a mig.Action, ctx Context) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("validateAction() -> %v", e)
-		}
-	}()
-	// syntax checking
-	err = a.Validate()
-	if err != nil {
-		panic(err)
-	}
-	// signature checking
-	pubringFile, err := os.Open(ctx.GPG.Home + "/pubring.gpg")
-	if err != nil {
-		panic(err)
-	}
-	err = a.VerifySignatures(pubringFile)
-	if err != nil {
-		panic(err)
-	}
-	pubringFile.Close()
-	return
-}
-
-func postAction(a mig.Action, follow bool, ctx Context) (a2 mig.Action, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("postAction() -> %v", e)
-		}
-	}()
-	err = validateAction(a, ctx)
-	if err != nil {
-		panic(err)
-	}
-	// serialize
-	ajson, err := json.Marshal(a)
-	if err != nil {
-		panic(err)
-	}
-	actionstr := string(ajson)
-
-	// http post the action to the posturl endpoint
-	postUrl := ctx.API.URL + "action/create/"
-	resp, err := ctx.HTTP.Client.PostForm(postUrl, url.Values{"action": {actionstr}})
-	defer resp.Body.Close()
-	if err != nil {
-		panic(err)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	if resp.StatusCode != 202 {
-		err = fmt.Errorf("error: HTTP %d. action creation failed.", resp.StatusCode)
-		panic(err)
-	}
-	var resource *cljs.Resource
-	err = json.Unmarshal(body, &resource)
-	if err != nil {
-		panic(err)
-	}
-	a2, err = valueToAction(resource.Collection.Items[0].Data[0].Value)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Action '%s' successfully launched with ID '%.0f' on target '%s'\n",
-		a2.Name, a2.ID, a2.Target)
-	if follow {
-		err = followAction(a2, ctx)
-		if err != nil {
-			panic(err)
-		}
-	}
-	return
-}
-
-func followAction(a mig.Action, ctx Context) (err error) {
+func followAction(a mig.Action, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("followAction() -> %v", e)
@@ -412,7 +314,7 @@ func followAction(a mig.Action, ctx Context) (err error) {
 	attempts := 0
 	var completion float64
 	for {
-		a, _, err = getAction(fmt.Sprintf("%.0f", a.ID), ctx)
+		a, _, err = cli.GetAction(a.ID)
 		if err != nil {
 			attempts++
 			time.Sleep(1 * time.Second)

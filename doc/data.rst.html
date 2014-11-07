@@ -147,11 +147,12 @@
             <pre source=".files/createdb.sh"><code class="bash"><span class="c">#! /usr/bin/env bash
 </span><span class="o">[</span> ! -x <span class="k">$(</span>which sudo<span class="k">)</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"sudo isn't available, that won't work"</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>1
 
+<span class="nv">genpass</span><span class="o">=</span>1
 <span class="nv">pass</span><span class="o">=</span><span class="s2">""</span>
-<span class="o">[</span> ! -z <span class="nv">$1</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nv">pass</span><span class="o">=</span><span class="nv">$1</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"using predefined password '$pass'"</span>
+<span class="o">[</span> ! -z <span class="nv">$1</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nv">pass</span><span class="o">=</span><span class="nv">$1</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"using predefined password '$pass'"</span> <span class="o">&amp;&amp;</span> <span class="nv">genpass</span><span class="o">=</span>0
 
 <span class="k">for </span>user in <span class="s2">"migadmin"</span> <span class="s2">"migapi"</span> <span class="s2">"migscheduler"</span>; <span class="k">do</span>
-    <span class="o">[</span> -z <span class="nv">$pass</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nv">pass</span><span class="o">=</span><span class="k">$(</span>&lt; /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c<span class="k">${</span><span class="nv">1</span><span class="k">:-</span><span class="nv">32</span><span class="k">})</span>
+    <span class="o">[</span> <span class="nv">$genpass</span> -gt 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nv">pass</span><span class="o">=</span><span class="k">$(</span>cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c<span class="k">${</span><span class="nv">1</span><span class="k">:-</span><span class="nv">32</span><span class="k">})</span>
     sudo su postgres -c <span class="s2">"psql -c 'CREATE ROLE $user;'"</span> 1&gt;/dev/null
     <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"ERROR: user creation failed."</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>123
     sudo su postgres -c <span class="s2">"psql -c \"ALTER ROLE $user WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD '$pass';\""</span> 1&gt;/dev/null
@@ -240,8 +241,9 @@ CREATE INDEX invagtmodperm_agentid_idx ON invagtmodperm USING btree (agentid);
 CREATE INDEX invagtmodperm_investigatorid_idx ON invagtmodperm USING btree (investigatorid);
 CREATE INDEX invagtmodperm_moduleid_idx ON invagtmodperm USING btree (moduleid);
 
+CREATE SEQUENCE investigators_id_seq START 1;
 CREATE TABLE investigators (
-    id numeric NOT NULL,
+    id numeric NOT NULL DEFAULT nextval('investigators_id_seq'),
     name character varying(1024) NOT NULL,
     pgpfingerprint character varying(128),
     publickey bytea,

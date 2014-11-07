@@ -396,11 +396,11 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 			if err != nil {
 				panic(err)
 			}
-			iid, err := ctx.DB.InvestigatorByFingerprint(fp)
+			inv, err := ctx.DB.InvestigatorByFingerprint(fp)
 			if err != nil {
 				panic(err)
 			}
-			err = ctx.DB.InsertSignature(action.ID, iid, sig)
+			err = ctx.DB.InsertSignature(action.ID, inv.ID, sig)
 			if err != nil {
 				panic(err)
 			}

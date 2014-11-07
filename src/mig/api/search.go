@@ -21,8 +21,7 @@ import (
 // search runs searches
 func search(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
-	opid := mig.GenID()
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%s", request.URL.String())}
+	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
 	p := migdb.NewSearchParameters()
@@ -35,7 +34,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				Data: []cljs.Data{{Name: "search parameters", Value: p}},
 			})
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request, opid)
+			respond(500, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving search()"}.Debug()
 	}()
@@ -205,5 +204,5 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request, opid)
+	respond(200, resource, respWriter, request)
 }
