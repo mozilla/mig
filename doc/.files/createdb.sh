@@ -95,8 +95,9 @@ CREATE INDEX invagtmodperm_agentid_idx ON invagtmodperm USING btree (agentid);
 CREATE INDEX invagtmodperm_investigatorid_idx ON invagtmodperm USING btree (investigatorid);
 CREATE INDEX invagtmodperm_moduleid_idx ON invagtmodperm USING btree (moduleid);
 
+CREATE SEQUENCE investigators_id_seq START 1;
 CREATE TABLE investigators (
-    id numeric NOT NULL,
+    id numeric NOT NULL DEFAULT nextval('investigators_id_seq'),
     name character varying(1024) NOT NULL,
     pgpfingerprint character varying(128),
     publickey bytea,
@@ -109,7 +110,6 @@ ALTER TABLE public.investigators OWNER TO migadmin;
 ALTER TABLE ONLY investigators
     ADD CONSTRAINT investigators_pkey PRIMARY KEY (id);
 CREATE UNIQUE INDEX investigators_pgpfingerprint_idx ON investigators USING btree (pgpfingerprint);
-CREATE SEQUENCE investigators_id_seq START 1;
 
 CREATE TABLE modules (
     id numeric NOT NULL,
