@@ -19,8 +19,11 @@ import (
 	"os"
 	"os/user"
 	"runtime"
+	"strings"
 	"time"
 )
+
+var version string = "0.1"
 
 // A Client provides all the needed functionalities to interact with the MIG API.
 // It should be initialized with a proper configuration file.
@@ -115,6 +118,45 @@ func FindHomedir() string {
 	}
 }
 
+// Do is a thin wrapper around http.Client.Do() that inserts an authentication header
+// to the outgoing request
+func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("Do() -> %v", e)
+		}
+	}()
+	r.Header.Set("User-Agent", "MIG Client v"+version)
+	if cli.Token == "" {
+		cli.Token, err = cli.MakeSignedToken()
+		if err != nil {
+			panic(err)
+		}
+	}
+	r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
+	// execute the request
+	resp, err = cli.API.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	// if the request failed because of an auth issue, it may be that the auth token has expired.
+	// try the request again with a fresh token
+	if resp.StatusCode == 401 {
+		resp.Body.Close()
+		cli.Token, err = cli.MakeSignedToken()
+		if err != nil {
+			panic(err)
+		}
+		r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
+		// execute the request
+		resp, err = cli.API.Do(r)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return
+}
+
 // GetAPIResource retrieves a cljs resource from a target endpoint. The target must be the relative
 // to the API URL passed in the configuration. For example, if the API URL is `http://localhost:12345/api/v1/`
 // then target could only be set to `dashboard` to retrieve `http://localhost:12345/api/v1/dashboard`
@@ -128,39 +170,17 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 	if err != nil {
 		panic(err)
 	}
-	if cli.Token == "" {
-		cli.Token, err = cli.MakeSignedToken()
-		if err != nil {
-			panic(err)
-		}
-	}
-	r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
-	// execute the request
-	resp, err := cli.API.Do(r)
+	resp, err := cli.Do(r)
 	if err != nil {
 		panic(err)
 	}
-	// if the request failed because of an auth issue, it may be that the auth token has expired.
-	// try the request again with a fresh token
-	if resp.StatusCode == 401 {
-		cli.Token, err = cli.MakeSignedToken()
-		if err != nil {
-			panic(err)
-		}
-		r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
-		// execute the request
-		resp, err = cli.API.Do(r)
-		if err != nil {
-			panic(err)
-		}
-	}
+	defer resp.Body.Close()
 	// unmarshal the body. don't attempt to interpret it, as long as it
 	// fits into a cljs.Resource, it's acceptable
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
 	if len(body) > 1 {
 		err = json.Unmarshal(body, &resource)
 		if err != nil {
@@ -211,10 +231,16 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 		panic(err)
 	}
 	actionstr := string(ajson)
-
-	// http post the action to the posturl endpoint
-	postUrl := cli.Conf.API.URL + "/action/create/"
-	resp, err := cli.API.PostForm(postUrl, url.Values{"action": {actionstr}})
+	data := url.Values{"action": {actionstr}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"action/create/", strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
 	defer resp.Body.Close()
 	if err != nil {
 		panic(err)
