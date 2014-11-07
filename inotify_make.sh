@@ -52,6 +52,10 @@ do
         echo
         make mig-console && echo success $(date +%H:%M:%S)
 
+    elif [[ "$dir" =~ client ]] ; then
+        echo
+        make mig-console && echo success $(date +%H:%M:%S)
+
     elif [[ "$dir" =~ pgp ]] ; then
         echo
         make mig-agent && \
