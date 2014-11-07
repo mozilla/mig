@@ -42,7 +42,7 @@ func actionReader(input string, cli client.Client) (err error) {
 	fmt.Println("Entering action reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Action: '%s'.\nLaunched by '%s' on '%s'.\nStatus '%s'.\n",
 		a.Name, investigators, a.StartTime, a.Status)
-	prompt := fmt.Sprintf("\x1b[31;1maction %.0f>\x1b[0m ", uint64(aid)%1000)
+	prompt := fmt.Sprintf("\x1b[31;1maction %d>\x1b[0m ", uint64(aid)%1000)
 	for {
 		// completion
 		var symbols = []string{"command", "copy", "counters", "details", "exit", "foundanything", "foundnothing",
