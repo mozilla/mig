@@ -7,6 +7,7 @@ package client
 
 import (
 	"code.google.com/p/gcfg"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/jvehent/cljs"
@@ -31,15 +32,19 @@ type Client struct {
 
 // Configuration stores the live configuration and global parameters of a client
 type Configuration struct {
-	API struct {
-		URL string
-	}
+	API     ApiConf
 	Homedir string
-	GPG     struct {
-		Home      string
-		KeyID     string
-		Keyserver string
-	}
+	GPG     GpgConf
+}
+
+type ApiConf struct {
+	URL            string
+	SkipVerifyCert bool
+}
+type GpgConf struct {
+	Home      string
+	KeyID     string
+	Keyserver string
 }
 
 // NewClient initiates a new instance of a Client
@@ -51,6 +56,20 @@ func NewClient(conf Configuration) Client {
 		//TLSClientConfig:    &tls.Config{RootCAs: pool},
 		DisableCompression: false,
 		DisableKeepAlives:  false,
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS10,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+			},
+			InsecureSkipVerify: conf.API.SkipVerifyCert,
+		},
 	}
 	cli.API = &http.Client{Transport: tr}
 	return cli
