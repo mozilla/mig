@@ -14,48 +14,50 @@ The API follows the core principles of REST, and provides discoverable
 endpoints. The document format follows the `Collection+JSON - Hypermedia Type
 <http://amundsen.com/media-types/collection/>`_.
 
-Authentication with X-PGPAUTHORIZATION
---------------------------------------
+Authentication with X-PGPAUTHORIZATION version 1
+------------------------------------------------
 
 Authenticating against the MIG API requires sending a PGP signed token in the
 request header named `X-PGPAUTHORIZATION`. The key that signs the token must
 belong to an active investigator. Construction of the token works as follows:
 
-1. make a string named **str** composed of a UTC timestamp in RFC3339 format,
-   followed by a semicolon, followed by a random nonce:
+1. make a string named **str** composed of a version, a UTC timestamp in RFC3339 format
+   and a random nonce, each separated by semicolons. The current version is **1**
+   and may be upgraded in the future. The nonce value must be a positive integer.
 
-   **str=<UTC TIMESTAMP RFC3339>;<NONCE>**
+   **str=<VERSION>;<UTC TIMESTAMP RFC3339>;<NONCE>**
 
    UTC is a hard requirement. The timestamp must end with the suffix **Z**
    which indicates the UTC timezone. In bash, a correct timestamp can be
    generated with the command `$ date -u +%Y-%m-%dT%H:%M:%SZ`.
 
-   An example string would look like: `2006-01-02T15:04:05Z;1825922807490630059`
+   An example string would look like: `1;2006-01-02T15:04:05Z;1825922807490630059`
 
    The string must be terminated by a newline character, hexadecimal code `0x0a`.
 
 .. code:: bash
 
-	$ hexdump -C <<< '2006-01-02T15:04:05Z;1825922807490630059'
-	00000000  32 30 30 36 2d 30 31 2d  30 32 54 31 35 3a 30 34  |2006-01-02T15:04|
-	00000010  3a 30 35 5a 3b 31 38 32  35 39 32 32 38 30 37 34  |:05Z;18259228074|
-	00000020  39 30 36 33 30 30 35 39  0a                       |90630059.|
-	00000029
+	$ hexdump -C <<< '1;2006-01-02T15:04:05Z;1825922807490630059'
+	00000000  31 3b 32 30 30 36 2d 30  31 2d 30 32 54 31 35 3a  |1;2006-01-02T15:|
+	00000010  30 34 3a 30 35 5a 3b 31  38 32 35 39 32 32 38 30  |04:05Z;182592280|
+	00000020  37 34 39 30 36 33 30 30  35 39 0a                 |7490630059.|
+	0000002b
 
 2. PGP sign **str** with the private key of the investigator. Armor and detach
    the signature into **armoredSig**::
 
-	$ gpg -a --detach-sig <<< '2006-01-02T15:04:05Z;1825922807490630059'
+	$ gpg -a --detach-sig <<< '1;2006-01-02T15:04:05Z;1825922807490630059'
+
 	-----BEGIN PGP SIGNATURE-----
 	Version: GnuPG v1
 
-	iQEcBAABCAAGBQJUWPDpAAoJEKPWUhc7dj6PQdgH/0TRMOEAL4SL6v+JvixWtEGJ
-	zXBCqBpRBsygHAKT+m4AxwniVa9vr8vfWm14eFpZTGdlDx39Ko+tdFoHn5Z1yKEe
-	QWEQYXqhneAnv0pYR1aIjXM8MY63TNePWBZxUerlRkjv2IH16/W5aBrbOctOxEs1
-	BKuN2pd4Hgubr+2f43gcRcWW+Ww/5Fyg1lKzH8jP84uqiIT8wQOdBrwUkgRdSdfM
-	QbYFjsgY57G+ZsMobNhhlFedgKuZShJCd+G1GlwsfZPsZOSLmVZahI7wjR3vckCJ
-	66eff3e/xX7Gt0zGGa5i1dgH5Q6TSjRGRBE37FwD4C6fycUEuy9yKI7iFziw33Y=
-	=k6gT
+	iQEcBAABCAAGBQJUZ5psAAoJEKPWUhc7dj6PFd8IALWQS4x9Kzssww1pxc7uq9mg
+	JT/3jHLwAYPQV3ltqFcI5R2EGHo5DsXXjX6lfOc7DgbteB9UV+H++KG0oVUTTjuP
+	kncmFYmoBEDqbXju6EASBLyUlt3M43N9DmQaAaeoyW2gB0p0aEYRZoN3Cf0O0qhU
+	b3nnsCz6IyuBcQAZh1Jnmf7AMwRmXier8OflObQ9wJ1iYF9KCD0TgP1Z+kaCvMqC
+	PWQ5XaNaXn665V19mjAMicOtO9U3A/v4ApYyUSPyq0cuLrT8z/Z1vdjyeZVTaOM8
+	MhnoKfgBnegQnP+BPQZlWcjaBsquenC/joYRhq20nAEwSjZ1Nm7+qHo/DW0bYOA=
+	=4nrR
 	-----END PGP SIGNATURE-----
 
 3. Create **sig** by taking **armoredSig** and removing the PGP headers, footers,
@@ -65,13 +67,13 @@ belong to an active investigator. Construction of the token works as follows:
 
 4. Create **token** by concatenating **str**, a semicolon, and **sig**.
    **token=<str>;<sig>**
-   example: `2006-01-02T15:04:05Z;1825922807490630059;owEBYQGe/pANAwAIAaPWUhc7dj6...<truncated>`
+   example: `1;2006-01-02T15:04:05Z;1825922807490630059;owEBYQGe/pANAwAIAaPWUhc7dj6...<truncated>`
 
 5. Send **token** in the header named **X-PGPAUTHORIZATION** with the request::
 
-	$ curl -H 'X-PGPAUTHORIZATION: 2006-01-02T15:04:05Z;1825922807490630059;owEBYQGe/pANAwAIAaP...<truncated>' localhost:12345/api/v1/
+	$ curl -H 'X-PGPAUTHORIZATION: 1;2006-01-02T15:04:05Z;1825922807490630059;owEBYQGe/pANAwAIAaP...<truncated>' localhost:12345/api/v1/
 
-6. The API first verifies the validity period of the timestamp. By default, a
+6. The API verifies the version and validity period of the timestamp. By default, a
    token will be rejected if its timestamp deviates from the server time by more
    than 10 minutes. Administrators can configure this value. In effect, this
    means a timestamp is valid for twice the duration of the window. By default,
@@ -104,7 +106,7 @@ The signature is valid but the timestamp is beyond the acceptable time window.
 
 .. code:: bash
 
-	$ curl -H 'X-PGPAUTHORIZATION: 2006-01-02T15:04:05Z;1825922807490630059;iQEcB...<truncated>' http://localhost:12345/api/v1/
+	$ curl -H 'X-PGPAUTHORIZATION: 1;2006-01-02T15:04:05Z;1825922807490630059;iQEcB...<truncated>' http://localhost:12345/api/v1/
 
 	{
 		"collection": {
@@ -126,7 +128,7 @@ recognize.
 
 .. code:: bash
 
-	$ curl -H 'X-PGPAUTHORIZATION: 2014-11-04T15:36:05Z;1825922807490630059;iQEcBA...<truncated>' http://localhost:12345/api/v1/
+	$ curl -H 'X-PGPAUTHORIZATION: 1;2014-11-04T15:36:05Z;1825922807490630059;iQEcBA...<truncated>' http://localhost:12345/api/v1/
 
 	{
 		"collection": {
@@ -145,11 +147,11 @@ Generating a token in Bash
 
 .. code::
 
-	$ token="$(date -u +%Y-%m-%dT%H:%M:%SZ);$RANDOM$RANDOM$RANDOM$RANDOM"; \
+	$ token="1;$(date -u +%Y-%m-%dT%H:%M:%SZ);$RANDOM$RANDOM$RANDOM$RANDOM"; \
 	sig=$(gpg -a --detach-sig <<< $token |tail -8 |head -7 \
 	| sed ':a;N;$!ba;s/\n//g'); echo "X-PGPAUTHORIZATION: $token;$sig"
 
-	X-PGPAUTHORIZATION: 2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....
+	X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....
 
 API endpoints
 -------------

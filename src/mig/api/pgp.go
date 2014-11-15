@@ -82,11 +82,18 @@ func verifySignedToken(token string) (inv mig.Investigator, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving verifySignedToken()"}.Debug()
 	}()
 	parts := strings.Split(token, ";")
-	if len(parts) != 3 {
+	if len(parts) != 4 {
 		panic("invalid token format")
 	}
+
+	// verify token version
+	tv := parts[0]
+	if tv != "1" {
+		panic("invalid token version, must be 1")
+	}
+
 	// verify that token timestamp is recent enough
-	tstr := parts[0]
+	tstr := parts[1]
 	ts, err := time.Parse("2006-01-02T15:04:05Z", tstr)
 	if err != nil {
 		panic(err)
@@ -96,13 +103,13 @@ func verifySignedToken(token string) (inv mig.Investigator, err error) {
 	if ts.Before(early) || ts.After(late) {
 		panic("token timestamp is not within acceptable time limits")
 	}
-	nonce := parts[1]
-	sig := parts[2]
+	nonce := parts[2]
+	sig := parts[3]
 	keyring, err := getKeyring()
 	if err != nil {
 		panic(err)
 	}
-	fp, err := pgp.GetFingerprintFromSignature(tstr+";"+nonce+"\n", sig, keyring)
+	fp, err := pgp.GetFingerprintFromSignature(tv+";"+tstr+";"+nonce+"\n", sig, keyring)
 	if err != nil {
 		panic(err)
 	}

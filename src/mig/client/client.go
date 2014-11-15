@@ -406,7 +406,8 @@ func (cli Client) MakeSignedToken() (token string, err error) {
 			err = fmt.Errorf("MakeSignedToken() -> %v", e)
 		}
 	}()
-	str := fmt.Sprintf("%s;%.0f", time.Now().UTC().Format(time.RFC3339), mig.GenID())
+	tokenVersion := 1
+	str := fmt.Sprintf("%d;%s;%.0f", tokenVersion, time.Now().UTC().Format(time.RFC3339), mig.GenID())
 	secringFile, err := os.Open(cli.Conf.GPG.Home + "/secring.gpg")
 	if err != nil {
 		panic(err)
