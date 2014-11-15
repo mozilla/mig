@@ -15,7 +15,7 @@ func main() {
 	var err error
 	homedir := client.FindHomedir()
 	// command line options
-	var config = flag.String("c", homedir+"/.migconsole", "Load configuration from file")
+	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
 	var aid = flag.Float64("aid", float64(1234567890), "Retrieve and print action by ID")
 	flag.Parse()
 

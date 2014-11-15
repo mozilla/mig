@@ -17,7 +17,7 @@ func main() {
 	}
 	var err error
 	homedir := client.FindHomedir()
-	var config = flag.String("c", homedir+"/.migconsole", "Load configuration from file")
+	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
 	flag.Parse()
 
 	// instanciate an API client

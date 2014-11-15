@@ -26,7 +26,7 @@ func main() {
 	var err error
 	homedir := client.FindHomedir()
 	// command line options
-	var config = flag.String("c", homedir+"/.migconsole", "Load configuration from file")
+	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
 	var shortnames = flag.Bool("s", false, "Shorten all agent names to first and last 5 characters)")
 	var quiet = flag.Bool("q", false, "don't display banners and prompts")
 	flag.Parse()
