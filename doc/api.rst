@@ -159,8 +159,19 @@ API endpoints
 The API root is at `/api/v1`. All the endpoints described below are reachable
 behind the root.
 
-GET /dashboard
-~~~~~~~~~~~~~~
+GET <root>/heartbeat
+~~~~~~~~~~~~~~~~~~~~
+* Description: basic endpoint that returns a HTTP 200
+* Parameters: none
+* Example:
+
+.. code:: bash
+
+	# curl localhost:1664/api/v1/heartbeat
+	gatorz say hi
+
+GET <root>/dashboard
+~~~~~~~~~~~~~~~~~~~~
 * Description: display a status dashboard of the MIG platform and agents
 * Parameters: none
 * Example:
@@ -169,8 +180,8 @@ GET /dashboard
 
 	/api/v1/dashboard
 
-GET /action
-~~~~~~~~~~~
+GET <root>/action
+~~~~~~~~~~~~~~~~~
 * Description: retrieve an action by its ID. Include links to related commands.
 * Parameters:
 	- `actionid`: a uint64 that identifies an action by its ID
@@ -180,8 +191,8 @@ GET /action
 
 	/api/v1/action?actionid=6019232215298562584
 
-POST /action/create/
-~~~~~~~~~~~~~~~~~~~~
+POST <root>/action/create/
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: send a signed action to the API for submission to the scheduler.
 * Parameters: (POST body)
 	- `action`: a signed action in JSON format
@@ -192,8 +203,8 @@ POST /action/create/
 
 	./bin/linux/amd64/mig-action-generator -i examples/actions/linux-backdoor.json -k jvehent@mozilla.com -posturl=http://localhost:1664/api/v1/action/create/
 
-GET /agent
-~~~~~~~~~~~~
+GET <root>/agent
+~~~~~~~~~~~~~~~~
 * Description: retrieve an agent by its ID
 * Parameters:
 	- `agentid`: a uint64 that identifies an agent by its ID
@@ -203,8 +214,8 @@ GET /agent
 
 	/api/v1/agent?agentid=6074883012002259968
 
-GET /command
-~~~~~~~~~~~~
+GET <root>/command
+~~~~~~~~~~~~~~~~~~
 * Description: retrieve a command by its ID. Include link to related action.
 * Parameters:
 	- `commandid`: a uint64 that identifies a command by its ID
@@ -214,8 +225,8 @@ GET /command
 
 	/api/v1/command?commandid=6019232259520546404
 
-GET /investigator
-~~~~~~~~~~~~~~~~~
+GET <root>/investigator
+~~~~~~~~~~~~~~~~~~~~~~~
 * Description: retrieve an investigator by its ID. Include link to the
   investigator's action history.
 * Parameters:
@@ -226,8 +237,8 @@ GET /investigator
 
 	/api/v1/investigator?investigatorid=1
 
-POST /investigator/create/
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+POST <root>/investigator/create/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: create a new investigator in the database
 * Parameters: (POST body)
 	- `name`: string that represents the full name
@@ -241,8 +252,8 @@ POST /investigator/create/
 	$ curl -iv -F "name=Bob Kelso" -F publickey=@/tmp/pubkey
 	http://localhost:1664/api/v1/investigator/create/
 
-POST /investigator/update/
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+POST <root>/investigator/update/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: update an existing investigator in the database
 * Parameters: (PUT body)
 	- `id`: investigator id, to identify the target investigator
@@ -253,8 +264,8 @@ POST /investigator/update/
 
 	$ curl -iv -X POST -d id=1234 -d status=disabled http://localhost:1664/api/v1/investigator/update/
 
-GET /search
-~~~~~~~~~~~
+GET <root>/search
+~~~~~~~~~~~~~~~~~
 * Description: search for actions, commands, agents or investigators.
 * Parameters:
 	- `type`: define the type of item returned by the search.

@@ -60,6 +60,9 @@ func main() {
 	// register routes
 	r := mux.NewRouter()
 	s := r.PathPrefix(ctx.Server.BaseRoute).Subrouter()
+	// heartbeat is not authenticated
+	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")
+	// all other resources require authentication
 	s.HandleFunc("/", authenticate(getHome)).Methods("GET")
 	s.HandleFunc("/search", authenticate(search)).Methods("GET")
 	s.HandleFunc("/action", authenticate(getAction)).Methods("GET")
@@ -176,6 +179,21 @@ func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, 
 	respWriter.Write(body)
 
 	return
+}
+
+// getHeartbeat returns a 200
+func getHeartbeat(respWriter http.ResponseWriter, request *http.Request) {
+	opid := mig.GenID()
+	defer func() {
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getHeartbeat()"}.Debug()
+	}()
+	ctx.Channels.Log <- mig.Log{
+		OpID: opid,
+		Desc: fmt.Sprintf("[no auth] %s", request.URL.String()),
+	}
+	respWriter.Header().Set("Cache-Control", "no-cache")
+	respWriter.WriteHeader(200)
+	respWriter.Write([]byte("gatorz say hi"))
 }
 
 // getHome returns a basic document that presents the different ressources
