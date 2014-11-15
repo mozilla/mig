@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-var version string = "0.1"
+var version string
 
 // A Client provides all the needed functionalities to interact with the MIG API.
 // It should be initialized with a proper configuration file.
@@ -55,8 +55,6 @@ func NewClient(conf Configuration) Client {
 	var cli Client
 	cli.Conf = conf
 	tr := &http.Transport{
-		// TODO: add TLS support
-		//TLSClientConfig:    &tls.Config{RootCAs: pool},
 		DisableCompression: false,
 		DisableKeepAlives:  false,
 		TLSClientConfig: &tls.Config{
@@ -86,6 +84,10 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 			err = fmt.Errorf("ReadConfiguration() -> %v", e)
 		}
 	}()
+	_, err = os.Stat(file)
+	if err != nil {
+		panic(err)
+	}
 	err = gcfg.ReadFileInto(&conf, file)
 	if conf.GPG.Home == "" {
 		gnupgdir := os.Getenv("GNUPGHOME")
