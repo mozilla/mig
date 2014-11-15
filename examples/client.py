@@ -8,13 +8,14 @@ import json
 
 def makeToken(gpghome, keyid):
     gpg = gnupg.GPG(gnupghome=gpghome)
+    version = "1"
     timestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
-    nonce = str(random.randint(10000, 18446744073709551616)) + \
-            str(random.randint(10000, 18446744073709551616))
-    sig = gpg.sign(timestamp + ";" + nonce + "\n",
+    nonce = str(random.randint(10000, 18446744073709551616))
+    token = version + ";" + timestamp + ";" + nonce
+    sig = gpg.sign(token + "\n",
         keyid=keyid,
         detach=True, clearsign=True)
-    token = timestamp + ";" + nonce + ";"
+    token += ";"
     linectr=0
     for line in iter(str(sig).splitlines()):
         linectr+=1
@@ -28,5 +29,6 @@ if __name__ == '__main__':
         "E60892BB9BD89A69F759A1A0A3D652173B763E8F")
     r = requests.get("http://localhost:12345/api/v1/dashboard",
         headers={'X-PGPAUTHORIZATION': token})
+    print token
     print r.text
 
