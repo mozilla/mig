@@ -24,6 +24,11 @@ var useShortNames bool
 
 func main() {
 	var err error
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Printf("FATAL: %v\n", e)
+		}
+	}()
 	homedir := client.FindHomedir()
 	// command line options
 	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
