@@ -6,20 +6,27 @@
 package client
 
 import (
+	"bytes"
 	"code.google.com/p/gcfg"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/jvehent/cljs"
+	"io"
 	"io/ioutil"
 	"mig"
 	"mig/pgp"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"os/user"
 	"runtime"
+	"strings"
 	"time"
 )
+
+var version string
 
 // A Client provides all the needed functionalities to interact with the MIG API.
 // It should be initialized with a proper configuration file.
@@ -31,15 +38,19 @@ type Client struct {
 
 // Configuration stores the live configuration and global parameters of a client
 type Configuration struct {
-	API struct {
-		URL string
-	}
+	API     ApiConf
 	Homedir string
-	GPG     struct {
-		Home      string
-		KeyID     string
-		Keyserver string
-	}
+	GPG     GpgConf
+}
+
+type ApiConf struct {
+	URL            string
+	SkipVerifyCert bool
+}
+type GpgConf struct {
+	Home      string
+	KeyID     string
+	Keyserver string
 }
 
 // NewClient initiates a new instance of a Client
@@ -47,10 +58,22 @@ func NewClient(conf Configuration) Client {
 	var cli Client
 	cli.Conf = conf
 	tr := &http.Transport{
-		// TODO: add TLS support
-		//TLSClientConfig:    &tls.Config{RootCAs: pool},
 		DisableCompression: false,
 		DisableKeepAlives:  false,
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS10,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+			},
+			InsecureSkipVerify: conf.API.SkipVerifyCert,
+		},
 	}
 	cli.API = &http.Client{Transport: tr}
 	return cli
@@ -64,6 +87,10 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 			err = fmt.Errorf("ReadConfiguration() -> %v", e)
 		}
 	}()
+	_, err = os.Stat(file)
+	if err != nil {
+		panic(err)
+	}
 	err = gcfg.ReadFileInto(&conf, file)
 	if conf.GPG.Home == "" {
 		gnupgdir := os.Getenv("GNUPGHOME")
@@ -96,6 +123,45 @@ func FindHomedir() string {
 	}
 }
 
+// Do is a thin wrapper around http.Client.Do() that inserts an authentication header
+// to the outgoing request
+func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("Do() -> %v", e)
+		}
+	}()
+	r.Header.Set("User-Agent", "MIG Client v"+version)
+	if cli.Token == "" {
+		cli.Token, err = cli.MakeSignedToken()
+		if err != nil {
+			panic(err)
+		}
+	}
+	r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
+	// execute the request
+	resp, err = cli.API.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	// if the request failed because of an auth issue, it may be that the auth token has expired.
+	// try the request again with a fresh token
+	if resp.StatusCode == 401 {
+		resp.Body.Close()
+		cli.Token, err = cli.MakeSignedToken()
+		if err != nil {
+			panic(err)
+		}
+		r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
+		// execute the request
+		resp, err = cli.API.Do(r)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return
+}
+
 // GetAPIResource retrieves a cljs resource from a target endpoint. The target must be the relative
 // to the API URL passed in the configuration. For example, if the API URL is `http://localhost:12345/api/v1/`
 // then target could only be set to `dashboard` to retrieve `http://localhost:12345/api/v1/dashboard`
@@ -109,39 +175,17 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 	if err != nil {
 		panic(err)
 	}
-	if cli.Token == "" {
-		cli.Token, err = cli.MakeSignedToken()
-		if err != nil {
-			panic(err)
-		}
-	}
-	r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
-	// execute the request
-	resp, err := cli.API.Do(r)
+	resp, err := cli.Do(r)
 	if err != nil {
 		panic(err)
 	}
-	// if the request failed because of an auth issue, it may be that the auth token has expired.
-	// try the request again with a fresh token
-	if resp.StatusCode == 401 {
-		cli.Token, err = cli.MakeSignedToken()
-		if err != nil {
-			panic(err)
-		}
-		r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
-		// execute the request
-		resp, err = cli.API.Do(r)
-		if err != nil {
-			panic(err)
-		}
-	}
+	defer resp.Body.Close()
 	// unmarshal the body. don't attempt to interpret it, as long as it
 	// fits into a cljs.Resource, it's acceptable
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
 	if len(body) > 1 {
 		err = json.Unmarshal(body, &resource)
 		if err != nil {
@@ -192,10 +236,16 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 		panic(err)
 	}
 	actionstr := string(ajson)
-
-	// http post the action to the posturl endpoint
-	postUrl := cli.Conf.API.URL + "/action/create/"
-	resp, err := cli.API.PostForm(postUrl, url.Values{"action": {actionstr}})
+	data := url.Values{"action": {actionstr}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"action/create/", strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
 	defer resp.Body.Close()
 	if err != nil {
 		panic(err)
@@ -334,6 +384,104 @@ func (cli Client) GetInvestigator(iid float64) (inv mig.Investigator, err error)
 	return
 }
 
+// PostInvestigator creates an Investigator and returns the reflected investigator
+func (cli Client) PostInvestigator(name string, pubkey []byte) (inv mig.Investigator, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("PostInvestigator() -> %v", e)
+		}
+	}()
+	// build the body into buf using a multipart writer
+	buf := &bytes.Buffer{}
+	writer := multipart.NewWriter(buf)
+	// set the name form value
+	err = writer.WriteField("name", name)
+	if err != nil {
+		panic(err)
+	}
+	// set the publickey form value
+	part, err := writer.CreateFormFile("publickey", fmt.Sprintf("%s.asc", name))
+	if err != nil {
+		panic(err)
+	}
+	_, err = io.Copy(part, bytes.NewReader(pubkey))
+	if err != nil {
+		panic(err)
+	}
+	// must close the writer to write trailing boundary
+	err = writer.Close()
+	if err != nil {
+		panic(err)
+	}
+	// post the request
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"investigator/create/", buf)
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	// get the investigator back from the response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var resource *cljs.Resource
+	err = json.Unmarshal(body, &resource)
+	if err != nil {
+		panic(err)
+	}
+	if resp.StatusCode != 201 {
+		err = fmt.Errorf("HTTP %d: %v (code %s)", resp.StatusCode,
+			resource.Collection.Error.Message, resource.Collection.Error.Code)
+		return
+	}
+	inv, err = ValueToInvestigator(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+// PostInvestigatorStatus updates the status of an Investigator
+func (cli Client) PostInvestigatorStatus(iid float64, newstatus string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("PostInvestigatorStatus() -> %v", e)
+		}
+	}()
+	data := url.Values{"id": {fmt.Sprintf("%.0f", iid)}, "status": {newstatus}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"investigator/update/", strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	var resource *cljs.Resource
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("error: HTTP %d. status update failed with error '%v' (code %s)",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	return
+}
+
 func ValueToInvestigator(v interface{}) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -359,7 +507,8 @@ func (cli Client) MakeSignedToken() (token string, err error) {
 			err = fmt.Errorf("MakeSignedToken() -> %v", e)
 		}
 	}()
-	str := fmt.Sprintf("%s;%.0f", time.Now().UTC().Format(time.RFC3339), mig.GenID())
+	tokenVersion := 1
+	str := fmt.Sprintf("%d;%s;%.0f", tokenVersion, time.Now().UTC().Format(time.RFC3339), mig.GenID())
 	secringFile, err := os.Open(cli.Conf.GPG.Home + "/secring.gpg")
 	if err != nil {
 		panic(err)

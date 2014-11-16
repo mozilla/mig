@@ -44,7 +44,7 @@ func agentReader(input string, cli client.Client) (err error) {
 		agtname = shorten(agtname)
 	}
 	fmt.Printf("Agent %.0f named '%s'\n", agt.ID, agtname)
-	prompt := fmt.Sprintf("\x1b[34;1magent %.0f>\x1b[0m ", uint64(agtid)%1000)
+	prompt := fmt.Sprintf("\x1b[34;1magent %d>\x1b[0m ", uint64(agtid)%1000)
 	for {
 		// completion
 		var symbols = []string{"details", "exit", "help", "json", "pretty", "r", "lastactions"}

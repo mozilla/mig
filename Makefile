@@ -88,6 +88,14 @@ mig-console:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig/client/console
 
+mig-cmd:
+	$(MKDIR) -p $(BINDIR)
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-cmd $(GOLDFLAGS) mig/client/cmd
+
+mig-agentsearch:
+	$(MKDIR) -p $(BINDIR)
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agentsearch $(GOLDFLAGS) mig/client/cmd/agentsearch
+
 go_get_deps_into_system:
 	make GOGETTER="go get -u" go_get_deps
 

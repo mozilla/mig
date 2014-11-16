@@ -44,7 +44,7 @@ func commandReader(input string, cli client.Client) (err error) {
 	}
 	fmt.Printf("Command %.0f ran on agent '%s' based on action '%s'\n",
 		cmd.ID, agtname, cmd.Action.Name)
-	prompt := fmt.Sprintf("\x1b[36;1mcommand %.0f>\x1b[0m ", uint64(cmdid)%1000)
+	prompt := fmt.Sprintf("\x1b[36;1mcommand %d>\x1b[0m ", uint64(cmdid)%1000)
 	for {
 		// completion
 		var symbols = []string{"exit", "help", "json", "found", "pretty", "r", "results"}
