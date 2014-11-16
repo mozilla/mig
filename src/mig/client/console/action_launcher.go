@@ -44,13 +44,13 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 	}
 	hasTimes := false
 	hasSignatures := false
-
+	hasEvaluatedTarget := false
 	fmt.Println("Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	prompt := "\x1b[33;1mlauncher>\x1b[0m "
 	for {
 		// completion
 		var symbols = []string{"addoperation", "deloperation", "exit", "help", "init",
-			"json", "launch", "load", "details", "filechecker", "netstat",
+			"json", "launch", "listagents", "load", "details", "filechecker", "netstat",
 			"setname", "settarget", "settimes", "sign", "times"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
@@ -134,6 +134,7 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 		case "help":
 			fmt.Printf(`The following orders are available:
 addoperation <module>	append a new operation of type <module> to the action operations
+listagents		list agents targetted by an action
 deloperation <opnum>	remove operation numbered <opnum> from operations array, count starts at zero
 details			display the action details
 exit			exit this mode
@@ -183,6 +184,26 @@ times			show the various timestamps of the action
 				fmt.Println("Action has no target. Define one using 'settarget <target>'")
 				break
 			}
+			if !hasEvaluatedTarget {
+				agents, err := cli.EvaluateAgentTarget(a.Target)
+				if err != nil {
+					panic(err)
+				}
+				count := len(agents)
+				if count == 0 {
+					fmt.Println("0 agents match this target. launch aborted")
+					break
+				}
+				fmt.Printf("%d agents will be targetted by search \"%s\"\n", count, a.Target)
+				input, err = readline.String("continue? (y/n)> ")
+				if err != nil {
+					panic(err)
+				}
+				if input != "y" {
+					fmt.Println("launch aborted")
+					break
+				}
+			}
 			if !hasTimes {
 				fmt.Printf("Times are not defined. Setting validity from now until +%s\n", defaultExpiration)
 				// for immediate execution, set validity one minute in the past
@@ -218,6 +239,20 @@ times			show the various timestamps of the action
 			fmt.Println("")
 			_ = actionReader(fmt.Sprintf("action %.0f", a.ID), cli)
 			goto exit
+		case "listagents":
+			agents, err := cli.EvaluateAgentTarget(a.Target)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+			fmt.Println("----    ID      ---- + ----         Name         -------")
+			for _, agt := range agents {
+				name := agt.Name
+				if useShortNames {
+					name = shorten(name)
+				}
+				fmt.Printf("%20.0f   %s\n", agt.ID, name)
+			}
 		case "load":
 			if len(orders) != 2 {
 				fmt.Println("Wrong arguments. Expects 'load <path_to_file>'")
@@ -251,6 +286,13 @@ times			show the various timestamps of the action
 				break
 			}
 			a.Target = strings.Join(orders[1:], " ")
+			agents, err := cli.EvaluateAgentTarget(a.Target)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+			fmt.Printf("%d agents will be targetted. To get the list, use 'listagents'\n", len(agents))
+			hasEvaluatedTarget = true
 		case "settimes":
 			// set the dates
 			if len(orders) != 3 {

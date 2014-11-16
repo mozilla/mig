@@ -336,8 +336,7 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getDashboard()"}.Debug()
 	}()
 
-	// get summary of agents active in the last 5 minutes
-	sum, err := ctx.DB.SumAgentsByVersion(time.Now().Add(-5 * time.Minute))
+	sum, err := ctx.DB.SumAgentsByVersion()
 	if err != nil {
 		panic(err)
 	}
@@ -345,7 +344,7 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	double, err := ctx.DB.CountDoubleAgents(time.Now().Add(-5 * time.Minute))
+	double, err := ctx.DB.CountDoubleAgents()
 	if err != nil {
 		panic(err)
 	}

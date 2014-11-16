@@ -323,9 +323,11 @@ GET <root>/search
 	  Status depends on the type. Below are the available statuses per type:
 
 		- `action`: init, preparing, invalid, inflight, completed
-		- `agent`: heartbeating, upgraded, destroyed, inactive
+		- `agent`: online, upgraded, destroyed, offline
 		- `command`: prepared, sent, success, timeout, cancelled, expired, failed
 		- `investigator`: active, disabled
+
+	- `target`: returns agents that match a target query (only for `agent` type)
 
 	- `threatfamily`: filter results of the threat family of the action, accept
 	  `ILIKE` pattern (only for types `command` and `action`)

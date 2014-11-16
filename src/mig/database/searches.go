@@ -31,6 +31,7 @@ type SearchParameters struct {
 	Limit            float64   `json:"limit"`
 	Report           string    `json:"report"`
 	Status           string    `json:"status"`
+	Target           string    `json:"target"`
 	ThreatFamily     string    `json:"threatfamily"`
 	Type             string    `json:"type"`
 }

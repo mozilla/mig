@@ -91,6 +91,8 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			}
 		case "status":
 			p.Status = request.URL.Query()["status"][0]
+		case "target":
+			p.Target = request.URL.Query()["target"][0]
 		case "threatfamily":
 			p.ThreatFamily = request.URL.Query()["threatfamily"][0]
 		}
@@ -103,7 +105,11 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		case "action":
 			results, err = ctx.DB.SearchActions(p)
 		case "agent":
-			results, err = ctx.DB.SearchAgents(p)
+			if p.Target != "" {
+				results, err = ctx.DB.ActiveAgentsByTarget(p.Target)
+			} else {
+				results, err = ctx.DB.SearchAgents(p)
+			}
 		case "command":
 			results, err = ctx.DB.SearchCommands(p, doFoundAnything)
 		case "investigator":

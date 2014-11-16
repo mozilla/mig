@@ -364,7 +364,10 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 		return
 	}
 	// find target agents for the action
-	agents, err := getTargetAgents(action, ctx)
+	agents, err := ctx.DB.ActiveAgentsByTarget(action.Target)
+	if err != nil {
+		panic(err)
+	}
 	action.Counters.Sent = len(agents)
 	if action.Counters.Sent == 0 {
 		err = fmt.Errorf("No agents found for target '%s'. invalidating action.", action.Target)
@@ -431,26 +434,6 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	}
 	// move action to flying state
 	err = flyAction(ctx, action, actionPath)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-// getTargetAgents retrieves an array of agents from the target of an action
-func getTargetAgents(action mig.Action, ctx Context) (agents []mig.Agent, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("getTargetAgents() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "leaving getTargetAgents()"}.Debug()
-	}()
-	timeOutPeriod, err := time.ParseDuration(ctx.Agent.TimeOut)
-	if err != nil {
-		panic(err)
-	}
-	pointInTime := time.Now().Add(-timeOutPeriod)
-	agents, err = ctx.DB.ActiveAgentsByTarget(action.Target, pointInTime)
 	if err != nil {
 		panic(err)
 	}

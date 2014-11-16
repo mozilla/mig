@@ -58,7 +58,7 @@ The following search parameters are available:
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("----    ID      ---- + ----         Name         ---- + -- Last Heartbeat --")
+		fmt.Println("----    ID      ---- + ----         Name         ---- + -- Status -- + -- Last Heartbeat --")
 		for _, agt := range agents {
 			name := agt.Name
 			if useShortNames {
@@ -72,7 +72,16 @@ The following search parameters are available:
 			if len(name) > 30 {
 				name = name[0:27] + "..."
 			}
-			fmt.Printf("%20.0f   %s   %s\n", agt.ID, name[0:30], agt.HeartBeatTS.Format(time.RFC3339))
+			status := agt.Status
+			if len(status) < 12 {
+				for i := len(status); i < 12; i++ {
+					status += " "
+				}
+			}
+			if len(status) > 12 {
+				status = status[0:12]
+			}
+			fmt.Printf("%20.0f   %s   %s   %s\n", agt.ID, name, status, agt.HeartBeatTS.Format(time.RFC3339))
 		}
 	case "action", "command":
 		fmt.Println("----    ID      ---- + ----         Name         ---- + --- Last Updated ---")
