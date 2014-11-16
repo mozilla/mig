@@ -12,34 +12,190 @@
         <h1>Table of Contents</h1>
         <ul class="auto-toc">
             <li>
-                <p><a href="#api-endpoints">1   API endpoints</a></p>
+                <p><a href="#authentication-with-x-pgpauthorization-version-1">1   Authentication with X-PGPAUTHORIZATION version 1</a></p>
                 <ul class="auto-toc">
-                    <li><a href="#get-dashboard">1.1   GET /dashboard</a></li>
-                    <li><a href="#get-action">1.2   GET /action</a></li>
-                    <li><a href="#post-action-create">1.3   POST /action/create/</a></li>
-                    <li><a href="#get-agent">1.4   GET /agent</a></li>
-                    <li><a href="#get-command">1.5   GET /command</a></li>
-                    <li><a href="#get-investigator">1.6   GET /investigator</a></li>
-                    <li><a href="#post-investigator-create">1.7   POST /investigator/create/</a></li>
-                    <li><a href="#post-investigator-update">1.8   POST /investigator/update/</a></li>
-                    <li><a href="#get-search">1.9   GET /search</a></li>
+                    <li><a href="#security-implications">1.1   Security implications</a></li>
+                    <li><a href="#example-1-invalid-timestamp">1.2   Example 1: invalid timestamp</a></li>
+                    <li><a href="#example-2-invalid-signature">1.3   Example 2: invalid signature</a></li>
+                    <li><a href="#generating-a-token-in-bash">1.4   Generating a token in Bash</a></li>
+                    <li><a href="#generating-a-token-in-python">1.5   Generating a token in Python</a></li>
                 </ul>
             </li>
             <li>
-                <p><a href="#data-transformation">2   Data transformation</a></p>
+                <p><a href="#api-endpoints">2   API endpoints</a></p>
                 <ul class="auto-toc">
-                    <li><a href="#compliance-items">2.1   Compliance Items</a></li>
+                    <li><a href="#get-root-heartbeat">2.1   GET &lt;root&gt;/heartbeat</a></li>
+                    <li><a href="#get-root-dashboard">2.2   GET &lt;root&gt;/dashboard</a></li>
+                    <li><a href="#get-root-action">2.3   GET &lt;root&gt;/action</a></li>
+                    <li><a href="#post-root-action-create">2.4   POST &lt;root&gt;/action/create/</a></li>
+                    <li><a href="#get-root-agent">2.5   GET &lt;root&gt;/agent</a></li>
+                    <li><a href="#get-root-command">2.6   GET &lt;root&gt;/command</a></li>
+                    <li><a href="#get-root-investigator">2.7   GET &lt;root&gt;/investigator</a></li>
+                    <li><a href="#post-root-investigator-create">2.8   POST &lt;root&gt;/investigator/create/</a></li>
+                    <li><a href="#post-root-investigator-update">2.9   POST &lt;root&gt;/investigator/update/</a></li>
+                    <li><a href="#get-root-search">2.10   GET &lt;root&gt;/search</a></li>
+                </ul>
+            </li>
+            <li>
+                <p><a href="#data-transformation">3   Data transformation</a></p>
+                <ul class="auto-toc">
+                    <li><a href="#compliance-items">3.1   Compliance Items</a></li>
                 </ul>
             </li>
         </ul>
     </aside>
     <p>Interactions between an investigator (a human being) and the MIG platform are performed through a REST API. The API exposes functions to create actions, retrieve results, and generally monitor the activity of the agents.</p>
     <p>The API follows the core principles of REST, and provides discoverable endpoints. The document format follows the <a href="http://amundsen.com/media-types/collection/">Collection+JSON - Hypermedia Type</a>.</p>
+    <section id="authentication-with-x-pgpauthorization-version-1">
+        <h2>1   Authentication with X-PGPAUTHORIZATION version 1</h2>
+        <p>Authenticating against the MIG API requires sending a PGP signed token in the request header named <cite>X-PGPAUTHORIZATION</cite>. The key that signs the token must belong to an active investigator. Construction of the token works as follows:</p>
+        <ol type="1">
+            <li>
+                <p>make a string named <strong>str</strong> composed of a version, a UTC timestamp in RFC3339 format and a random nonce, each separated by semicolons. The current version is <strong>1</strong> and may be upgraded in the future. The nonce value must be a positive integer.</p>
+                <p><strong>str=&lt;VERSION&gt;;&lt;UTC TIMESTAMP RFC3339&gt;;&lt;NONCE&gt;</strong></p>
+                <p>UTC is a hard requirement. The timestamp must end with the suffix <strong>Z</strong> which indicates the UTC timezone. In bash, a correct timestamp can be generated with the command <cite>$ date -u +%Y-%m-%dT%H:%M:%SZ</cite>.</p>
+                <p>An example string would look like: <cite>1;2006-01-02T15:04:05Z;1825922807490630059</cite></p>
+                <p>The string must be terminated by a newline character, hexadecimal code <cite>0x0a</cite>.</p>
+            </li>
+        </ol>
+        <pre><code class="bash"><span class="nv">$ </span>hexdump -C <span class="o">&lt;&lt;&lt;</span> <span class="s1">'1;2006-01-02T15:04:05Z;1825922807490630059'</span>
+00000000  31 3b 32 30 30 36 2d 30  31 2d 30 32 54 31 35 3a  |1;2006-01-02T15:|
+00000010  30 34 3a 30 35 5a 3b 31  38 32 35 39 32 32 38 30  |04:05Z;182592280|
+00000020  37 34 39 30 36 33 30 30  35 39 0a                 |7490630059.|
+0000002b</code></pre>
+        <ol start="2" type="1">
+            <li>
+                <p>PGP sign <strong>str</strong> with the private key of the investigator. Armor and detach the signature into <strong>armoredSig</strong>:</p>
+                <pre>$ gpg -a --detach-sig &lt;&lt;&lt; '1;2006-01-02T15:04:05Z;1825922807490630059'
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQEcBAABCAAGBQJUZ5psAAoJEKPWUhc7dj6PFd8IALWQS4x9Kzssww1pxc7uq9mg
+JT/3jHLwAYPQV3ltqFcI5R2EGHo5DsXXjX6lfOc7DgbteB9UV+H++KG0oVUTTjuP
+kncmFYmoBEDqbXju6EASBLyUlt3M43N9DmQaAaeoyW2gB0p0aEYRZoN3Cf0O0qhU
+b3nnsCz6IyuBcQAZh1Jnmf7AMwRmXier8OflObQ9wJ1iYF9KCD0TgP1Z+kaCvMqC
+PWQ5XaNaXn665V19mjAMicOtO9U3A/v4ApYyUSPyq0cuLrT8z/Z1vdjyeZVTaOM8
+MhnoKfgBnegQnP+BPQZlWcjaBsquenC/joYRhq20nAEwSjZ1Nm7+qHo/DW0bYOA=
+=4nrR
+-----END PGP SIGNATURE-----</pre>
+            </li>
+            <li>
+                <p>Create <strong>sig</strong> by taking <strong>armoredSig</strong> and removing the PGP headers, footers, empty lines and newlines.</p>
+                <blockquote>
+                    <p>example: <cite>iQEcBAABCAAGBQJUWPDpAAoJEKPWUhc7dj6PQdgH/0TRMOEAL4SL6v+JvixWtEGJzXBCqBpRBsygHAKT+m4AxwniVa9vr8vfWm14eFpZTGdlDx39Ko+tdFoHn5Z1yKEeQWEQYXqhneAnv0pYR1aIjXM8MY63TNePWBZxUerlRkjv2IH16/W5aBrbOctOxEs1BKuN2pd4Hgubr+2f43gcRcWW+Ww/5Fyg1lKzH8jP84uqiIT8wQOdBrwUkgRdSdfMQbYFjsgY57G+ZsMobNhhlFedgKuZShJCd+G1GlwsfZPsZOSLmVZahI7wjR3vckCJ66eff3e/xX7Gt0zGGa5i1dgH5Q6TSjRGRBE37FwD4C6fycUEuy9yKI7iFziw33Y==k6gT</cite></p>
+                </blockquote>
+            </li>
+            <li>Create <strong>token</strong> by concatenating <strong>str</strong>, a semicolon, and <strong>sig</strong>. <strong>token=&lt;str&gt;;&lt;sig&gt;</strong> example: <cite>1;2006-01-02T15:04:05Z;1825922807490630059;owEBYQGe/pANAwAIAaPWUhc7dj6...&lt;truncated&gt;</cite></li>
+            <li>
+                <p>Send <strong>token</strong> in the header named <strong>X-PGPAUTHORIZATION</strong> with the request:</p>
+                <pre>$ curl -H 'X-PGPAUTHORIZATION: 1;2006-01-02T15:04:05Z;1825922807490630059;owEBYQGe/pANAwAIAaP...&lt;truncated&gt;' localhost:12345/api/v1/</pre>
+            </li>
+            <li>The API verifies the version and validity period of the timestamp. By default, a token will be rejected if its timestamp deviates from the server time by more than 10 minutes. Administrators can configure this value. In effect, this means a timestamp is valid for twice the duration of the window. By default, that's 10 minutes before current server time, and 10 minutes after current server time.</li>
+            <li>If the timestamp is valid, the API next verifies the signature against the data and authenticates the user. Failure to verify the signature returns an error with the HTTP code 401 Unauthorized.</li>
+            <li>The user is authorized, the API processes and answer the request.</li>
+        </ol>
+        <section id="security-implications">
+            <h3>1.1   Security implications</h3>
+            <ol type="1">
+                <li>A token can be used an unlimited number of times within its validity period. There is no check to guarantee that a token is only used once. It is assumed that the token is transmitted over a secure channel such as HTTPS to prevent token theft by a malicious user.</li>
+                <li>API clients and servers must use proper time synchronization for the timestamp verification to work. A client or a server that has inaccurate time may not be able to establish connections. We believe this requirement to be reasonable considering the sensitivity of the API.</li>
+            </ol>
+        </section>
+        <section id="example-1-invalid-timestamp">
+            <h3>1.2   Example 1: invalid timestamp</h3>
+            <p>The signature is valid but the timestamp is beyond the acceptable time window.</p>
+            <pre><code class="bash"><span class="nv">$ </span>curl -H <span class="s1">'X-PGPAUTHORIZATION: 1;2006-01-02T15:04:05Z;1825922807490630059;iQEcB...&lt;truncated&gt;'</span> http://localhost:12345/api/v1/
+
+<span class="o">{</span>
+    <span class="s2">"collection"</span>: <span class="o">{</span>
+        <span class="s2">"error"</span>: <span class="o">{</span>
+            <span class="s2">"code"</span>: <span class="s2">"6077873045059431424"</span>,
+            <span class="s2">"message"</span>: <span class="s2">"Authorization verification failed with error 'verifySignedToken() -&gt; token timestamp is not within acceptable time limits'"</span>
+        <span class="o">}</span>,
+        <span class="s2">"href"</span>: <span class="s2">"http://localhost:12345/api/v1/"</span>,
+        <span class="s2">"template"</span>: <span class="o">{}</span>,
+        <span class="s2">"version"</span>: <span class="s2">"1.0"</span>
+    <span class="o">}</span>
+<span class="o">}</span></code></pre>
+        </section>
+        <section id="example-2-invalid-signature">
+            <h3>1.3   Example 2: invalid signature</h3>
+            <p>The signature is not valid, or is signed by a key that the API does not recognize.</p>
+            <pre><code class="bash"><span class="nv">$ </span>curl -H <span class="s1">'X-PGPAUTHORIZATION: 1;2014-11-04T15:36:05Z;1825922807490630059;iQEcBA...&lt;truncated&gt;'</span> http://localhost:12345/api/v1/
+
+<span class="o">{</span>
+    <span class="s2">"collection"</span>: <span class="o">{</span>
+        <span class="s2">"error"</span>: <span class="o">{</span>
+            <span class="s2">"code"</span>: <span class="s2">"6077875007260332032"</span>,
+            <span class="s2">"message"</span>: <span class="s2">"Authorization verification failed with error 'verifySignedToken() -&gt; GetFingerprintFromSignature() -&gt; openpgp: invalid signature: hash tag doesn't match'"</span>
+        <span class="o">}</span>,
+        <span class="s2">"href"</span>: <span class="s2">"http://localhost:12345/api/v1/"</span>,
+        <span class="s2">"template"</span>: <span class="o">{}</span>,
+        <span class="s2">"version"</span>: <span class="s2">"1.0"</span>
+    <span class="o">}</span>
+<span class="o">}</span></code></pre>
+        </section>
+        <section id="generating-a-token-in-bash">
+            <h3>1.4   Generating a token in Bash</h3>
+            <pre><code class="">$ token="1;$(date -u +%Y-%m-%dT%H:%M:%SZ);$RANDOM$RANDOM$RANDOM$RANDOM"; \
+sig=$(gpg -a --detach-sig &lt;&lt;&lt; $token |tail -8 |head -7 \
+| sed ':a;N;$!ba;s/\n//g'); echo "X-PGPAUTHORIZATION: $token;$sig"
+
+X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</code></pre>
+        </section>
+        <section id="generating-a-token-in-python">
+            <h3>1.5   Generating a token in Python</h3>
+            <pre><code class="python"><span class="c">#!/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">gnupg</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">gmtime</span><span class="p">,</span> <span class="n">strftime</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="k">def</span> <span class="nf">makeToken</span><span class="p">(</span><span class="n">gpghome</span><span class="p">,</span> <span class="n">keyid</span><span class="p">):</span>
+    <span class="n">gpg</span> <span class="o">=</span> <span class="n">gnupg</span><span class="o">.</span><span class="n">GPG</span><span class="p">(</span><span class="n">gnupghome</span><span class="o">=</span><span class="n">gpghome</span><span class="p">)</span>
+    <span class="n">version</span> <span class="o">=</span> <span class="s">"1"</span>
+    <span class="n">timestamp</span> <span class="o">=</span> <span class="n">strftime</span><span class="p">(</span><span class="s">"%Y-%m-</span><span class="si">%d</span><span class="s">T%H:%M:%SZ"</span><span class="p">,</span> <span class="n">gmtime</span><span class="p">())</span>
+    <span class="n">nonce</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="mi">18446744073709551616</span><span class="p">))</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">version</span> <span class="o">+</span> <span class="s">";"</span> <span class="o">+</span> <span class="n">timestamp</span> <span class="o">+</span> <span class="s">";"</span> <span class="o">+</span> <span class="n">nonce</span>
+    <span class="n">sig</span> <span class="o">=</span> <span class="n">gpg</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">token</span> <span class="o">+</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span>
+        <span class="n">keyid</span><span class="o">=</span><span class="n">keyid</span><span class="p">,</span>
+        <span class="n">detach</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">clearsign</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">token</span> <span class="o">+=</span> <span class="s">";"</span>
+    <span class="n">linectr</span><span class="o">=</span><span class="mi">0</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()):</span>
+        <span class="n">linectr</span><span class="o">+=</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">linectr</span> <span class="o">&lt;</span> <span class="mi">4</span> <span class="ow">or</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">'-'</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">token</span> <span class="o">+=</span> <span class="n">line</span>
+    <span class="k">return</span> <span class="n">token</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">'__main__'</span><span class="p">:</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">makeToken</span><span class="p">(</span><span class="s">"/home/ulfr/.gnupg"</span><span class="p">,</span>
+        <span class="s">"E60892BB9BD89A69F759A1A0A3D652173B763E8F"</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">"http://localhost:12345/api/v1/dashboard"</span><span class="p">,</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s">'X-PGPAUTHORIZATION'</span><span class="p">:</span> <span class="n">token</span><span class="p">})</span>
+    <span class="k">print</span> <span class="n">token</span>
+    <span class="k">print</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span></code></pre>
+        </section>
+    </section>
     <section id="api-endpoints">
-        <h2>1   API endpoints</h2>
+        <h2>2   API endpoints</h2>
         <p>The API root is at <cite>/api/v1</cite>. All the endpoints described below are reachable behind the root.</p>
-        <section id="get-dashboard">
-            <h3>1.1   GET /dashboard</h3>
+        <section id="get-root-heartbeat">
+            <h3>2.1   GET &lt;root&gt;/heartbeat</h3>
+            <ul>
+                <li>Description: basic endpoint that returns a HTTP 200</li>
+                <li>Parameters: none</li>
+                <li>Example:</li>
+            </ul>
+            <pre><code class="bash"><span class="c"># curl localhost:1664/api/v1/heartbeat
+</span>gatorz say hi</code></pre>
+        </section>
+        <section id="get-root-dashboard">
+            <h3>2.2   GET &lt;root&gt;/dashboard</h3>
             <ul>
                 <li>Description: display a status dashboard of the MIG platform and agents</li>
                 <li>Parameters: none</li>
@@ -47,8 +203,8 @@
             </ul>
             <pre><code class="bash">/api/v1/dashboard</code></pre>
         </section>
-        <section id="get-action">
-            <h3>1.2   GET /action</h3>
+        <section id="get-root-action">
+            <h3>2.3   GET &lt;root&gt;/action</h3>
             <ul>
                 <li>Description: retrieve an action by its ID. Include links to related commands.</li>
                 <li>
@@ -65,8 +221,8 @@
             </ul>
             <pre><code class="bash">/api/v1/action?actionid<span class="o">=</span>6019232215298562584</code></pre>
         </section>
-        <section id="post-action-create">
-            <h3>1.3   POST /action/create/</h3>
+        <section id="post-root-action-create">
+            <h3>2.4   POST &lt;root&gt;/action/create/</h3>
             <ul>
                 <li>Description: send a signed action to the API for submission to the scheduler.</li>
                 <li>
@@ -83,8 +239,8 @@
             </ul>
             <pre><code class="bash">./bin/linux/amd64/mig-action-generator -i examples/actions/linux-backdoor.json -k jvehent@mozilla.com -posturl<span class="o">=</span>http://localhost:1664/api/v1/action/create/</code></pre>
         </section>
-        <section id="get-agent">
-            <h3>1.4   GET /agent</h3>
+        <section id="get-root-agent">
+            <h3>2.5   GET &lt;root&gt;/agent</h3>
             <ul>
                 <li>Description: retrieve an agent by its ID</li>
                 <li>
@@ -101,8 +257,8 @@
             </ul>
             <pre><code class="bash">/api/v1/agent?agentid<span class="o">=</span>6074883012002259968</code></pre>
         </section>
-        <section id="get-command">
-            <h3>1.5   GET /command</h3>
+        <section id="get-root-command">
+            <h3>2.6   GET &lt;root&gt;/command</h3>
             <ul>
                 <li>Description: retrieve a command by its ID. Include link to related action.</li>
                 <li>
@@ -119,8 +275,8 @@
             </ul>
             <pre><code class="bash">/api/v1/command?commandid<span class="o">=</span>6019232259520546404</code></pre>
         </section>
-        <section id="get-investigator">
-            <h3>1.6   GET /investigator</h3>
+        <section id="get-root-investigator">
+            <h3>2.7   GET &lt;root&gt;/investigator</h3>
             <ul>
                 <li>Description: retrieve an investigator by its ID. Include link to the investigator's action history.</li>
                 <li>
@@ -137,8 +293,8 @@
             </ul>
             <pre><code class="bash">/api/v1/investigator?investigatorid<span class="o">=</span>1</code></pre>
         </section>
-        <section id="post-investigator-create">
-            <h3>1.7   POST /investigator/create/</h3>
+        <section id="post-root-investigator-create">
+            <h3>2.8   POST &lt;root&gt;/investigator/create/</h3>
             <ul>
                 <li>Description: create a new investigator in the database</li>
                 <li>
@@ -159,8 +315,8 @@
 <span class="nv">$ </span>curl -iv -F <span class="s2">"name=Bob Kelso"</span> -F <span class="nv">publickey</span><span class="o">=</span>@/tmp/pubkey
 http://localhost:1664/api/v1/investigator/create/</code></pre>
         </section>
-        <section id="post-investigator-update">
-            <h3>1.8   POST /investigator/update/</h3>
+        <section id="post-root-investigator-update">
+            <h3>2.9   POST &lt;root&gt;/investigator/update/</h3>
             <ul>
                 <li>Description: update an existing investigator in the database</li>
                 <li>
@@ -178,8 +334,8 @@ http://localhost:1664/api/v1/investigator/create/</code></pre>
             </ul>
             <pre><code class="bash"><span class="nv">$ </span>curl -iv -X POST -d <span class="nv">id</span><span class="o">=</span>1234 -d <span class="nv">status</span><span class="o">=</span>disabled http://localhost:1664/api/v1/investigator/update/</code></pre>
         </section>
-        <section id="get-search">
-            <h3>1.9   GET /search</h3>
+        <section id="get-root-search">
+            <h3>2.10   GET &lt;root&gt;/search</h3>
             <ul>
                 <li>Description: search for actions, commands, agents or investigators.</li>
                 <li>
@@ -235,12 +391,13 @@ http://localhost:1664/api/v1/investigator/create/</code></pre>
                                     <blockquote>
                                         <ul>
                                             <li><cite>action</cite>: init, preparing, invalid, inflight, completed</li>
-                                            <li><cite>agent</cite>: heartbeating, upgraded, destroyed, inactive</li>
+                                            <li><cite>agent</cite>: online, upgraded, destroyed, offline</li>
                                             <li><cite>command</cite>: prepared, sent, success, timeout, cancelled, expired, failed</li>
                                             <li><cite>investigator</cite>: active, disabled</li>
                                         </ul>
                                     </blockquote>
                                 </li>
+                                <li><cite>target</cite>: returns agents that match a target query (only for <cite>agent</cite> type)</li>
                                 <li><cite>threatfamily</cite>: filter results of the threat family of the action, accept <cite>ILIKE</cite> pattern (only for types <cite>command</cite> and <cite>action</cite>)</li>
                             </ul>
                         </dd>
@@ -267,10 +424,10 @@ http://localhost:1664/api/v1/investigator/create/</code></pre>
         </section>
     </section>
     <section id="data-transformation">
-        <h2>2   Data transformation</h2>
+        <h2>3   Data transformation</h2>
         <p>The API implements several data transformation functions between the base format of <cite>action</cite> and <cite>command</cite>, and reporting formats.</p>
         <section id="compliance-items">
-            <h3>2.1   Compliance Items</h3>
+            <h3>3.1   Compliance Items</h3>
             <p>The compliance item format is used to measure the compliance of a target with particular requirement. A single compliance item represent the compliance of one target (host) with one check (test + value).</p>
             <p>In MIG, an <cite>action</cite> can contain compliance checks. An <cite>action</cite> creates one <cite>command</cite> per <cite>agent</cite>. Upon completion, the agent stores the results in the <cite>command.results</cite>. To visualize the results of an action, an investigator must look at the results of each command generated by that action.</p>
             <p>To generate compliance items, the API takes the results from commands, and creates one item per result. Therefore, a single action that creates hundreds of commands could, in turn, generate thousands of compliance items.</p>
