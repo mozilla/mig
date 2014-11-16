@@ -101,7 +101,7 @@ func (db *DB) InsertAgent(agt mig.Agent) (err error) {
 // UpdateAgentHeartbeat updates the heartbeat timestamp of an agent in the database
 func (db *DB) UpdateAgentHeartbeat(agt mig.Agent) (err error) {
 	_, err = db.c.Exec(`UPDATE agents
-		SET heartbeattime=$2 WHERE id=$1`, agt.ID, agt.HeartBeatTS)
+		SET status='online', heartbeattime=$2 WHERE id=$1`, agt.ID, agt.HeartBeatTS)
 	if err != nil {
 		return fmt.Errorf("Failed to update agent in database: '%v'", err)
 	}
@@ -114,7 +114,7 @@ func (db *DB) InsertOrUpdateAgent(agt mig.Agent) (err error) {
 	agent, err := db.AgentByQueueAndPID(agt.QueueLoc, agt.PID)
 	if err != nil {
 		agt.DestructionTime = time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
-		agt.Status = "heartbeating"
+		agt.Status = "online"
 		// create a new agent
 		return db.InsertAgent(agt)
 	} else {
@@ -129,8 +129,7 @@ func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agent
 	rows, err := db.c.Query(`SELECT agents.id, agents.name, agents.queueloc, agents.os,
 		agents.version, agents.pid, agents.starttime, agents.heartbeattime, agents.status
 		FROM agents
-		WHERE agents.heartbeattime >= $1 AND agents.heartbeattime <= NOW()
-		AND agents.queueloc=$2`, pointInTime, queueloc)
+		WHERE agents.heartbeattime > $1 AND agents.queueloc=$2`, pointInTime, queueloc)
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
@@ -152,15 +151,31 @@ func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agent
 	return
 }
 
-// ActiveAgentsByTarget runs a search for all agents that match a given target string
-func (db *DB) ActiveAgentsByTarget(target string, pointInTime time.Time) (agents []mig.Agent, err error) {
-	rows, err := db.c.Query(`SELECT DISTINCT ON (queueloc) id, name, queueloc, os, version, pid,
+// ActiveAgentsByTarget runs a search for all agents that match a given target string.
+// For safety, it does so in a transaction that runs as a readonly user.
+func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error) {
+	// save current user
+	var dbuser string
+	err = db.c.QueryRow("SELECT CURRENT_USER").Scan(&dbuser)
+	if err != nil {
+		return
+	}
+	txn, err := db.c.Begin()
+	if err != nil {
+		return
+	}
+	_, err = txn.Exec(`SET ROLE migreadonly`)
+	if err != nil {
+		_ = txn.Rollback()
+		return
+	}
+	rows, err := txn.Query(`SELECT DISTINCT ON (queueloc) id, name, queueloc, os, version, pid,
 		starttime, destructiontime, heartbeattime, status
 		FROM agents
-		WHERE agents.heartbeattime >= $1 AND agents.heartbeattime <= NOW()
-		AND (`+target+`)
-		ORDER BY agents.queueloc, agents.heartbeattime DESC`, pointInTime)
+		WHERE agents.status = 'online' AND (` + target + `)
+		ORDER BY agents.queueloc, agents.heartbeattime DESC`)
 	if err != nil {
+		_ = txn.Rollback()
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
 	}
@@ -178,6 +193,16 @@ func (db *DB) ActiveAgentsByTarget(target string, pointInTime time.Time) (agents
 	}
 	if err := rows.Err(); err != nil {
 		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
+	_, err = txn.Exec(`SET ROLE ` + dbuser)
+	if err != nil {
+		_ = txn.Rollback()
+		return
+	}
+	err = txn.Commit()
+	if err != nil {
+		_ = txn.Rollback()
+		return
 	}
 	return
 }
@@ -211,10 +236,9 @@ type AgentsSum struct {
 }
 
 // SumAgentsByVersion retrieves a sum of agents grouped by version
-func (db *DB) SumAgentsByVersion(pointInTime time.Time) (sum []AgentsSum, err error) {
+func (db *DB) SumAgentsByVersion() (sum []AgentsSum, err error) {
 	rows, err := db.c.Query(`SELECT COUNT(*), version FROM agents
-		WHERE agents.heartbeattime >= $1 AND agents.heartbeattime <= NOW()
-		GROUP BY version`, pointInTime)
+		WHERE agents.status='online' GROUP BY version`)
 	if err != nil {
 		err = fmt.Errorf("Error while counting agents: '%v'", err)
 		return
@@ -237,7 +261,7 @@ func (db *DB) SumAgentsByVersion(pointInTime time.Time) (sum []AgentsSum, err er
 
 // CountNewAgents retrieves a count of agents that started after `pointInTime`
 func (db *DB) CountNewAgents(pointInTime time.Time) (sum float64, err error) {
-	err = db.c.QueryRow(`SELECT COUNT(name) FROM agents
+	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
 		WHERE starttime >= $1 AND starttime <= NOW()`, pointInTime).Scan(&sum)
 	if err != nil {
 		err = fmt.Errorf("Error while counting agents: '%v'", err)
@@ -250,13 +274,13 @@ func (db *DB) CountNewAgents(pointInTime time.Time) (sum float64, err error) {
 }
 
 // CountDoubleAgents counts the number of endpoints that run more than one agent
-func (db *DB) CountDoubleAgents(pointInTime time.Time) (sum float64, err error) {
+func (db *DB) CountDoubleAgents() (sum float64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
 		WHERE queueloc IN (
 			SELECT queueloc FROM agents
-			WHERE heartbeattime >= $1
+			WHERE heartbeattime >= NOW() - INTERVAL '10 minutes'
 			GROUP BY queueloc HAVING count(queueloc) > 1
-		)`, pointInTime).Scan(&sum)
+		)`).Scan(&sum)
 	if err != nil {
 		err = fmt.Errorf("Error while counting double agents: '%v'", err)
 		return
@@ -283,6 +307,16 @@ func (db *DB) CountDisappearedAgents(seenSince, activeSince time.Time) (sum floa
 	}
 	if err == sql.ErrNoRows {
 		return
+	}
+	return
+}
+
+// MarkOfflineAgents updates the status of agents that have not sent a heartbeat since pointInTime
+func (db *DB) MarkOfflineAgents(pointInTime time.Time) (err error) {
+	_, err = db.c.Exec(`UPDATE agents SET status='offline'
+		WHERE heartbeattime<$1 AND status!='offline'`, pointInTime)
+	if err != nil {
+		return fmt.Errorf("Failed to mark agents as offline in database: '%v'", err)
 	}
 	return
 }

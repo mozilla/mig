@@ -542,3 +542,30 @@ func (cli Client) SignAction(a mig.Action) (signed_action mig.Action, err error)
 	signed_action = a
 	return
 }
+
+// EvaluateAgentTarget runs a search against the api to find all agents that match an action target string
+func (cli Client) EvaluateAgentTarget(target string) (agents []mig.Agent, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("EvaluateAgentTarget() -> %v", e)
+		}
+	}()
+	query := "search?type=agent&target=" + url.QueryEscape(target)
+	resource, err := cli.GetAPIResource(query)
+	if err != nil {
+		panic(err)
+	}
+	for _, item := range resource.Collection.Items {
+		for _, data := range item.Data {
+			if data.Name != "agent" {
+				continue
+			}
+			agt, err := ValueToAgent(data.Value)
+			if err != nil {
+				panic(err)
+			}
+			agents = append(agents, agt)
+		}
+	}
+	return
+}

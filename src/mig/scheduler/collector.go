@@ -46,7 +46,10 @@ func spoolInspection(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-
+	err = timeoutAgents(ctx)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
@@ -207,5 +210,25 @@ func cleanDir(ctx Context, targetDir string) (err error) {
 		}
 	}
 	dir.Close()
+	return
+}
+
+// timeoutAgents updates the status of agents that are no longer heartbeating to "offline"
+func timeoutAgents(ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("timeoutAgents() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving timeoutAgents()"}.Debug()
+	}()
+	timeOutPeriod, err := time.ParseDuration(ctx.Agent.TimeOut)
+	if err != nil {
+		panic(err)
+	}
+	pointInTime := time.Now().Add(-timeOutPeriod)
+	err = ctx.DB.MarkOfflineAgents(pointInTime)
+	if err != nil {
+		panic(err)
+	}
 	return
 }

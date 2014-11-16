@@ -283,7 +283,7 @@ Times          valid from %s until %s
 	}
 	fmt.Printf("\n")
 	fmt.Printf("Counters       sent=%d; done=%d; in flight=%d\n"+
-		"               sucess=%d; cancelled=%d; expired=%d; failed=%d; timeout=%d\n",
+		"               success=%d; cancelled=%d; expired=%d; failed=%d; timeout=%d\n",
 		a.Counters.Sent, a.Counters.Done, a.Counters.InFlight, a.Counters.Success,
 		a.Counters.Cancelled, a.Counters.Expired, a.Counters.Failed, a.Counters.TimeOut)
 	return
