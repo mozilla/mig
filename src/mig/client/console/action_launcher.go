@@ -50,7 +50,7 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 	for {
 		// completion
 		var symbols = []string{"addoperation", "deloperation", "exit", "help", "init",
-			"json", "launch", "load", "details", "filechecker", "netstat",
+			"json", "launch", "listagents", "load", "details", "filechecker", "netstat",
 			"setname", "settarget", "settimes", "sign", "times"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
@@ -134,6 +134,7 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 		case "help":
 			fmt.Printf(`The following orders are available:
 addoperation <module>	append a new operation of type <module> to the action operations
+listagents		list agents targetted by an action
 deloperation <opnum>	remove operation numbered <opnum> from operations array, count starts at zero
 details			display the action details
 exit			exit this mode
@@ -238,6 +239,20 @@ times			show the various timestamps of the action
 			fmt.Println("")
 			_ = actionReader(fmt.Sprintf("action %.0f", a.ID), cli)
 			goto exit
+		case "listagents":
+			agents, err := cli.EvaluateAgentTarget(a.Target)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+			fmt.Println("----    ID      ---- + ----         Name         -------")
+			for _, agt := range agents {
+				name := agt.Name
+				if useShortNames {
+					name = shorten(name)
+				}
+				fmt.Printf("%20.0f   %s\n", agt.ID, name)
+			}
 		case "load":
 			if len(orders) != 2 {
 				fmt.Println("Wrong arguments. Expects 'load <path_to_file>'")
@@ -276,7 +291,7 @@ times			show the various timestamps of the action
 				fmt.Println(err)
 				break
 			}
-			fmt.Printf("%d agents will be targetted. To get the list, use 'expandtarget'\n", len(agents))
+			fmt.Printf("%d agents will be targetted. To get the list, use 'listagents'\n", len(agents))
 			hasEvaluatedTarget = true
 		case "settimes":
 			// set the dates
