@@ -18,6 +18,7 @@
                     <li><a href="#example-1-invalid-timestamp">1.2   Example 1: invalid timestamp</a></li>
                     <li><a href="#example-2-invalid-signature">1.3   Example 2: invalid signature</a></li>
                     <li><a href="#generating-a-token-in-bash">1.4   Generating a token in Bash</a></li>
+                    <li><a href="#generating-a-token-in-python">1.5   Generating a token in Python</a></li>
                 </ul>
             </li>
             <li>
@@ -142,6 +143,42 @@ sig=$(gpg -a --detach-sig &lt;&lt;&lt; $token |tail -8 |head -7 \
 | sed ':a;N;$!ba;s/\n//g'); echo "X-PGPAUTHORIZATION: $token;$sig"
 
 X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</code></pre>
+        </section>
+        <section id="generating-a-token-in-python">
+            <h3>1.5   Generating a token in Python</h3>
+            <pre><code class="python"><span class="c">#!/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">gnupg</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">gmtime</span><span class="p">,</span> <span class="n">strftime</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="k">def</span> <span class="nf">makeToken</span><span class="p">(</span><span class="n">gpghome</span><span class="p">,</span> <span class="n">keyid</span><span class="p">):</span>
+    <span class="n">gpg</span> <span class="o">=</span> <span class="n">gnupg</span><span class="o">.</span><span class="n">GPG</span><span class="p">(</span><span class="n">gnupghome</span><span class="o">=</span><span class="n">gpghome</span><span class="p">)</span>
+    <span class="n">version</span> <span class="o">=</span> <span class="s">"1"</span>
+    <span class="n">timestamp</span> <span class="o">=</span> <span class="n">strftime</span><span class="p">(</span><span class="s">"%Y-%m-</span><span class="si">%d</span><span class="s">T%H:%M:%SZ"</span><span class="p">,</span> <span class="n">gmtime</span><span class="p">())</span>
+    <span class="n">nonce</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="mi">18446744073709551616</span><span class="p">))</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">version</span> <span class="o">+</span> <span class="s">";"</span> <span class="o">+</span> <span class="n">timestamp</span> <span class="o">+</span> <span class="s">";"</span> <span class="o">+</span> <span class="n">nonce</span>
+    <span class="n">sig</span> <span class="o">=</span> <span class="n">gpg</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">token</span> <span class="o">+</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span>
+        <span class="n">keyid</span><span class="o">=</span><span class="n">keyid</span><span class="p">,</span>
+        <span class="n">detach</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">clearsign</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">token</span> <span class="o">+=</span> <span class="s">";"</span>
+    <span class="n">linectr</span><span class="o">=</span><span class="mi">0</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()):</span>
+        <span class="n">linectr</span><span class="o">+=</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">linectr</span> <span class="o">&lt;</span> <span class="mi">4</span> <span class="ow">or</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">'-'</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">token</span> <span class="o">+=</span> <span class="n">line</span>
+    <span class="k">return</span> <span class="n">token</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">'__main__'</span><span class="p">:</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">makeToken</span><span class="p">(</span><span class="s">"/home/ulfr/.gnupg"</span><span class="p">,</span>
+        <span class="s">"E60892BB9BD89A69F759A1A0A3D652173B763E8F"</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">"http://localhost:12345/api/v1/dashboard"</span><span class="p">,</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s">'X-PGPAUTHORIZATION'</span><span class="p">:</span> <span class="n">token</span><span class="p">})</span>
+    <span class="k">print</span> <span class="n">token</span>
+    <span class="k">print</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span></code></pre>
         </section>
     </section>
     <section id="api-endpoints">
