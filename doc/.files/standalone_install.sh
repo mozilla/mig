@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+fail() {
+    echo configuration failed
+    exit 1
+}
+
 echo Standalone MIG demo deployment script
 which sudo 2>&1 1>/dev/null || (echo Install sudo and try again && exit 1)
 
@@ -11,19 +16,22 @@ sudo killall /sbin/mig-agent
 
 # packages dependencies
 pkglist=""
+installRabbitRPM=false
+isRPM=false
 distrib=$(head -1 /etc/issue|awk '{print $1}')
 case $distrib in
     Amazon|Fedora|Red|CentOS|Scientific)
+        isRPM=true
         PKG="yum"
-    [ ! -r "/usr/include/readline/readline.h" ] && pkglist="$pkglist readline-devel"
-    [ ! -d "/var/lib/rabbitmq" ] && echo RabbitMQ is not installed and your distribution does not ship it. Install rabbitmq-server manually and rerun this script. http://www.rabbitmq.com/download.html
-    [ ! -r "/usr/bin/postgres" ] && pkglist="$pkglist postgresql"
+        [ ! -r "/usr/include/readline/readline.h" ] && pkglist="$pkglist readline-devel"
+        [ ! -d "/var/lib/rabbitmq" ] && pkglist="$pkglist erlang" && installRabbitRPM=true
+        [ ! -r "/usr/bin/postgres" ] && pkglist="$pkglist postgresql-server"
     ;;
     Debian|Ubuntu)
         PKG="apt-get"
-    [ ! -e "/usr/include/readline/readline.h" ] && pkglist="$pkglist libreadline-dev"
-    [ ! -d "/var/lib/rabbitmq" ] && pkglist="$pkglist rabbitmq-server"
-    ls /usr/lib/postgresql/*/bin/postgres 2>&1 1>/dev/null || pkglist="$pkglist postgresql"
+        [ ! -e "/usr/include/readline/readline.h" ] && pkglist="$pkglist libreadline-dev"
+        [ ! -d "/var/lib/rabbitmq" ] && pkglist="$pkglist rabbitmq-server"
+        ls /usr/lib/postgresql/*/bin/postgres 2>&1 1>/dev/null || pkglist="$pkglist postgresql"
     ;;
 esac
 
@@ -40,39 +48,55 @@ if [ "$pkglist" != "" ]; then
     echo -n "would you list to install the missing packages? (need sudo) y/n> "
     read yesno
     if [ $yesno = "y" ]; then
-        sudo $PKG install $pkglist || ( echo FAILED && exit 1 )
+        [ "$isRPM" != true ] && (sudo apt-get update || fail)
+        sudo $PKG install $pkglist || fail
     fi
+fi
+if [ "$installRabbitRPM" = true ]; then
+    sudo rpm -Uvh https://www.rabbitmq.com/releases/rabbitmq-server/v3.4.1/rabbitmq-server-3.4.1-1.noarch.rpm
+fi
+if [ "$isRPM" = true ]; then
+    sudo service rabbitmq-server stop
+    sudo service rabbitmq-server start || fail
+    sudo service postgresql initdb
+    PGHBA=$(sudo find /var/lib -name pg_hba.conf | tail -1)
+    echo -e "\n---- Adding password authorization to $PGHBA\n"
+    echo 'host    all             all             127.0.0.1/32            password' > /tmp/hba
+    sudo grep -Ev "^#|^$" $PGHBA  >> /tmp/hba
+    sudo mv /tmp/hba $PGHBA
+    sudo service postgresql restart
 fi
 
 echo -e "\n---- Checking out MIG source code\n"
 if [ -d mig ]; then
     cd mig
-    git pull origin master || ( echo FAILED && exit 1 )
+    git pull origin master || fail
 else
-    git clone https://github.com/mozilla/mig.git || ( echo FAILED && exit 1 )
+    git clone https://github.com/mozilla/mig.git || fail
     cd mig
 fi
 
 echo -e "\n---- Retrieving build dependencies\n"
-make go_get_deps || ( echo FAILED && exit 1 )
+make go_get_deps || fail
 
 echo -e "\n---- Building MIG Scheduler\n"
-make mig-scheduler || ( echo FAILED && exit 1 )
-sudo cp bin/linux/amd64/mig-scheduler /usr/local/bin/ || ( echo FAILED && exit 1 )
-sudo chown mig /usr/local/bin/mig-scheduler || ( echo FAILED && exit 1 )
-sudo chmod 550 /usr/local/bin/mig-scheduler || ( echo FAILED && exit 1 )
+make mig-scheduler || fail
+id mig || sudo useradd -r mig || fail
+sudo cp bin/linux/amd64/mig-scheduler /usr/local/bin/ || fail
+sudo chown mig /usr/local/bin/mig-scheduler || fail
+sudo chmod 550 /usr/local/bin/mig-scheduler || fail
 
 echo -e "\n---- Building MIG API\n"
-make mig-api || ( echo FAILED && exit 1 )
-sudo cp bin/linux/amd64/mig-api /usr/local/bin/ || ( echo FAILED && exit 1 )
-sudo chown mig /usr/local/bin/mig-api || ( echo FAILED && exit 1 )
-sudo chmod 550 /usr/local/bin/mig-api || ( echo FAILED && exit 1 )
+make mig-api || fail
+sudo cp bin/linux/amd64/mig-api /usr/local/bin/ || fail
+sudo chown mig /usr/local/bin/mig-api || fail
+sudo chmod 550 /usr/local/bin/mig-api || fail
 
 echo -e "\n---- Building MIG Console\n"
-make mig-console || ( echo FAILED && exit 1 )
-sudo cp bin/linux/amd64/mig-console /usr/local/bin/ || ( echo FAILED && exit 1 )
-sudo chown mig /usr/local/bin/mig-console || ( echo FAILED && exit 1 )
-sudo chmod 555 /usr/local/bin/mig-console || ( echo FAILED && exit 1 )
+make mig-console || fail
+sudo cp bin/linux/amd64/mig-console /usr/local/bin/ || fail
+sudo chown mig /usr/local/bin/mig-console || fail
+sudo chmod 555 /usr/local/bin/mig-console || fail
 
 echo -e "\n---- Building Database\n"
 cd doc/.files
@@ -82,37 +106,37 @@ sudo su - postgres -c "psql -c 'drop role migadmin'"
 sudo su - postgres -c "psql -c 'drop role migapi'"
 sudo su - postgres -c "psql -c 'drop role migscheduler'"
 sudo su - postgres -c "psql -c 'drop role migreadonly'"
-bash createdb.sh $dbpass || ( echo FAILED && exit 1 )
+bash createdb.sh $dbpass || fail
 
 echo -e "\n---- Creating system user and folders\n"
-id mig || sudo useradd -r mig || ( echo FAILED && exit 1 )
-sudo mkdir -p /var/cache/mig/{action/new,action/done,action/inflight,action/invalid,command/done,command/inflight,command/ready,command/returned} || ( echo FAILED && exit 1 )
-sudo hostname > /tmp/agents_whitelist.txt || ( echo FAILED && exit 1 )
-sudo echo localhost >> /tmp/agents_whitelist.txt || ( echo FAILED && exit 1 )
+sudo mkdir -p /var/cache/mig/{action/new,action/done,action/inflight,action/invalid,command/done,command/inflight,command/ready,command/returned} || fail
+hostname > /tmp/agents_whitelist.txt
+hostname --fqdn >> /tmp/agents_whitelist.txt
+echo localhost >> /tmp/agents_whitelist.txt
 sudo mv /tmp/agents_whitelist.txt /var/cache/mig/
-sudo chown mig /var/cache/mig -R || ( echo FAILED && exit 1 )
-sudo mkdir /etc/mig || ( echo FAILED && exit 1 )
-sudo chown mig /etc/mig || ( echo FAILED && exit 1 )
+sudo chown mig /var/cache/mig -R || fail
+[ ! -d /etc/mig ] && sudo mkdir /etc/mig
+sudo chown mig /etc/mig || fail
 
 echo -e "\n---- Configuring RabbitMQ\n"
 mqpass=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
 sudo rabbitmqctl delete_user admin
-sudo rabbitmqctl add_user admin $mqpass || ( echo FAILED && exit 1 )
-sudo rabbitmqctl set_user_tags admin administrator || ( echo FAILED && exit 1 )
+sudo rabbitmqctl add_user admin $mqpass || fail
+sudo rabbitmqctl set_user_tags admin administrator || fail
 sudo rabbitmqctl delete_user scheduler
-sudo rabbitmqctl add_user scheduler $mqpass || ( echo FAILED && exit 1 )
+sudo rabbitmqctl add_user scheduler $mqpass || fail
 sudo rabbitmqctl delete_user agent
-sudo rabbitmqctl add_user agent $mqpass || ( echo FAILED && exit 1 )
+sudo rabbitmqctl add_user agent $mqpass || fail
 sudo rabbitmqctl add_vhost mig
 sudo rabbitmqctl list_vhosts
 sudo rabbitmqctl set_permissions -p mig scheduler \
     '^mig(|\.(heartbeat|sched\..*))' \
     '^mig.*' \
-    '^mig(|\.(heartbeat|sched\..*))' || ( echo FAILED && exit 1 )
+    '^mig(|\.(heartbeat|sched\..*))' || fail
 sudo rabbitmqctl set_permissions -p mig agent \
     "^mig\.agt\.*" \
     "^mig*" \
-    "^mig(|\.agt\..*)" || ( echo FAILED && exit 1 )
+    "^mig(|\.agt\..*)" || fail
 
 echo -e "\n---- Creating Scheduler configuration\n"
 cat > /tmp/mig-scheduler.cfg << EOF
@@ -150,9 +174,9 @@ cat > /tmp/mig-scheduler.cfg << EOF
     level = "info"
     file = "/var/cache/mig/mig-scheduler.log"
 EOF
-sudo mv /tmp/mig-scheduler.cfg /etc/mig/ || ( echo FAILED && exit 1 )
-sudo chown mig /etc/mig/mig-scheduler.cfg || ( echo FAILED && exit 1 )
-sudo chmod 750 /etc/mig/mig-scheduler.cfg || ( echo FAILED && exit 1 )
+sudo mv /tmp/mig-scheduler.cfg /etc/mig/ || fail
+sudo chown mig /etc/mig/mig-scheduler.cfg || fail
+sudo chmod 750 /etc/mig/mig-scheduler.cfg || fail
 
 echo -e "\n---- Creating API configuration\n"
 cat > /tmp/mig-api.cfg << EOF
@@ -179,17 +203,19 @@ cat > /tmp/mig-api.cfg << EOF
     level = "info"
     file = "/var/cache/mig/mig-api.log"
 EOF
-sudo mv /tmp/mig-api.cfg /etc/mig/ || ( echo FAILED && exit 1 )
-sudo chown mig /etc/mig/mig-api.cfg || ( echo FAILED && exit 1 )
-sudo chmod 750 /etc/mig/mig-api.cfg || ( echo FAILED && exit 1 )
+sudo mv /tmp/mig-api.cfg /etc/mig/ || fail
+sudo chown mig /etc/mig/mig-api.cfg || fail
+sudo chmod 750 /etc/mig/mig-api.cfg || fail
 
 echo -e "\n---- Starting Scheduler and API in TMUX under mig user\n"
 sudo su mig -c "/usr/bin/tmux new-session -s 'mig' -d"
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-scheduler -c /etc/mig/mig-scheduler.cfg'"
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-api -c /etc/mig/mig-api.cfg'"
 
+echo -e "\n---- Testing API status\n"
+sleep 2
 ret=$(curl -s http://localhost:12345/api/v1/heartbeat)
-[ "$ret" != "gatorz say hi" ] && echo API Startup FAILED && exit 1
+[ "$ret" != "gatorz say hi" ] && fail
 
 echo -e "\n---- Creating GnuPG key pair for new investigator in ~/.mig/\n"
 [ ! -d ~/.mig ] && mkdir ~/.mig
@@ -220,9 +246,9 @@ echo -e "\n---- Creating investigator $(whoami) in database\n"
 gpg --no-default-keyring --keyring ~/.mig/pubring.gpg \
     --secret-keyring ~/.mig/secring.gpg \
     --export -a $(whoami)@$(hostname) \
-    > ~/.mig/$(whoami)-pubkey.asc || ( echo FAILED && exit 1 )
+    > ~/.mig/$(whoami)-pubkey.asc || fail
 echo -e "create investigator\n$(whoami)\n$HOME/.mig/$(whoami)-pubkey.asc\ny\n" | \
-    /usr/local/bin/mig-console -q || ( echo FAILED && exit 1 )
+    /usr/local/bin/mig-console -q || fail
 
 echo -e "\n---- Creating agent configuration\n"
 cd; cd mig
@@ -277,16 +303,19 @@ var AGENTKEY = []byte("")
 EOF
 
 echo -e "\n---- Building and running local agent\n"
-make mig-agent || ( echo FAILED && exit 1 )
-sudo cp bin/linux/amd64/mig-agent-latest /sbin/mig-agent || ( echo FAILED && exit 1 )
-sudo chown root /sbin/mig-agent || ( echo FAILED && exit 1 )
-sudo chmod 500 /sbin/mig-agent || ( echo FAILED && exit 1 )
+make mig-agent || fail
+sudo cp bin/linux/amd64/mig-agent-latest /sbin/mig-agent || fail
+sudo chown root /sbin/mig-agent || fail
+sudo chmod 500 /sbin/mig-agent || fail
 sudo /sbin/mig-agent
 
 sleep 3
 echo exit | /usr/local/bin/mig-console
 
 cat << EOF
+
+        -------------------------------------------------
+
 MIG is up and running with one local agent. Try /usr/local/bin/mig-console
 
 This configuration is insecure, do not use it in production yet.
