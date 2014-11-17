@@ -200,7 +200,7 @@ cat > /tmp/mig-api.cfg << EOF
     sslmode = "disable"
 [logging]
     mode = "file" ; stdout | file | syslog
-    level = "info"
+    level = "debug"
     file = "/var/cache/mig/mig-api.log"
 EOF
 sudo mv /tmp/mig-api.cfg /etc/mig/ || fail
@@ -279,7 +279,7 @@ var LOGGINGCONF = mig.Logging{
 var AMQPBROKER string = "amqp://agent:$mqpass@localhost:5672/mig"
 var PROXIES = [...]string{``}
 var SOCKET = "127.0.0.1:51664"
-var HEARTBEATFREQ time.Duration = 300 * time.Second
+var HEARTBEATFREQ time.Duration = 30 * time.Second
 var MODULETIMEOUT time.Duration = 300 * time.Second
 var AGENTACL = [...]string{
 \`{
@@ -316,7 +316,7 @@ cat << EOF
 
         -------------------------------------------------
 
-MIG is up and running with one local agent. Try /usr/local/bin/mig-console
+MIG is up and running with one local agent.
 
 This configuration is insecure, do not use it in production yet.
 To make it secure, do the following:
@@ -334,4 +334,6 @@ To make it secure, do the following:
 
   5. Change database password of users 'migapi' and 'migscheduler'. Change rabbitmq
      passwords of users 'scheduler' and 'agent';
+
+Now to get started, launch /usr/local/bin/mig-console
 EOF
