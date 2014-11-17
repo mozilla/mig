@@ -95,8 +95,8 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	//desc := fmt.Sprintf("Received heartbeat for Agent '%s' OS '%s' QueueLoc '%s'", agt.Name, agt.OS, agt.QueueLoc)
-	//ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
+	desc := fmt.Sprintf("Received heartbeat for Agent '%s' OS '%s' QueueLoc '%s'", agt.Name, agt.OS, agt.QueueLoc)
+	ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 
 	// discard expired heartbeats
 	agtTimeOut, err := time.ParseDuration(ctx.Agent.TimeOut)
@@ -194,10 +194,10 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 		for {
 			select {
 			case msg := <-agentChan:
-				// process incoming heartbeat messages
+				// process incoming agent messages
 				ctx.OpID = mig.GenID()
-				//desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
-				//ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+				desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
 				err := recvAgentResults(msg, ctx)
 				if err != nil {
 					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
@@ -206,11 +206,11 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 			case <-time.After(agtTimeOut):
 				// expire listener and exit goroutine
 				desc := fmt.Sprintf("Listener timeout triggered for agent '%s'", agt.Name)
-				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
 				goto exit
 			}
 		}
-		desc = fmt.Sprintf("Closing heartbeat goroutine for agent '%s'", agt.Name)
+		desc = fmt.Sprintf("Closing listener for agent '%s'", agt.Name)
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}
 	exit:
 		for i, q := range activeAgentsList {
@@ -222,7 +222,7 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 		}
 	}()
 
-	desc := fmt.Sprintf("startAgentactiveAgentsListener: started recvAgentResults goroutine for agent '%s'", agt.Name)
+	desc := fmt.Sprintf("startAgentsListener: started listener for agent '%s' on queue '%s'", agt.Name, queue)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
 
 	// add the new active queue to the activeAgentsList

@@ -206,7 +206,7 @@ func main() {
 		panic(err)
 	}
 
-	// launch the routine that handles registrations
+	// launch the routine that processes agents heartbeats
 	go func() {
 		for msg := range activeAgentsChan {
 			ctx.OpID = mig.GenID()
