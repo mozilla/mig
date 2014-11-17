@@ -373,8 +373,8 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 		// check that the module is available and pass the command to the execution channel
 		if _, ok := mig.AvailableModules[operation.Module]; ok {
 			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("calling module '%s'", operation.Module)}.Debug()
-			ctx.Channels.RunAgentCommand <- currentOp
 			runningOps[currentOp.id] = currentOp
+			ctx.Channels.RunAgentCommand <- currentOp
 		} else {
 			// no module is available, return an error
 			currentOp.err = fmt.Errorf("module '%s' is not available", operation.Module)
@@ -489,6 +489,9 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 	// create the slice of results and insert each incoming
 	// result at the right position: operation[0] => results[0]
 	cmd.Results = make([]mig.ModuleResult, opsCounter)
+
+	// assume everything went fine, and reset the status if errors are found
+	cmd.Status = mig.StatusSuccess
 
 	// process failed operations first
 	for _, op := range runningOps {
