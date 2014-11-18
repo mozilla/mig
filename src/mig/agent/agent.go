@@ -398,21 +398,29 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 	return
 }
 
-// runAgentModule is a generic command launcher for MIG modules that are
-// built into the agent's binary. It handles commands timeout.
+// runAgentModule is a generic module launcher that takes an operation and calls
+// the mig-agent binary with the proper module parameters. It sets a timeout on
+// execution and kills the module if needed. On success, it stores the output from
+// the module in a moduleResult struct and passes it along to the function that aggregates
+// all results
 func runAgentModule(ctx Context, op moduleOp) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("runAgentModule() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "leaving runAgentModule()"}.Debug()
-		// upon exit, remove the op from the running Ops
-		delete(runningOps, op.id)
-	}()
-
 	var result moduleResult
 	result.id = op.id
 	result.position = op.position
+	defer func() {
+		if e := recover(); e != nil {
+			// if running the module failed, store the error in the module result
+			// and sets the status to failed before passing the results along
+			err = fmt.Errorf("runAgentModule() -> %v", e)
+			result.err = err
+			result.status = mig.StatusFailed
+		}
+		// upon exit, remove the op from the running Ops
+		delete(runningOps, op.id)
+		// whatever happens, always send the results
+		op.resultChan <- result
+		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "leaving runAgentModule()"}.Debug()
+	}()
 
 	ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: fmt.Sprintf("executing module '%s'", op.mode)}.Debug()
 	// waiter is a channel that receives a message when the timeout expires
@@ -448,7 +456,6 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 
 		// update the command status and send the response back
 		result.status = mig.StatusTimeout
-		op.resultChan <- result
 
 		// kill the command
 		err := cmd.Process.Kill()
@@ -457,13 +464,10 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 		}
 		<-waiter // allow goroutine to exit
 
-	// Normal exit case: command has finished before the timeout
+	// Normal exit case: command has run successfully
 	case err := <-waiter:
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command failed."}.Err()
-			// update the command status and send the response back
-			result.status = mig.StatusFailed
-			op.resultChan <- result
 			panic(err)
 
 		} else {
@@ -474,10 +478,10 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 			}
 			// mark command status as successfully completed
 			result.status = mig.StatusSuccess
-			// send the results
-			op.resultChan <- result
 		}
 	}
+	// return executes the defer block at the top of the function, which passes module result
+	// into the result channel
 	return
 }
 
