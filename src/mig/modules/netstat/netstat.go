@@ -313,16 +313,21 @@ func HasLocalIP(ipStr string) (found bool, elements []element, err error) {
 }
 
 func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("PrintResults() -> %v", e)
+		}
+	}()
 	var modres mig.ModuleResult
 	err = json.Unmarshal(rawResults, &modres)
 	if err != nil {
 		panic(err)
 	}
-	buf, err := json.Marshal(modres)
+	buf, err := json.Marshal(modres.Elements)
 	if err != nil {
 		panic(err)
 	}
-	var els elements
+	els := *newElements()
 	err = json.Unmarshal(buf, &els)
 	if err != nil {
 		panic(err)

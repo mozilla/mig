@@ -194,7 +194,7 @@ times			show the various timestamps of the action
 					fmt.Println("0 agents match this target. launch aborted")
 					break
 				}
-				fmt.Printf("%d agents will be targetted by search \"%s\"\n", count, a.Target)
+				fmt.Printf("%d agents will be targeted by search \"%s\"\n", count, a.Target)
 				input, err = readline.String("continue? (y/n)> ")
 				if err != nil {
 					panic(err)
