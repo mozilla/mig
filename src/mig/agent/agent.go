@@ -14,6 +14,7 @@ import (
 	"mig"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -43,6 +44,13 @@ type moduleOp struct {
 var runningOps = make(map[float64]moduleOp)
 
 func main() {
+	// only use half the cpus available on the machine, never more
+	cpus := runtime.NumCPU() / 2
+	if cpus == 0 {
+		cpus = 1
+	}
+	runtime.GOMAXPROCS(cpus)
+
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
 	var debug = flag.Bool("d", false, "Debug mode: run in foreground, log to stdout.")
