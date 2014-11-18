@@ -309,7 +309,7 @@ sudo chmod 500 /sbin/mig-agent || fail
 sudo /sbin/mig-agent
 
 sleep 3
-echo exit | /usr/local/bin/mig-console
+echo -e "create action\nload examples/actions/integration_tests.json\nlaunch\ny\nresults\n" | /usr/local/bin/mig-console
 
 cat << EOF
 
