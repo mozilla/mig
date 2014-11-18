@@ -261,7 +261,6 @@ import(
     _ "mig/modules/netstat"
     _ "mig/modules/upgrade"
     _ "mig/modules/agentdestroy"
-    _ "mig/modules/example"
 )
 var TAGS = struct {
     Operator string \`json:"operator"\`
@@ -274,7 +273,7 @@ var DISCOVERPUBLICIP = false
 var LOGGINGCONF = mig.Logging{
     Mode:   "file",
     Level:  "debug",
-    File:   "//var/cache/mig/mig-agent.log",
+    File:   "/var/cache/mig/mig-agent.log",
 }
 var AMQPBROKER string = "amqp://agent:$mqpass@localhost:5672/mig"
 var PROXIES = [...]string{``}
