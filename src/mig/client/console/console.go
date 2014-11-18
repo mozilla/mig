@@ -201,7 +201,7 @@ func printStatus(cli client.Client) (err error) {
 				str := fmt.Sprintf("%s   %s   %s   %s", idstr, name, datestr, invs)
 				actout = append(actout, str)
 			case "active agents":
-				agtout[1] = fmt.Sprintf("* %.0f agents have checked in during the last 5 minutes", data.Value)
+				agtout[1] = fmt.Sprintf("* %.0f active agents", data.Value)
 			case "agents versions count":
 				bData, err := json.Marshal(data.Value)
 				if err != nil {

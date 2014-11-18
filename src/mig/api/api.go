@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jvehent/cljs"
 	"mig"
-	migdb "mig/database"
 	"net/http"
 	"os"
 	"runtime"
@@ -375,22 +374,4 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 		resource.AddItem(actionItem)
 	}
 	respond(200, resource, respWriter, request)
-}
-
-// agentsSumToItem receives an AgentsSum and returns an Item
-// in the Collection+JSON format
-func agentsSummaryToItem(sum []migdb.AgentsSum, count, double, disappeared float64, ctx Context) (item cljs.Item, err error) {
-	item.Href = fmt.Sprintf("%s/dashboard", ctx.Server.BaseURL)
-	var total float64 = 0
-	for _, asum := range sum {
-		total += asum.Count
-	}
-	item.Data = []cljs.Data{
-		{Name: "active agents", Value: total},
-		{Name: "agents versions count", Value: sum},
-		{Name: "agents started in the last 24 hours", Value: count},
-		{Name: "endpoints running 2 or more agents", Value: double},
-		{Name: "endpoints that have disappeared over last 7 days", Value: disappeared},
-	}
-	return
 }
