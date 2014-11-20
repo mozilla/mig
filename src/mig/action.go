@@ -196,7 +196,15 @@ func (a Action) Sign(keyid string, secring io.Reader) (sig string, err error) {
 			err = fmt.Errorf("Sign() -> %v", e)
 		}
 	}()
-	str, err := a.String()
+	filename, err := a.ToTempFile()
+	if err != nil {
+		panic(err)
+	}
+	a2, err := mig.ActionFromFile(filename)
+	if err != nil {
+		panic(err)
+	}
+	str, err := a2.String()
 	if err != nil {
 		panic(err)
 	}
