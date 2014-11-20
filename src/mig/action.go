@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"mig/pgp"
+	"os"
 	"strconv"
 	"time"
 )
@@ -101,6 +102,34 @@ func ActionFromFile(path string) (Action, error) {
 	}
 
 	return a, err
+}
+
+// ToTempFile writes an action into a generated temporary file and returns its filename
+func (a Action) ToTempFile() (filename string, err error) {
+	var (
+		data []byte
+		fd   *os.File
+		fi   os.FileInfo
+	)
+	data, err = json.Marshal(a)
+	if err != nil {
+		return
+	}
+	fd, err = ioutil.TempFile("", "migaction_")
+	defer fd.Close()
+	if err != nil {
+		return
+	}
+	_, err = fd.Write(data)
+	if err != nil {
+		return
+	}
+	fi, err = fd.Stat()
+	if err != nil {
+		return
+	}
+	filename = fmt.Sprintf("%s/%s", os.TempDir(), fi.Name())
+	return
 }
 
 const MAXINT = int(^uint(0) >> 1)

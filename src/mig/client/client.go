@@ -529,12 +529,20 @@ func (cli Client) SignAction(a mig.Action) (signed_action mig.Action, err error)
 			err = fmt.Errorf("SignAction() -> %v", e)
 		}
 	}()
+	filename, err := a.ToTempFile()
+	if err != nil {
+		panic(err)
+	}
+	a2, err := mig.ActionFromFile(filename)
+	if err != nil {
+		panic(err)
+	}
 	secring, err := os.Open(cli.Conf.GPG.Home + "/secring.gpg")
 	if err != nil {
 		panic(err)
 	}
 	defer secring.Close()
-	sig, err := a.Sign(cli.Conf.GPG.KeyID, secring)
+	sig, err := a2.Sign(cli.Conf.GPG.KeyID, secring)
 	if err != nil {
 		panic(err)
 	}
