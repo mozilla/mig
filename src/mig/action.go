@@ -200,7 +200,7 @@ func (a Action) Sign(keyid string, secring io.Reader) (sig string, err error) {
 	if err != nil {
 		panic(err)
 	}
-	a2, err := mig.ActionFromFile(filename)
+	a2, err := ActionFromFile(filename)
 	if err != nil {
 		panic(err)
 	}
