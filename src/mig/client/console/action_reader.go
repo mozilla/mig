@@ -373,15 +373,18 @@ func actionPrintResults(a mig.Action, links []cljs.Link, orders []string, cli cl
 			id := strings.Split(link.Href, "=")[1]
 			cmdid, err := strconv.ParseFloat(id, 64)
 			if err != nil {
-				panic(err)
+				fmt.Println("ERROR: invalid command id in link:", link)
+				continue
 			}
 			cmd, err := cli.GetCommand(cmdid)
 			if err != nil {
-				panic(err)
+				fmt.Println("ERROR: failed to get command id", cmdid)
+				continue
 			}
 			err = commandPrintResults(cmd, found, true)
 			if err != nil {
-				panic(err)
+				fmt.Println("ERROR: failed to print results from command id", cmdid)
+				continue
 			}
 		}
 	}
