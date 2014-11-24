@@ -9,15 +9,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/bobappleyard/readline"
 	"io"
 	"log"
 	"mig"
 	"mig/client"
 	migdb "mig/database"
 	"os"
+	"strconv"
 	"strings"
-
-	"github.com/bobappleyard/readline"
 )
 
 var useShortNames bool
@@ -55,6 +55,14 @@ func main() {
 	// shorten names for obfuscation, useful during demoes
 	if *shortnames {
 		useShortNames = true
+	// load history
+	historyfile := homedir + "/.mig_history"
+	fi, err := os.Stat(historyfile)
+	if err == nil && fi.Size() > 0 {
+		err = readline.LoadHistory(historyfile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to load history from %s\n", historyfile)
+		}
 	}
 
 	// instanciate an API client
@@ -71,8 +79,8 @@ func main() {
 	fmt.Fprintf(out, "\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", cli.Conf.API.URL)
 	for {
 		// completion
-		var symbols = []string{"action", "agent", "create", "command", "help", "exit", "showcfg",
-			"status", "investigator", "search", "where", "and"}
+		var symbols = []string{"action", "agent", "create", "command", "help", "history",
+			"exit", "showcfg", "status", "investigator", "search", "where", "and"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -141,11 +149,24 @@ create investigator	create a new investigator, will prompt for name and public k
 command <id>		enter command reader mode for command <id>
 exit			leave
 help			show this help
+history <count>		print last <count> entries in history. count=10 by default.
 investigator <id>	enter interactive investigator management mode for investigator <id>
 search			perform a search. see "search help" for more information.
 showcfg			display running configuration
 status			display platform status: connected agents, latest actions, ...
 `)
+		case "history":
+			var count int64 = 10
+			if len(orders) > 1 {
+				count, err = strconv.ParseInt(orders[1], 10, 64)
+				if err != nil {
+					log.Println(err)
+					break
+				}
+			}
+			for i := readline.HistorySize(); i > 0 && count > 0; i, count = i-1, count-1 {
+				fmt.Println(readline.GetHistory(i - 1))
+			}
 		case "investigator":
 			err = investigatorReader(input, cli)
 			if err != nil {
@@ -173,6 +194,10 @@ status			display platform status: connected agents, latest actions, ...
 	}
 exit:
 	fmt.Fprintf(out, footer)
+	err = readline.SaveHistory(historyfile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to save history to %s\n", historyfile)
+	}
 }
 
 func printStatus(cli client.Client) (err error) {
