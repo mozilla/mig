@@ -1347,9 +1347,6 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 		}
 	}
 	if !foundOnly {
-		for _, we := range results.Errors {
-			prints = append(prints, we)
-		}
 		stat := fmt.Sprintf("Statistics: %.0f checks tested on %.0f files. %.0f failed to open. %.0f checks matched on %.0f files. %.0f total hits. ran in %s.",
 			results.Statistics.Checkcount, results.Statistics.Filescount, results.Statistics.Openfailed, results.Statistics.Checksmatch, results.Statistics.Uniquefiles,
 			results.Statistics.Totalhits, results.Statistics.Exectime)

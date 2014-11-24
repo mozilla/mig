@@ -706,17 +706,23 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 		if err != nil {
 			panic(err)
 		}
-		if len(cmd.Action.Operations) <= i {
-			fmt.Fprintf(os.Stderr, "%s[error] no operation maps results %d\n", prefix, i)
+		if !onlyFound {
 			for _, rerr := range result.Errors {
 				fmt.Fprintf(os.Stderr, "%s[error] %s\n", prefix, rerr)
+			}
+		}
+		if len(cmd.Action.Operations) <= i {
+			if !onlyFound {
+				fmt.Fprintf(os.Stderr, "%s[error] no operation maps results %d\n", prefix, i)
 			}
 			continue
 		}
 		// verify that we know the module
 		moduleName := cmd.Action.Operations[i].Module
 		if _, ok := mig.AvailableModules[moduleName]; !ok {
-			fmt.Fprintf(os.Stderr, "%s[error] unknown module '%s'\n", prefix, moduleName)
+			if !onlyFound {
+				fmt.Fprintf(os.Stderr, "%s[error] unknown module '%s'\n", prefix, moduleName)
+			}
 			continue
 		}
 		modRunner := mig.AvailableModules[moduleName]()
@@ -730,7 +736,9 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 				fmt.Printf("%s%s\n", prefix, res)
 			}
 		} else {
-			fmt.Fprintf(os.Stderr, "%s[error] no printer available for module '%s'\n", prefix, moduleName)
+			if !onlyFound {
+				fmt.Fprintf(os.Stderr, "%s[error] no printer available for module '%s'\n", prefix, moduleName)
+			}
 		}
 	}
 	if !onlyFound {
