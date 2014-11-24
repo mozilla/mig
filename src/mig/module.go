@@ -62,3 +62,8 @@ type HasResultsPrinter interface {
 type HasParamsCreator interface {
 	ParamsCreator() (interface{}, error)
 }
+
+// HasParamsParser implements a function that parses command line parameters
+type HasParamsParser interface {
+	ParamsParser([]string) (interface{}, error)
+}

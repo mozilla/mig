@@ -97,7 +97,7 @@ mig-cmd:
 	if [ ! -r $(AVAILMODS) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
 	cp $(AVAILMODS) src/mig/client/cmd/available_modules.go
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-cmd $(GOLDFLAGS) mig/client/cmd
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig $(GOLDFLAGS) mig/client/cmd
 
 mig-agentsearch:
 	$(MKDIR) -p $(BINDIR)
