@@ -116,8 +116,9 @@ ls <filter>	returns the list of commands with their status
 		'filter' is a pipe separated string of filter:
 		ex: ls | grep server1.(dom1|dom2) | grep -v example.net
 r		refresh the action (get latest version from upstream)
-results <found> display results of all commands, limit to results that have
-                found something is <found> is declared
+results <show>  display results of all commands, <show> is set to "all" by default
+		set to "found" to only display positive results
+		set to "notfound" for negative results
 times		show the various timestamps of the action
 `)
 		case "investigators":
@@ -141,7 +142,7 @@ times		show the various timestamps of the action
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("Reload succeeded")
+			fmt.Println("reloaded")
 		case "results":
 			show := "all"
 			if len(orders) > 1 {

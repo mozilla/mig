@@ -55,18 +55,6 @@ mig-agent:
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] && echo SUCCESS && exit 0
 
-#mig-agent-all: mig-agent-386 mig-agent-amd64
-#
-#mig-agent-386:
-#	make OS=linux ARCH=386 mig-agent
-#	make OS=darwin ARCH=386 mig-agent
-#	make OS=windows ARCH=386 mig-agent
-#
-#mig-agent-amd64:
-#	make OS=linux ARCH=amd64 mig-agent
-#	make OS=darwin ARCH=amd64 mig-agent
-#	make OS=windows ARCH=amd64 mig-agent
-
 mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig/scheduler

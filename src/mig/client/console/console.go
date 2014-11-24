@@ -59,14 +59,13 @@ func main() {
 			fmt.Fprintf(os.Stderr, "failed to load history from %s\n", historyfile)
 		}
 	}
-
 	// instanciate an API client
 	conf, err := client.ReadConfiguration(*config)
 	if err != nil {
 		panic(err)
 	}
 	cli := client.NewClient(conf)
-
+	// print platform status
 	err = printStatus(cli)
 	if err != nil {
 		log.Fatal(err)
