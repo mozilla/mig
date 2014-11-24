@@ -691,49 +691,50 @@ func (cli Client) PrintActionResults(a mig.Action, show string) (err error) {
 	return
 }
 
-func PrintCommandResults(cmd mig.Command, found, showAgent bool) (err error) {
+func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PrintCommandResults() -> %v", e)
 		}
 	}()
+	var prefix string
+	if showAgent {
+		prefix = cmd.Agent.Name + " "
+	}
 	for i, result := range cmd.Results {
 		buf, err := json.Marshal(result)
 		if err != nil {
 			panic(err)
 		}
 		if len(cmd.Action.Operations) <= i {
-			fmt.Fprintf(os.Stderr, "[error] no operation maps results %d\n", i)
+			fmt.Fprintf(os.Stderr, "%s[error] no operation maps results %d\n", prefix, i)
 			for _, rerr := range result.Errors {
-				fmt.Fprintf(os.Stderr, "[error] %s\n", rerr)
+				fmt.Fprintf(os.Stderr, "%s[error] %s\n", prefix, rerr)
 			}
 			continue
 		}
 		// verify that we know the module
 		moduleName := cmd.Action.Operations[i].Module
 		if _, ok := mig.AvailableModules[moduleName]; !ok {
-			fmt.Fprintf(os.Stderr, "Skipping unknown module '%s'\n", moduleName)
+			fmt.Fprintf(os.Stderr, "%s[error] unknown module '%s'\n", prefix, moduleName)
 			continue
 		}
 		modRunner := mig.AvailableModules[moduleName]()
 		// look for a result printer in the module
 		if _, ok := modRunner.(mig.HasResultsPrinter); ok {
-			results, err := modRunner.(mig.HasResultsPrinter).PrintResults(buf, found)
+			results, err := modRunner.(mig.HasResultsPrinter).PrintResults(buf, onlyFound)
 			if err != nil {
 				panic(err)
 			}
 			for _, res := range results {
-				if showAgent {
-					agtname := cmd.Agent.Name
-					fmt.Printf("%s %s\n", agtname, res)
-				} else {
-					fmt.Println(res)
-				}
+				fmt.Printf("%s%s\n", prefix, res)
 			}
 		} else {
-			fmt.Fprintf(os.Stderr, "no printer available for module '%s'\n", moduleName)
+			fmt.Fprintf(os.Stderr, "%s[error] no printer available for module '%s'\n", prefix, moduleName)
 		}
 	}
-	fmt.Fprintf(os.Stderr, "command status: %s\n", cmd.Status)
+	if !onlyFound {
+		fmt.Printf("%scommand %s\n", prefix, cmd.Status)
+	}
 	return
 }
