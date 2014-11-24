@@ -28,6 +28,7 @@ DESTDIR		:= /
 GPGMEDIR	:= src/mig/pgp/sign
 BINDIR		:= bin/$(OS)/$(ARCH)
 AGTCONF		:= conf/mig-agent-conf.go
+AVAILMODS	:= conf/available_modules.go
 
 GCC			:= gcc
 CFLAGS		:=
@@ -47,6 +48,8 @@ mig-agent:
 	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
 	cp $(AGTCONF) src/mig/agent/configuration.go
+	if [ ! -r $(AVAILMODS) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
+	cp $(AVAILMODS) src/mig/agent/available_modules.go
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig/agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
@@ -85,10 +88,14 @@ mig-action-verifier:
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig/client/verifier
 
 mig-console:
+	if [ ! -r $(AVAILMODS) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
+	cp $(AVAILMODS) src/mig/client/console/available_modules.go
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig/client/console
 
 mig-cmd:
+	if [ ! -r $(AVAILMODS) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
+	cp $(AVAILMODS) src/mig/client/cmd/available_modules.go
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-cmd $(GOLDFLAGS) mig/client/cmd
 

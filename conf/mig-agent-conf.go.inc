@@ -8,12 +8,6 @@ package main
 import(
 	"mig"
 	"time"
-
-    _ "mig/modules/filechecker"
-    _ "mig/modules/netstat"
-    _ "mig/modules/upgrade"
-    _ "mig/modules/agentdestroy"
-    _ "mig/modules/example"
 )
 
 // some tags that are useful to differentiate agents. You can add whatever
