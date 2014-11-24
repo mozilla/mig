@@ -5,6 +5,10 @@ bin/*
 conf/*
 !conf/*.inc
 src/mig/agent/configuration.go
+src/mig/*/available_modules.go
+src/mig/*/*/available_modules.go
+src/mig/*/*/*/available_modules.go
+!conf/available_modules.go
 *.a
 *.so
 *.o
