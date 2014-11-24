@@ -230,6 +230,7 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 			err = fmt.Errorf("PostAction() -> %v", e)
 		}
 	}()
+	a.SyntaxVersion = mig.ActionVersion
 	// serialize
 	ajson, err := json.Marshal(a)
 	if err != nil {

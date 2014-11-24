@@ -31,7 +31,6 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 	var a mig.Action
 	if tpl.ID == 0 {
 		fmt.Println("Entering action launcher with empty template")
-		a.SyntaxVersion = mig.ActionVersion
 	} else {
 		// reinit the fields that we don't reuse
 		a.Name = tpl.Name
@@ -39,7 +38,6 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 		a.Description = tpl.Description
 		a.Threat = tpl.Threat
 		a.Operations = tpl.Operations
-		a.SyntaxVersion = tpl.SyntaxVersion
 		fmt.Printf("Entering action launcher using template '%s'\n", a.Name)
 	}
 	hasTimes := false
