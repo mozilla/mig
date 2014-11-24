@@ -314,9 +314,6 @@ func actionPrintLinks(links []cljs.Link, orders []string) (err error) {
 	}
 	ctr := 0
 	for _, link := range links {
-		if useShortNames {
-			link.Rel = link.Rel[0:40] + shorten(link.Rel[40:len(link.Rel)])
-		}
 		if has_filter {
 			str, err := filterString(link.Rel, filter)
 			if err != nil {

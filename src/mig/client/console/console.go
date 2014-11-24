@@ -32,7 +32,6 @@ func main() {
 	homedir := client.FindHomedir()
 	// command line options
 	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
-	var shortnames = flag.Bool("s", false, "Shorten all agent names to first and last 5 characters)")
 	var quiet = flag.Bool("q", false, "don't display banners and prompts")
 	flag.Parse()
 
@@ -51,10 +50,6 @@ func main() {
 
 	// append a space after completion
 	readline.CompletionAppendChar = 0x20
-
-	// shorten names for obfuscation, useful during demoes
-	if *shortnames {
-		useShortNames = true
 	// load history
 	historyfile := homedir + "/.mig_history"
 	fi, err := os.Stat(historyfile)
@@ -267,20 +262,6 @@ func printStatus(cli client.Client) (err error) {
 	}
 	fmt.Println("\x1b[31;1m+------\x1b[0m")
 	return
-}
-
-func shorten(p string) string {
-	if len(p) < 8 {
-		return p
-	}
-	out := p[0:7]
-	out += "."
-	out += "."
-	out += "."
-	if len(p) > 18 {
-		out += p[len(p)-7 : len(p)]
-	}
-	return out
 }
 
 var banner string = `

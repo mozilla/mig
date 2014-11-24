@@ -61,9 +61,6 @@ The following search parameters are available:
 		fmt.Println("----    ID      ---- + ----         Name         ---- + -- Status -- + -- Last Heartbeat --")
 		for _, agt := range agents {
 			name := agt.Name
-			if useShortNames {
-				name = shorten(name)
-			}
 			if len(name) < 30 {
 				for i := len(name); i < 30; i++ {
 					name += " "

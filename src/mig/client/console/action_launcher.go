@@ -245,11 +245,7 @@ times			show the various timestamps of the action
 			}
 			fmt.Println("----    ID      ---- + ----         Name         -------")
 			for _, agt := range agents {
-				name := agt.Name
-				if useShortNames {
-					name = shorten(name)
-				}
-				fmt.Printf("%20.0f   %s\n", agt.ID, name)
+				fmt.Printf("%20.0f   %s\n", agt.ID, agt.Name)
 			}
 		case "load":
 			if len(orders) != 2 {
