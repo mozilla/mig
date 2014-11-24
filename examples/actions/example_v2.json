@@ -14,7 +14,7 @@
     },
     "operations": [
         {
-            "module": "filechecker",
+            "module": "file",
             "parameters": {
                 "searches": {
                     "pkeyhomedir": {
