@@ -483,8 +483,14 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 		if err != nil {
 			panic(err)
 		}
+		// write command to InFlight directory
+		dest := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
+		err = safeWrite(ctx, dest, data)
+		if err != nil {
+			panic(err)
+		}
+		// send amqp message with an expiration timer
 		expire := cmd.Action.ExpireAfter.Sub(cmd.Action.ValidFrom)
-		// build amqp message for sending
 		msg := amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			Timestamp:    time.Now(),
@@ -493,7 +499,6 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 			Body:         []byte(data),
 		}
 		agtQueue := fmt.Sprintf("mig.agt.%s", cmd.Agent.QueueLoc)
-		// send
 		go func() {
 			err = ctx.MQ.Chan.Publish("mig", agtQueue, true, false, msg)
 			if err != nil {
@@ -502,12 +507,6 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command sent to agent queue"}.Debug()
 			}
 		}()
-		// write command to InFlight directory
-		dest := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
-		err = safeWrite(ctx, dest, data)
-		if err != nil {
-			panic(err)
-		}
 	}
 	return
 }
@@ -529,7 +528,7 @@ func recvAgentResults(msg amqp.Delivery, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Received result from '%s'", msg.RoutingKey)}.Debug()
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("received result on '%s'", msg.RoutingKey)}
 
 	return
 }
