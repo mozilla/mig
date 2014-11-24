@@ -515,6 +515,9 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 				panic(err)
 			}
 			resultReceived++
+			if resultReceived >= opsCounter {
+				goto finish
+			}
 		}
 	}
 
@@ -532,7 +535,7 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 			break
 		}
 	}
-
+finish:
 	// forward the updated command
 	ctx.Channels.Results <- cmd
 
