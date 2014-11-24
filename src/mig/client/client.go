@@ -587,6 +587,11 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 	attempts := 0
 	var completion float64
 	for {
+		if completion > 97 {
+			// if we got 97% completion, exit following mode.
+			// there is always a couple % that are late and we don't want to block.
+			goto finish
+		}
 		a, _, err = cli.GetAction(a.ID)
 		if err != nil {
 			attempts++
@@ -623,7 +628,7 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 		}
 		if a.Counters.Done > 0 && a.Counters.Done > previousctr {
 			completion = (float64(a.Counters.Done) / float64(a.Counters.Sent)) * 100
-			if completion > 99.9 && a.Counters.Done != a.Counters.Sent {
+			if completion > 99 && a.Counters.Done != a.Counters.Sent {
 				completion = 99.9
 			}
 			previousctr = a.Counters.Done
@@ -634,7 +639,7 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 		dotter++
 	}
 finish:
-	fmt.Fprintf(os.Stderr, "done in %s\n", time.Now().Sub(a.StartTime).String())
+	fmt.Fprintf(os.Stderr, "%2.1f%% done in %s\n", completion, time.Now().Sub(a.StartTime).String())
 	a.PrintCounters()
 	return
 }
