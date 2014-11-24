@@ -11,6 +11,7 @@ import (
 	"mig"
 	"mig/client"
 	"os"
+	"os/signal"
 	"time"
 )
 
@@ -59,7 +60,7 @@ func main() {
 	)
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("FATAL: %v", e)
+			fmt.Fprintf(os.Stderr, "FATAL: %v\n", e)
 		}
 	}()
 	homedir := client.FindHomedir()
@@ -155,10 +156,24 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = cli.FollowAction(a)
-	if err != nil {
-		panic(err)
+	c := make(chan os.Signal, 1)
+	done := make(chan bool, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		err = cli.FollowAction(a)
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+	select {
+	case <-c:
+		fmt.Fprintf(os.Stderr, "stop following action. agents may still be running. printing available results:\n")
+		goto printresults
+	case <-done:
+		goto printresults
 	}
+printresults:
 	err = cli.PrintActionResults(a, show)
 	if err != nil {
 		panic(err)
