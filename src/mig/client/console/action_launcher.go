@@ -229,7 +229,7 @@ times			show the various timestamps of the action
 			fmt.Printf("Action '%s' successfully launched with ID '%.0f' on target '%s'\n",
 				a.Name, a.ID, a.Target)
 			if follow {
-				err = followAction(a, cli)
+				err = cli.FollowAction(a)
 				if err != nil {
 					panic(err)
 				}

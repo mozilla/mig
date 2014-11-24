@@ -143,7 +143,16 @@ times		show the various timestamps of the action
 			}
 			fmt.Println("Reload succeeded")
 		case "results":
-			err = actionPrintResults(a, links, orders, cli)
+			show := "all"
+			if len(orders) > 1 {
+				switch orders[1] {
+				case "found":
+					show = "found"
+				case "notfound":
+					show = "notfound"
+				}
+			}
+			err = cli.PrintActionResults(a, show)
 			if err != nil {
 				panic(err)
 			}
@@ -328,67 +337,5 @@ func actionPrintLinks(links []cljs.Link, orders []string) (err error) {
 		fmt.Printf("s")
 	}
 	fmt.Printf(" found\n")
-	return
-}
-
-func actionPrintResults(a mig.Action, links []cljs.Link, orders []string, cli client.Client) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("actionPrintResuls() -> %v", e)
-		}
-	}()
-	found := false
-	if len(orders) > 1 {
-		if orders[1] == "found" {
-			found = true
-		} else {
-			fmt.Printf("Unknown option '%s'\n", orders[1])
-		}
-	}
-	if found {
-		// if we want foundes, use the search api, it's faster than
-		// iterating through each link when we have thousands of them
-		target := "search?type=command&limit=1000000&foundanything=true"
-		target += "&actionid=" + fmt.Sprintf("%.0f", a.ID)
-		resource, err := cli.GetAPIResource(target)
-		if err != nil {
-			panic(err)
-		}
-		for _, item := range resource.Collection.Items {
-			for _, data := range item.Data {
-				if data.Name != "command" {
-					continue
-				}
-				cmd, err := client.ValueToCommand(data.Value)
-				if err != nil {
-					panic(err)
-				}
-				err = commandPrintResults(cmd, true, true)
-				if err != nil {
-					panic(err)
-				}
-			}
-		}
-	} else {
-		for _, link := range links {
-			// TODO: replace the url parsing hack with proper link creation in API response
-			id := strings.Split(link.Href, "=")[1]
-			cmdid, err := strconv.ParseFloat(id, 64)
-			if err != nil {
-				fmt.Println("ERROR: invalid command id in link:", link)
-				continue
-			}
-			cmd, err := cli.GetCommand(cmdid)
-			if err != nil {
-				fmt.Println("ERROR: failed to get command id", cmdid)
-				continue
-			}
-			err = commandPrintResults(cmd, found, true)
-			if err != nil {
-				fmt.Println("ERROR: failed to print results from command id", cmdid)
-				continue
-			}
-		}
-	}
 	return
 }

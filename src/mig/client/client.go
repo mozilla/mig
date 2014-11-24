@@ -570,3 +570,170 @@ func (cli Client) EvaluateAgentTarget(target string) (agents []mig.Agent, err er
 	}
 	return
 }
+
+// FollowAction continuously loops over an action and prints its completion status in os.Stderr.
+// when the action reaches its expiration date, FollowAction prints its final status and returns.
+func (cli Client) FollowAction(a mig.Action) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("followAction() -> %v", e)
+		}
+	}()
+	fmt.Fprintf(os.Stderr, "Following action ID %.0f. ", a.ID)
+	sent := 0
+	dotter := 0
+	previousctr := 0
+	status := ""
+	attempts := 0
+	var completion float64
+	for {
+		a, _, err = cli.GetAction(a.ID)
+		if err != nil {
+			attempts++
+			time.Sleep(1 * time.Second)
+			if attempts >= 30 {
+				panic("failed to retrieve action after 30 seconds. launch may have failed")
+			}
+			continue
+		}
+		if status == "" {
+			status = a.Status
+		}
+		if status != a.Status {
+			fmt.Fprintf(os.Stderr, "status=%s\n", a.Status)
+			status = a.Status
+		}
+		// exit follower mode if status isn't one we follow,
+		// or enough commands have returned
+		// or expiration time has passed
+		if (status != "init" && status != "preparing" && status != "inflight") ||
+			(a.Counters.Done > 0 && a.Counters.Done >= a.Counters.Sent) ||
+			(time.Now().After(a.ExpireAfter)) {
+			goto finish
+			break
+		}
+		// init counters
+		if sent == 0 {
+			if a.Counters.Sent == 0 {
+				time.Sleep(1 * time.Second)
+				continue
+			} else {
+				sent = a.Counters.Sent
+			}
+		}
+		if a.Counters.Done > 0 && a.Counters.Done > previousctr {
+			completion = (float64(a.Counters.Done) / float64(a.Counters.Sent)) * 100
+			if completion > 99.9 && a.Counters.Done != a.Counters.Sent {
+				completion = 99.9
+			}
+			previousctr = a.Counters.Done
+			fmt.Fprintf(os.Stderr, "%.0f%% ", completion)
+		}
+		fmt.Fprintf(os.Stderr, ".")
+		time.Sleep(2 * time.Second)
+		dotter++
+	}
+finish:
+	fmt.Fprintf(os.Stderr, "done in %s\n", time.Now().Sub(a.StartTime).String())
+	a.PrintCounters()
+	return
+}
+
+func (cli Client) PrintActionResults(a mig.Action, show string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("PrintActionResults() -> %v", e)
+		}
+	}()
+	found := false
+	var resource *cljs.Resource
+	switch show {
+	case "found":
+		found = true
+		target := fmt.Sprintf("search?type=command&limit=1000000&foundanything=true&actionid=%.0f", a.ID)
+		resource, err = cli.GetAPIResource(target)
+		if err != nil {
+			panic(err)
+		}
+	case "notfound":
+		target := fmt.Sprintf("search?type=command&limit=1000000&foundanything=false&actionid=%.0f", a.ID)
+		resource, err = cli.GetAPIResource(target)
+		if err != nil {
+			panic(err)
+		}
+	case "all":
+		target := fmt.Sprintf("search?type=command&limit=1000000&actionid=%.0f", a.ID)
+		resource, err = cli.GetAPIResource(target)
+		if err != nil {
+			panic(err)
+		}
+	default:
+		return fmt.Errorf("invalid parameter '%s'", show)
+	}
+	count := 0
+	for _, item := range resource.Collection.Items {
+		for _, data := range item.Data {
+			if data.Name != "command" {
+				continue
+			}
+			cmd, err := ValueToCommand(data.Value)
+			if err != nil {
+				panic(err)
+			}
+			err = PrintCommandResults(cmd, found, true)
+			if err != nil {
+				panic(err)
+			}
+			count++
+		}
+	}
+	fmt.Fprintf(os.Stderr, "%d agents have %s results\n", count, show)
+	return
+}
+
+func PrintCommandResults(cmd mig.Command, found, showAgent bool) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("PrintCommandResults() -> %v", e)
+		}
+	}()
+	for i, result := range cmd.Results {
+		buf, err := json.Marshal(result)
+		if err != nil {
+			panic(err)
+		}
+		if len(cmd.Action.Operations) <= i {
+			fmt.Fprintf(os.Stderr, "[error] no operation maps results %d\n", i)
+			for _, rerr := range result.Errors {
+				fmt.Fprintf(os.Stderr, "[error] %s\n", rerr)
+			}
+			continue
+		}
+		// verify that we know the module
+		moduleName := cmd.Action.Operations[i].Module
+		if _, ok := mig.AvailableModules[moduleName]; !ok {
+			fmt.Fprintf(os.Stderr, "Skipping unknown module '%s'\n", moduleName)
+			continue
+		}
+		modRunner := mig.AvailableModules[moduleName]()
+		// look for a result printer in the module
+		if _, ok := modRunner.(mig.HasResultsPrinter); ok {
+			results, err := modRunner.(mig.HasResultsPrinter).PrintResults(buf, found)
+			if err != nil {
+				panic(err)
+			}
+			for _, res := range results {
+				if showAgent {
+					agtname := cmd.Agent.Name
+					fmt.Printf("%s %s\n", agtname, res)
+				} else {
+					fmt.Println(res)
+				}
+			}
+		} else {
+			fmt.Fprintf(os.Stderr, "no printer available for module '%s'\n", moduleName)
+		}
+	}
+	fmt.Fprintf(os.Stderr, "command status: %s\n", cmd.Status)
+	return
+}

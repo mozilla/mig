@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"github.com/bobappleyard/readline"
 	"io"
-	"mig"
 	"mig/client"
 	"strconv"
 	"strings"
@@ -101,7 +100,7 @@ results <found>	print the results. if "found" is set, only print results that ha
 					fmt.Printf("Unknown option '%s'\n", orders[1])
 				}
 			}
-			err = commandPrintResults(cmd, found, false)
+			err = client.PrintCommandResults(cmd, found, false)
 			if err != nil {
 				panic(err)
 			}
@@ -114,48 +113,6 @@ results <found>	print the results. if "found" is set, only print results that ha
 	}
 exit:
 	fmt.Printf("\n")
-	return
-}
-
-func commandPrintResults(cmd mig.Command, found, showAgent bool) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("commandPrintResults() -> %v", e)
-		}
-	}()
-	for i, result := range cmd.Results {
-		buf, err := json.Marshal(result)
-		if err != nil {
-			panic(err)
-		}
-		// verify that we know the module
-		moduleName := cmd.Action.Operations[i].Module
-		if _, ok := mig.AvailableModules[moduleName]; !ok {
-			fmt.Println("Skipping unknown module", moduleName)
-			continue
-		}
-		modRunner := mig.AvailableModules[moduleName]()
-		// look for a result printer in the module
-		if _, ok := modRunner.(mig.HasResultsPrinter); ok {
-			results, err := modRunner.(mig.HasResultsPrinter).PrintResults(buf, found)
-			if err != nil {
-				panic(err)
-			}
-			for _, res := range results {
-				if showAgent {
-					agtname := cmd.Agent.Name
-					if useShortNames {
-						agtname = shorten(agtname)
-					}
-					fmt.Printf("%s %s\n", agtname, res)
-				} else {
-					fmt.Println(res)
-				}
-			}
-		} else {
-			fmt.Printf("no result printer available for module '%s'. try `json pretty`\n", moduleName)
-		}
-	}
 	return
 }
 
