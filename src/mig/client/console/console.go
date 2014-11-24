@@ -209,16 +209,16 @@ func printStatus(cli client.Client) (err error) {
 	agtout[0] = "Agents Summary:"
 	actout := make([]string, 2)
 	actout[0] = "Latest Actions:"
-	actout[1] = "----    ID      ---- + ----         Name         ---- + ----    Date    ---- + ---- Investigators ----"
+	actout[1] = "----    ID      ---- + ----         Name         ---- + -Sent- + ----    Date     ---- + ---- Investigators ----"
 	for _, item := range st.Collection.Items {
 		for _, data := range item.Data {
 			switch data.Name {
 			case "action":
-				idstr, name, datestr, invs, err := actionPrintShort(data.Value)
+				idstr, name, datestr, invs, sent, err := actionPrintShort(data.Value)
 				if err != nil {
 					panic(err)
 				}
-				str := fmt.Sprintf("%s   %s   %s   %s", idstr, name, datestr, invs)
+				str := fmt.Sprintf("%s   %s   %6d   %s   %s", idstr, name, sent, datestr, invs)
 				actout = append(actout, str)
 			case "active agents":
 				agtout[1] = fmt.Sprintf("* %.0f active agents", data.Value)

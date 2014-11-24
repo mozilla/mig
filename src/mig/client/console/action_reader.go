@@ -215,7 +215,7 @@ func searchFoundAnything(a mig.Action, wantFound bool, cli client.Client) (err e
 	return
 }
 
-func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, err error) {
+func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, sent int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("actionPrintShort() -> %v", e)
@@ -245,14 +245,15 @@ func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, err 
 	}
 
 	datestr = a.LastUpdateTime.Format("Mon Jan 2 3:04pm MST")
-	if len(datestr) > 20 {
-		datestr = datestr[0:20]
+	if len(datestr) > 21 {
+		datestr = datestr[0:21]
 	}
 	if len(datestr) < 20 {
 		for i := len(datestr); i < 20; i++ {
 			datestr += " "
 		}
 	}
+	sent = a.Counters.Sent
 	return
 }
 

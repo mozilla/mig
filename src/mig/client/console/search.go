@@ -89,7 +89,7 @@ The following search parameters are available:
 				}
 				switch data.Name {
 				case "action":
-					idstr, name, datestr, _, err := actionPrintShort(data.Value)
+					idstr, name, datestr, _, _, err := actionPrintShort(data.Value)
 					if err != nil {
 						panic(err)
 					}
