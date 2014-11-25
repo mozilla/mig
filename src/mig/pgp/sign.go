@@ -17,6 +17,8 @@ import (
 	"strings"
 )
 
+var cachedPassphrase string
+
 // Sign signs a string with a key identified by a key fingerprint or an email address
 func Sign(data, keyid string, secringFile io.Reader) (sig string, err error) {
 	defer func() {
@@ -49,12 +51,20 @@ func Sign(data, keyid string, secringFile io.Reader) (sig string, err error) {
 		panic(err)
 	}
 
-	// if private key is encrypted, attempt to decrypt it with the passphrase
+	// if private key is encrypted, attempt to decrypt it with the cached passphrase
+	// then try with an agent or by asking the user for a passphrase
 	if signer.PrivateKey.Encrypted {
-		// get private key passphrase
-		signer, err = decryptEntity(signer)
+		err = signer.PrivateKey.Decrypt([]byte(cachedPassphrase))
 		if err != nil {
-			panic(err)
+			var pass string
+			// get private key passphrase
+			signer, pass, err = decryptEntity(signer)
+			if err != nil {
+				panic(err)
+			}
+			if pass != "" {
+				cachedPassphrase = pass
+			}
 		}
 	}
 
@@ -93,7 +103,7 @@ func deArmor(sig string) (str string, err error) {
 
 // decryptEntity calls gnupg-agent and pinentry to obtain a passphrase and
 // decrypt the private key of a given entity (thank you, camlistore folks)
-func decryptEntity(s *openpgp.Entity) (ds *openpgp.Entity, err error) {
+func decryptEntity(s *openpgp.Entity) (ds *openpgp.Entity, pass string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("pgp.decryptEntity(): %v", e)
@@ -121,7 +131,7 @@ func decryptEntity(s *openpgp.Entity) (ds *openpgp.Entity, err error) {
 			if err == nil {
 				err = ds.PrivateKey.Decrypt([]byte(pass))
 				if err == nil {
-					return ds, err
+					return ds, pass, err
 				}
 				req.Error = "Passphrase failed to decrypt: " + err.Error()
 				conn.RemoveFromCache(req.CacheKey)
@@ -137,11 +147,11 @@ func decryptEntity(s *openpgp.Entity) (ds *openpgp.Entity, err error) {
 
 	pinReq := &pinentry.Request{Desc: desc, Prompt: "Passphrase"}
 	for tries := 0; tries < 2; tries++ {
-		pass, err := pinReq.GetPIN()
+		pass, err = pinReq.GetPIN()
 		if err == nil {
 			err = ds.PrivateKey.Decrypt([]byte(pass))
 			if err == nil {
-				return ds, err
+				return ds, pass, err
 			}
 			pinReq.Error = "Passphrase failed to decrypt: " + err.Error()
 			continue
@@ -150,5 +160,5 @@ func decryptEntity(s *openpgp.Entity) (ds *openpgp.Entity, err error) {
 			panic("failed to decrypt key; action canceled")
 		}
 	}
-	return ds, fmt.Errorf("decryptEntity(): failed to decrypt key %q", pubk.KeyIdShortString())
+	return ds, "", fmt.Errorf("decryptEntity(): failed to decrypt key %q", pubk.KeyIdShortString())
 }
