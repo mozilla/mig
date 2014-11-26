@@ -42,6 +42,7 @@ func actionReader(input string, cli client.Client) (err error) {
 	fmt.Println("Entering action reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Action: '%s'.\nLaunched by '%s' on '%s'.\nStatus '%s'.\n",
 		a.Name, investigators, a.StartTime, a.Status)
+	a.PrintCounters()
 	prompt := fmt.Sprintf("\x1b[31;1maction %d>\x1b[0m ", uint64(aid)%1000)
 	for {
 		// completion
@@ -79,10 +80,11 @@ func actionReader(input string, cli client.Client) (err error) {
 			}
 			goto exit
 		case "counters":
-			fmt.Printf("Sent:\t\t%d\nDone:\t\t%d\nIn Flight:\t%d\n"+
-				"Success:\t%d\nCancelled:\t%d\nExpired:\t%d\nFailed:\t\t%d\nTimeout:\t%d\n",
-				a.Counters.Sent, a.Counters.Done, a.Counters.InFlight,
-				a.Counters.Success, a.Counters.Cancelled, a.Counters.Expired, a.Counters.Failed, a.Counters.TimeOut)
+			a, links, err = cli.GetAction(aid)
+			if err != nil {
+				panic(err)
+			}
+			a.PrintCounters()
 		case "details":
 			actionPrintDetails(a)
 		case "exit":
@@ -114,8 +116,9 @@ ls <filter>	returns the list of commands with their status
 		'filter' is a pipe separated string of filter:
 		ex: ls | grep server1.(dom1|dom2) | grep -v example.net
 r		refresh the action (get latest version from upstream)
-results <found> display results of all commands, limit to results that have
-                found something is <found> is declared
+results <show>  display results of all commands, <show> is set to "all" by default
+		set to "found" to only display positive results
+		set to "notfound" for negative results
 times		show the various timestamps of the action
 `)
 		case "investigators":
@@ -139,9 +142,18 @@ times		show the various timestamps of the action
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("Reload succeeded")
+			fmt.Println("reloaded")
 		case "results":
-			err = actionPrintResults(a, links, orders, cli)
+			show := "all"
+			if len(orders) > 1 {
+				switch orders[1] {
+				case "found":
+					show = "found"
+				case "notfound":
+					show = "notfound"
+				}
+			}
+			err = cli.PrintActionResults(a, show)
 			if err != nil {
 				panic(err)
 			}
@@ -204,7 +216,7 @@ func searchFoundAnything(a mig.Action, wantFound bool, cli client.Client) (err e
 	return
 }
 
-func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, err error) {
+func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, sent int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("actionPrintShort() -> %v", e)
@@ -234,14 +246,15 @@ func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, err 
 	}
 
 	datestr = a.LastUpdateTime.Format("Mon Jan 2 3:04pm MST")
-	if len(datestr) > 20 {
-		datestr = datestr[0:20]
+	if len(datestr) > 21 {
+		datestr = datestr[0:21]
 	}
 	if len(datestr) < 20 {
 		for i := len(datestr); i < 20; i++ {
 			datestr += " "
 		}
 	}
+	sent = a.Counters.Sent
 	return
 }
 
@@ -303,9 +316,6 @@ func actionPrintLinks(links []cljs.Link, orders []string) (err error) {
 	}
 	ctr := 0
 	for _, link := range links {
-		if useShortNames {
-			link.Rel = link.Rel[0:40] + shorten(link.Rel[40:len(link.Rel)])
-		}
 		if has_filter {
 			str, err := filterString(link.Rel, filter)
 			if err != nil {
@@ -326,67 +336,5 @@ func actionPrintLinks(links []cljs.Link, orders []string) (err error) {
 		fmt.Printf("s")
 	}
 	fmt.Printf(" found\n")
-	return
-}
-
-func actionPrintResults(a mig.Action, links []cljs.Link, orders []string, cli client.Client) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("actionPrintResuls() -> %v", e)
-		}
-	}()
-	found := false
-	if len(orders) > 1 {
-		if orders[1] == "found" {
-			found = true
-		} else {
-			fmt.Printf("Unknown option '%s'\n", orders[1])
-		}
-	}
-	if found {
-		// if we want foundes, use the search api, it's faster than
-		// iterating through each link when we have thousands of them
-		target := "search?type=command&limit=1000000&foundanything=true"
-		target += "&actionid=" + fmt.Sprintf("%.0f", a.ID)
-		resource, err := cli.GetAPIResource(target)
-		if err != nil {
-			panic(err)
-		}
-		for _, item := range resource.Collection.Items {
-			for _, data := range item.Data {
-				if data.Name != "command" {
-					continue
-				}
-				cmd, err := client.ValueToCommand(data.Value)
-				if err != nil {
-					panic(err)
-				}
-				err = commandPrintResults(cmd, true, true)
-				if err != nil {
-					panic(err)
-				}
-			}
-		}
-	} else {
-		for _, link := range links {
-			// TODO: replace the url parsing hack with proper link creation in API response
-			id := strings.Split(link.Href, "=")[1]
-			cmdid, err := strconv.ParseFloat(id, 64)
-			if err != nil {
-				fmt.Println("ERROR: invalid command id in link:", link)
-				continue
-			}
-			cmd, err := cli.GetCommand(cmdid)
-			if err != nil {
-				fmt.Println("ERROR: failed to get command id", cmdid)
-				continue
-			}
-			err = commandPrintResults(cmd, found, true)
-			if err != nil {
-				fmt.Println("ERROR: failed to print results from command id", cmdid)
-				continue
-			}
-		}
-	}
 	return
 }

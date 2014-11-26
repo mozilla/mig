@@ -456,8 +456,6 @@ func createCommand(ctx Context, action mig.Action, agent mig.Agent, emptyResults
 	cmd.StartTime = time.Now().UTC()
 	cmd.Results = emptyResults
 	ctx.Channels.CommandReady <- cmd
-	desc := fmt.Sprintf("created command for action '%s' on agent '%s'", action.Name, agent.Name)
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, CommandID: cmdid, Desc: desc}
 	return
 }
 
@@ -502,9 +500,10 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 		go func() {
 			err = ctx.MQ.Chan.Publish("mig", agtQueue, true, false, msg)
 			if err != nil {
-				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "Failed to publish command to agent queue"}.Err()
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "publishing failed to queue" + agtQueue}.Err()
 			} else {
-				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command sent to agent queue"}.Debug()
+				desc := fmt.Sprintf("published to queue %s", agtQueue)
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: desc}
 			}
 		}()
 	}

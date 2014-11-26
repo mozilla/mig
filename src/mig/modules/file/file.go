@@ -4,12 +4,12 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-// filechecker provides functions to scan a file system. It can look into files
+// file provides functions to scan a file system. It can look into files
 // using regexes. It can search files by name. It can match hashes in md5, sha1,
 // sha256, sha384, sha512, sha3_224, sha3_256, sha3_384 and sha3_512.
 // The filesystem can be searches using pattern, as described in the Parameters
 // documentation.
-package filechecker
+package file
 
 import (
 	"bufio"
@@ -36,7 +36,7 @@ import (
 var debug bool = false
 
 func init() {
-	mig.RegisterModule("filechecker", func() interface{} {
+	mig.RegisterModule("file", func() interface{} {
 		return new(Runner)
 	})
 }
@@ -54,8 +54,8 @@ type Parameters struct {
 type search struct {
 	Description string   `json:"description,omitempty"`
 	Paths       []string `json:"paths"`
-	Regexes     []string `json:"regexes,omitempty"`
-	Filenames   []string `json:"filenames,omitempty"`
+	Contents    []string `json:"contents,omitempty"`
+	Names       []string `json:"names,omitempty"`
 	MD5         []string `json:"md5,omitempty"`
 	SHA1        []string `json:"sha1,omitempty"`
 	SHA256      []string `json:"sha256,omitempty"`
@@ -89,13 +89,13 @@ func (r Runner) ValidateParameters() (err error) {
 		if err != nil {
 			return
 		}
-		for _, r := range s.Regexes {
+		for _, r := range s.Contents {
 			err = validateRegex(r)
 			if err != nil {
 				return
 			}
 		}
-		for _, r := range s.Filenames {
+		for _, r := range s.Names {
 			err = validateRegex(r)
 			if err != nil {
 				return
@@ -376,7 +376,7 @@ func newResults() *Results {
 
 var walkingErrors []string
 
-// Run() is filechecker's entry point. It parses command line arguments into a list of
+// Run() is file's entry point. It parses command line arguments into a list of
 // individual checks, stored in a map.
 // Each Check contains a path, which is inspected in the pathWalk function.
 // The results are stored in the checklist map and sent to stdout at the end.
@@ -505,11 +505,11 @@ func createChecks(label string, s search) (checks []filecheck, err error) {
 		}
 	}()
 	for _, path := range s.Paths {
-		for _, re := range s.Regexes {
+		for _, re := range s.Contents {
 			check := newFileCheck(label, path, "regex", re, checkRegex)
 			checks = append(checks, *check)
 		}
-		for _, re := range s.Filenames {
+		for _, re := range s.Names {
 			check := newFileCheck(label, path, "filename", re, checkFilename)
 			checks = append(checks, *check)
 		}
@@ -1338,7 +1338,7 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 						continue
 					}
 					for file, cnt := range results.Elements[path][method][label][value].Files {
-						res := fmt.Sprintf("%.0f found in '%s' on '%s' for filechecker '%s':'%s':'%s'",
+						res := fmt.Sprintf("%.0f found in '%s' on '%s' for file '%s':'%s':'%s'",
 							cnt, file, value, path, method, label)
 						prints = append(prints, res)
 					}
@@ -1347,6 +1347,9 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 		}
 	}
 	if !foundOnly {
+		for _, we := range results.Errors {
+			prints = append(prints, we)
+		}
 		stat := fmt.Sprintf("Statistics: %.0f checks tested on %.0f files. %.0f failed to open. %.0f checks matched on %.0f files. %.0f total hits. ran in %s.",
 			results.Statistics.Checkcount, results.Statistics.Filescount, results.Statistics.Openfailed, results.Statistics.Checksmatch, results.Statistics.Uniquefiles,
 			results.Statistics.Totalhits, results.Statistics.Exectime)

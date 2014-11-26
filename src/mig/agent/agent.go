@@ -339,9 +339,13 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 			// if we have a command to return, update status and send back
 			if cmd.ID > 0 {
-				var mr mig.ModuleResult
-				mr.Errors = append(mr.Errors, fmt.Sprintf("%v", err))
-				cmd.Results = append(cmd.Results, mr)
+				results := make([]mig.ModuleResult, len(cmd.Action.Operations))
+				for i, _ := range cmd.Action.Operations {
+					var mr mig.ModuleResult
+					mr.Errors = append(mr.Errors, fmt.Sprintf("%v", err))
+					results[i] = mr
+				}
+				cmd.Results = results
 				cmd.Status = "failed"
 				ctx.Channels.Results <- cmd
 			}
@@ -515,6 +519,9 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 				panic(err)
 			}
 			resultReceived++
+			if resultReceived >= opsCounter {
+				goto finish
+			}
 		}
 	}
 
@@ -532,7 +539,7 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 			break
 		}
 	}
-
+finish:
 	// forward the updated command
 	ctx.Channels.Results <- cmd
 

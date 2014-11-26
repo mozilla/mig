@@ -299,3 +299,27 @@ func (a Action) VerifyACL(acl ACL, keyring io.Reader) (err error) {
 	}
 	return
 }
+
+// PrintCounters prints the counters of an action to stderr
+func (a Action) PrintCounters() {
+	out := fmt.Sprintf("%d sent, %d done", a.Counters.Sent, a.Counters.Done)
+	if a.Counters.InFlight > 0 {
+		out += fmt.Sprintf(", %d inflight", a.Counters.InFlight)
+	}
+	if a.Counters.Success > 0 {
+		out += fmt.Sprintf(", %d succeeded", a.Counters.Success)
+	}
+	if a.Counters.Cancelled > 0 {
+		out += fmt.Sprintf(", %d cancelled", a.Counters.Cancelled)
+	}
+	if a.Counters.Expired > 0 {
+		out += fmt.Sprintf(", %d expired", a.Counters.Expired)
+	}
+	if a.Counters.Failed > 0 {
+		out += fmt.Sprintf(", %d failed", a.Counters.Failed)
+	}
+	if a.Counters.TimeOut > 0 {
+		out += fmt.Sprintf(", %d timed out", a.Counters.TimeOut)
+	}
+	fmt.Fprintf(os.Stderr, "%s\n", out)
+}

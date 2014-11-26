@@ -31,7 +31,6 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 	var a mig.Action
 	if tpl.ID == 0 {
 		fmt.Println("Entering action launcher with empty template")
-		a.SyntaxVersion = mig.ActionVersion
 	} else {
 		// reinit the fields that we don't reuse
 		a.Name = tpl.Name
@@ -39,7 +38,6 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 		a.Description = tpl.Description
 		a.Threat = tpl.Threat
 		a.Operations = tpl.Operations
-		a.SyntaxVersion = tpl.SyntaxVersion
 		fmt.Printf("Entering action launcher using template '%s'\n", a.Name)
 	}
 	hasTimes := false
@@ -231,7 +229,7 @@ times			show the various timestamps of the action
 			fmt.Printf("Action '%s' successfully launched with ID '%.0f' on target '%s'\n",
 				a.Name, a.ID, a.Target)
 			if follow {
-				err = followAction(a, cli)
+				err = cli.FollowAction(a)
 				if err != nil {
 					panic(err)
 				}
@@ -247,11 +245,7 @@ times			show the various timestamps of the action
 			}
 			fmt.Println("----    ID      ---- + ----         Name         -------")
 			for _, agt := range agents {
-				name := agt.Name
-				if useShortNames {
-					name = shorten(name)
-				}
-				fmt.Printf("%20.0f   %s\n", agt.ID, name)
+				fmt.Printf("%20.0f   %s\n", agt.ID, agt.Name)
 			}
 		case "load":
 			if len(orders) != 2 {

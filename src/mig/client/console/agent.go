@@ -39,11 +39,7 @@ func agentReader(input string, cli client.Client) (err error) {
 	}
 
 	fmt.Println("Entering agent reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
-	agtname := agt.Name
-	if useShortNames {
-		agtname = shorten(agtname)
-	}
-	fmt.Printf("Agent %.0f named '%s'\n", agt.ID, agtname)
+	fmt.Printf("Agent %.0f named '%s'\n", agt.ID, agt.Name)
 	prompt := fmt.Sprintf("\x1b[34;1magent %d>\x1b[0m ", uint64(agtid)%1000)
 	for {
 		// completion
@@ -73,10 +69,6 @@ func agentReader(input string, cli client.Client) (err error) {
 			if err != nil {
 				panic(err)
 			}
-			location := agt.QueueLoc
-			if useShortNames {
-				location = shorten(location)
-			}
 			fmt.Printf(`Agent ID %.0f
 name       %s
 last seen  %s ago
@@ -86,7 +78,8 @@ os         %s
 pid        %d
 starttime  %s
 status     %s
-`, agt.ID, agtname, time.Now().Sub(agt.HeartBeatTS).String(), agt.Version, location, agt.OS, agt.PID, agt.StartTime, agt.Status)
+`, agt.ID, agt.Name, time.Now().Sub(agt.HeartBeatTS).String(), agt.Version,
+				agt.QueueLoc, agt.OS, agt.PID, agt.StartTime, agt.Status)
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit

@@ -28,6 +28,7 @@ DESTDIR		:= /
 GPGMEDIR	:= src/mig/pgp/sign
 BINDIR		:= bin/$(OS)/$(ARCH)
 AGTCONF		:= conf/mig-agent-conf.go
+AVAILMODS	:= conf/available_modules.go
 
 GCC			:= gcc
 CFLAGS		:=
@@ -47,22 +48,12 @@ mig-agent:
 	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
 	cp $(AGTCONF) src/mig/agent/configuration.go
+	if [ ! -r $(AVAILMODS) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
+	cp $(AVAILMODS) src/mig/agent/available_modules.go
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig/agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] && echo SUCCESS && exit 0
-
-#mig-agent-all: mig-agent-386 mig-agent-amd64
-#
-#mig-agent-386:
-#	make OS=linux ARCH=386 mig-agent
-#	make OS=darwin ARCH=386 mig-agent
-#	make OS=windows ARCH=386 mig-agent
-#
-#mig-agent-amd64:
-#	make OS=linux ARCH=amd64 mig-agent
-#	make OS=darwin ARCH=amd64 mig-agent
-#	make OS=windows ARCH=amd64 mig-agent
 
 mig-scheduler:
 	$(MKDIR) -p $(BINDIR)
@@ -85,12 +76,16 @@ mig-action-verifier:
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig/client/verifier
 
 mig-console:
+	if [ ! -r $(AVAILMODS) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
+	cp $(AVAILMODS) src/mig/client/console/available_modules.go
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig/client/console
 
 mig-cmd:
+	if [ ! -r $(AVAILMODS) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
+	cp $(AVAILMODS) src/mig/client/cmd/available_modules.go
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-cmd $(GOLDFLAGS) mig/client/cmd
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig $(GOLDFLAGS) mig/client/cmd
 
 mig-agentsearch:
 	$(MKDIR) -p $(BINDIR)

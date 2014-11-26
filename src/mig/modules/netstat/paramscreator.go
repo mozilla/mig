@@ -8,6 +8,7 @@ package netstat
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -126,4 +127,76 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 		}
 	}
 	return p, nil
+}
+
+const cmd_help string = `~~~ NETSTAT module ~~~
+-lm <regex>	search for local mac addresses that match <regex>
+		example: -lm ^8c:70:[0-9a-f]
+
+-nm <regex>	search for neighbors mac addresses that match <regex>
+		in the ARP table
+		example: -nm ^8c:70:[0-9a-f]
+
+-li <ip|cidr>	search for IPs that match <ip|cidr> on the local interfaces
+		if a cidr is specified, return all matching addresses.
+		example: -li 10.0.0.0/8
+			 -li 2001:db8::/32
+
+-ni <ip|cidr>	search for neighbors IPs that match <ip|cidr> in the ARP table
+		if a cidr is specified, return all matching addresses
+		example: -ni 10.1.2.3
+			 -ni fdda:5cc1:23:4::1f
+
+-ci <ip|cidr>	search for remote IPs connected to the system matching <ip|cidr>.
+		returns connection tuple: localip:localport remoteip:remoteport
+		example: -ci 80.70.60.0/24
+			 -ci 2001:0db8:0123:4567:89ab:cdef:1234:0/116
+
+-lp <port>	search for a listening tcp/udp port on <port>
+		example: -lp 443
+`
+
+// ParamsParser implements a command line parameters parser that takes a string
+// and returns a Parameters structure in an interface. It will display the module
+// help if the arguments string spell the work 'help'
+func (r Runner) ParamsParser(args []string) (interface{}, error) {
+	var (
+		err                    error
+		lm, nm, li, ni, ci, lp flagParam
+		fs                     flag.FlagSet
+	)
+	if len(args) < 1 || args[0] == "" || args[0] == "help" {
+		fmt.Println(cmd_help)
+		return nil, fmt.Errorf("help printed")
+	}
+	fs.Init("file", flag.ContinueOnError)
+	fs.Var(&lm, "lm", "see help")
+	fs.Var(&nm, "nm", "see help")
+	fs.Var(&li, "li", "see help")
+	fs.Var(&ni, "ni", "see help")
+	fs.Var(&ci, "ci", "see help")
+	fs.Var(&lp, "lp", "see help")
+	err = fs.Parse(args)
+	if err != nil {
+		return nil, err
+	}
+	var p params
+	p.LocalMAC = lm
+	p.NeighborMAC = nm
+	p.LocalIP = li
+	p.NeighborIP = ni
+	p.ConnectedIP = ci
+	p.ListeningPort = lp
+	return p, nil
+}
+
+type flagParam []string
+
+func (f *flagParam) String() string {
+	return fmt.Sprint([]string(*f))
+}
+
+func (f *flagParam) Set(value string) error {
+	*f = append(*f, value)
+	return nil
 }
