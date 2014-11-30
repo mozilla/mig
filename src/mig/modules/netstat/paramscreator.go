@@ -38,8 +38,7 @@ connectedip <ip|cidr>	search for connections with the given IP address or within
 
 listeningport <port>	search for an open socket on the local system listening on <port>, tcp and udp
 			example: > listeningport 443
-
-When done, enter 'done'`
+`
 
 // ParamsCreator implements an interactive parameters creation interface, which
 // receives user input,  stores it into a Parameters structure, validates it,
@@ -80,7 +79,7 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 				continue
 			}
 			p.LocalMAC = append(p.LocalMAC, checkValue)
-			fmt.Printf("Stored %s '%s'. Enter another search or 'done'.\n", checkType, checkValue)
+			fmt.Printf("Stored %s '%s'. Enter another parameter, or 'done' to exit.\n", checkType, checkValue)
 		case "neighbormac":
 			err = validateMAC(checkValue)
 			if err != nil {
@@ -129,7 +128,7 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 	return p, nil
 }
 
-const cmd_help string = `~~~ NETSTAT module ~~~
+const cmd_help string = `
 -lm <regex>	search for local mac addresses that match <regex>
 		example: -lm ^8c:70:[0-9a-f]
 
