@@ -61,6 +61,8 @@ Options
 %smatchlimit <int> - limit the number of files that can be matched by a search.
 		   the default limit is set to 1000. search will stop once the limit
 		   is reached.
+
+detailled doc at http://mig.mozilla.org/doc/module_file.html
 `, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash)
 
 	return
