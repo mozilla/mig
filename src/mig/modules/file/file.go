@@ -1336,6 +1336,7 @@ func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
 				var mf matchedfile
 				mf.File = matchedFile
 				if mf.File != "" {
+					stats.Totalhits++
 					fi, err := os.Stat(mf.File)
 					if err != nil {
 						panic(err)
@@ -1349,7 +1350,6 @@ func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
 				mf.Search.Options.MaxDepth = 0
 				mf.Search.Options.MatchAll = search.Options.MatchAll
 				sr = append(sr, mf)
-				stats.Totalhits++
 			}
 			// done with this search, go to the next one
 			goto nextsearch
