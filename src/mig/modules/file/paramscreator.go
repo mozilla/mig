@@ -14,28 +14,64 @@ import (
 	"strings"
 )
 
-const help string = `To add search parameters, use the following syntax:
-path <path>		add a path to search.
-			example: > /etc/yum.*/*.repo
+func printHelp(isCmd bool) {
+	dash := ""
+	if isCmd {
+		dash = "-"
+	}
+	fmt.Printf(`Search parameters
+-----------------
+%spath <string>	- search path
+		  ex: path /etc
+%sname <regex>	- regex to match against the name of a file
+		  ex: name \.sql$
+%ssize <size>	- match files with a size smaller or greater that <size>
+		  prefix with '<' for lower than, and '>' for greater than
+		  suffix with k, m, g or t for kilo, mega, giga and terabytes
+		  ex: size <10m (match files larger than 10 megabytes)
+%smode <regex>	- filter on the filemode, provided as a regex on the mode string
+		  ex: mode -r(w|-)xr-x---
+%smtime <period>  - match files modified before or since <period>
+		  prefix with '<' for modified since, and '>' for modified before
+		  suffix with d, h, m for days, hours and minutes
+		  ex: mtime <90d (match files modified since last 90 days)
+%scontent <regex> - regex to match against the content of a file
+		  ex: content ^root:\$1\$10CXRS19\$/h
+%smd5 <hash>      .
+%ssha1 <hash>     .
+%ssha256 <hash>   .
+%ssha384 <hash>   .
+%ssha512 <hash>   .
+%ssha3_224 <hash> .
+%ssha3_256 <hash> .
+%ssha3_384 <hash> .
+%ssha3_512 <hash> - compare file against given hash
 
-content <regex>		add a regex to check against files content
-			example: > ^root:\$1\$10CXRS19\$/h
 
-name <regex>		add a regex to search against filenames
-			example: > \.sql$
+Options
+-------
+%smaxdepth <int> - limit search to that many subdirectories
+		  ex: maxdepth 3
+%smatchall	- all search parameters must match on a given file for it to
+		  return as a match. off by default. deactivates 'matchany' if set.
+		  ex: matchall
+%smatchany	- any search parameter must match on a given file for it to
+		  return as a match. on by default. deactivates 'matchall' if set.
+		  ex: matchany
+%smatchlimit <int> - limit the number of files that can be matched by a search.
+		   the default limit is set to 1000. search will stop once the limit
+		   is reached.
 
-<hashType> <hash>	add an hash to compare files against
-			Available hash types:
-				md5, sha1, sha256, sha384, sha512,
-				sha3_224, sha3_256, sha3_384, sha3_512
-			example: > md5 a12496cb3fd77a535df2d6ddc2e4ef53
-When done, enter 'done'`
+detailled doc at http://mig.mozilla.org/doc/module_file.html
+`, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash)
+
+	return
+}
 
 // ParamsCreator implements an interactive parameters creation interface, which
 // receives user input,  stores it into a Parameters structure, validates it,
 // and returns that structure as an interface. It is mainly used by the MIG Console
 func (r Runner) ParamsCreator() (interface{}, error) {
-	fmt.Println("initializing filechecker parameters creation")
 	var err error
 	p := newParameters()
 	scanner := bufio.NewScanner(os.Stdin)
@@ -43,7 +79,7 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 		var label string
 		var search search
 		for {
-			fmt.Println("create a new search by entering a search label, or 'done' to exit")
+			fmt.Println("Give a name to this search, or 'done' to exit")
 			fmt.Printf("label> ")
 			scanner.Scan()
 			if err := scanner.Err(); err != nil {
@@ -54,6 +90,10 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 			if label == "done" {
 				// no label to add, exit
 				goto exit
+			}
+			if label == "help" {
+				fmt.Println(`A search must first have a name before search parameters can be defined.`)
+				continue
 			}
 			err = validateLabel(label)
 			if err != nil {
@@ -77,7 +117,8 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 			}
 			break
 		}
-		fmt.Printf("creating new search with label: %s\n%s\n", label, help)
+		fmt.Printf("Creating new search with label '%s'\n"+
+			"Enter 'help' to list available parameters.\n", label)
 
 		for {
 			fmt.Printf("search '%s'> ", label)
@@ -91,12 +132,12 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 				break
 			}
 			if input == "help" {
-				fmt.Printf("%s\n", help)
+				printHelp(false)
 				continue
 			}
 			arr := strings.SplitN(input, " ", 2)
 			if len(arr) != 2 {
-				fmt.Printf("Invalid input format!\n%s\n", help)
+				fmt.Printf("Invalid input format!\n")
 				continue
 			}
 			checkType := arr[0]
@@ -104,13 +145,6 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 			switch checkType {
 			case "path":
 				search.Paths = append(search.Paths, checkValue)
-			case "content":
-				err = validateRegex(checkValue)
-				if err != nil {
-					fmt.Printf("ERROR: %v\nTry again.\n", err)
-					continue
-				}
-				search.Contents = append(search.Contents, checkValue)
 			case "name":
 				err = validateRegex(checkValue)
 				if err != nil {
@@ -118,6 +152,34 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 					continue
 				}
 				search.Names = append(search.Names, checkValue)
+			case "size":
+				err = validateSize(checkValue)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Sizes = append(search.Sizes, checkValue)
+			case "mode":
+				err = validateRegex(checkValue)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Modes = append(search.Modes, checkValue)
+			case "mtime":
+				err = validateMtime(checkValue)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Mtimes = append(search.Mtimes, checkValue)
+			case "content":
+				err = validateRegex(checkValue)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Contents = append(search.Contents, checkValue)
 			case "md5":
 				err = validateHash(checkValue, checkMD5)
 				if err != nil {
@@ -182,10 +244,10 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 				}
 				search.SHA3_512 = append(search.SHA3_512, checkValue)
 			default:
-				fmt.Printf("Invalid method!\n%s\n", help)
+				fmt.Printf("Invalid method!\n")
 				continue
 			}
-			fmt.Printf("Stored %s %s\n", checkType, checkValue)
+			fmt.Printf("Stored %s %s\nEnter a new parameter, or 'done' to exit.\n", checkType, checkValue)
 		}
 		p.Searches[label] = search
 		fmt.Println("Stored search", label)
@@ -194,37 +256,28 @@ exit:
 	return p, nil
 }
 
-const cmd_help string = `~~~ FILE module ~~~
--path <string>		inspects the given path recursively.
-			At least one path must be given on invocation.
-
--name <regex>		looks for files that have a name that match this regex
-
--content <regex>	look for files that have a content that match this regex
-
--md5, -sha1, -sha256,
--sha384, -sha512,
--sha3_224, -sha3_256,
--sha3_384, -sha3_512 <hash>	look for files that match a given checksum
-`
-
 // ParamsParser implements a command line parameters parser that takes a string
 // and returns a Parameters structure in an interface. It will display the module
 // help if the arguments string spell the work 'help'
 func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	var (
 		err error
-		paths, names, contents, md5s, sha1s, sha256s, sha384s,
-		sha512s, sha3_224s, sha3_256s, sha3_384s, sha3_512s flagParam
-		fs flag.FlagSet
+		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha256s,
+		sha384s, sha512s, sha3_224s, sha3_256s, sha3_384s, sha3_512s flagParam
+		maxdepth, matchlimit float64
+		matchall, matchany   bool
+		fs                   flag.FlagSet
 	)
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
-		fmt.Println(cmd_help)
-		return nil, fmt.Errorf("help printed")
+		printHelp(true)
+		return nil, nil
 	}
 	fs.Init("file", flag.ContinueOnError)
 	fs.Var(&paths, "path", "see help")
 	fs.Var(&names, "name", "see help")
+	fs.Var(&sizes, "size", "see help")
+	fs.Var(&modes, "mode", "see help")
+	fs.Var(&mtimes, "mtime", "see help")
 	fs.Var(&contents, "content", "see help")
 	fs.Var(&md5s, "md5", "see help")
 	fs.Var(&sha1s, "sha1", "see help")
@@ -235,6 +288,10 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	fs.Var(&sha3_256s, "sha3_256", "see help")
 	fs.Var(&sha3_384s, "sha3_384", "see help")
 	fs.Var(&sha3_512s, "sha3_512", "see help")
+	fs.Float64Var(&maxdepth, "maxdepth", 0, "see help")
+	fs.Float64Var(&matchlimit, "matchlimit", 0, "see help")
+	fs.BoolVar(&matchall, "matchall", true, "see help")
+	fs.BoolVar(&matchany, "matchany", false, "see help")
 	err = fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -242,6 +299,9 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	var s search
 	s.Paths = paths
 	s.Names = names
+	s.Sizes = sizes
+	s.Modes = modes
+	s.Mtimes = mtimes
 	s.Contents = contents
 	s.MD5 = md5s
 	s.SHA1 = sha1s
@@ -252,8 +312,19 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	s.SHA3_256 = sha3_256s
 	s.SHA3_384 = sha3_384s
 	s.SHA3_512 = sha3_512s
+	s.Options.MaxDepth = maxdepth
+	s.Options.MatchLimit = matchlimit
+	s.Options.MatchAll = matchall
+	if matchany {
+		s.Options.MatchAll = false
+	}
 	p := newParameters()
 	p.Searches["s1"] = s
+	r.Parameters = *p
+	err = r.ValidateParameters()
+	if err != nil {
+		return nil, err
+	}
 	return p, nil
 }
 

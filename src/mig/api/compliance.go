@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mig"
-	"mig/modules/filechecker"
+	"mig/modules/file"
 	"time"
 )
 
@@ -62,29 +62,114 @@ func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, 
 				continue
 			}
 			switch cmd.Action.Operations[i].Module {
-			case "filechecker":
-				var r filechecker.Results
+			case "file":
+				var r file.Results
 				err = json.Unmarshal(buf, &r)
 				if err != nil {
 					return items, err
 				}
-				for path, _ := range r.Elements {
-					bitem.Check.Location = path
-					for method, _ := range r.Elements[path] {
-						bitem.Check.Test.Type = method
-						for id, _ := range r.Elements[path][method] {
-							bitem.Check.Name = id
-							for value, _ := range r.Elements[path][method][id] {
-								bitem.Check.Test.Value = value
-								if r.Elements[path][method][id][value].Matchcount > 0 {
-									bitem.Compliance = true
-								} else {
-									bitem.Compliance = false
-								}
-								item := bitem
-								items = append(items, item)
+				for label, sr := range r.Elements {
+					for _, mf := range sr {
+						bitem.Check.Location = mf.File
+						bitem.Check.Name = label
+						bitem.Check.Test.Type = "file"
+						bitem.Check.Test.Value = ""
+						for _, v := range mf.Search.Names {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
 							}
+							bitem.Check.Test.Value += fmt.Sprintf("name='%s'", v)
 						}
+						for _, v := range mf.Search.Sizes {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("size='%s'", v)
+						}
+						for _, v := range mf.Search.Modes {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("mode='%s'", v)
+						}
+						for _, v := range mf.Search.Mtimes {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("mtime='%s'", v)
+						}
+						for _, v := range mf.Search.Contents {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("content='%s'", v)
+						}
+						for _, v := range mf.Search.MD5 {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("md5='%s'", v)
+						}
+						for _, v := range mf.Search.SHA1 {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("sha1='%s'", v)
+						}
+						for _, v := range mf.Search.SHA256 {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("sha256='%s'", v)
+						}
+						for _, v := range mf.Search.SHA384 {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("sha384='%s'", v)
+						}
+						for _, v := range mf.Search.SHA512 {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("sha512='%s'", v)
+						}
+						for _, v := range mf.Search.SHA3_224 {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("sha3_224='%s'", v)
+						}
+						for _, v := range mf.Search.SHA3_256 {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("sha3_256='%s'", v)
+						}
+						for _, v := range mf.Search.SHA3_384 {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("sha3_384='%s'", v)
+						}
+						for _, v := range mf.Search.SHA3_512 {
+							if len(bitem.Check.Test.Value) > 0 {
+								bitem.Check.Test.Value += " and "
+							}
+							bitem.Check.Test.Value += fmt.Sprintf("sha3_512='%s'", v)
+						}
+						if mf.File == "" {
+							for i, p := range mf.Search.Paths {
+								if i > 0 {
+									bitem.Check.Location += ", "
+								}
+								bitem.Check.Location += p
+							}
+							bitem.Compliance = false
+						} else {
+							bitem.Compliance = true
+						}
+						items = append(items, bitem)
 					}
 				}
 			}

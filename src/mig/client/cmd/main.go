@@ -112,7 +112,7 @@ func main() {
 		os.Exit(2)
 	}
 	op.Parameters, err = modRunner.(mig.HasParamsParser).ParamsParser(modargs)
-	if err != nil {
+	if err != nil || op.Parameters == nil {
 		panic(err)
 	}
 	a.Operations = append(a.Operations, op)

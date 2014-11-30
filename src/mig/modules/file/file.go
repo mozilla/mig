@@ -13,6 +13,7 @@ package file
 
 import (
 	"bufio"
+	"code.google.com/p/go.crypto/sha3"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -27,10 +28,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
-
-	"code.google.com/p/go.crypto/sha3"
 )
 
 var debug bool = false
@@ -47,40 +47,330 @@ type Runner struct {
 }
 
 type Parameters struct {
-	Searches  map[string]search `json:"searches,omitempty"`
-	Condition string            `json:"condition,omitempty"`
+	Searches map[string]search `json:"searches,omitempty"`
 }
 
-type search struct {
-	Description string   `json:"description,omitempty"`
-	Paths       []string `json:"paths"`
-	Contents    []string `json:"contents,omitempty"`
-	Names       []string `json:"names,omitempty"`
-	MD5         []string `json:"md5,omitempty"`
-	SHA1        []string `json:"sha1,omitempty"`
-	SHA256      []string `json:"sha256,omitempty"`
-	SHA384      []string `json:"sha384,omitempty"`
-	SHA512      []string `json:"sha512,omitempty"`
-	SHA3_224    []string `json:"sha3_224,omitempty"`
-	SHA3_256    []string `json:"sha3_256,omitempty"`
-	SHA3_384    []string `json:"sha3_384,omitempty"`
-	SHA3_512    []string `json:"sha3_512,omitempty"`
-	//Options     options  `json:"options,omitempty"`
-}
-
-//type options struct {
-//	MaxDepth float64 `json:"maxdepth,omitempty"`
-//	CrossFS  bool    `json:"crossfs,omitempty"`
-//}
-
-// Create a new Parameters
 func newParameters() *Parameters {
 	var p Parameters
 	p.Searches = make(map[string]search)
 	return &p
 }
 
-// validate a Parameters
+type search struct {
+	Description  string   `json:"description,omitempty"`
+	Paths        []string `json:"paths"`
+	Contents     []string `json:"contents,omitempty"`
+	Names        []string `json:"names,omitempty"`
+	Sizes        []string `json:"sizes,omitempty"`
+	Modes        []string `json:"modes,omitempty"`
+	Mtimes       []string `json:"mtimes,omitempty"`
+	MD5          []string `json:"md5,omitempty"`
+	SHA1         []string `json:"sha1,omitempty"`
+	SHA256       []string `json:"sha256,omitempty"`
+	SHA384       []string `json:"sha384,omitempty"`
+	SHA512       []string `json:"sha512,omitempty"`
+	SHA3_224     []string `json:"sha3_224,omitempty"`
+	SHA3_256     []string `json:"sha3_256,omitempty"`
+	SHA3_384     []string `json:"sha3_384,omitempty"`
+	SHA3_512     []string `json:"sha3_512,omitempty"`
+	Options      options  `json:"options,omitempty"`
+	checks       []check
+	checkmask    checkType
+	isactive     bool
+	iscurrent    bool
+	currentdepth uint64
+}
+
+type options struct {
+	MaxDepth   float64 `json:"maxdepth"`
+	RemoteFS   bool    `json:"remotefs,omitempty"`
+	MatchAll   bool    `json:"matchall"`
+	MatchLimit float64 `json:"matchlimit"`
+}
+
+type checkType uint64
+
+// BitMask for the type of check to apply to a given file
+// see documentation about iota for more info
+const (
+	checkContent checkType = 1 << (64 - 1 - iota)
+	checkName
+	checkSize
+	checkMode
+	checkMtime
+	checkMD5
+	checkSHA1
+	checkSHA256
+	checkSHA384
+	checkSHA512
+	checkSHA3_224
+	checkSHA3_256
+	checkSHA3_384
+	checkSHA3_512
+)
+
+type check struct {
+	code               checkType
+	matched            uint64
+	matchedfiles       []string
+	value              string
+	regex              *regexp.Regexp
+	minsize, maxsize   uint64
+	minmtime, maxmtime time.Time
+}
+
+func (s *search) makeChecks() (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("makeChecks() -> %v", e)
+		}
+	}()
+	if s.Options.MaxDepth == 0 {
+		s.Options.MaxDepth = float64(^uint64(0) >> 1)
+	}
+	if s.Options.MatchLimit == 0 {
+		s.Options.MatchLimit = 1000
+	}
+	for _, v := range s.Contents {
+		var c check
+		c.code = checkContent
+		c.value = v
+		c.regex = regexp.MustCompile(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.Names {
+		var c check
+		c.code = checkName
+		c.value = v
+		c.regex = regexp.MustCompile(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.Sizes {
+		var c check
+		c.code = checkSize
+		c.value = v
+		c.minsize, c.maxsize, err = parseSize(v)
+		if err != nil {
+			panic(err)
+		}
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.Modes {
+		var c check
+		c.code = checkMode
+		c.value = v
+		c.regex = regexp.MustCompile(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.Mtimes {
+		var c check
+		c.code = checkMtime
+		c.value = v
+		c.minmtime, c.maxmtime, err = parseMtime(v)
+		if err != nil {
+			panic(err)
+		}
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.MD5 {
+		var c check
+		c.code = checkMD5
+		c.value = strings.ToUpper(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.SHA1 {
+		var c check
+		c.code = checkSHA1
+		c.value = strings.ToUpper(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.SHA256 {
+		var c check
+		c.code = checkSHA256
+		c.value = strings.ToUpper(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.SHA384 {
+		var c check
+		c.code = checkSHA384
+		c.value = strings.ToUpper(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.SHA512 {
+		var c check
+		c.code = checkSHA512
+		c.value = strings.ToUpper(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.SHA3_224 {
+		var c check
+		c.code = checkSHA3_224
+		c.value = strings.ToUpper(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.SHA3_256 {
+		var c check
+		c.code = checkSHA3_256
+		c.value = strings.ToUpper(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.SHA3_384 {
+		var c check
+		c.code = checkSHA3_384
+		c.value = strings.ToUpper(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	for _, v := range s.SHA3_512 {
+		var c check
+		c.code = checkSHA3_512
+		c.value = strings.ToUpper(v)
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+	}
+	return
+}
+
+func parseSize(size string) (minsize, maxsize uint64, err error) {
+	var (
+		multiplier uint64 = 1
+		n          uint64 = 0
+	)
+	switch size[len(size)-1] {
+	case 'k':
+		multiplier = 1024
+	case 'm':
+		multiplier = 1024 * 1024
+	case 'g':
+		multiplier = 1024 * 1024 * 1024
+	case 't':
+		multiplier = 1024 * 1024 * 1024 * 1024
+	}
+	up := len(size)
+	if multiplier > 1 {
+		up--
+	}
+	switch size[0] {
+	case '<':
+
+		// must not exceed size
+		n, err = strconv.ParseUint(size[1:up], 10, 64)
+		if err != nil {
+			return
+		}
+		minsize = 0
+		maxsize = n * multiplier
+	case '>':
+		// must not be smaller than
+		n, err = strconv.ParseUint(size[1:up], 10, 64)
+		if err != nil {
+			return
+		}
+		minsize = n * multiplier
+		maxsize = uint64(^uint64(0) >> 1)
+	default:
+		// must be exactly this size
+		n, err = strconv.ParseUint(size[0:up], 10, 64)
+		if err != nil {
+			return
+		}
+		minsize = n * multiplier
+		maxsize = n * multiplier
+	}
+	return
+}
+
+func parseMtime(mtime string) (minmtime, maxmtime time.Time, err error) {
+	var (
+		isDays bool   = false
+		n      uint64 = 0
+	)
+	suffix := mtime[len(mtime)-1]
+	if suffix == 'd' {
+		isDays = true
+		suffix = 'h'
+	}
+	n, err = strconv.ParseUint(mtime[1:len(mtime)-1], 10, 64)
+	if err != nil {
+		return
+	}
+	if isDays {
+		n = n * 24
+	}
+	duration := fmt.Sprintf("%d%c", n, suffix)
+	d, err := time.ParseDuration(duration)
+	switch mtime[0] {
+	case '<':
+		// modification date is between date and now (or future)
+		future, _ := time.ParseDuration("8760000h") // In 1,000 years
+		minmtime = time.Now().Add(-d)
+		maxmtime = time.Now().Add(future)
+	case '>':
+		// modification date is older than date
+		ancient, _ := time.ParseDuration("8760000h") // 1,000 years ago...
+		minmtime = time.Now().Add(-ancient)
+		maxmtime = time.Now().Add(-d)
+	}
+	return
+}
+
+func (s *search) activate() {
+	s.isactive = true
+	return
+}
+
+func (s *search) deactivate() {
+	s.isactive = false
+	return
+}
+
+func (s *search) increasedepth() {
+	s.currentdepth++
+	return
+}
+
+func (s *search) decreasedepth() {
+	s.currentdepth--
+	return
+}
+
+func (s *search) markcurrent() {
+	s.iscurrent = true
+	return
+}
+
+func (s *search) unmarkcurrent() {
+	s.iscurrent = false
+	return
+}
+
+func (c *check) storeMatch(file string) {
+	store := true
+	for _, storedFile := range c.matchedfiles {
+		// only store files once per check
+		if file == storedFile {
+			store = false
+		}
+	}
+	if store {
+		c.matched++
+		c.matchedfiles = append(c.matchedfiles, file)
+	}
+	return
+}
+
 func (r Runner) ValidateParameters() (err error) {
 	var labels []string
 	for label, s := range r.Parameters.Searches {
@@ -97,6 +387,24 @@ func (r Runner) ValidateParameters() (err error) {
 		}
 		for _, r := range s.Names {
 			err = validateRegex(r)
+			if err != nil {
+				return
+			}
+		}
+		for _, r := range s.Sizes {
+			err = validateSize(r)
+			if err != nil {
+				return
+			}
+		}
+		for _, r := range s.Modes {
+			err = validateRegex(r)
+			if err != nil {
+				return
+			}
+		}
+		for _, r := range s.Mtimes {
+			err = validateMtime(r)
 			if err != nil {
 				return
 			}
@@ -156,44 +464,13 @@ func (r Runner) ValidateParameters() (err error) {
 			}
 		}
 	}
-	if r.Parameters.Condition != "" {
-		// evaluate the condition
-		condcomp := strings.Split(r.Parameters.Condition, " ")
-		lencond := len(condcomp)
-		opre := regexp.MustCompile("(?i)^(and|or)$")
-		hasLabel := false
-		for pos, comp := range condcomp {
-			// is the current component a label?
-			for _, label := range labels {
-				if comp == label || comp == "!"+label {
-					if pos > 0 && hasLabel {
-						return fmt.Errorf("Invalid condition. Labels must be separated by operators at pos %d", pos)
-					}
-					hasLabel = true
-					goto next
-				}
-			}
-			// is the current component an operator?
-			if opre.MatchString(comp) {
-				// check that operator is not first or last
-				if pos == 0 || pos == lencond-1 {
-					return fmt.Errorf("Invalid condition. A condition cannot start or stop with an operator")
-				}
-				if !hasLabel {
-					return fmt.Errorf("Invalid condition. Operator '%s' must be preceded by a label at pos. %d", comp, pos)
-				}
-				hasLabel = false
-				goto next
-			}
-			// if we are here, the component is invalid
-			return fmt.Errorf("Invalid component '%s' in condition. Must be a valid label or an operator (and|or).", comp)
-		next:
-		}
-	}
 	return
 }
 
 func validateLabel(label string) (err error) {
+	if len(label) < 1 {
+		return fmt.Errorf("empty labels are not permitted")
+	}
 	labelre := regexp.MustCompile("^[a-zA-Z0-9_-]{1,64}$")
 	if !labelre.MatchString(label) {
 		return fmt.Errorf("The syntax of label '%s' is invalid. Must match regex ^[a-zA-Z0-9_-]{1,64}$", label)
@@ -202,6 +479,9 @@ func validateLabel(label string) (err error) {
 }
 
 func validateRegex(regex string) (err error) {
+	if len(regex) < 1 {
+		return fmt.Errorf("Empty values are not permitted")
+	}
 	_, err = regexp.Compile(regex)
 	if err != nil {
 		return fmt.Errorf("Invalid regexp '%s'. Must be a regexp. Compilation failed with '%v'", regex, err)
@@ -209,7 +489,37 @@ func validateRegex(regex string) (err error) {
 	return
 }
 
-func validateHash(hash string, hashType uint64) (err error) {
+// Size accepts the prefixes '<', '>' for lower than and greater than. if no prefix is specified, equality is assumed.
+// Size accepts the suffixes 'k', 'm', 'g', 't' for kilobyte, megabyte, gigabyte and terabyte. if not suffix is specified,
+// bytes are assumed. example: '>50m' will find files with a size greater than 50 megabytes
+func validateSize(size string) (err error) {
+	if len(size) < 1 {
+		return fmt.Errorf("Empty values are not permitted")
+	}
+	re := "^(<|>)?[0-9]*(k|m|g|t)?$"
+	sizere := regexp.MustCompile(re)
+	if !sizere.MatchString(size) {
+		return fmt.Errorf("Invalid size format for size '%s'. Must match regex %s", size, re)
+	}
+	return
+}
+
+func validateMtime(mtime string) (err error) {
+	if len(mtime) < 1 {
+		return fmt.Errorf("Empty values are not permitted")
+	}
+	re := "^(<|>)[0-9]*(d|h|m)$"
+	mtimere := regexp.MustCompile(re)
+	if !mtimere.MatchString(mtime) {
+		return fmt.Errorf("Invalid mtime format for mtime '%s'. Must match regex %s", mtime, re)
+	}
+	return
+}
+
+func validateHash(hash string, hashType checkType) (err error) {
+	if len(hash) < 1 {
+		return fmt.Errorf("Empty values are not permitted")
+	}
 	hash = strings.ToUpper(hash)
 	var re string
 	switch hashType {
@@ -249,138 +559,22 @@ func validateHash(hash string, hashType uint64) (err error) {
 - Totalhits is the total number of checklist hits
 */
 type statistics struct {
-	Checkcount  float64 `json:"checkcount"`
-	Filescount  float64 `json:"filescount"`
-	Openfailed  float64 `json:"openfailed"`
-	Checksmatch float64 `json:"checksmatch"`
-	Uniquefiles float64 `json:"uniquefiles"`
-	Totalhits   float64 `json:"totalhits"`
-	Exectime    string  `json:"exectime"`
+	Filescount float64 `json:"filescount"`
+	Openfailed float64 `json:"openfailed"`
+	Totalhits  float64 `json:"totalhits"`
+	Exectime   string  `json:"exectime"`
 }
 
 // stats is a global variable
 var stats statistics
 
-// Representation of a filecheck.
-// label is a string that identifies the search
-// path is the file system path to inspect
-// method is the name of the type of check
-// test is the value of the check, such as a md5 hash
-// code is the type of test in integer form
-// filecount is the total number of files inspected for each Check
-// matchcount is a counter of positive results for this Check
-// hasmatched is a boolean set to True when the Check has matched once or more
-// files is an slice of string that contains paths of matching files
-// regex is a regular expression
-type filecheck struct {
-	label, path, method, test string
-	code                      uint64
-	filecount, matchcount     float64
-	hasmatched                bool
-	files                     map[string]float64
-	regex                     *regexp.Regexp
-}
-
-func newFileCheck(label, path, method, test string, code uint64) *filecheck {
-	var fc filecheck
-	fc.files = make(map[string]float64)
-	fc.hasmatched = false
-	fc.filecount = 0
-	fc.matchcount = 0
-	fc.label = label
-	fc.path = path
-	fc.method = method
-	fc.test = test
-	fc.code = code
-	if code == checkRegex || code == checkFilename {
-		fc.regex = regexp.MustCompile(test)
-	}
-	return &fc
-}
-
-// Results contains the details of what was inspected on the file system.
-// The `Elements` parameter contains 5 level-deep structure that represents
-// the original search parameters, plus the detailled result of each test.
-// To help with results parsing, if any of the check matches at least once,
-// the flag `FoundAnything` will be set to true.
-//
-// JSON sample:
-//	{
-//		"elements": {
-//			"/usr/*bin/*": {
-//			    "filename": {
-//			        "module names": {
-//			            "atddd": {
-//			                "filecount": 1992,
-//			                "files": {},
-//			                "matchcount": 0
-//			            },
-//			            "cupsdd": {
-//			                "filecount": 1992,
-//			                "files": {},
-//			                "matchcount": 0
-//			            }
-//			        }
-//			    },
-//			    "md5": {
-//			        "atddd": {
-//			            "fade6e3ab4b396553b191f23d8c04cf1": {
-//			                "filecount": 996,
-//			                "files": {},
-//			                "matchcount": 0
-//			            }
-//			        },
-//			        "cupsdd": {
-//			            "ce607e782faa5ace379c13a5de8052a3": {
-//			                "filecount": 996,
-//			                "files": {},
-//			                "matchcount": 0
-//			            }
-//			        }
-//			    }
-//			}
-//		},
-//		"error": [
-//			"ERROR: followSymLink() -\u003e lstat /usr/lib/vmware-tools/bin64/vmware-user-wrapper: no such file or directory"
-//		],
-//		"foundanything": false,
-//		"statistics": {
-//			"checkcount": 52,
-//			"checksmatch": 0,
-//			"exectime": "4.67603983s",
-//			"filescount": 6574,
-//			"openfailed": 1,
-//			"totalhits": 0,
-//			"uniquefiles": 0
-//		}
-//	}
-type Results struct {
-	FoundAnything bool                                                     `json:"foundanything"`
-	Success       bool                                                     `json:"success"`
-	Elements      map[string]map[string]map[string]map[string]singleresult `json:"elements"`
-	Statistics    statistics                                               `json:"statistics"`
-	Errors        []string                                                 `json:"error"`
-}
-
-// singleresult contains information on the result of a single test
-type singleresult struct {
-	Filecount  float64            `json:"filecount"`
-	Matchcount float64            `json:"matchcount"`
-	Files      map[string]float64 `json:"files"`
-}
-
-// newResults allocates a Results structure
-func newResults() *Results {
-	return &Results{Elements: make(map[string]map[string]map[string]map[string]singleresult), FoundAnything: false}
-}
-
 var walkingErrors []string
 
-// Run() is file's entry point. It parses command line arguments into a list of
-// individual checks, stored in a map.
-// Each Check contains a path, which is inspected in the pathWalk function.
-// The results are stored in the checklist map and sent to stdout at the end.
 func (r Runner) Run(Args []byte) (resStr string) {
+	var (
+		roots     []string
+		traversed []string
+	)
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
@@ -397,7 +591,6 @@ func (r Runner) Run(Args []byte) (resStr string) {
 		}
 	}()
 	t0 := time.Now()
-	//r.Parameters = newParameters()
 	err := json.Unmarshal(Args, &r.Parameters)
 	if err != nil {
 		panic(err)
@@ -408,44 +601,35 @@ func (r Runner) Run(Args []byte) (resStr string) {
 		panic(err)
 	}
 
-	// walk through the parameters and generate a checklist of filechecks
-	checklist := make(map[float64]filecheck)
-	todolist := make(map[float64]filecheck)
-	var i float64 = 0
 	for label, search := range r.Parameters.Searches {
-		checks, err := createChecks(label, search)
+		if debug {
+			fmt.Println("making checks for label", label)
+		}
+		err := search.makeChecks()
 		if err != nil {
 			panic(err)
 		}
-		for _, check := range checks {
-			if debug {
-				fmt.Printf("check %.0f: label='%s'; path='%s'; method='%s'; test='%s'\n",
-					i, check.label, check.path, check.method, check.test)
+		var paths []string
+		// clean up the paths, store in roots if not already present
+		for _, p := range search.Paths {
+			p = filepath.Clean(p)
+			paths = append(paths, p)
+			alreadyPresent := false
+			for _, r := range roots {
+				if p == r {
+					alreadyPresent = true
+				}
 			}
-			checklist[i] = check
-			todolist[i] = check
-			i++
-			stats.Checkcount++
-		}
-	}
-
-	// From all the checks, grab a list of root path sorted small sortest
-	// to longest, and then enter each path iteratively
-	var roots []string
-	for id, check := range checklist {
-		root := findRootPath(check.path)
-		if debug {
-			fmt.Printf("Main: Found root path at '%s' in check '%d':'%s'\n", root, id, check.test)
-		}
-		exist := false
-		for _, p := range roots {
-			if root == p {
-				exist = true
+			if !alreadyPresent {
+				if debug {
+					fmt.Println("adding path", p, "to list of locations to traverse")
+				}
+				roots = append(roots, p)
 			}
 		}
-		if !exist {
-			roots = append(roots, root)
-		}
+		// store the cleaned up paths
+		search.Paths = paths
+		r.Parameters.Searches[label] = search
 		// sorting the array is useful in case the same command contains "/some/thing"
 		// and then "/some". By starting with the smallest root, we ensure that all the
 		// checks for both "/some" and "/some/thing" will be processed.
@@ -453,23 +637,41 @@ func (r Runner) Run(Args []byte) (resStr string) {
 	}
 	// enter each root one by one
 	for _, root := range roots {
-		interestedlist := make(map[float64]filecheck)
-		err = pathWalk(root, checklist, todolist, interestedlist)
+		// before entering a root, deactivate all searches a reset the depth counters
+		for label, search := range r.Parameters.Searches {
+			search.deactivate()
+			search.currentdepth = 0
+			r.Parameters.Searches[label] = search
+		}
+		for _, p := range traversed {
+			if root == p {
+				if debug {
+					fmt.Println("skipping already traversed root:", root)
+				}
+				goto skip
+			}
+		}
+		if debug {
+			fmt.Println("entering root", root)
+		}
+		traversed, err = r.pathWalk(root, roots)
 		if err != nil {
-			panic(err)
+			// log errors and continue
+			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
 			if debug {
 				fmt.Printf("pathWalk failed with error '%v'\n", err)
 			}
 		}
+	skip:
 	}
 
-	resStr, err = buildResults(checklist, t0)
+	resStr, err = r.buildResults(t0)
 	if err != nil {
 		panic(err)
 	}
 
 	if debug {
-		// pretty printing
+		fmt.Println("---- results ----")
 		printedResults, err := r.PrintResults([]byte(resStr), false)
 		if err != nil {
 			panic(err)
@@ -481,138 +683,12 @@ func (r Runner) Run(Args []byte) (resStr string) {
 	return
 }
 
-// BitMask for the type of check to apply to a given file
-// see documentation about iota for more info
-const (
-	checkRegex = 1 << iota
-	checkFilename
-	checkMD5
-	checkSHA1
-	checkSHA256
-	checkSHA384
-	checkSHA512
-	checkSHA3_224
-	checkSHA3_256
-	checkSHA3_384
-	checkSHA3_512
-)
-
-// createCheck creates a new filecheck
-func createChecks(label string, s search) (checks []filecheck, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("createChecks() -> %v", e)
-		}
-	}()
-	for _, path := range s.Paths {
-		for _, re := range s.Contents {
-			check := newFileCheck(label, path, "regex", re, checkRegex)
-			checks = append(checks, *check)
-		}
-		for _, re := range s.Names {
-			check := newFileCheck(label, path, "filename", re, checkFilename)
-			checks = append(checks, *check)
-		}
-		for _, hash := range s.MD5 {
-			hash = strings.ToUpper(hash)
-			check := newFileCheck(label, path, "md5", hash, checkMD5)
-			checks = append(checks, *check)
-		}
-		for _, hash := range s.SHA1 {
-			hash = strings.ToUpper(hash)
-			check := newFileCheck(label, path, "sha1", hash, checkSHA1)
-			checks = append(checks, *check)
-		}
-		for _, hash := range s.SHA256 {
-			hash = strings.ToUpper(hash)
-			check := newFileCheck(label, path, "sha256", hash, checkSHA256)
-			checks = append(checks, *check)
-		}
-		for _, hash := range s.SHA384 {
-			hash = strings.ToUpper(hash)
-			check := newFileCheck(label, path, "sha384", hash, checkSHA384)
-			checks = append(checks, *check)
-		}
-		for _, hash := range s.SHA512 {
-			hash = strings.ToUpper(hash)
-			check := newFileCheck(label, path, "sha512", hash, checkSHA512)
-			checks = append(checks, *check)
-		}
-		for _, hash := range s.SHA3_224 {
-			hash = strings.ToUpper(hash)
-			check := newFileCheck(label, path, "sha3_224", hash, checkSHA3_224)
-			checks = append(checks, *check)
-		}
-		for _, hash := range s.SHA3_256 {
-			hash = strings.ToUpper(hash)
-			check := newFileCheck(label, path, "sha3_256", hash, checkSHA3_256)
-			checks = append(checks, *check)
-		}
-		for _, hash := range s.SHA3_384 {
-			hash = strings.ToUpper(hash)
-			check := newFileCheck(label, path, "sha3_384", hash, checkSHA3_384)
-			checks = append(checks, *check)
-		}
-		for _, hash := range s.SHA3_512 {
-			hash = strings.ToUpper(hash)
-			check := newFileCheck(label, path, "sha3_512", hash, checkSHA3_512)
-			checks = append(checks, *check)
-		}
-	}
-	return
-}
-
-// findRootPath takes a path pattern and extracts the root, that is the
-// directory we can start our pattern search from.
-// example: pattern='/etc/cron.*/*' => root='/etc/'
-func findRootPath(pattern string) string {
-	// if pattern has no metacharacter, use as-is
-	if strings.IndexAny(pattern, "*?[") < 0 {
-		return pattern
-	}
-	// find the root path before the first pattern character.
-	// seppos records the position of the latest path separator
-	// before the first pattern.
-	seppos := 0
-	for cursor := 0; cursor < len(pattern); cursor++ {
-		char := pattern[cursor]
-		switch char {
-		case '*', '?', '[':
-			// found pattern character. but ignore it if preceded by backslash
-			if cursor > 0 {
-				if pattern[cursor-1] == '\\' {
-					break
-				}
-			}
-			goto exit
-		case os.PathSeparator:
-			if cursor > 0 {
-				seppos = cursor
-			}
-		}
-	}
-exit:
-	if seppos == 0 {
-		return string(pattern[0])
-	} else {
-		return pattern[0 : seppos+1]
-	}
-}
-
-// pathWalk goes down a directory and build a list of Active checklist that
-// apply to the current path. For a given directory, it calls itself for all
-// subdirectories fund, recursively walking down the pass. When it find a file,
-// it calls the inspection function, and give it the list of checklist to inspect
-// the file with.
-// parameters:
-//      - path is the file system path to inspect
-//      - checklist is the global list of checklist
-//      - todolist is a map that contains the checklist that are not yet active
-//      - interestedlist is a map that contains checks that are interested in the
-//	  current path but not yet active
-// return:
-//      - nil on success, error on error
-func pathWalk(path string, checklist, todolist, interestedlist map[float64]filecheck) (err error) {
+func (r Runner) pathWalk(path string, roots []string) (traversed []string, err error) {
+	var (
+		subdirs []string
+		target  *os.File
+		t       os.FileInfo
+	)
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("pathWalk() -> %v", e)
@@ -621,35 +697,80 @@ func pathWalk(path string, checklist, todolist, interestedlist map[float64]filec
 	if debug {
 		fmt.Printf("pathWalk: walking into '%s'\n", path)
 	}
-	for id, check := range todolist {
-		if pathIncludes(path, check.path) {
-			/* Found a new Check to apply to the current path, add
-			   it to the interested list, and delete it from the todo
-			*/
-			interestedlist[id] = todolist[id]
-			if debug {
-				fmt.Printf("pathWalk: adding check '%d':'%s':'%s':'%s' to interestedlist, removing from todolist\n",
-					id, check.path, check.method, check.test)
-			}
+	// as we traversed the directory structure from the shortest path to the longest, we
+	// may end up traversing directories that are supposed to be processed later on.
+	// when that happens, flag the directory in the traversed list to tell the top-level
+	// function to not traverse it again
+	for _, p := range roots {
+		if p == path {
+			traversed = append(traversed, p)
 		}
 	}
-	var subdirs []string
+	// verify that we have at least one search interested in the current directory
+	activesearches := 0
+	for label, search := range r.Parameters.Searches {
+		// check if a search needs to be activated by comparing
+		// the search paths with the current path. if one matches,
+		// then the search is activated.
+		for _, p := range search.Paths {
+			if debug {
+				fmt.Printf("comparing current path '%s' with candidate search '%s'\n", path, p)
+			}
+			if len(path) >= len(p) && p == path[:len(p)] {
+				search.activate()
+				search.markcurrent()
+				search.increasedepth()
+			} else {
+				search.unmarkcurrent()
+			}
+		}
+		// we're entering a new directory, increase the depth counter
+		// of active searches, and deactivate a search that is too deep
+		if search.isactive {
+			if search.currentdepth > uint64(search.Options.MaxDepth) {
+				if debug {
+					fmt.Printf("deactivating search '%s' because depth %d > %.0f\n", label, search.currentdepth, search.Options.MaxDepth)
+				}
+				search.deactivate()
+			} else {
+				activesearches++
+			}
+		}
+		// if we reached the limit of matches we're allowed to return, deactivate this search
+		if stats.Totalhits >= search.Options.MatchLimit {
+			search.deactivate()
+			search.unmarkcurrent()
+			activesearches--
+			r.Parameters.Searches[label] = search
+		}
+		r.Parameters.Searches[label] = search
+	}
+	if debug {
+		fmt.Printf("pathWalk: %d searches are currently active\n", activesearches)
+	}
+	if activesearches == 0 {
+		goto finish
+	}
 	// Read the content of dir stored in 'path',
-	// put all sub-directories in the SubDirs slice, and call
+	// put all sub-directories in the subdirs slice, and call
 	// the inspection function for all files
-	target, err := os.Open(path)
+	target, err = os.Open(path)
 	if err != nil {
 		// do not panic when open fails, just increase a counter
 		stats.Openfailed++
 		walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
-		return nil
+		goto finish
 	}
-	targetMode, _ := os.Lstat(path)
-	if targetMode.Mode().IsDir() {
+	t, _ = os.Lstat(path)
+	if t.Mode().IsDir() {
 		// target is a directory, process its content
+		if debug {
+			fmt.Printf("'%s' is a directory, processing its content\n", path)
+		}
 		dirContent, err := target.Readdir(-1)
 		if err != nil {
-			panic(err)
+			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
+			goto finish
 		}
 		// loop over the content of the directory
 		for _, dirEntry := range dirContent {
@@ -686,62 +807,62 @@ func pathWalk(path string, checklist, todolist, interestedlist map[float64]filec
 				}
 			}
 			if dirEntry.Mode().IsRegular() || isLinkedFile {
-				err = evaluateFile(entryAbsPath, interestedlist, checklist)
+				err = r.evaluateFile(entryAbsPath)
 				if err != nil {
-					panic(err)
+					walkingErrors = append(walkingErrors, err.Error())
 				}
 			}
 		}
 	}
 
-	// target is a symlink, expand it
-	isLinkedFile := false
-	if targetMode.Mode()&os.ModeSymlink == os.ModeSymlink {
+	// target is a symlink, expand it. we only follow symlinks to files, not directories
+	if t.Mode()&os.ModeSymlink == os.ModeSymlink {
 		linkmode, linkpath, err := followSymLink(path)
 		if err != nil {
 			// reading the link failed, count and continue
 			stats.Openfailed++
 			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
-			return nil
+			goto finish
 		}
 		if debug {
 			fmt.Printf("'%s' links to '%s'\n", path, linkpath)
 		}
 		if linkmode.IsRegular() {
-			isLinkedFile = true
+			path = linkpath
 		}
 	}
 
-	// target is a file or a symlink to a file, evaluate it
-	if targetMode.Mode().IsRegular() || isLinkedFile {
-		err = evaluateFile(path, interestedlist, checklist)
+	// target is a not a directory
+	if !t.Mode().IsDir() {
+		err = r.evaluateFile(path)
+		if err != nil {
+			walkingErrors = append(walkingErrors, err.Error())
+			goto finish
+		}
+	}
+
+	// if we found any sub directories, go down the rabbit hole recursively,
+	// but only if one of the check is interested in going
+	for _, dir := range subdirs {
+		traversed, err = r.pathWalk(dir, roots)
 		if err != nil {
 			panic(err)
 		}
 	}
-
+finish:
 	// close the current target, we are done with it
-	if err := target.Close(); err != nil {
-		panic(err)
-	}
-	// if we found any sub directories, go down the rabbit hole recursively,
-	// but only if one of the check is interested in going
-	for _, dir := range subdirs {
-		interested := false
-		for _, check := range interestedlist {
-			if pathIncludes(dir, check.path) {
-				interested = true
-				break
+	target.Close()
+	// leaving the directory, decrement the depth counter of active searches
+	for label, search := range r.Parameters.Searches {
+		if search.iscurrent {
+			search.decreasedepth()
+			if debug {
+				fmt.Printf("decreasing search depth for '%s' to '%d'\n", label, search.currentdepth)
 			}
 		}
-		if interested {
-			err = pathWalk(dir, checklist, todolist, interestedlist)
-			if err != nil {
-				panic(err)
-			}
-		}
+		r.Parameters.Searches[label] = search
 	}
-	return nil
+	return
 }
 
 // followSymLink expands a symbolic link and return the absolute path of the target,
@@ -768,306 +889,317 @@ func followSymLink(link string) (mode os.FileMode, path string, err error) {
 	return
 }
 
-// pathIncludes verifies that a given path matches a given pattern
-func pathIncludes(path, pattern string) bool {
-	// if pattern has no metacharacter, use as-is
-	if strings.IndexAny(pattern, "*?[") < 0 {
-		if path == pattern {
-			return true
-		}
-		return false
-	}
-	// decompose the path into a slice of strings using the PathSeparator to split
-	// and compare each component of the pattern with the correspond component of the path
-	pathItems := strings.Split(path, string(os.PathSeparator))
-	patternItems := strings.Split(pattern, string(os.PathSeparator))
-	matchLen := len(patternItems)
-	if matchLen > len(pathItems) {
-		matchLen = len(pathItems)
-	}
-	if debug {
-		fmt.Printf("Path comparison: ")
-	}
-	for i := 0; i < matchLen; i++ {
-		if i > 0 && pathItems[i] == "" {
-			// skip comparison of the last item of the path because it's empty
-			break
-		}
-		match, _ := filepath.Match(patternItems[i], pathItems[i])
-		if !match {
-			if debug {
-				fmt.Printf("'%s'!='%s'\n", pathItems[i], patternItems[i])
-			}
-			return false
-		}
-		if debug {
-			fmt.Printf("'%s'=~'%s'; ", pathItems[i], patternItems[i])
-		}
-	}
-	if debug {
-		fmt.Printf("=> match\n")
-	}
-	return true
-}
-
-// evaluateFile looks for patterns that match a file and build a list of checks
-// passed to inspectFile
-// '/etc/' will grep into /etc/ without going further down. '/etc/*' will go further down.
-// '/etc/*sswd' or '/etc/*yum*/*.repo' work as expected.
-func evaluateFile(file string, interestedlist, checklist map[float64]filecheck) (err error) {
+// evaluateFile takes a single file and applies searches to it
+func (r Runner) evaluateFile(file string) (err error) {
+	var activeSearches []string
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("evaluateFile() -> %v", e)
 		}
+		// restore list of active searches on exit
+		for _, label := range activeSearches {
+			search := r.Parameters.Searches[label]
+			search.activate()
+			r.Parameters.Searches[label] = search
+		}
 	}()
+	stats.Filescount++
 	if debug {
-		fmt.Printf("evaluateFile: evaluating '%s' against %d checks\n", file, len(interestedlist))
+		fmt.Printf("evaluateFile: evaluating '%s'\n", file)
 	}
-	if len(interestedlist) < 1 {
-		if debug {
-			fmt.Printf("evaluateFile: interestedlist is empty\n")
-		}
-		return nil
-	}
-	// that one is a file, see if it matches one of the pattern
-	inspect := false
-	var checkBitmask uint64 = 0
-	var activechecks []float64
-	for id, check := range interestedlist {
-		match := false
-		subfile := file
-		if strings.IndexAny(check.path, "*?[") < 0 {
-			// check.path doesn't contain metacharacters,
-			// do a direct comparison
-			if check.path[len(check.path)-1] == os.PathSeparator {
-				if len(file) >= len(check.path) {
-					if check.path[0:len(check.path)-1] == file[0:len(check.path)-1] {
-						match = true
-					}
-				}
-			} else if file == check.path {
-				match = true
-			}
-		} else {
-			match, err = filepath.Match(check.path, file)
-			if err != nil {
-				return err
-			}
-			if !match && (len(check.path) < len(file)) && (check.path[len(check.path)-1] == '*') {
-				// 2nd chance to match if check.path is shorter than file and ends
-				// with a wildcard.
-				// filepath.Match isn't very tolerant: a pattern such as '/etc*'
-				// will not match the file '/etc/passwd'.
-				// We work around that by attempting to match on equal length.
-				subfile = file[0 : len(check.path)-1]
-				match, err = filepath.Match(check.path, subfile)
-				if err != nil {
-					return err
-				}
-			}
-		}
-		if match {
+	// store list of active searches to restore it before leaving
+	for label, search := range r.Parameters.Searches {
+		if search.isactive {
 			if debug {
-				fmt.Printf("evaluateFile: activated check id '%d' '%s' on '%s'\n", id, check.path, file)
+				fmt.Printf("evaluateFile: search '%s' is active\n", label)
 			}
-			activechecks = append(activechecks, id)
-			checkBitmask |= check.code
-			inspect = true
-		} else {
-			if debug {
-				fmt.Printf("evaluateFile: '%s' is NOT interested in '%s'\n", check.path, file)
-			}
+			activeSearches = append(activeSearches, label)
 		}
 	}
-	if inspect {
-		// it matches, open the file and inspect it
-		entryfd, err := os.Open(file)
-		if err != nil {
-			// woops, open failed. update counters and move on
-			stats.Openfailed++
-			return nil
+	// First pass: look at the file metadata and if MatchAll is set,
+	// deactivate the searches that don't match the current file.
+	// If MatchAll is not set, all checks will be performed individually
+	fi, err := os.Stat(file)
+	if err != nil {
+		panic(err)
+	}
+	for label, search := range r.Parameters.Searches {
+		if !search.isactive {
+			goto skip
 		}
-		inspectFile(entryfd, activechecks, checkBitmask, checklist)
-		stats.Filescount++
-		if err := entryfd.Close(); err != nil {
-			panic(err)
+		if !search.checkName(file, fi) && search.Options.MatchAll {
+			search.deactivate()
+			goto skip
 		}
-		stats.Filescount++
+		if !search.checkMode(file, fi) && search.Options.MatchAll {
+			search.deactivate()
+			goto skip
+		}
+		if !search.checkSize(file, fi) && search.Options.MatchAll {
+			search.deactivate()
+			goto skip
+		}
+		if !search.checkMtime(file, fi) && search.Options.MatchAll {
+			search.deactivate()
+			goto skip
+		}
+	skip:
+		r.Parameters.Searches[label] = search
+	}
+	// Second pass: Enter all content & hash checks across all searches.
+	// Only perform the searches that are active.
+	// Optimize to only read a file once per check type
+	r.checkContent(file)
+	r.checkHash(file, checkMD5)
+	r.checkHash(file, checkSHA1)
+	r.checkHash(file, checkSHA256)
+	r.checkHash(file, checkSHA384)
+	r.checkHash(file, checkSHA512)
+	r.checkHash(file, checkSHA3_224)
+	r.checkHash(file, checkSHA3_256)
+	r.checkHash(file, checkSHA3_384)
+	r.checkHash(file, checkSHA3_512)
+	return
+}
+
+func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
+	matchedall = true
+	if (s.checkmask & checkName) != 0 {
+		for i, c := range s.checks {
+			if (c.code & checkName) == 0 {
+				continue
+			}
+			if c.regex.MatchString(path.Base(fi.Name())) {
+				if debug {
+					fmt.Printf("file name '%s' matches regex '%s'\n", fi.Name(), c.value)
+				}
+				c.storeMatch(file)
+			} else {
+				matchedall = false
+			}
+			s.checks[i] = c
+		}
 	}
 	return
 }
 
-// inspectFile is an orchestration function that runs the individual checks
-// against a selected file. It uses checkBitmask to find the checks it needs
-// to run. The file is opened once, and all the checks are ran against it,
-// minimizing disk IOs.
-// parameters:
-//      - fd is an open file descriptor that points to the file to inspect
-//      - activechecks is a slice that contains the IDs of the checklist
-//      that all files in that path and below must be checked against
-//      - checkBitmask is a bitmask of the checks types currently active
-//      - checklist is the global list of checklist
-// returns:
-//      - nil on success, error on failure
-func inspectFile(fd *os.File, activechecks []float64, checkBitmask uint64, checklist map[float64]filecheck) (err error) {
+func (s search) checkMode(file string, fi os.FileInfo) (matchedall bool) {
+	matchedall = true
+	if (s.checkmask & checkMode) != 0 {
+		for i, c := range s.checks {
+			if (c.code & checkMode) == 0 {
+				continue
+			}
+			if c.regex.MatchString(fi.Mode().String()) {
+				if debug {
+					fmt.Printf("file '%s' mode '%s' matches regex '%s'\n",
+						fi.Name(), fi.Mode().String(), c.value)
+				}
+				c.storeMatch(file)
+			} else {
+				matchedall = false
+			}
+			s.checks[i] = c
+		}
+	}
+	return
+}
+
+func (s search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
+	matchedall = true
+	if (s.checkmask & checkSize) != 0 {
+		for i, c := range s.checks {
+			if (c.code & checkSize) == 0 {
+				continue
+			}
+			if fi.Size() > int64(c.minsize) && fi.Size() < int64(c.maxsize) {
+				if debug {
+					fmt.Printf("file '%s' size '%d' is between %d and %d\n",
+						fi.Name(), fi.Size(), c.minsize, c.maxsize)
+				}
+				c.storeMatch(file)
+			} else {
+				matchedall = false
+			}
+			s.checks[i] = c
+		}
+	}
+	return
+}
+
+func (s search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
+	matchedall = true
+	if (s.checkmask & checkMtime) != 0 {
+		for i, c := range s.checks {
+			if (c.code & checkMtime) == 0 {
+				continue
+			}
+			if fi.ModTime().After(c.minmtime) && fi.ModTime().Before(c.maxmtime) {
+				if debug {
+					fmt.Printf("file '%s' mtime '%s' is between %s and %s\n",
+						fi.Name(), fi.ModTime().UTC().String(),
+						c.minmtime.String(), c.maxmtime.String())
+				}
+				c.storeMatch(file)
+			} else {
+				matchedall = false
+			}
+			s.checks[i] = c
+		}
+	}
+	return
+}
+
+func (r Runner) checkContent(file string) {
+	var (
+		err error
+		fd  *os.File
+	)
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("inspectFile() -> %v", e)
+			err = fmt.Errorf("checkContent() -> %v", e)
+			walkingErrors = append(walkingErrors, err.Error())
 		}
 	}()
-	// Iterate through the entire checklist, and process the checks of each file
-	if debug {
-		fmt.Printf("InspectFile: file '%s' CheckMask '%d'\n",
-			fd.Name(), checkBitmask)
-	}
-	if (checkBitmask & checkRegex) != 0 {
-		// build a list of checklist of check type 'contains'
-		var ReList []float64
-		for _, id := range activechecks {
-			if (checklist[id].code & checkRegex) != 0 {
-				ReList = append(ReList, id)
-			}
+	// skip this check if no search has anything to run
+	// also used to keep track of the checks to run and exit early if possible
+	var checksstatus = make(map[string]map[int]bool)
+	doit := false
+	for label, search := range r.Parameters.Searches {
+		if !search.isactive {
+			continue
 		}
-		match, err := matchRegexOnFile(fd, ReList, checklist)
-		if err != nil {
+		for i, c := range search.checks {
+			if c.code&checkContent == 0 {
+				continue
+			}
+			// init the map
+			checksstatus[label] = map[int]bool{i: false}
+			doit = true
+		}
+	}
+	if !doit {
+		return
+	}
+	fd, err = os.Open(file)
+	if err != nil {
+		stats.Openfailed++
+		panic(err)
+	}
+	defer fd.Close()
+	// iterate over the file content
+	scanner := bufio.NewScanner(fd)
+	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
 			panic(err)
 		}
-		if match {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
+		if !doit {
+			break
+		}
+		doneany := false
+		for label, search := range r.Parameters.Searches {
+			// skip inactive searches or searches that don't have a content check
+			if !search.isactive || (search.checkmask&checkContent == 0) {
+				continue
 			}
+			// apply the content checks regexes to the current scan
+			for i, c := range search.checks {
+				if c.code&checkContent == 0 || checksstatus[label][i] {
+					continue
+				}
+				if c.regex.MatchString(scanner.Text()) {
+					if debug {
+						fmt.Printf("checkContent: regex '%s' match on line '%s'\n", c.value, scanner.Text())
+					}
+					c.storeMatch(file)
+					checksstatus[label][i] = true
+				}
+				doneany = true
+				search.checks[i] = c
+			}
+		}
+		if !doneany {
+			doit = false
 		}
 	}
-	if (checkBitmask & checkFilename) != 0 {
-		// build a list of checklist of check type 'contains'
-		var ReList []float64
-		for _, id := range activechecks {
-			if (checklist[id].code & checkFilename) != 0 {
-				ReList = append(ReList, id)
+	// done with file content inspection, deactivate searches that have matchall set
+	// to true, but did not match against the current file
+	for label, search := range r.Parameters.Searches {
+		if search.isactive && (search.checkmask&checkContent != 0) && search.Options.MatchAll {
+			for i, c := range search.checks {
+				if c.code&checkContent == 0 {
+					continue
+				}
+				if !checksstatus[label][i] {
+					// check has not matched, deactivate
+					search.deactivate()
+				}
 			}
 		}
-		if matchRegexOnName(fd.Name(), ReList, checklist) {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
-			}
+		r.Parameters.Searches[label] = search
+	}
+	return
+}
+
+func (r Runner) checkHash(file string, hashtype checkType) {
+	var (
+		err error
+	)
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("checkHash() -> %v", e)
+			walkingErrors = append(walkingErrors, err.Error())
+		}
+	}()
+	// skip this check if no search has anything to run
+	nothingToDo := true
+	for _, search := range r.Parameters.Searches {
+		if search.isactive && (search.checkmask&hashtype) != 0 {
+			nothingToDo = false
 		}
 	}
-	if (checkBitmask & checkMD5) != 0 {
-		hash, err := getHash(fd, checkMD5)
-		if err != nil {
-			panic(err)
-		}
-		if verifyHash(fd.Name(), hash, checkMD5, activechecks, checklist) {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
-			}
-		}
+	if nothingToDo {
+		return
 	}
-	if (checkBitmask & checkSHA1) != 0 {
-		hash, err := getHash(fd, checkSHA1)
-		if err != nil {
-			panic(err)
-		}
-		if verifyHash(fd.Name(), hash, checkSHA1, activechecks, checklist) {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
-			}
-		}
+	hash, err := getHash(file, hashtype)
+	if err != nil {
+		panic(err)
 	}
-	if (checkBitmask & checkSHA256) != 0 {
-		hash, err := getHash(fd, checkSHA256)
-		if err != nil {
-			panic(err)
-		}
-		if verifyHash(fd.Name(), hash, checkSHA256, activechecks, checklist) {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
+	for label, search := range r.Parameters.Searches {
+		if search.isactive && (search.checkmask&hashtype) != 0 {
+			for i, c := range search.checks {
+				if c.code&hashtype == 0 {
+					continue
+				}
+				if c.value == hash {
+					if debug {
+						fmt.Printf("checkHash: file '%s' matches checksum '%s'\n", file, c.value)
+					}
+					c.storeMatch(file)
+				} else if search.Options.MatchAll {
+					search.deactivate()
+				}
+				search.checks[i] = c
 			}
 		}
-	}
-	if (checkBitmask & checkSHA384) != 0 {
-		hash, err := getHash(fd, checkSHA384)
-		if err != nil {
-			panic(err)
-		}
-		if verifyHash(fd.Name(), hash, checkSHA384, activechecks, checklist) {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
-			}
-		}
-	}
-	if (checkBitmask & checkSHA512) != 0 {
-		hash, err := getHash(fd, checkSHA512)
-		if err != nil {
-			panic(err)
-		}
-		if verifyHash(fd.Name(), hash, checkSHA512, activechecks, checklist) {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
-			}
-		}
-	}
-	if (checkBitmask & checkSHA3_224) != 0 {
-		hash, err := getHash(fd, checkSHA3_224)
-		if err != nil {
-			panic(err)
-		}
-		if verifyHash(fd.Name(), hash, checkSHA3_224, activechecks, checklist) {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
-			}
-		}
-	}
-	if (checkBitmask & checkSHA3_256) != 0 {
-		hash, err := getHash(fd, checkSHA3_256)
-		if err != nil {
-			panic(err)
-		}
-		if verifyHash(fd.Name(), hash, checkSHA3_256, activechecks, checklist) {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
-			}
-		}
-	}
-	if (checkBitmask & checkSHA3_384) != 0 {
-		hash, err := getHash(fd, checkSHA3_384)
-		if err != nil {
-			panic(err)
-		}
-		if verifyHash(fd.Name(), hash, checkSHA3_384, activechecks, checklist) {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
-			}
-		}
-	}
-	if (checkBitmask & checkSHA3_512) != 0 {
-		hash, err := getHash(fd, checkSHA3_512)
-		if err != nil {
-			panic(err)
-		}
-		if verifyHash(fd.Name(), hash, checkSHA3_512, activechecks, checklist) {
-			if debug {
-				fmt.Printf("InspectFile: Positive result found for '%s'\n", fd.Name())
-			}
-		}
+		r.Parameters.Searches[label] = search
 	}
 	return
 }
 
 // getHash calculates the hash of a file.
-// It reads a file block by block, and updates a hashsum with each block.
-// Reading by blocks consume very little memory, which is needed for large files.
-// parameters:
-//      - fd is an open file descriptor that points to the file to inspect
-//      - hashType is an integer that define the type of hash
-// return:
-//      - hexhash, the hex encoded hash of the file found at fp
-func getHash(fd *os.File, hashType float64) (hexhash string, err error) {
+func getHash(file string, hashType checkType) (hexhash string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("getHash() -> %v", e)
 		}
 	}()
+	fd, err := os.Open(file)
+	if err != nil {
+		stats.Openfailed++
+		panic(err)
+	}
+	defer fd.Close()
 	if debug {
 		fmt.Printf("getHash: computing hash for '%s'\n", fd.Name())
 	}
@@ -1112,171 +1244,177 @@ func getHash(fd *os.File, hashType float64) (hexhash string, err error) {
 	return
 }
 
-// verifyHash compares a file hash with the checklist that apply to the file
-// parameters:
-//      - file is the absolute filename of the file to check
-//      - hash is the value of the hash being checked
-//      - check is the type of check
-//      - activechecks is a slice of int with IDs of active checklist
-//      - checklist is a map of Check
-// returns:
-//      - IsVerified: true if a match is found, false otherwise
-func verifyHash(file string, hash string, check float64, activechecks []float64, checklist map[float64]filecheck) (IsVerified bool) {
-	IsVerified = false
-	for _, id := range activechecks {
-		tmpcheck := checklist[id]
-		if checklist[id].test == hash {
-			IsVerified = true
-			tmpcheck.hasmatched = true
-			tmpcheck.matchcount++
-			tmpcheck.files[file] = 1
-		}
-		// update checklist tested files count
-		tmpcheck.filecount++
-		checklist[id] = tmpcheck
-	}
-	return
+type Results struct {
+	FoundAnything bool          `json:"foundanything"`
+	Success       bool          `json:"success"`
+	Elements      searchresults `json:"elements"`
+	Statistics    statistics    `json:"statistics"`
+	Errors        []string      `json:"error"`
 }
 
-// matchRegexOnFile read a file line by line and apply regexp search to each
-// line. If a regexp matches, the corresponding Check is updated with the result.
-// All regexp are compiled during argument parsing and not here.
-// parameters:
-//      - fd is a file descriptor on the open file
-//      - ReList is a list of Check IDs to apply to this file
-//      - checklist is a map of Check
-// return:
-//      - hasmatched is a boolean set to true if at least one regexp matches
-func matchRegexOnFile(fd *os.File, ReList []float64, checklist map[float64]filecheck) (hasmatched bool, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("matchRegexOnFile() -> %v", e)
-		}
-	}()
-	hasmatched = false
-	// temp map to store the results
-	results := make(map[float64]float64)
-	scanner := bufio.NewScanner(fd)
-	for scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			panic(err)
-		}
-		for _, id := range ReList {
-			if checklist[id].regex.MatchString(scanner.Text()) {
-				if debug {
-					fmt.Printf("matchRegexOnFile: regex '%s' match on line '%s'\n",
-						checklist[id].test, scanner.Text())
-				}
-				hasmatched = true
-				results[id]++
-			}
-		}
-	}
-	if hasmatched {
-		for id, count := range results {
-			tmpcheck := checklist[id]
-			tmpcheck.hasmatched = true
-			tmpcheck.matchcount += count
-			tmpcheck.files[fd.Name()] = count
-			checklist[id] = tmpcheck
-		}
-	}
-	// update checklist tested files count
-	for _, id := range ReList {
-		tmpcheck := checklist[id]
-		tmpcheck.filecount++
-		checklist[id] = tmpcheck
-	}
-	return
+type searchresults map[string]searchresult
+
+type searchresult []matchedfile
+
+type matchedfile struct {
+	File     string   `json:"file"`
+	Search   search   `json:"search"`
+	FileInfo fileinfo `json:"fileinfo"`
 }
 
-// matchRegexOnName applies regexp search to a given filename
-// parameters:
-//      - filename is a string that contains a filename
-//      - ReList is a list of Check IDs to apply to this file
-//      - checklist is a map of Check
-// return:
-//      - hasmatched is a boolean set to true if at least one regexp matches
-func matchRegexOnName(filename string, ReList []float64, checklist map[float64]filecheck) (hasmatched bool) {
-	hasmatched = false
-	for _, id := range ReList {
-		tmpcheck := checklist[id]
-		if checklist[id].regex.MatchString(path.Base(filename)) {
-			hasmatched = true
-			tmpcheck.hasmatched = true
-			tmpcheck.matchcount++
-			tmpcheck.files[filename] = tmpcheck.matchcount
-		}
-		// update checklist tested files count
-		tmpcheck.filecount++
-		checklist[id] = tmpcheck
-	}
-	return
+type fileinfo struct {
+	Size  float64 `json:"size"`
+	Mode  string  `json:"mode"`
+	Mtime string  `json:"lastmodified"`
 }
 
-// buildResults iterates on the map of checklist and print the results to stdout (if
-// debug is set) and into JSON format
-func buildResults(checklist map[float64]filecheck, t0 time.Time) (resStr string, err error) {
+// newResults allocates a Results structure
+func newResults() *Results {
+	return &Results{Elements: make(searchresults), FoundAnything: false}
+}
+
+func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("buildResults() -> %v", e)
 		}
 	}()
 	res := newResults()
-	history := make(map[string]float64)
-
-	// iterate through the checklist and parse the results
-	// into a Response object
-	for id, check := range checklist {
-		if debug {
-			fmt.Printf("Main: Check %s:%d returned %d positive match\n", check.label, id, check.matchcount)
-		}
-		if check.hasmatched {
-			for file, hits := range check.files {
+	for label, search := range r.Parameters.Searches {
+		var sr searchresult
+		// first pass on the results: if matchall is set, verify that all
+		// the checks matched on all the files
+		if search.Options.MatchAll {
+			// collect all the files that were found across all checks of this search
+			var allFiles, matchedFiles []string
+			for _, c := range search.checks {
+				// populate allFiles as a slice of unique files
+				for _, matchedFile := range c.matchedfiles {
+					store := true
+					for _, afile := range allFiles {
+						if afile == matchedFile {
+							store = false
+						}
+					}
+					if store {
+						allFiles = append(allFiles, matchedFile)
+					}
+				}
+			}
+			// verify that each file has matched on all the checks
+			for _, foundFile := range allFiles {
 				if debug {
-					fmt.Printf("\t- %d hits on %s\n", hits, file)
+					fmt.Println("checking if file", foundFile, "matched all checks")
 				}
-				stats.Totalhits += float64(hits)
-				if _, ok := history[file]; !ok {
-					stats.Uniquefiles++
+				matchedallchecks := true
+				for _, c := range search.checks {
+					found := false
+					for _, matchedFile := range c.matchedfiles {
+						if foundFile == matchedFile {
+							found = true
+						}
+					}
+					if !found {
+						if debug {
+							fmt.Println("check", c.code, "did not match")
+						}
+						matchedallchecks = false
+						break
+					}
+				}
+				if matchedallchecks {
+					matchedFiles = append(matchedFiles, foundFile)
 				}
 			}
-			stats.Checksmatch++
-		}
-
-		// build a single results and insert it into the result structure
-		r := singleresult{
-			Filecount:  check.filecount,
-			Matchcount: check.matchcount,
-			Files:      check.files,
-		}
-		// to avoid overwriting existing elements, we test each level before inserting the result
-		if _, ok := res.Elements[check.path]; !ok {
-			res.Elements[check.path] = map[string]map[string]map[string]singleresult{
-				check.method: map[string]map[string]singleresult{
-					check.label: map[string]singleresult{
-						check.test: r,
-					},
-				},
+			if len(matchedFiles) == 0 {
+				matchedFiles = append(matchedFiles, "")
 			}
-		} else if _, ok := res.Elements[check.path][check.method]; !ok {
-			res.Elements[check.path][check.method] = map[string]map[string]singleresult{
-				check.label: map[string]singleresult{
-					check.test: r,
-				},
+			// now that we have a clean list of files that matched all checks, store it
+			for _, matchedFile := range matchedFiles {
+				if debug {
+				}
+				var mf matchedfile
+				mf.File = matchedFile
+				if mf.File != "" {
+					fi, err := os.Stat(mf.File)
+					if err != nil {
+						panic(err)
+					}
+					mf.FileInfo.Size = float64(fi.Size())
+					mf.FileInfo.Mode = fi.Mode().String()
+					mf.FileInfo.Mtime = fi.ModTime().UTC().String()
+				}
+				mf.Search = search
+				mf.Search.Options.MatchLimit = 0
+				mf.Search.Options.MaxDepth = 0
+				mf.Search.Options.MatchAll = search.Options.MatchAll
+				sr = append(sr, mf)
+				stats.Totalhits++
 			}
-		} else if _, ok := res.Elements[check.path][check.method][check.label]; !ok {
-			res.Elements[check.path][check.method][check.label] = map[string]singleresult{
-				check.test: r,
-			}
-		} else if _, ok := res.Elements[check.path][check.method][check.label][check.test]; !ok {
-			res.Elements[check.path][check.method][check.label][check.test] = r
+			// done with this search, go to the next one
+			goto nextsearch
 		}
-	}
-
-	// if something matched anywhere, set the global boolean to true
-	if stats.Checksmatch > 0 {
-		res.FoundAnything = true
+		// if matchall is not set, store each file on each check that matched individually
+		for _, c := range search.checks {
+			// if this check matched nothing, store it in a search result
+			// where the File value is the empty string
+			if len(c.matchedfiles) == 0 {
+				c.matchedfiles = append(c.matchedfiles, "")
+			}
+			for _, file := range c.matchedfiles {
+				var mf matchedfile
+				mf.File = file
+				if mf.File != "" {
+					stats.Totalhits++
+					fi, err := os.Stat(file)
+					if err != nil {
+						panic(err)
+					}
+					mf.FileInfo.Size = float64(fi.Size())
+					mf.FileInfo.Mode = fi.Mode().String()
+					mf.FileInfo.Mtime = fi.ModTime().UTC().String()
+					mf.Search.Paths = []string{filepath.Dir(mf.File)}
+				} else {
+					mf.Search.Paths = search.Paths
+				}
+				mf.Search.Options.MatchLimit = 0
+				mf.Search.Options.MaxDepth = 0
+				mf.Search.Options.MatchAll = search.Options.MatchAll
+				switch c.code {
+				case checkContent:
+					mf.Search.Contents = append(mf.Search.Contents, c.value)
+				case checkName:
+					mf.Search.Names = append(mf.Search.Names, c.value)
+				case checkSize:
+					mf.Search.Sizes = append(mf.Search.Sizes, c.value)
+				case checkMode:
+					mf.Search.Modes = append(mf.Search.Modes, c.value)
+				case checkMtime:
+					mf.Search.Mtimes = append(mf.Search.Mtimes, c.value)
+				case checkMD5:
+					mf.Search.MD5 = append(mf.Search.MD5, c.value)
+				case checkSHA1:
+					mf.Search.SHA1 = append(mf.Search.SHA1, c.value)
+				case checkSHA256:
+					mf.Search.SHA256 = append(mf.Search.SHA256, c.value)
+				case checkSHA384:
+					mf.Search.SHA384 = append(mf.Search.SHA384, c.value)
+				case checkSHA512:
+					mf.Search.SHA512 = append(mf.Search.SHA512, c.value)
+				case checkSHA3_224:
+					mf.Search.SHA3_224 = append(mf.Search.SHA3_224, c.value)
+				case checkSHA3_256:
+					mf.Search.SHA3_256 = append(mf.Search.SHA3_256, c.value)
+				case checkSHA3_384:
+					mf.Search.SHA3_384 = append(mf.Search.SHA3_384, c.value)
+				case checkSHA3_512:
+					mf.Search.SHA3_512 = append(mf.Search.SHA3_512, c.value)
+				}
+				sr = append(sr, mf)
+			}
+		}
+	nextsearch:
+		res.Elements[label] = sr
 	}
 
 	// calculate execution time
@@ -1292,15 +1430,15 @@ func buildResults(checklist map[float64]filecheck, t0 time.Time) (resStr string,
 	}
 	// execution succeeded, set Success to true
 	res.Success = true
+	if stats.Totalhits > 0 {
+		res.FoundAnything = true
+	}
 	if debug {
-		fmt.Printf("Tested checklist: %d\n"+
-			"Tested files:     %d\n"+
-			"checklist Match:  %d\n"+
-			"Unique Files:     %d\n"+
-			"Total hits:       %d\n"+
+		fmt.Printf("Tested files:     %.0f\n"+
+			"Open Failed:      %.0f\n"+
+			"Total hits:       %.0f\n"+
 			"Execution time:   %s\n",
-			stats.Checkcount, stats.Filescount,
-			stats.Checksmatch, stats.Uniquefiles,
+			stats.Filescount, stats.Openfailed,
 			stats.Totalhits, stats.Exectime)
 	}
 	JsonResults, err := json.Marshal(res)
@@ -1321,37 +1459,75 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 	if err != nil {
 		panic(err)
 	}
-	for path, _ := range results.Elements {
-		for method, _ := range results.Elements[path] {
-			for label, _ := range results.Elements[path][method] {
-				for value, _ := range results.Elements[path][method][label] {
-					if foundOnly {
-						if results.Elements[path][method][label][value].Matchcount < 1 {
-							// go to next value
-							continue
-						}
-					}
-					if len(results.Elements[path][method][label][value].Files) == 0 {
-						res := fmt.Sprintf("0 found on '%s' in check '%s':'%s':'%s'",
-							value, path, method, label)
-						prints = append(prints, res)
-						continue
-					}
-					for file, cnt := range results.Elements[path][method][label][value].Files {
-						res := fmt.Sprintf("%.0f found in '%s' on '%s' for file '%s':'%s':'%s'",
-							cnt, file, value, path, method, label)
-						prints = append(prints, res)
-					}
+	for label, sr := range results.Elements {
+		for _, mf := range sr {
+			var out string
+			if mf.File == "" {
+				if foundOnly {
+					continue
 				}
+				out = fmt.Sprintf("0 match found in search '%s'", label)
+			} else {
+				out = fmt.Sprintf("%s [lastmodified:%s, mode:%s, size:%.0f] in search '%s'",
+					mf.File, mf.FileInfo.Mtime, mf.FileInfo.Mode, mf.FileInfo.Size, label)
 			}
+			if mf.Search.Options.MatchAll {
+				prints = append(prints, out)
+				continue
+			}
+			out += " on checks"
+			// if matchany, print the detail of the checks that matched with the filename
+			for _, v := range mf.Search.Names {
+				out += fmt.Sprintf(" name='%s'", v)
+			}
+			for _, v := range mf.Search.Sizes {
+				out += fmt.Sprintf(" size='%s'", v)
+			}
+			for _, v := range mf.Search.Modes {
+				out += fmt.Sprintf(" mode='%s'", v)
+			}
+			for _, v := range mf.Search.Mtimes {
+				out += fmt.Sprintf(" mtime='%s'", v)
+			}
+			for _, v := range mf.Search.Contents {
+				out += fmt.Sprintf(" content='%s'", v)
+			}
+			for _, v := range mf.Search.MD5 {
+				out += fmt.Sprintf(" md5='%s'", v)
+			}
+			for _, v := range mf.Search.SHA1 {
+				out += fmt.Sprintf(" sha1='%s'", v)
+			}
+			for _, v := range mf.Search.SHA256 {
+				out += fmt.Sprintf(" sha256='%s'", v)
+			}
+			for _, v := range mf.Search.SHA384 {
+				out += fmt.Sprintf(" sha384='%s'", v)
+			}
+			for _, v := range mf.Search.SHA512 {
+				out += fmt.Sprintf(" sha512='%s'", v)
+			}
+			for _, v := range mf.Search.SHA3_224 {
+				out += fmt.Sprintf(" sha3_224='%s'", v)
+			}
+			for _, v := range mf.Search.SHA3_256 {
+				out += fmt.Sprintf(" sha3_256='%s'", v)
+			}
+			for _, v := range mf.Search.SHA3_384 {
+				out += fmt.Sprintf(" sha3_384='%s'", v)
+			}
+			for _, v := range mf.Search.SHA3_512 {
+				out += fmt.Sprintf(" sha3_512='%s'", v)
+			}
+			prints = append(prints, out)
 		}
 	}
 	if !foundOnly {
 		for _, we := range results.Errors {
 			prints = append(prints, we)
 		}
-		stat := fmt.Sprintf("Statistics: %.0f checks tested on %.0f files. %.0f failed to open. %.0f checks matched on %.0f files. %.0f total hits. ran in %s.",
-			results.Statistics.Checkcount, results.Statistics.Filescount, results.Statistics.Openfailed, results.Statistics.Checksmatch, results.Statistics.Uniquefiles,
+		stat := fmt.Sprintf("Statistics: %.0f files checked, %.0f failed to open, %.0f matched, ran in %s.",
+			results.Statistics.Filescount, results.Statistics.Openfailed,
 			results.Statistics.Totalhits, results.Statistics.Exectime)
 		prints = append(prints, stat)
 	}
