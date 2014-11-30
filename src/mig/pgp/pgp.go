@@ -25,11 +25,11 @@ func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.ReadSeeker, keycount 
 	}()
 	var buf bytes.Buffer
 	// iterate over the keys, and load them into an io.Reader keyring
-	for _, key := range pubkeys {
+	for i, key := range pubkeys {
 		// Load PGP public key
 		el, err := openpgp.ReadArmoredKeyRing(bytes.NewBufferString(key))
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("key num.%d failed to load with error %v", i, err))
 		}
 		keycount += 1
 		if len(el) != 1 {

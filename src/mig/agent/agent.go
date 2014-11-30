@@ -118,7 +118,7 @@ func main() {
 	case "agent":
 		err := configLoad(*config)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[info] Using builtin conf. %v\n", err)
+			fmt.Fprintf(os.Stderr, "[info] Just FYI (not an error): using the builtin conf because %v\n", err)
 		} else {
 			fmt.Fprintf(os.Stderr, "[info] Using external conf from %s\n", *config)
 		}
