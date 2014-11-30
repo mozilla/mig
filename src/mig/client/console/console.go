@@ -26,7 +26,7 @@ func main() {
 	var err error
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Printf("FATAL: %v\n", e)
+			fmt.Fprintf(os.Stderr, "FATAL: %v\n", e)
 		}
 	}()
 	homedir := client.FindHomedir()
