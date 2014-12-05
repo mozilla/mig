@@ -126,7 +126,7 @@ func decryptEntity(s *openpgp.Entity) (ds *openpgp.Entity, pass string, err erro
 			Prompt:   "Passphrase",
 			Desc:     desc,
 		}
-		for tries := 0; tries < 2; tries++ {
+		for tries := 0; tries < 3; tries++ {
 			pass, err := conn.GetPassphrase(req)
 			if err == nil {
 				err = ds.PrivateKey.Decrypt([]byte(pass))
@@ -146,9 +146,10 @@ func decryptEntity(s *openpgp.Entity) (ds *openpgp.Entity, pass string, err erro
 	}
 
 	pinReq := &pinentry.Request{Desc: desc, Prompt: "Passphrase"}
-	for tries := 0; tries < 2; tries++ {
+	for tries := 0; tries < 3; tries++ {
 		pass, err = pinReq.GetPIN()
 		if err == nil {
+
 			err = ds.PrivateKey.Decrypt([]byte(pass))
 			if err == nil {
 				return ds, pass, err
