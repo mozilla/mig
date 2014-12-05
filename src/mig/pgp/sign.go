@@ -161,5 +161,5 @@ func decryptEntity(s *openpgp.Entity) (ds *openpgp.Entity, pass string, err erro
 			panic("failed to decrypt key; action canceled")
 		}
 	}
-	return ds, "", fmt.Errorf("decryptEntity(): failed to decrypt key %q", pubk.KeyIdShortString())
+	return ds, "", fmt.Errorf("decryptEntity(): failed to decrypt key %q: %v", pubk.KeyIdShortString(), err)
 }
