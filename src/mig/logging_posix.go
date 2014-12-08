@@ -1,3 +1,5 @@
+// +build linux darwin
+
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -303,7 +305,6 @@ func ProcessLog(logctx Logging, l Log) (stop bool, err error) {
 		log.Println(logline)
 		return
 	}
-	return
 }
 
 func (logctx Logging) Destroy() {
