@@ -107,6 +107,15 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 	if conf.API.URL[len(conf.API.URL)-1] != '/' {
 		conf.API.URL += "/"
 	}
+	// try to make a signed token, just to check that we can access the private key
+	var cli Client
+	cli.Conf = conf
+	_, err = cli.MakeSignedToken()
+	if err != nil {
+		err = fmt.Errorf("failed to generate a security token using key %s from %s\n",
+			conf.GPG.KeyID, conf.GPG.Home+"/secring.gpg")
+		return
+	}
 	return
 }
 
