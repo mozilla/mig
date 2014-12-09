@@ -37,13 +37,10 @@ func Sign(data, keyid string, secringFile io.Reader) (sig string, err error) {
 	found := false
 	for _, entity := range keyring {
 		fingerprint := strings.ToUpper(hex.EncodeToString(entity.PrimaryKey.Fingerprint[:]))
-		for _, ident := range entity.Identities {
-			email := ident.UserId.Email
-			if keyid == fingerprint || keyid == email {
-				signer = entity
-				found = true
-				break
-			}
+		if keyid == fingerprint {
+			signer = entity
+			found = true
+			break
 		}
 	}
 	if !found {
