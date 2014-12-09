@@ -523,6 +523,7 @@ func (cli Client) MakeSignedToken() (token string, err error) {
 	if err != nil {
 		panic(err)
 	}
+	defer secringFile.Close()
 	sig, err := pgp.Sign(str+"\n", cli.Conf.GPG.KeyID, secringFile)
 	if err != nil {
 		panic(err)
