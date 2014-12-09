@@ -42,7 +42,7 @@ MKDIR		:= mkdir
 INSTALL		:= install
 
 
-all: mig-agent mig-scheduler mig-action-generator mig-action-verifier
+all: mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier
 
 mig-agent:
 	echo building mig-agent for $(OS)/$(ARCH)
