@@ -314,14 +314,16 @@ func parseMtime(mtime string) (minmtime, maxmtime time.Time, err error) {
 	switch mtime[0] {
 	case '<':
 		// modification date is between date and now (or future)
-		future, _ := time.ParseDuration("8760000h") // In 1,000 years
 		minmtime = time.Now().Add(-d)
-		maxmtime = time.Now().Add(future)
+		maxmtime = time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
 	case '>':
 		// modification date is older than date
-		ancient, _ := time.ParseDuration("8760000h") // 1,000 years ago...
-		minmtime = time.Now().Add(-ancient)
+		minmtime = time.Date(1111, time.January, 11, 11, 11, 11, 11, time.UTC)
 		maxmtime = time.Now().Add(-d)
+	}
+	if debug {
+		fmt.Printf("Parsed mtime filter with minmtime '%s' and maxmtime '%s'\n",
+			minmtime.String(), maxmtime.String())
 	}
 	return
 }
