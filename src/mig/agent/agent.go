@@ -176,7 +176,7 @@ func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s in checkin mode", version, ctx.Agent.QueueLoc)}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s in checkin mode", version, ctx.Agent.Hostname)}
 
 	// The loop below retrieves messages from the relay. If no message is available,
 	// it will timeout and break out of the loop after 10 seconds, causing the agent to exit
@@ -244,7 +244,7 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 		panic(err)
 	}
 
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.QueueLoc)}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.Hostname)}
 
 	// agent won't exit until this chan receives something
 	exitReason := <-ctx.Channels.Terminate
