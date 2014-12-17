@@ -170,19 +170,26 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 		}
 	}
 
+	// create a new channel
+	agtResultsChan, err := ctx.MQ.conn.Channel()
+	if err != nil {
+		panic(err)
+	}
+
+	// declare the "mig" exchange used for all publications
 	//create a queue for agent
 	queue := fmt.Sprintf("mig.sched.%s", agt.QueueLoc)
-	_, err = ctx.MQ.Chan.QueueDeclare(queue, true, false, false, false, nil)
+	_, err = agtResultsChan.QueueDeclare(queue, true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	err = ctx.MQ.Chan.QueueBind(queue, queue, "mig", false, nil)
+	err = agtResultsChan.QueueBind(queue, queue, "mig", false, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	agentChan, err := ctx.MQ.Chan.Consume(queue, "", true, false, false, false, nil)
+	consumeAgtResults, err := agtResultsChan.Consume(queue, "", true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -193,7 +200,7 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
 		for {
 			select {
-			case msg := <-agentChan:
+			case msg := <-consumeAgtResults:
 				// process incoming agent messages
 				ctx.OpID = mig.GenID()
 				desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
@@ -203,16 +210,20 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
 					// TODO: agent is sending bogus results, do something about it
 				}
-			case <-time.After(agtTimeOut):
+			case <-time.After(2 * agtTimeOut):
 				// expire listener and exit goroutine
 				desc := fmt.Sprintf("Listener timeout triggered for agent '%s'", agt.Name)
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
 				goto exit
 			}
 		}
-		desc = fmt.Sprintf("Closing listener for agent '%s'", agt.Name)
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}
 	exit:
+		desc = fmt.Sprintf("Closing listener for agent '%s'", agt.Name)
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+		err = agtResultsChan.Close()
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while attempt to close listener: %v", err)}.Err()
+		}
 		for i, q := range activeAgentsList {
 			if q == agt.QueueLoc {
 				// remove queue from active list
@@ -221,9 +232,6 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 			}
 		}
 	}()
-
-	desc := fmt.Sprintf("startAgentsListener: started listener for agent '%s' on queue '%s'", agt.Name, queue)
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
 
 	// add the new active queue to the activeAgentsList
 	activeAgentsList = append(activeAgentsList, agt.QueueLoc)
