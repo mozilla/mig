@@ -50,6 +50,8 @@ func spoolInspection(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d agent listeners are currently active", len(activeAgentsList))}.Debug()
+
 	return
 }
 
