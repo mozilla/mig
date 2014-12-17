@@ -698,12 +698,14 @@ Whitelisting of agents
 
 At the moment, MIG does not provide a strong mechanism to authenticate agents.
 It is a work in progress, but for now agents are whitelisted in the scheduler
-using the hostname that are advertised in the heartbeat messages. While easy to
-spoof, it provides a basic filtering mechanism. The long term goal is to allow
-the scheduler to call an external database to authorize agents. In AWS, the
-scheduler could call the AWS API to verify that a given agent does indeed exist
-in the infrastructure. In a traditional datacenter, this could be an inventory
-database.
+using the queuelocs that are advertised in the heartbeat messages. Spoofing the
+queueloc string is difficult, because it contains a random value that is
+specific to an endpoint. An attacker would need access to the random value in
+order to spoof an agent's identity. This method provides a basic access control
+mechanism. The long term goal is to allow the scheduler to call an external database
+to authorize agents. In AWS, the scheduler could call the AWS API to verify that
+a given agent does indeed exist in the infrastructure. In a traditional datacenter,
+this could be an inventory database.
 
 Limit data extraction to a minimum
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

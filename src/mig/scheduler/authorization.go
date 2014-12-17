@@ -14,7 +14,7 @@ import (
 )
 
 // If a whitelist is defined, lookup the agent in it, and return nil if found, or error if not
-func isAgentAuthorized(agentName string, ctx Context) (ok bool, err error) {
+func isAgentAuthorized(agentQueueLoc string, ctx Context) (ok bool, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("isAgentAuthorized() -> %v", e)
@@ -30,7 +30,7 @@ func isAgentAuthorized(agentName string, ctx Context) (ok bool, err error) {
 		return
 	}
 
-	agtRe := regexp.MustCompile("^" + agentName + "$")
+	agtRe := regexp.MustCompile("^" + agentQueueLoc + "$")
 	wfd, err := os.Open(ctx.Agent.Whitelist)
 	if err != nil {
 		panic(err)
@@ -43,7 +43,7 @@ func isAgentAuthorized(agentName string, ctx Context) (ok bool, err error) {
 			panic(err)
 		}
 		if agtRe.MatchString(scanner.Text()) {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentName)}.Debug()
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
 			ok = true
 			return
 		}

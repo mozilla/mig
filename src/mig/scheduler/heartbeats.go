@@ -112,12 +112,12 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 
 	// if agent is not authorized, ack the message and skip the registration
 	// nothing is returned to the agent. it's simply ignored.
-	ok, err := isAgentAuthorized(agt.Name, ctx)
+	ok, err := isAgentAuthorized(agt.QueueLoc, ctx)
 	if err != nil {
 		panic(err)
 	}
 	if !ok {
-		desc := fmt.Sprintf("getHeartbeats(): Agent '%s' is not authorized", agt.Name)
+		desc := fmt.Sprintf("getHeartbeats(): Agent '%s' is not authorized", agt.QueueLoc)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Warning()
 		return
 	}

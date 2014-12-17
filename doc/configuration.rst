@@ -269,16 +269,25 @@ needs.
 Whitelist
 ~~~~~~~~~
 
-Agents' names must be listed in a whitelist file for the scheduler to accept
+Agents's queuelocs must be listed in a whitelist file for the scheduler to accept
 their registrations. The location of the whitelist is configurable, but a good
 place for it is in `/var/cache/mig/agents_whitelist.txt`. The file contains one
-agent name on each line. The agent name is taken from the hostname the agent
-runs on.
+queueloc string on each line. The agent queueloc is taken from the hostname of the
+endpoint the agent runs on, plus a random value only known to the endpoint and
+the MIG platform.
 
   ::
-	agent123.example.net
-	db4.sub.example.com
+	linux.agent123.example.net.58b3mndjmbb00
+	windows.db4.sub.example.com.56b2andxmyb00
 	...
+
+If the scheduler receives a heartbeat from an agent that is not present in the
+whitelist, it will log an error message. An operator can process the logs and
+add agents to the whitelist manually.
+
+  ::
+	Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized
+
 
 Database creation
 ~~~~~~~~~~~~~~~~~
