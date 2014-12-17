@@ -250,7 +250,7 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 		}
 	}
 	ctx.Agent.UID = fmt.Sprintf("%s", id)
-	os.Chmod(idFile, 0644)
+	os.Chmod(idFile, 0400)
 	return
 }
 

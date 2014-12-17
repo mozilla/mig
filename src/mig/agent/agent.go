@@ -600,7 +600,7 @@ func heartbeat(ctx Context) (err error) {
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 		publish(ctx, "mig", "mig.heartbeat", body)
 		// write the heartbeat to disk
-		err = ioutil.WriteFile(ctx.Agent.RunDir+"mig-agent.ok", body, 644)
+		err = ioutil.WriteFile(ctx.Agent.RunDir+"mig-agent.ok", []byte(time.Now().String()), 644)
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{Desc: "Failed to write mig-agent.ok to disk"}.Err()
 		}
