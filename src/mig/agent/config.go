@@ -20,6 +20,7 @@ type config struct {
 		IsImmortal       bool
 		InstallService   bool
 		DiscoverPublicIP bool
+		CheckIn          bool
 		Relay            string
 		Socket           string
 		HeartbeatFreq    string
@@ -47,6 +48,7 @@ func configLoad(path string) (err error) {
 	ISIMMORTAL = config.Agent.IsImmortal
 	MUSTINSTALLSERVICE = config.Agent.InstallService
 	DISCOVERPUBLICIP = config.Agent.DiscoverPublicIP
+	CHECKIN = config.Agent.CheckIn
 	LOGGINGCONF = config.Logging
 	AMQPBROKER = config.Agent.Relay
 	HEARTBEATFREQ, err = time.ParseDuration(config.Agent.HeartbeatFreq)

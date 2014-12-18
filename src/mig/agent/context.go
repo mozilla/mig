@@ -34,6 +34,7 @@ type Context struct {
 	Agent struct {
 		Hostname, OS, QueueLoc, UID, BinPath, RunDir string
 		Respawn                                      bool
+		CheckIn                                      bool
 		Env                                          mig.AgentEnv
 		Tags                                         interface{}
 	}

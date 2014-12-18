@@ -44,6 +44,7 @@ type moduleOp struct {
 var runningOps = make(map[float64]moduleOp)
 
 func main() {
+	var err error
 	// only use half the cpus available on the machine, never more
 	cpus := runtime.NumCPU() / 2
 	if cpus == 0 {
@@ -113,27 +114,26 @@ func main() {
 		goto exit
 	}
 
+	// attempt to read a local configuration file
+	err = configLoad(*config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[info] using builtin conf")
+	} else {
+		fmt.Fprintf(os.Stderr, "[info] Using external conf from %s\n", *config)
+	}
+	// if checkin mode is set in conf, enforce the mode
+	if CHECKIN && *mode == "agent" {
+		*mode = "agent-checkin"
+	}
 	// run the agent in the correct mode. the default is to call a module.
 	switch *mode {
 	case "agent":
-		err := configLoad(*config)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "[info] Just FYI (not an error): using the builtin conf because %v\n", err)
-		} else {
-			fmt.Fprintf(os.Stderr, "[info] Using external conf from %s\n", *config)
-		}
 		err = runAgent(*foreground, *upgrading, *debug)
 		if err != nil {
 			panic(err)
 		}
 	case "agent-checkin":
 		*foreground = true
-		err := configLoad(*config)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "[info] Using builtin conf. %v\n", err)
-		} else {
-			fmt.Fprintf(os.Stderr, "[info] Using external conf from %s\n", *config)
-		}
 		err = runAgentCheckin(*foreground, *upgrading, *debug)
 		if err != nil {
 			panic(err)

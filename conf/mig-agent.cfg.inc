@@ -24,6 +24,10 @@
     ; attempt to retrieve the public IP behind which the agent is running
     discoverpublicip = off
 
+    ; in check-in mode, the agent connects to the relay, runs all pending commands
+    ; and exits. this mode is used to run the agent as a cron job, not a daemon.
+    checkin = off
+
 [certs]
     ca  = "/path/to/ca/cert"
     cert= "/path/to/client/cert"

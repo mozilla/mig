@@ -27,6 +27,10 @@ var MUSTINSTALLSERVICE bool = true
 // attempt to discover the public IP of the endpoint by querying a STUN server
 var DISCOVERPUBLICIP = false
 
+// in check-in mode, the agent connects to the relay, runs all pending commands
+// and exits. this mode is used to run the agent as a cron job, not a daemon.
+var CHECKIN = false
+
 var LOGGINGCONF = mig.Logging{
 	Mode:	"stdout",	// stdout | file | syslog
 	Level:	"debug",	// debug | info | ...
