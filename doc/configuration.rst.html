@@ -206,24 +206,15 @@ sudo chown mig-user /var/cache/mig -R</code></pre>
         <section id="whitelist">
             <h3>4.2   Whitelist</h3>
             <p>Agents's queuelocs must be listed in a whitelist file for the scheduler to accept their registrations. The location of the whitelist is configurable, but a good place for it is in <cite>/var/cache/mig/agents_whitelist.txt</cite>. The file contains one queueloc string on each line. The agent queueloc is taken from the hostname of the endpoint the agent runs on, plus a random value only known to the endpoint and the MIG platform.</p>
-            <blockquote>
-                <dl>
-                    <dt>::</dt>
-                    <dd>linux.agent123.example.net.58b3mndjmbb00 windows.db4.sub.example.com.56b2andxmyb00 ...</dd>
-                </dl>
-            </blockquote>
+            <pre><code class="">linux.agent123.example.net.58b3mndjmbb00
+windows.db4.sub.example.com.56b2andxmyb00</code></pre>
             <p>If the scheduler receives a heartbeat from an agent that is not present in the whitelist, it will log an error message. An operator can process the logs and add agents to the whitelist manually.</p>
-            <blockquote>
-                <dl>
-                    <dt>::</dt>
-                    <dd>Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized</dd>
-                </dl>
-            </blockquote>
+            <pre><code class="">Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized</code></pre>
         </section>
         <section id="database-creation">
             <h3>4.3   Database creation</h3>
-            <p>The dabase for MIG is PostgreSQL. If you are using a local postgres database, you can run the script in <a href=".files/createdb.sh">doc/.files/createdb.sh</a>, which will create the database and 3 users: <cite>migadmin</cite>, <cite>migscheduler</cite> and <cite>migapi</cite>. Each user has different permissions on the database.</p>
-            <p>If you are using a remote database, create the database <cite>mig</cite> and user <cite>migadmin</cite>, the run the script from <a href=".files/createremotedb.sh">doc/.files/createremotedb.sh</a> that will create the tables, users and permissions. This approach works well with Amazon RDS.</p>
+            <p>The dabase for MIG is PostgreSQL. If you are using a local postgres database, you can run the script in <a href="https://github.com/mozilla/mig/blob/master/doc/.files/createdb.sh">doc/.files/createdb.sh</a>, which will create the database and 3 users: <cite>migadmin</cite>, <cite>migscheduler</cite> and <cite>migapi</cite>. Each user has different permissions on the database.</p>
+            <p>If you are using a remote database, create the database <cite>mig</cite> and user <cite>migadmin</cite>, the run the script from <a href="https://github.com/mozilla/mig/blob/master/doc/.files/createremotedb.sh">doc/.files/createremotedb.sh</a> that will create the tables, users and permissions. This approach works well with Amazon RDS.</p>
             <p>Edit the variables in the script <cite>createremotedb.sh</cite>:</p>
             <pre><code class="bash"><span class="nv">$ </span>vim createremotedb.sh
 

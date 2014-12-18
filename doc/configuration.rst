@@ -276,16 +276,17 @@ queueloc string on each line. The agent queueloc is taken from the hostname of t
 endpoint the agent runs on, plus a random value only known to the endpoint and
 the MIG platform.
 
-  ::
+.. code::
+
 	linux.agent123.example.net.58b3mndjmbb00
 	windows.db4.sub.example.com.56b2andxmyb00
-	...
 
 If the scheduler receives a heartbeat from an agent that is not present in the
 whitelist, it will log an error message. An operator can process the logs and
 add agents to the whitelist manually.
 
-  ::
+.. code::
+
 	Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized
 
 
@@ -297,14 +298,14 @@ you can run the script in `doc/.files/createdb.sh`_, which will create the
 database and 3 users: `migadmin`, `migscheduler` and `migapi`. Each user has
 different permissions on the database.
 
-.. _`doc/.files/createdb.sh`: .files/createdb.sh
+.. _`doc/.files/createdb.sh`: https://github.com/mozilla/mig/blob/master/doc/.files/createdb.sh
 
 If you are using a remote database, create the database `mig` and user
 `migadmin`, the run the script from `doc/.files/createremotedb.sh`_ that will
 create the tables, users and permissions. This approach works well with Amazon
 RDS.
 
-.. _`doc/.files/createremotedb.sh`: .files/createremotedb.sh
+.. _`doc/.files/createremotedb.sh`: https://github.com/mozilla/mig/blob/master/doc/.files/createremotedb.sh
 
 Edit the variables in the script `createremotedb.sh`:
 
