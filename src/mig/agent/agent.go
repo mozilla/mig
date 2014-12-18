@@ -117,7 +117,7 @@ func main() {
 	// attempt to read a local configuration file
 	err = configLoad(*config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[info] using builtin conf")
+		fmt.Fprintf(os.Stderr, "[info] using builtin conf\n")
 	} else {
 		fmt.Fprintf(os.Stderr, "[info] Using external conf from %s\n", *config)
 	}
