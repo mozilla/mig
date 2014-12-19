@@ -7,6 +7,13 @@ package mig
 
 import "time"
 
+const (
+	AgtStatusOnline    string = "online"
+	AgtStatusUpgraded  string = "upgraded"
+	AgtStatusDestroyed string = "destroyed"
+	AgtStatusOffline   string = "offline"
+)
+
 // Agent stores the description of an agent and serves as a canvas
 // for heartbeat messages
 type Agent struct {

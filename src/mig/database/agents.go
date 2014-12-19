@@ -99,9 +99,11 @@ func (db *DB) InsertAgent(agt mig.Agent) (err error) {
 }
 
 // UpdateAgentHeartbeat updates the heartbeat timestamp of an agent in the database
+// unless the agent has been marked as destroyed or upgraded
 func (db *DB) UpdateAgentHeartbeat(agt mig.Agent) (err error) {
 	_, err = db.c.Exec(`UPDATE agents
-		SET status='online', heartbeattime=$2 WHERE id=$1`, agt.ID, agt.HeartBeatTS)
+		SET status=$1, heartbeattime=$2 WHERE id=$3 and status!=$4 and status!=$5`,
+		mig.AgtStatusOnline, agt.HeartBeatTS, agt.ID, mig.AgtStatusDestroyed, mig.AgtStatusUpgraded)
 	if err != nil {
 		return fmt.Errorf("Failed to update agent in database: '%v'", err)
 	}
@@ -114,7 +116,7 @@ func (db *DB) InsertOrUpdateAgent(agt mig.Agent) (err error) {
 	agent, err := db.AgentByQueueAndPID(agt.QueueLoc, agt.PID)
 	if err != nil {
 		agt.DestructionTime = time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
-		agt.Status = "online"
+		agt.Status = mig.AgtStatusOnline
 		// create a new agent
 		return db.InsertAgent(agt)
 	} else {
@@ -209,8 +211,8 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 
 // MarkAgentUpgraded updated the status of an agent in the database
 func (db *DB) MarkAgentUpgraded(agent mig.Agent) (err error) {
-	_, err = db.c.Exec(`UPDATE agents SET status='upgraded' WHERE id=$1`,
-		agent.ID)
+	_, err = db.c.Exec(`UPDATE agents SET status=$1 WHERE id=$2`,
+		mig.AgtStatusUpgraded, agent.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to mark agent as upgraded in database: '%v'", err)
 	}
@@ -219,11 +221,10 @@ func (db *DB) MarkAgentUpgraded(agent mig.Agent) (err error) {
 
 // MarkAgentDestroyed updated the status and destructiontime of an agent in the database
 func (db *DB) MarkAgentDestroyed(agent mig.Agent) (err error) {
-	agent.Status = "destroyed"
 	agent.DestructionTime = time.Now()
 	_, err = db.c.Exec(`UPDATE agents
 		SET destructiontime=$1, status=$2 WHERE id=$3`,
-		agent.DestructionTime, agent.Status, agent.ID)
+		agent.DestructionTime, mig.AgtStatusDestroyed, agent.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to mark agent as destroyed in database: '%v'", err)
 	}
@@ -238,7 +239,7 @@ type AgentsSum struct {
 // SumAgentsByVersion retrieves a sum of agents grouped by version
 func (db *DB) SumAgentsByVersion() (sum []AgentsSum, err error) {
 	rows, err := db.c.Query(`SELECT COUNT(*), version FROM agents
-		WHERE agents.status='online' GROUP BY version`)
+		WHERE agents.status=$1 GROUP BY version`, mig.AgtStatusOnline)
 	if err != nil {
 		err = fmt.Errorf("Error while counting agents: '%v'", err)
 		return
@@ -313,8 +314,9 @@ func (db *DB) CountDisappearedAgents(seenSince, activeSince time.Time) (sum floa
 
 // MarkOfflineAgents updates the status of agents that have not sent a heartbeat since pointInTime
 func (db *DB) MarkOfflineAgents(pointInTime time.Time) (err error) {
-	_, err = db.c.Exec(`UPDATE agents SET status='offline'
-		WHERE heartbeattime<$1 AND status!='offline'`, pointInTime)
+	_, err = db.c.Exec(`UPDATE agents SET status=$1
+		WHERE heartbeattime<$2 AND status!=$3`,
+		mig.AgtStatusOffline, pointInTime, mig.AgtStatusOffline)
 	if err != nil {
 		return fmt.Errorf("Failed to mark agents as offline in database: '%v'", err)
 	}
