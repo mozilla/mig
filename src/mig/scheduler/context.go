@@ -31,7 +31,7 @@ type Context struct {
 	Agent struct {
 		// configuration
 		TimeOut, HeartbeatFreq, Whitelist string
-		DetectMultiAgents                 bool
+		DetectMultiAgents, KillDupAgents  bool
 	}
 	Channels struct {
 		// internal
@@ -324,11 +324,10 @@ func initSecring(orig_ctx Context) (ctx Context, err error) {
 			err = nil // reinit err, this isn't an error
 			ctx.Channels.Log <- mig.Log{Desc: "no key found in database. generating a private key for user migscheduler"}
 			// generate a private key and try again to load it, or fail
-			inv, err := makeSchedulerInvestigator(ctx)
+			_, err := makeSchedulerInvestigator(ctx)
 			if err != nil {
 				panic(err)
 			}
-			ctx.PGP.PrivKeyID = inv.PGPFingerprint
 			ctx.PGP.Secring, err = makeSecring(ctx)
 			if err != nil {
 				panic(err)
@@ -337,6 +336,12 @@ func initSecring(orig_ctx Context) (ctx Context, err error) {
 			panic(err)
 		}
 	}
+	inv, err := ctx.DB.GetSchedulerInvestigator()
+	ctx.PGP.PrivKeyID = inv.PGPFingerprint
+	if err != nil {
+		panic(err)
+	}
+	ctx.Channels.Log <- mig.Log{Desc: "Loaded scheduler investigator with key id " + ctx.PGP.PrivKeyID}
 	return
 }
 

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"mig"
-	"mig/pgp"
 	"reflect"
 	"time"
 )
@@ -126,9 +125,27 @@ func inspectMultiAgents(queueLoc string, ctx Context) (err error) {
 
 	remainingAgents := agentsCount - destroyedAgents - leftAloneAgents
 	if remainingAgents > 1 {
-		// there's still some agents left, raise errors for these
-		desc := fmt.Sprintf("Found '%d' agents running on '%s'. Require manual inspection.", remainingAgents, queueLoc)
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Warning()
+		// there's still some agents left. if killdupagents is set, issue kill orders
+		if ctx.Agent.KillDupAgents {
+			oldest := agents[0]
+			for _, agent := range agents {
+				if agent.Status != "online" {
+					continue
+				}
+				if agent.StartTime.Before(oldest.StartTime) {
+					oldest = agent
+				}
+			}
+			desc := fmt.Sprintf("Issuing destruction action for agent '%s' with PID '%d'.", oldest.Name, oldest.PID)
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}
+			err = destroyAgent(oldest, ctx)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			desc := fmt.Sprintf("Found '%d' agents running on '%s'. Require manual inspection.", remainingAgents, queueLoc)
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Warning()
+		}
 	}
 	return
 }
@@ -146,10 +163,10 @@ func destroyAgent(agent mig.Agent, ctx Context) (err error) {
 	killAction := mig.Action{
 		ID:            mig.GenID(),
 		Name:          fmt.Sprintf("Destroy agent %s", agent.Name),
-		Target:        agent.QueueLoc,
+		Target:        fmt.Sprintf("queueloc='%s'", agent.QueueLoc),
 		ValidFrom:     time.Now().Add(-60 * time.Second).UTC(),
 		ExpireAfter:   time.Now().Add(30 * time.Minute).UTC(),
-		SyntaxVersion: 1,
+		SyntaxVersion: 2,
 	}
 	var opparams struct {
 		PID     int    `json:"pid"`
@@ -164,12 +181,11 @@ func destroyAgent(agent mig.Agent, ctx Context) (err error) {
 	killAction.Operations = append(killAction.Operations, killOperation)
 
 	// sign the action with the scheduler PGP key
-	str, err := killAction.String()
+	secring, err := getSecring(ctx)
 	if err != nil {
 		panic(err)
 	}
-	secring, err := getSecring(ctx)
-	pgpsig, err := pgp.Sign(str, ctx.PGP.PrivKeyID, secring)
+	pgpsig, err := killAction.Sign(ctx.PGP.PrivKeyID, secring)
 	if err != nil {
 		panic(err)
 	}

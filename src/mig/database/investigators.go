@@ -14,7 +14,7 @@ import (
 )
 
 // ActiveInvestigators returns a slice of investigators keys marked as active
-func (db *DB) ActiveInvestigatorsKeys() (keys []string, err error) {
+func (db *DB) ActiveInvestigatorsKeys() (keys [][]byte, err error) {
 	rows, err := db.c.Query("SELECT publickey FROM investigators WHERE status='active'")
 	if err != nil && err != sql.ErrNoRows {
 		rows.Close()
@@ -32,7 +32,7 @@ func (db *DB) ActiveInvestigatorsKeys() (keys []string, err error) {
 			err = fmt.Errorf("Error while retrieving investigator key: '%v'", err)
 			return
 		}
-		keys = append(keys, string(key))
+		keys = append(keys, key)
 	}
 	if err := rows.Err(); err != nil {
 		err = fmt.Errorf("Failed to complete active investigators query: '%v'", err)
@@ -167,6 +167,21 @@ func (db *DB) GetSchedulerPrivKey() (key []byte, err error) {
 	}
 	if err == sql.ErrNoRows { // having an empty DB is not an issue
 		err = fmt.Errorf("no private key found for migscheduler")
+		return
+	}
+	return
+}
+
+// GetSchedulerInvestigator returns the first active scheduler investigator
+func (db *DB) GetSchedulerInvestigator() (inv mig.Investigator, err error) {
+	err = db.c.QueryRow(`SELECT id, name, pgpfingerprint, publickey, status, createdat, lastmodified
+		FROM investigators WHERE name ='migscheduler' AND status='active' ORDER BY id ASC LIMIT 1`,
+	).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status, &inv.CreatedAt, &inv.LastModified)
+	if err != nil {
+		err = fmt.Errorf("Error while retrieving scheduler investigator: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows {
 		return
 	}
 	return

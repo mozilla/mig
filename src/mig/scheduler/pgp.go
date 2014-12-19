@@ -28,7 +28,7 @@ func makePubring(ctx Context) (pubring io.ReadSeeker, err error) {
 	if err != nil {
 		panic(err)
 	}
-	pubring, keycount, err := pgp.ArmoredPubKeysToKeyring(keys)
+	pubring, keycount, err := pgp.ArmoredKeysToKeyring(keys)
 	if err != nil {
 		panic(err)
 	}
@@ -84,7 +84,9 @@ func makeSecring(ctx Context) (secring io.ReadSeeker, err error) {
 	if err != nil {
 		panic(err)
 	}
-	secring, err = pgp.ArmoredPrivKeyToKeyring(key)
+	keys := make([][]byte, 1)
+	keys[0] = key
+	secring, _, err = pgp.ArmoredKeysToKeyring(keys)
 	if err != nil {
 		panic(err)
 	}

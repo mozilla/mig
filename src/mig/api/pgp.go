@@ -29,7 +29,7 @@ func makeKeyring() (keyring io.ReadSeeker, err error) {
 	if err != nil {
 		panic(err)
 	}
-	keyring, keycount, err := pgp.ArmoredPubKeysToKeyring(keys)
+	keyring, keycount, err := pgp.ArmoredKeysToKeyring(keys)
 	if err != nil {
 		panic(err)
 	}

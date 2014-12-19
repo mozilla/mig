@@ -31,12 +31,14 @@ func Sign(data, keyid string, secringFile io.Reader) (sig string, err error) {
 		err = fmt.Errorf("Keyring access failed: '%v'", err)
 		panic(err)
 	}
-
 	// find the entity in the keyring
 	var signer *openpgp.Entity
 	found := false
 	for _, entity := range keyring {
-		fingerprint := strings.ToUpper(hex.EncodeToString(entity.PrimaryKey.Fingerprint[:]))
+		if entity.PrivateKey == nil {
+			panic("secring contains entity without private key data")
+		}
+		fingerprint := strings.ToUpper(hex.EncodeToString(entity.PrivateKey.PublicKey.Fingerprint[:]))
 		if keyid == fingerprint {
 			signer = entity
 			found = true
@@ -47,7 +49,6 @@ func Sign(data, keyid string, secringFile io.Reader) (sig string, err error) {
 		err = fmt.Errorf("Signer '%s' not found", keyid)
 		panic(err)
 	}
-
 	// if private key is encrypted, attempt to decrypt it with the cached passphrase
 	// then try with an agent or by asking the user for a passphrase
 	if signer.PrivateKey.Encrypted {
@@ -64,7 +65,6 @@ func Sign(data, keyid string, secringFile io.Reader) (sig string, err error) {
 			}
 		}
 	}
-
 	// calculate signature
 	out := bytes.NewBuffer(nil)
 	message := bytes.NewBufferString(data)

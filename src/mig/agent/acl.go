@@ -23,8 +23,12 @@ func checkActionAuthorization(a mig.Action, ctx Context) (err error) {
 		}
 		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: "leaving checkActionAuthorization()"}.Debug()
 	}()
+	var keys [][]byte
+	for _, pk := range PUBLICPGPKEYS {
+		keys = append(keys, []byte(pk))
+	}
 	// get an io.Reader from the public pgp key
-	keyring, keycount, err := pgp.ArmoredPubKeysToKeyring(PUBLICPGPKEYS[0:])
+	keyring, keycount, err := pgp.ArmoredKeysToKeyring(keys)
 	if err != nil {
 		panic(err)
 	}

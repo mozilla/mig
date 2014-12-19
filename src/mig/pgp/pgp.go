@@ -15,9 +15,9 @@ import (
 	"strings"
 )
 
-// ArmoredPubKeysToKeyring takes a list of public PGP key in armored form and transforms
+// ArmoredKeysToKeyring takes a list of PGP keys in armored form and transforms
 // it into a keyring that can be used in other openpgp's functions
-func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.ReadSeeker, keycount int, err error) {
+func ArmoredKeysToKeyring(keys [][]byte) (keyring io.ReadSeeker, keycount int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("ArmoredPubKeysToKeyRing() -> %v", e)
@@ -25,19 +25,23 @@ func ArmoredPubKeysToKeyring(pubkeys []string) (keyring io.ReadSeeker, keycount 
 	}()
 	var buf bytes.Buffer
 	// iterate over the keys, and load them into an io.Reader keyring
-	for i, key := range pubkeys {
+	for i, key := range keys {
 		// Load PGP public key
-		el, err := openpgp.ReadArmoredKeyRing(bytes.NewBufferString(key))
+		el, err := openpgp.ReadArmoredKeyRing(bytes.NewBuffer(key))
 		if err != nil {
 			panic(fmt.Errorf("key num.%d failed to load with error %v", i, err))
 		}
 		keycount += 1
 		if len(el) != 1 {
-			err = fmt.Errorf("Public GPG Key contains %d entities, wanted 1", len(el))
+			err = fmt.Errorf("PGP key contains %d entities, wanted 1", len(el))
 			panic(err)
 		}
 		// serialize entities into io.Reader
-		err = el[0].Serialize(&buf)
+		if el[0].PrivateKey != nil {
+			err = el[0].SerializePrivate(&buf, nil)
+		} else {
+			err = el[0].Serialize(&buf)
+		}
 		if err != nil {
 			panic(err)
 		}
@@ -77,33 +81,6 @@ func KeyringToArmoredPubKeys(keyring io.ReadCloser) (armoredkeys map[string][]by
 		ewrbuf.Close()
 		armoredkeys[fingerprint] = armoredbuf.Bytes()
 	}
-	return
-}
-
-// ArmoredPrivKeyToKeyring takes a single private PGP key in armored form and transforms
-// it into a keyring that can be used in other openpgp's functions
-func ArmoredPrivKeyToKeyring(privkey []byte) (keyring io.ReadSeeker, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("ArmoredPrivKeyToKeyRing() -> %v", e)
-		}
-	}()
-	var buf bytes.Buffer
-	// Load PGP private key
-	el, err := openpgp.ReadArmoredKeyRing(bytes.NewBuffer(privkey))
-	if err != nil {
-		panic(err)
-	}
-	if len(el) != 1 {
-		err = fmt.Errorf("Public GPG Key contains %d entities, wanted 1", len(el))
-		panic(err)
-	}
-	// serialize entities into io.Reader
-	err = el[0].Serialize(&buf)
-	if err != nil {
-		panic(err)
-	}
-	keyring = bytes.NewReader(buf.Bytes())
 	return
 }
 
