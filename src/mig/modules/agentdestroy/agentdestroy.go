@@ -5,12 +5,12 @@
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
 // agentdestroy is a module used in the upgrade protocol to kill an agent
-// that has been upgraded, and remove its binary from the file system.
-// The only sanity check it does, aside from validating the parameters, is
-// refusing to suicide. Meaning an agent will not run this module against itself.
+// that has been upgraded. This module will refuse to suicide, meaning that
+// an agent will not run this module against itself
 package agentdestroy
 
 import (
+	"bitbucket.org/kardianos/osext"
 	"encoding/json"
 	"fmt"
 	"mig"
@@ -77,35 +77,50 @@ func (r Runner) Run(Args []byte) string {
 	}
 
 	// get the path of the agent's executable
-	var binary string
+	var targetExecutable string
 	switch runtime.GOOS {
 	case "linux", "darwin", "freebsd", "openbsd", "netbsd":
-		binary, err = os.Readlink(fmt.Sprintf("/proc/%d/exe", r.Parameters.PID))
+		targetExecutable, err = os.Readlink(fmt.Sprintf("/proc/%d/exe", r.Parameters.PID))
 		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Binary path of PID '%d' not found: '%v'", r.Parameters.PID, err))
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Executable path of PID '%d' not found: '%v'", r.Parameters.PID, err))
 			return r.buildResults()
 		}
 	case "windows":
-		binary = fmt.Sprintf("C:/Windows/mig-agent-%s.exe", r.Parameters.Version)
+		targetExecutable = fmt.Sprintf("C:/Windows/mig-agent-%s.exe", r.Parameters.Version)
 	default:
 		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("'%s' isn't a supported OS", runtime.GOOS))
 		return r.buildResults()
 	}
+	// verify that the executable we're removing isn't in use by the current agent
+	// this can happen when two agents are running of the same executable
+	// in which case, do not remove the executable, and only kill the process
+	myExecutable, err := osext.Executable()
+	if err != nil {
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Failed to retrieve my executable location: '%v'", err))
+		return r.buildResults()
+	}
+	removeExecutable := true
+	if myExecutable == targetExecutable {
+		r.Results.Errors = append(r.Results.Errors, "Executable not removed because current agent uses it as well")
+		removeExecutable = false
+	}
 
-	// check that the binary we're removing has the right version
-	version, err := getAgentVersion(binary)
-	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Failed to check agent version: '%v'", err))
-		return r.buildResults()
-	}
-	if version != r.Parameters.Version {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Version mismatch. Expected '%s', found '%s'", r.Parameters.Version, version))
-		return r.buildResults()
-	}
-	err = os.Remove(binary)
-	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Failed to remove binary '%s': '%v'", binary, err))
-		return r.buildResults()
+	if removeExecutable {
+		// check that the binary we're removing has the right version
+		version, err := getAgentVersion(targetExecutable)
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Failed to check agent version: '%v'", err))
+			return r.buildResults()
+		}
+		if version != r.Parameters.Version {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Version mismatch. Expected '%s', found '%s'", r.Parameters.Version, version))
+			return r.buildResults()
+		}
+		err = os.Remove(targetExecutable)
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Failed to remove executable '%s': '%v'", targetExecutable, err))
+			return r.buildResults()
+		}
 	}
 
 	// Then kill the PID
