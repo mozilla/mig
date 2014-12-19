@@ -12,6 +12,7 @@ const (
 	AgtStatusUpgraded  string = "upgraded"
 	AgtStatusDestroyed string = "destroyed"
 	AgtStatusOffline   string = "offline"
+	AgtStatusIdle      string = "idle"
 )
 
 // Agent stores the description of an agent and serves as a canvas

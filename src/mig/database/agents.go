@@ -171,11 +171,11 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 		_ = txn.Rollback()
 		return
 	}
-	rows, err := txn.Query(`SELECT DISTINCT ON (queueloc) id, name, queueloc, os, version, pid,
+	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc, os, version, pid,
 		starttime, destructiontime, heartbeattime, status
 		FROM agents
-		WHERE agents.status = 'online' AND (` + target + `)
-		ORDER BY agents.queueloc, agents.heartbeattime DESC`)
+		WHERE agents.status IN ('%s', '%s') AND (%s)
+		ORDER BY agents.queueloc, agents.heartbeattime DESC`, mig.AgtStatusOnline, mig.AgtStatusIdle, target))
 	if err != nil {
 		_ = txn.Rollback()
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
@@ -312,13 +312,24 @@ func (db *DB) CountDisappearedAgents(seenSince, activeSince time.Time) (sum floa
 	return
 }
 
-// MarkOfflineAgents updates the status of agents that have not sent a heartbeat since pointInTime
+// MarkOfflineAgents updates the status of idle agents that have not sent a heartbeat since pointInTime
 func (db *DB) MarkOfflineAgents(pointInTime time.Time) (err error) {
 	_, err = db.c.Exec(`UPDATE agents SET status=$1
-		WHERE heartbeattime<$2 AND status!=$3`,
-		mig.AgtStatusOffline, pointInTime, mig.AgtStatusOffline)
+		WHERE heartbeattime<$2 AND status=$3`,
+		mig.AgtStatusOffline, pointInTime, mig.AgtStatusIdle)
 	if err != nil {
 		return fmt.Errorf("Failed to mark agents as offline in database: '%v'", err)
+	}
+	return
+}
+
+// MarkIdleAgents updates the status of online agents that have not sent a heartbeat since pointInTime
+func (db *DB) MarkIdleAgents(pointInTime time.Time) (err error) {
+	_, err = db.c.Exec(`UPDATE agents SET status=$1
+		WHERE heartbeattime<$2 AND status=$3`,
+		mig.AgtStatusIdle, pointInTime, mig.AgtStatusOnline)
+	if err != nil {
+		return fmt.Errorf("Failed to mark agents as idle in database: '%v'", err)
 	}
 	return
 }

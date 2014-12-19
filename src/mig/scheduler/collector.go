@@ -46,7 +46,11 @@ func spoolInspection(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	err = timeoutAgents(ctx)
+	err = markOfflineAgents(ctx)
+	if err != nil {
+		panic(err)
+	}
+	err = markIdleAgents(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -215,13 +219,13 @@ func cleanDir(ctx Context, targetDir string) (err error) {
 	return
 }
 
-// timeoutAgents updates the status of agents that are no longer heartbeating to "offline"
-func timeoutAgents(ctx Context) (err error) {
+// markOfflineAgents updates the status of idle agents that passed the agent timeout to "offline"
+func markOfflineAgents(ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("timeoutAgents() -> %v", e)
+			err = fmt.Errorf("markOfflineAgents() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving timeoutAgents()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving markOfflineAgents()"}.Debug()
 	}()
 	timeOutPeriod, err := time.ParseDuration(ctx.Agent.TimeOut)
 	if err != nil {
@@ -229,6 +233,26 @@ func timeoutAgents(ctx Context) (err error) {
 	}
 	pointInTime := time.Now().Add(-timeOutPeriod)
 	err = ctx.DB.MarkOfflineAgents(pointInTime)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+// markIdleAgents updates the status of agents that stopped sending heartbeats
+func markIdleAgents(ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("markIdleAgents() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving markIdleAgents()"}.Debug()
+	}()
+	hbFreq, err := time.ParseDuration(ctx.Agent.HeartbeatFreq)
+	if err != nil {
+		panic(err)
+	}
+	pointInTime := time.Now().Add(-hbFreq * 5)
+	err = ctx.DB.MarkIdleAgents(pointInTime)
 	if err != nil {
 		panic(err)
 	}

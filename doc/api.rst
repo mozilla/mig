@@ -362,7 +362,7 @@ GET <root>/search
 	  Status depends on the type. Below are the available statuses per type:
 
 		- `action`: init, preparing, invalid, inflight, completed
-		- `agent`: online, upgraded, destroyed, offline
+		- `agent`: online, upgraded, destroyed, offline, idle
 		- `command`: prepared, sent, success, timeout, cancelled, expired, failed
 		- `investigator`: active, disabled
 
