@@ -32,7 +32,7 @@ var activeAgentsList []string
 // AMQP ctx.MQ.Chan. It also launches the goroutines.
 func main() {
 	cpus := runtime.NumCPU()
-	runtime.GOMAXPROCS(cpus)
+	runtime.GOMAXPROCS(cpus * 2)
 
 	// command line options
 	var config = flag.String("c", "/etc/mig/scheduler.cfg", "Load configuration from file")
