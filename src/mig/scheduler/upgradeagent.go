@@ -142,6 +142,8 @@ func inspectMultiAgents(queueLoc string, ctx Context) (err error) {
 			if err != nil {
 				panic(err)
 			}
+			// throttling to prevent issuing too many kill orders at the same time
+			time.Sleep(5 * time.Second)
 		} else {
 			desc := fmt.Sprintf("Found '%d' agents running on '%s'. Require manual inspection.", remainingAgents, queueLoc)
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Warning()
