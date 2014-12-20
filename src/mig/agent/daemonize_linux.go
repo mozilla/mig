@@ -44,6 +44,11 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 			ctx.Channels.Log <- mig.Log{Desc: "Service deployed. Exit."}.Debug()
 			os.Exit(0)
 		}
+		// install a cron job that acts as a watchdog,
+		err = installCron(ctx)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+		}
 		// We are not upgrading, and parent is init. We must decide how to handle
 		// respawns based on the type of init system: upstart and systemd will
 		// take care of respawning agents automatically. sysvinit won't.
@@ -52,12 +57,7 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 			ctx.Agent.Respawn = false
 			return
 		}
-		// init is sysvinit, install a cron job that acts as a watchdog,
-		// then exec a new agent and exit the current one
-		err = installCron(ctx)
-		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
-		}
+		// this is sysvinit: exec a new agent and exit the current one
 		cmd := exec.Command(ctx.Agent.BinPath, "-f")
 		err = cmd.Start()
 		if err != nil {
@@ -100,7 +100,8 @@ func installCron(ctx Context) (err error) {
 	var job = []byte(`# mig agent monitoring cronjob
 PATH="/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin"
 SHELL=/bin/bash
-*/10 * * * * root /sbin/mig-agent -q=pid 2>&1 1>/dev/null || /sbin/mig-agent
+MAILTO=""
+*/30 * * * * root /sbin/mig-agent -q=pid 2>&1 1>/dev/null || /sbin/mig-agent
 `)
 	err = ioutil.WriteFile("/etc/cron.d/mig-agent", job, 0644)
 	if err != nil {
