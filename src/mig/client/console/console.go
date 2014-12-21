@@ -204,11 +204,11 @@ func printStatus(cli client.Client) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	agtout := make([]string, 5)
-	agtout[0] = "Agents Summary:"
+	var onlineagt, idleagt []string
 	actout := make([]string, 2)
 	actout[0] = "Latest Actions:"
 	actout[1] = "----    ID      ---- + ----         Name         ---- + -Sent- + ----    Date     ---- + ---- Investigators ----"
+	var onlineagents, onlineendpoints, idleagents, idleendpoints, newendpoints, doubleagents, disappearedendpoints, flappingendpoints float64
 	for _, item := range st.Collection.Items {
 		for _, data := range item.Data {
 			switch data.Name {
@@ -219,9 +219,23 @@ func printStatus(cli client.Client) (err error) {
 				}
 				str := fmt.Sprintf("%s   %s   %6d   %s   %s", idstr, name, sent, datestr, invs)
 				actout = append(actout, str)
-			case "active agents":
-				agtout[1] = fmt.Sprintf("* %.0f active agents", data.Value)
-			case "agents versions count":
+			case "online agents":
+				onlineagents = data.Value.(float64)
+			case "online endpoints":
+				onlineendpoints = data.Value.(float64)
+			case "idle agents":
+				idleagents = data.Value.(float64)
+			case "idle endpoints":
+				idleendpoints = data.Value.(float64)
+			case "new endpoints":
+				newendpoints = data.Value.(float64)
+			case "endpoints running 2 or more agents":
+				doubleagents = data.Value.(float64)
+			case "disappeared endpoints":
+				disappearedendpoints = data.Value.(float64)
+			case "flapping endpoints":
+				flappingendpoints = data.Value.(float64)
+			case "online agents by version":
 				bData, err := json.Marshal(data.Value)
 				if err != nil {
 					panic(err)
@@ -236,19 +250,44 @@ func printStatus(cli client.Client) (err error) {
 					if asum.Count > 1 {
 						s += "s"
 					}
-					agtout = append(agtout, s)
+					onlineagt = append(onlineagt, s)
 				}
-			case "agents started in the last 24 hours":
-				agtout[2] = fmt.Sprintf("* %.0f agents (re)started in the last 24 hours", data.Value)
-			case "endpoints running 2 or more agents":
-				agtout[3] = fmt.Sprintf("* %.0f endpoints are running 2 or more agents", data.Value)
-			case "endpoints that have disappeared over last 7 days":
-				agtout[4] = fmt.Sprintf("* %.0f endpoints have disappeared over the last 7 days", data.Value)
+			case "idle agents by version":
+				bData, err := json.Marshal(data.Value)
+				if err != nil {
+					panic(err)
+				}
+				var sum []migdb.AgentsSum
+				err = json.Unmarshal(bData, &sum)
+				if err != nil {
+					panic(err)
+				}
+				for _, asum := range sum {
+					s := fmt.Sprintf("* version %s: %.0f agent", asum.Version, asum.Count)
+					if asum.Count > 1 {
+						s += "s"
+					}
+					idleagt = append(idleagt, s)
+				}
 			}
 		}
 	}
 	fmt.Println("\x1b[31;1m+------\x1b[0m")
-	for _, s := range agtout {
+	fmt.Printf("\x1b[31;1m| Agents & Endpoints summary:\n"+
+		"\x1b[31;1m|\x1b[0m * %.0f online agents on %.0f endpoints\n"+
+		"\x1b[31;1m|\x1b[0m * %.0f idle agents on %.0f endpoints\n"+
+		"\x1b[31;1m|\x1b[0m * %.0f endpoints are running 2 or more agents\n"+
+		"\x1b[31;1m|\x1b[0m * %.0f endpoints appeared over the last 7 days\n"+
+		"\x1b[31;1m|\x1b[0m * %.0f endpoints disappeared over the last 7 days\n"+
+		"\x1b[31;1m|\x1b[0m * %.0f endpoints have been flapping\n",
+		onlineagents, onlineendpoints, idleagents, idleendpoints, doubleagents, newendpoints,
+		disappearedendpoints, flappingendpoints)
+	fmt.Println("\x1b[31;1m| Online agents by version:\x1b[0m")
+	for _, s := range onlineagt {
+		fmt.Println("\x1b[31;1m|\x1b[0m " + s)
+	}
+	fmt.Println("\x1b[31;1m| Idle agents by version:\x1b[0m")
+	for _, s := range idleagt {
 		fmt.Println("\x1b[31;1m|\x1b[0m " + s)
 	}
 	fmt.Println("\x1b[31;1m|\x1b[0m")

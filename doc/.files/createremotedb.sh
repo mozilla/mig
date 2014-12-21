@@ -37,7 +37,6 @@ CREATE TABLE actions (
     finishtime timestamp with time zone,
     lastupdatetime timestamp with time zone,
     status character varying(256),
-    pgpsignatures json,
     syntaxversion integer
 );
 ALTER TABLE public.actions OWNER TO migadmin;
@@ -63,6 +62,7 @@ ALTER TABLE ONLY agents
     ADD CONSTRAINT agents_pkey PRIMARY KEY (id);
 CREATE INDEX agents_heartbeattime_idx ON agents(heartbeattime DESC);
 CREATE INDEX agents_queueloc_pid_idx ON agents(queueloc, pid);
+CREATE INDEX agents_status_idx ON agents(status);
 
 CREATE TABLE agtmodreq (
     moduleid numeric NOT NULL,

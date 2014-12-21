@@ -77,18 +77,30 @@ func agentToItem(agt mig.Agent) (item cljs.Item, err error) {
 
 // agentsSumToItem receives an AgentsSum and returns an Item
 // in the Collection+JSON format
-func agentsSummaryToItem(sum []migdb.AgentsSum, count, double, disappeared float64, ctx Context) (item cljs.Item, err error) {
+func agentsSummaryToItem(onlineagtsum, idleagtsum []migdb.AgentsSum,
+	countonlineendpoints, countidleendpoints, countnewendpoints, countdoubleagents, countdisappearedendpoints, countflappingendpoints float64,
+	ctx Context) (item cljs.Item, err error) {
 	item.Href = fmt.Sprintf("%s/dashboard", ctx.Server.BaseURL)
-	var total float64 = 0
-	for _, asum := range sum {
-		total += asum.Count
+	var (
+		totalOnlineAgents, totalIdleAgents float64
+	)
+	for _, asum := range onlineagtsum {
+		totalOnlineAgents += asum.Count
+	}
+	for _, asum := range idleagtsum {
+		totalIdleAgents += asum.Count
 	}
 	item.Data = []cljs.Data{
-		{Name: "active agents", Value: total},
-		{Name: "agents versions count", Value: sum},
-		{Name: "agents started in the last 24 hours", Value: count},
-		{Name: "endpoints running 2 or more agents", Value: double},
-		{Name: "endpoints that have disappeared over last 7 days", Value: disappeared},
+		{Name: "online agents", Value: totalOnlineAgents},
+		{Name: "online endpoints", Value: countonlineendpoints},
+		{Name: "idle agents", Value: totalIdleAgents},
+		{Name: "idle endpoints", Value: countidleendpoints},
+		{Name: "new endpoints", Value: countnewendpoints},
+		{Name: "endpoints running 2 or more agents", Value: countdoubleagents},
+		{Name: "disappeared endpoints", Value: countdisappearedendpoints},
+		{Name: "flapping endpoints", Value: countflappingendpoints},
+		{Name: "online agents by version", Value: onlineagtsum},
+		{Name: "idle agents by version", Value: idleagtsum},
 	}
 	return
 }

@@ -236,8 +236,8 @@ type AgentsSum struct {
 	Count   float64 `json:"count"`
 }
 
-// SumAgentsByVersion retrieves a sum of agents grouped by version
-func (db *DB) SumAgentsByVersion() (sum []AgentsSum, err error) {
+// SumOnlineAgentsByVersion retrieves a sum of online agents grouped by version
+func (db *DB) SumOnlineAgentsByVersion() (sum []AgentsSum, err error) {
 	rows, err := db.c.Query(`SELECT COUNT(*), version FROM agents
 		WHERE agents.status=$1 GROUP BY version`, mig.AgtStatusOnline)
 	if err != nil {
@@ -260,12 +260,77 @@ func (db *DB) SumAgentsByVersion() (sum []AgentsSum, err error) {
 	return
 }
 
-// CountNewAgents retrieves a count of agents that started after `pointInTime`
-func (db *DB) CountNewAgents(pointInTime time.Time) (sum float64, err error) {
-	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
-		WHERE starttime >= $1 AND starttime <= NOW()`, pointInTime).Scan(&sum)
+// SumIdleAgentsByVersion retrieves a sum of idle agents grouped by version
+// and excludes endpoints where an online agent is running
+func (db *DB) SumIdleAgentsByVersion() (sum []AgentsSum, err error) {
+	rows, err := db.c.Query(`SELECT COUNT(*), version FROM agents
+		WHERE agents.status=$1 AND agents.queueloc NOT IN (
+			SELECT distinct(queueloc) FROM agents
+			WHERE agents.status=$2)
+		GROUP BY version`, mig.AgtStatusIdle, mig.AgtStatusOnline)
 	if err != nil {
 		err = fmt.Errorf("Error while counting agents: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var asum AgentsSum
+		err = rows.Scan(&asum.Count, &asum.Version)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to retrieve summary data: '%v'", err)
+			return
+		}
+		sum = append(sum, asum)
+	}
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
+	return
+}
+
+// CountOnlineEndpoints retrieves a count of unique endpoints that have online agents
+func (db *DB) CountOnlineEndpoints() (sum float64, err error) {
+	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents WHERE status=$1`,
+		mig.AgtStatusOnline).Scan(&sum)
+	if err != nil {
+		err = fmt.Errorf("Error while counting endpoints: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows {
+		return
+	}
+	return
+}
+
+// CountIdleEndpoints retrieves a count of unique endpoints that have idle agents
+// and do not have an online agent
+func (db *DB) CountIdleEndpoints() (sum float64, err error) {
+	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
+		WHERE status=$1
+		AND queueloc NOT IN (
+			SELECT DISTINCT(queueloc) FROM agents
+			WHERE status=$2
+		)`, mig.AgtStatusIdle, mig.AgtStatusOnline).Scan(&sum)
+	if err != nil {
+		err = fmt.Errorf("Error while counting endpoints: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows {
+		return
+	}
+	return
+}
+
+// CountNewEndpointsretrieves a count of new endpoints that started after `pointInTime`
+func (db *DB) CountNewEndpoints(pointInTime time.Time) (sum float64, err error) {
+	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
+		WHERE status=$1 AND queueloc NOT IN (
+			SELECT DISTINCT(queueloc) FROM agents
+			WHERE status=$2 OR status=$3
+		) AND starttime > $4`, mig.AgtStatusOnline, mig.AgtStatusIdle,
+		mig.AgtStatusOffline, pointInTime).Scan(&sum)
+	if err != nil {
+		err = fmt.Errorf("Error while counting new endpoints: '%v'", err)
 		return
 	}
 	if err == sql.ErrNoRows {
@@ -279,9 +344,9 @@ func (db *DB) CountDoubleAgents() (sum float64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
 		WHERE queueloc IN (
 			SELECT queueloc FROM agents
-			WHERE heartbeattime >= NOW() - INTERVAL '10 minutes'
+			WHERE status=$1
 			GROUP BY queueloc HAVING count(queueloc) > 1
-		)`).Scan(&sum)
+		)`, mig.AgtStatusOnline).Scan(&sum)
 	if err != nil {
 		err = fmt.Errorf("Error while counting double agents: '%v'", err)
 		return
@@ -292,18 +357,33 @@ func (db *DB) CountDoubleAgents() (sum float64, err error) {
 	return
 }
 
-// CountDisappearedAgents counts the number of endpoints that have disappeared recently
-func (db *DB) CountDisappearedAgents(seenSince, activeSince time.Time) (sum float64, err error) {
-	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(name)) FROM agents
-		WHERE name IN (
-		        SELECT DISTINCT(name) FROM agents
-		        WHERE heartbeattime >= $1
-		) AND name NOT IN (
-		        SELECT DISTINCT(name) FROM agents
-		        WHERE heartbeattime >= $2
-		)`, seenSince, activeSince).Scan(&sum)
+// CountDisappearedEndpoints a count of endpoints that have disappeared over a given period
+func (db *DB) CountDisappearedEndpoints(pointInTime time.Time) (sum float64, err error) {
+	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
+		WHERE status=$1 AND queueloc NOT IN (
+			SELECT DISTINCT(queueloc) FROM agents
+			WHERE status=$2 OR status=$3
+		) AND heartbeattime > $4`, mig.AgtStatusOffline, mig.AgtStatusIdle,
+		mig.AgtStatusOnline, pointInTime).Scan(&sum)
 	if err != nil {
-		err = fmt.Errorf("Error while counting agents: '%v'", err)
+		err = fmt.Errorf("Error while counting new disappeared endpoints: '%v'", err)
+		return
+	}
+	if err == sql.ErrNoRows {
+		return
+	}
+	return
+}
+
+// CountFlappingEndpoints a count of endpoints that have restarted their agent recently
+func (db *DB) CountFlappingEndpoints() (sum float64, err error) {
+	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
+		WHERE status=$1 OR status=$2 AND queueloc IN (
+			SELECT DISTINCT(queueloc) FROM agents
+			WHERE status=$3
+		)`, mig.AgtStatusOnline, mig.AgtStatusIdle, mig.AgtStatusOffline).Scan(&sum)
+	if err != nil {
+		err = fmt.Errorf("Error while counting flapping endpoints: '%v'", err)
 		return
 	}
 	if err == sql.ErrNoRows {

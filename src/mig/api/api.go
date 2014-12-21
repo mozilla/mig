@@ -335,11 +335,23 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getDashboard()"}.Debug()
 	}()
 
-	sum, err := ctx.DB.SumAgentsByVersion()
+	onlineagtsum, err := ctx.DB.SumOnlineAgentsByVersion()
 	if err != nil {
 		panic(err)
 	}
-	count, err := ctx.DB.CountNewAgents(time.Now().Add(-24 * time.Hour))
+	idleagtsum, err := ctx.DB.SumIdleAgentsByVersion()
+	if err != nil {
+		panic(err)
+	}
+	countonlineendpoints, err := ctx.DB.CountOnlineEndpoints()
+	if err != nil {
+		panic(err)
+	}
+	countidleendpoints, err := ctx.DB.CountIdleEndpoints()
+	if err != nil {
+		panic(err)
+	}
+	countnewendpoints, err := ctx.DB.CountNewEndpoints(time.Now().Add(-7 * 24 * time.Hour))
 	if err != nil {
 		panic(err)
 	}
@@ -347,12 +359,16 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	disappeared, err := ctx.DB.CountDisappearedAgents(
-		time.Now().Add(-7*24*time.Hour), time.Now().Add(-5*time.Minute))
+	disappeared, err := ctx.DB.CountDisappearedEndpoints(time.Now().Add(-7 * 24 * time.Hour))
 	if err != nil {
 		panic(err)
 	}
-	sumItem, err := agentsSummaryToItem(sum, count, double, disappeared, ctx)
+	flapping, err := ctx.DB.CountFlappingEndpoints()
+	if err != nil {
+		panic(err)
+	}
+	sumItem, err := agentsSummaryToItem(onlineagtsum, idleagtsum, countonlineendpoints, countidleendpoints,
+		countnewendpoints, double, disappeared, flapping, ctx)
 	resource.AddItem(sumItem)
 
 	// add the last 10 actions
