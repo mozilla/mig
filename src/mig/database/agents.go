@@ -378,10 +378,12 @@ func (db *DB) CountDisappearedEndpoints(pointInTime time.Time) (sum float64, err
 // CountFlappingEndpoints a count of endpoints that have restarted their agent recently
 func (db *DB) CountFlappingEndpoints() (sum float64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
-		WHERE status=$1 OR status=$2 AND queueloc IN (
-			SELECT DISTINCT(queueloc) FROM agents
-			WHERE status=$3
-		)`, mig.AgtStatusOnline, mig.AgtStatusIdle, mig.AgtStatusOffline).Scan(&sum)
+		WHERE queueloc IN (
+			SELECT queueloc FROM agents
+			WHERE status=$1 OR status=$2
+			GROUP BY queueloc
+			HAVING count(queueloc) > 1
+		)`, mig.AgtStatusOnline, mig.AgtStatusIdle).Scan(&sum)
 	if err != nil {
 		err = fmt.Errorf("Error while counting flapping endpoints: '%v'", err)
 		return
