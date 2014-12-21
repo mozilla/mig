@@ -44,10 +44,12 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 			ctx.Channels.Log <- mig.Log{Desc: "Service deployed. Exit."}.Debug()
 			os.Exit(0)
 		}
-		// install a cron job that acts as a watchdog,
-		err = installCron(ctx)
-		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+		if ctx.Agent.Respawn {
+			// install a cron job that acts as a watchdog,
+			err = installCron(ctx)
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+			}
 		}
 		// We are not upgrading, and parent is init. We must decide how to handle
 		// respawns based on the type of init system: upstart and systemd will
