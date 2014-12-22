@@ -105,7 +105,7 @@ go_get_deps:
 	$(GOGETTER) github.com/gorilla/mux
 	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) bitbucket.org/kardianos/osext
-	$(GOGETTER) bitbucket.org/jvehent/service
+	$(GOGETTER) github.com/jvehent/service-go
 	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
 	$(GOGETTER) camlistore.org/pkg/misc/pinentry
 	$(GOGETTER) github.com/ccding/go-stun/stun

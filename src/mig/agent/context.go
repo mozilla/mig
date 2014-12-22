@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"bitbucket.org/jvehent/service"
 	"bitbucket.org/kardianos/osext"
+	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
 )
 
