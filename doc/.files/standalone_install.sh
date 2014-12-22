@@ -41,7 +41,7 @@ which hg   2>&1 1>/dev/null || pkglist="$pkglist mercurial"
 which make 2>&1 1>/dev/null || pkglist="$pkglist make"
 which gcc  2>&1 1>/dev/null || pkglist="$pkglist gcc"
 which tmux 2>&1 1>/dev/null || pkglist="$pkglist tmux"
-which curl 2>&1 1>/dev/null || pkglist="$pkglist tmux"
+which curl 2>&1 1>/dev/null || pkglist="$pkglist curl"
 
 if [ "$pkglist" != "" ]; then
     echo "missing packages: $pkglist"
