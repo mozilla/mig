@@ -1,0 +1,11 @@
+language: go
+go:
+    - 1.4
+notifications:
+    irc:
+        channels:
+            - "irc.mozilla.org#mig"
+before_install:
+    - sudo apt-get install libreadline-dev
+install:
+    - make go_get_deps
