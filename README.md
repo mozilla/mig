@@ -1,7 +1,7 @@
 MIG: Mozilla InvestiGator
 =========================
 
-**Note: MIG is under heavy development. The code is unstable, and non-backward compatible changes are still in progress. Be warned.**
+**Note: MIG is under heavy development. The code is stable and used in production, but changes may be backward incompatible. Be warned.**
 
 MIG is OpSec's platform for investigative surgery of remote endpoints.
 
@@ -104,3 +104,4 @@ We use Bugzilla to track the work on MIG.
 * List open bugs: [Bugzilla MIG](https://bugzilla.mozilla.org/showdependencytree.cgi?id=896480&hide_resolved=1)
 * Create a new bug: [Bugzilla OpSec](https://bugzilla.mozilla.org/enter_bug.cgi?product=mozilla.org&component=Security%20Assurance%3A%20Operations)
 
+[![Build Status](https://travis-ci.org/mozilla/mig.svg?branch=master)](https://travis-ci.org/mozilla/mig)
