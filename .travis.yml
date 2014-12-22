@@ -9,3 +9,4 @@ before_install:
     - sudo apt-get install libreadline-dev
 install:
     - make go_get_deps
+    - cp conf/mig-agent-conf.go.inc conf/mig-agent-conf.go
