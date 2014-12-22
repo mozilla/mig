@@ -1,6 +1,6 @@
 language: go
 go:
-    - 1.4
+    - tip
 notifications:
     irc:
         channels:
@@ -10,3 +10,5 @@ before_install:
 install:
     - make go_get_deps
     - cp conf/mig-agent-conf.go.inc conf/mig-agent-conf.go
+script:
+    - make test
