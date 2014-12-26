@@ -19,13 +19,12 @@ ifeq ($(ARCH),386)
 	FPMARCH := i386
 endif
 ifeq ($(OS),windows)
-	BINSUFFIX   := ".exe"
+	BINSUFFIX	:= ".exe"
 else
 	BINSUFFIX	:= ""
 endif
 PREFIX		:= /usr/local/
 DESTDIR		:= /
-GPGMEDIR	:= src/mig/pgp/sign
 BINDIR		:= bin/$(OS)/$(ARCH)
 AGTCONF		:= conf/mig-agent-conf.go
 AVAILMODS	:= conf/available_modules.go
@@ -124,7 +123,7 @@ install: mig-agent mig-scheduler
 	$(INSTALL) -D -m 0640 mig.cfg $(DESTDIR)$(PREFIX)/etc/mig/mig.cfg
 	$(MKDIR) -p $(DESTDIR)$(PREFIX)/var/cache/mig
 
-rpm: rpm-agent rpm-scheduler rpm-utils
+rpm: rpm-agent rpm-scheduler
 
 rpm-agent: mig-agent
 # Bonus FPM options
@@ -133,64 +132,82 @@ rpm-agent: mig-agent
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
 	$(MKDIR) -p tmp/var/cache/mig
 	make agent-install-script
-	#make agent-cron
+	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		-m "Mozilla OpSec" --url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
-		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
+		-s dir -t rpm .
 
 deb-agent: mig-agent
 	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/cache/mig
 	make agent-install-script
-	#make agent-cron
+	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		-m "Mozilla OpSec" --url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
-		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
+		-s dir -t deb .
 
 osxpkg-agent: mig-agent
 	rm -fr tmp
 	mkdir 'tmp' 'tmp/sbin'
-	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
+	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/cache/mig
 	make agent-install-script
-	#make agent-cron
+	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		-m "Mozilla OpSec" --url https://github.com/mozilla/mig --after-install tmp/agent_install.sh \
-		--architecture $(FPMARCH) -v $(BUILDREV) -s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
+		-s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
 
 agent-install-script:
-	echo '#!/bin/sh' > tmp/agent_install.sh
-	echo 'chmod 500 /sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
-	echo 'chown root:root /sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
-	echo 'rm /sbin/mig-agent; ln -s /sbin/mig-agent-$(BUILDENV) /sbin/mig-agent' >> tmp/agent_install.sh
-	echo '/sbin/mig-agent -q=pid 2>&1 1>/dev/null && kill $$(/sbin/mig-agent -q=pid)' >> tmp/agent_install.sh
-	echo '/sbin/mig-agent-$(BUILDENV)' >> tmp/agent_install.sh
+	echo '#!/bin/sh'																				> tmp/agent_install.sh
+	echo '[ -x "$$(which service)" ] && service mig-agent stop'										>> tmp/agent_install.sh
+	echo '[ -x "$$(which initctl)" ] && initctl stop mig-agent'										>> tmp/agent_install.sh
+	echo '[ -x "$$(which launchctl)" ] && launchctl unload /Library/LaunchDaemons/mig-agent.plist'	>> tmp/agent_install.sh
+	echo '/sbin/mig-agent -q=pid 2>&1 1>/dev/null && kill $$(/sbin/mig-agent -q=pid)'				>> tmp/agent_install.sh
+	echo 'echo deploying /sbin/mig-agent-$(BUILDREV) linked to /sbin/mig-agent'						>> tmp/agent_install.sh
+	echo 'chmod 500 /sbin/mig-agent-$(BUILDREV)'													>> tmp/agent_install.sh
+	echo 'chown root:root /sbin/mig-agent-$(BUILDREV)'												>> tmp/agent_install.sh
+	echo 'rm /sbin/mig-agent; ln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent'					>> tmp/agent_install.sh
+	echo '/sbin/mig-agent-$(BUILDREV)'																>> tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
+
+agent-remove-script:
+	echo '#!/bin/sh'																				> tmp/agent_remove.sh
+	echo 'echo shutting down running instances of mig-agent'										>> tmp/agent_remove.sh
+	echo '[ -x "$$(which service)" ] && service mig-agent stop'										>> tmp/agent_remove.sh
+	echo '[ -x "$$(which initctl)" ] && initctl stop mig-agent'										>> tmp/agent_remove.sh
+	echo '[ -x "$$(which launchctl)" ] && launchctl unload /Library/LaunchDaemons/mig-agent.plist'	>> tmp/agent_remove.sh
+	echo '/sbin/mig-agent -q=pid 2>&1 1>/dev/null && kill $$(/sbin/mig-agent -q=pid)'				>> tmp/agent_remove.sh
+	echo 'rm -f "$$(readlink /sbin/mig-agent)" "/sbin/mig-agent"'									>> tmp/agent_remove.sh
+	echo '[ -e "/etc/cron.d/mig-agent" ] && rm -f "/etc/cron.d/mig-agent"'							>> tmp/agent_remove.sh
+	chmod 0755 tmp/agent_remove.sh
 
 agent-cron:
 	mkdir -p tmp/etc/cron.d/
-	echo 'PATH="/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin"' > tmp/etc/cron.d/mig-agent
-	echo 'SHELL=/bin/bash' >> tmp/etc/cron.d/mig-agent
+	echo 'PATH="/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin"'			> tmp/etc/cron.d/mig-agent
+	echo 'SHELL=/bin/bash'																>> tmp/etc/cron.d/mig-agent
+	echo 'MAILTO=""'																	>> tmp/etc/cron.d/mig-agent
 	echo '*/10 * * * * root /sbin/mig-agent -q=pid 2>&1 1>/dev/null || /sbin/mig-agent' >> tmp/etc/cron.d/mig-agent
 	chmod 0644 tmp/etc/cron.d/mig-agent
 
 rpm-scheduler: mig-scheduler
 	rm -rf tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/sbin/mig-scheduler
-	$(INSTALL) -D -m 0640 mig.cfg tmp/etc/mig/mig.cfg
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/usr/bin/mig-scheduler
+	$(INSTALL) -D -m 0640 conf/mig-scheduler.cfg.inc tmp/etc/mig/mig-scheduler.cfg
 	$(MKDIR) -p tmp/var/cache/mig
 	fpm -C tmp -n mig-scheduler --license GPL --vendor mozilla --description "Mozilla InvestiGator Scheduler" \
-		-m "Mozilla OpSec" --url https://github.com/mozilla/mig \
-		-s dir -t rpm .
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
 
-rpm-utils: mig-action-generator
+rpm-api: mig-api
 	rm -rf tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/bin/mig-action-generator
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-api tmp/usr/bin/mig-api
+	$(INSTALL) -D -m 0640 conf/mig-api.cfg.inc tmp/etc/mig/mig-api.cfg
 	$(MKDIR) -p tmp/var/cache/mig
-	fpm -C tmp -n mig-utils --license GPL --vendor mozilla --description "Mozilla InvestiGator Utilities" \
-		-m "Mozilla OpSec" --url https://github.com/mozilla/mig \
-		-s dir -t rpm .
+	fpm -C tmp -n mig-api --license GPL --vendor mozilla --description "Mozilla InvestiGator API" \
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
 
 test: mig-agent
 	$(BINDIR)/mig-agent-latest -m=file '{"searches": {"shouldmatch": {"names": ["^root"],"sizes": ["<10m"],"options": {"matchall": true},"paths": ["/etc/passwd"]},"shouldnotmatch": {"options": {"maxdepth": 1},"paths": ["/tmp"],"contents": ["should not match"]}}}'
