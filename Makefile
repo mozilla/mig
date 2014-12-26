@@ -135,7 +135,7 @@ rpm-agent: mig-agent
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
-		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
+		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh --after-upgrade tmp/agent_install.sh \
 		-s dir -t rpm .
 
 deb-agent: mig-agent
@@ -146,7 +146,7 @@ deb-agent: mig-agent
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
-		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
+		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh --after-upgrade tmp/agent_install.sh \
 		-s dir -t deb .
 
 osxpkg-agent: mig-agent
