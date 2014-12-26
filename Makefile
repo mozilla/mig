@@ -129,7 +129,7 @@ rpm-agent: mig-agent
 # Bonus FPM options
 #       --rpm-digest sha512 --rpm-sign
 	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDENV)
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/cache/mig
 	make agent-install-script
 	make agent-remove-script
