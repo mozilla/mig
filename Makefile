@@ -130,7 +130,7 @@ rpm-agent: mig-agent
 #       --rpm-digest sha512 --rpm-sign
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
-	$(MKDIR) -p tmp/var/cache/mig
+	$(MKDIR) -p tmp/var/run/mig
 	make agent-install-script
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
@@ -141,7 +141,7 @@ rpm-agent: mig-agent
 deb-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
-	$(MKDIR) -p tmp/var/cache/mig
+	$(MKDIR) -p tmp/var/run/mig
 	make agent-install-script
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
@@ -153,12 +153,12 @@ osxpkg-agent: mig-agent
 	rm -fr tmp
 	mkdir 'tmp' 'tmp/sbin'
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
-	$(MKDIR) -p tmp/var/cache/mig
+	$(MKDIR) -p tmp/var/run/mig
 	make agent-install-script
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
-		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
+		--after-install tmp/agent_install.sh \
 		-s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
 
 agent-install-script:
