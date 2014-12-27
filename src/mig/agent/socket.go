@@ -9,6 +9,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"mig"
 	"net"
 	"os"
@@ -108,7 +109,7 @@ func socketQuery(bind, query string) (resp string, err error) {
 	}
 	if query == "shutdown" {
 		// attempt to read the agent secret id and append it to the shutdown order
-		id, err := io.ReadFile(getRunDir() + ".migagtid")
+		id, err := ioutil.ReadFile(getRunDir() + ".migagtid")
 		if err != nil {
 			panic(err)
 		}
