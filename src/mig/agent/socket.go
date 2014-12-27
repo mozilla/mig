@@ -12,6 +12,7 @@ import (
 	"mig"
 	"net"
 	"os"
+	"strings"
 )
 
 func initSocket(orig_ctx Context) (ctx Context, err error) {
@@ -57,16 +58,32 @@ func socketServe(fd net.Conn, ctx Context) {
 	}
 	if n > 8190 {
 		resp = "Request too large. Max size is 8192 bytes\n"
+	} else if n < 2 {
+		resp = "Request too small. Min size is 1 byte\n"
 	} else {
-		data := buf[0 : n-1]
-		switch string(data) {
+		// input data can have multiple fields, space separated
+		// the first field is always the request, the rest are optional parameters
+		fields := strings.Split(string(buf[0:n-1]), " ")
+		switch fields[0] {
 		case "pid":
 			resp = fmt.Sprintf("%d", os.Getpid())
 		case "help":
 			resp = fmt.Sprintf(`
 Welcome to the MIG agent socket. The commands are:
-pid	returns the PID of the running agent
+pid		returns the PID of the running agent
+shutdown <id>	request agent shutdown. <id> is the agent's secret id
 `)
+		case "shutdown":
+			if len(fields) < 2 {
+				resp = "missing agent id, shutdown refused"
+				break
+			}
+			if fields[1] != ctx.Agent.UID {
+				resp = "invalid agent id, shutdown refused"
+				break
+			}
+			resp = "shutdown requested"
+			ctx.Channels.Terminate <- fmt.Errorf(resp)
 		default:
 			resp = "unknown command"
 		}
@@ -88,6 +105,14 @@ func socketQuery(bind, query string) (resp string, err error) {
 	conn, err := net.Dial("tcp", bind)
 	if err != nil {
 		panic(err)
+	}
+	if query == "shutdown" {
+		// attempt to read the agent secret id and append it to the shutdown order
+		id, err := io.ReadFile(getRunDir() + ".migagtid")
+		if err != nil {
+			panic(err)
+		}
+		query += " " + string(id)
 	}
 	fmt.Fprintf(conn, query+"\n")
 	resp, err = bufio.NewReader(conn).ReadString('\n')

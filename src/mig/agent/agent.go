@@ -246,19 +246,25 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.Hostname)}
 
-	// agent won't exit until this chan receives something
+	// The agent blocks here until a termination order is received
+	// The order is then evaluated to decide if a new agent must be respawned, or the agent
+	// service should simply be stopped.
 	exitReason := <-ctx.Channels.Terminate
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
-
-	// I'll be back!
-	if ctx.Agent.Respawn {
-		ctx.Channels.Log <- mig.Log{Desc: "Agent is immortal. Resuscitating!"}
-		cmd := exec.Command(ctx.Agent.BinPath, "-f")
-		_ = cmd.Start()
-		os.Exit(0)
-	}
-
+	time.Sleep(time.Second)
 	Destroy(ctx)
+	switch exitReason.Error() {
+	case "shutdown requested":
+		ctx.Service.Stop()
+	default:
+		// I'll be back!
+		if ctx.Agent.Respawn {
+			ctx.Channels.Log <- mig.Log{Desc: "Agent is immortal. Resuscitating!"}
+			cmd := exec.Command(ctx.Agent.BinPath, "-f")
+			_ = cmd.Start()
+			os.Exit(0)
+		}
+	}
 	return
 }
 
