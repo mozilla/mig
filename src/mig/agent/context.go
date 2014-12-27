@@ -59,8 +59,7 @@ type Context struct {
 			Chan       <-chan amqp.Delivery
 		}
 	}
-	OpID    float64 // ID of the current operation, used for tracking
-	Service service.Service
+	OpID    float64       // ID of the current operation, used for tracking
 	Sleeper time.Duration // timer used when the agent has to sleep for a while
 	Socket  struct {
 		Bind     string
@@ -513,7 +512,7 @@ func serviceDeploy(orig_ctx Context) (ctx Context, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving serviceDeploy()"}.Debug()
 	}()
-	ctx.Service, err = service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
+	svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
 	if err != nil {
 		panic(err)
 	}
@@ -522,26 +521,26 @@ func serviceDeploy(orig_ctx Context) (ctx Context, err error) {
 	// running as a service, and the agent currently upgrading which isn't yet running as a service.
 
 	// if already running, stop it. don't panic on error
-	err = ctx.Service.Stop()
+	err = svc.Stop()
 	if err != nil {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to stop service mig-agent: '%v'", err)}.Info()
 	} else {
 		ctx.Channels.Log <- mig.Log{Desc: "Stopped running mig-agent service"}.Info()
 	}
 
-	err = ctx.Service.Remove()
+	err = svc.Remove()
 	if err != nil {
 		// fail but continue, the service may not exist yet
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to remove service mig-agent: '%v'", err)}.Info()
 	} else {
 		ctx.Channels.Log <- mig.Log{Desc: "Removed existing mig-agent service"}.Info()
 	}
-	err = ctx.Service.Install()
+	err = svc.Install()
 	if err != nil {
 		panic(err)
 	}
 	ctx.Channels.Log <- mig.Log{Desc: "Installed mig-agent service"}.Info()
-	err = ctx.Service.Start()
+	err = svc.Start()
 	if err != nil {
 		panic(err)
 	}

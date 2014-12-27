@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
 )
 
@@ -253,9 +254,10 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
 	time.Sleep(time.Second)
 	Destroy(ctx)
-	switch exitReason.Error() {
+	switch fmt.Sprintf("%v", exitReason) {
 	case "shutdown requested":
-		ctx.Service.Stop()
+		svc, _ := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
+		svc.Stop()
 	default:
 		// I'll be back!
 		if ctx.Agent.Respawn {
