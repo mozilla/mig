@@ -80,7 +80,7 @@ shutdown <id>	request agent shutdown. <id> is the agent's secret id
 				break
 			}
 			if fields[1] != ctx.Agent.UID {
-				resp = "invalid agent id, shutdown refused"
+				resp = "invalid agent id '" + fields[1] + "', shutdown refused"
 				break
 			}
 			resp = "shutdown requested"
@@ -113,7 +113,7 @@ func socketQuery(bind, query string) (resp string, err error) {
 		if err != nil {
 			panic(err)
 		}
-		query += " " + string(id)
+		query = fmt.Sprintf("%s %s", query, id)
 	}
 	fmt.Fprintf(conn, query+"\n")
 	resp, err = bufio.NewReader(conn).ReadString('\n')
