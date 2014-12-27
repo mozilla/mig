@@ -135,7 +135,7 @@ rpm-agent: mig-agent
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
-		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh --after-upgrade tmp/agent_install.sh \
+		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
 		-s dir -t rpm .
 
 deb-agent: mig-agent
@@ -146,7 +146,7 @@ deb-agent: mig-agent
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
-		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh --after-upgrade tmp/agent_install.sh \
+		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
 		-s dir -t deb .
 
 osxpkg-agent: mig-agent
@@ -163,8 +163,8 @@ osxpkg-agent: mig-agent
 
 agent-install-script:
 	echo '#!/bin/sh'															> tmp/agent_install.sh
-	echo '/sbin/mig-agent -q=shutdown'											>> tmp/agent_remove.sh
-	echo 'echo deploying /sbin/mig-agent-$(BUILDREV) linked to /sbin/mig-agent'	>> tmp/agent_install.sh
+	echo '/sbin/mig-agent -q=shutdown; sleep 2'									>> tmp/agent_remove.sh
+	echo 'pid=$$(/sbin/mig-agent -q=pid) && [ $$? -eq 0 ] && kill $$pid'		>> tmp/agent_remove.sh
 	echo 'chmod 500 /sbin/mig-agent-$(BUILDREV)'								>> tmp/agent_install.sh
 	echo 'chown root:root /sbin/mig-agent-$(BUILDREV)'							>> tmp/agent_install.sh
 	echo 'rm /sbin/mig-agent; ln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent'>> tmp/agent_install.sh
@@ -172,11 +172,11 @@ agent-install-script:
 	chmod 0755 tmp/agent_install.sh
 
 agent-remove-script:
-	echo '#!/bin/sh'														> tmp/agent_remove.sh
-	echo 'echo shutting down running instances of mig-agent'				>> tmp/agent_remove.sh
-	echo '/sbin/mig-agent -q=shutdown'										>> tmp/agent_remove.sh
-	echo 'rm -f "$$(readlink /sbin/mig-agent)" "/sbin/mig-agent"'			>> tmp/agent_remove.sh
-	echo '[ -e "/etc/cron.d/mig-agent" ] && rm -f "/etc/cron.d/mig-agent"'	>> tmp/agent_remove.sh
+	echo '#!/bin/sh'																> tmp/agent_remove.sh
+	echo 'for f in "/etc/cron.d/mig-agent" "/etc/init/mig-agent.conf" "/etc/init.d/mig-agent" "/etc/systemd/system/mig-agent.service"; do' >> tmp/agent_remove.sh
+	echo '    [ -e "$$f" ] && rm -f "$$f"'											>> tmp/agent_remove.sh
+	echo 'done'																		>> tmp/agent_remove.sh
+	echo 'echo mig-agent removed, but potentially running processes left untouched' >> tmp/agent_remove.sh
 	chmod 0755 tmp/agent_remove.sh
 
 agent-cron:
