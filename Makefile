@@ -162,27 +162,21 @@ osxpkg-agent: mig-agent
 		-s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
 
 agent-install-script:
-	echo '#!/bin/sh'																				> tmp/agent_install.sh
-	echo '[ -x "$$(which service)" ] && service mig-agent stop'										>> tmp/agent_install.sh
-	echo '[ -x "$$(which initctl)" ] && initctl stop mig-agent'										>> tmp/agent_install.sh
-	echo '[ -x "$$(which launchctl)" ] && launchctl unload /Library/LaunchDaemons/mig-agent.plist'	>> tmp/agent_install.sh
-	echo '/sbin/mig-agent -q=pid 2>&1 1>/dev/null && kill $$(/sbin/mig-agent -q=pid)'				>> tmp/agent_install.sh
-	echo 'echo deploying /sbin/mig-agent-$(BUILDREV) linked to /sbin/mig-agent'						>> tmp/agent_install.sh
-	echo 'chmod 500 /sbin/mig-agent-$(BUILDREV)'													>> tmp/agent_install.sh
-	echo 'chown root:root /sbin/mig-agent-$(BUILDREV)'												>> tmp/agent_install.sh
-	echo 'rm /sbin/mig-agent; ln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent'					>> tmp/agent_install.sh
-	echo '/sbin/mig-agent-$(BUILDREV)'																>> tmp/agent_install.sh
+	echo '#!/bin/sh'															> tmp/agent_install.sh
+	echo '/sbin/mig-agent -q=shutdown'											>> tmp/agent_remove.sh
+	echo 'echo deploying /sbin/mig-agent-$(BUILDREV) linked to /sbin/mig-agent'	>> tmp/agent_install.sh
+	echo 'chmod 500 /sbin/mig-agent-$(BUILDREV)'								>> tmp/agent_install.sh
+	echo 'chown root:root /sbin/mig-agent-$(BUILDREV)'							>> tmp/agent_install.sh
+	echo 'rm /sbin/mig-agent; ln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent'>> tmp/agent_install.sh
+	echo '/sbin/mig-agent-$(BUILDREV)'											>> tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 
 agent-remove-script:
-	echo '#!/bin/sh'																				> tmp/agent_remove.sh
-	echo 'echo shutting down running instances of mig-agent'										>> tmp/agent_remove.sh
-	echo '[ -x "$$(which service)" ] && service mig-agent stop'										>> tmp/agent_remove.sh
-	echo '[ -x "$$(which initctl)" ] && initctl stop mig-agent'										>> tmp/agent_remove.sh
-	echo '[ -x "$$(which launchctl)" ] && launchctl unload /Library/LaunchDaemons/mig-agent.plist'	>> tmp/agent_remove.sh
-	echo '/sbin/mig-agent -q=pid 2>&1 1>/dev/null && kill $$(/sbin/mig-agent -q=pid)'				>> tmp/agent_remove.sh
-	echo 'rm -f "$$(readlink /sbin/mig-agent)" "/sbin/mig-agent"'									>> tmp/agent_remove.sh
-	echo '[ -e "/etc/cron.d/mig-agent" ] && rm -f "/etc/cron.d/mig-agent"'							>> tmp/agent_remove.sh
+	echo '#!/bin/sh'														> tmp/agent_remove.sh
+	echo 'echo shutting down running instances of mig-agent'				>> tmp/agent_remove.sh
+	echo '/sbin/mig-agent -q=shutdown'										>> tmp/agent_remove.sh
+	echo 'rm -f "$$(readlink /sbin/mig-agent)" "/sbin/mig-agent"'			>> tmp/agent_remove.sh
+	echo '[ -e "/etc/cron.d/mig-agent" ] && rm -f "/etc/cron.d/mig-agent"'	>> tmp/agent_remove.sh
 	chmod 0755 tmp/agent_remove.sh
 
 agent-cron:
