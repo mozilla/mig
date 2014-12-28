@@ -274,8 +274,8 @@ func moveBinary(binPath, version string) (linkloc string, err error) {
 		target = fmt.Sprintf("/sbin/mig-agent-%s", version)
 		linkloc = "/sbin/mig-agent"
 	case "windows":
-		target = fmt.Sprintf("C:/Windows/mig-agent-%s.exe", version)
-		linkloc = "C:/Windows/mig-agent.exe"
+		target = fmt.Sprintf("C:\\Program Files\\mig\\mig-agent-%s.exe", version)
+		linkloc = "C:\\Program Files\\mig\\mig-agent.exe"
 	default:
 		err = fmt.Errorf("'%s' isn't a supported OS", runtime.GOOS)
 		return

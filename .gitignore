@@ -4,6 +4,7 @@ bin/*
 *.cfg
 conf/*
 !conf/*.inc
+!conf/mig-agent-installer.wxs
 src/mig/agent/configuration.go
 src/mig/*/available_modules.go
 src/mig/*/*/available_modules.go

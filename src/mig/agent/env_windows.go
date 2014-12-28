@@ -109,5 +109,5 @@ exit:
 }
 
 func getRunDir() string {
-	return `C:\Windows\`
+	return `C:\Program Files\mig\`
 }

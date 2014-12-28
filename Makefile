@@ -2,14 +2,20 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-BUILDREF	:= $(shell git log --pretty=format:'%h' -n 1)
-BUILDDATE	:= $(shell date +%Y%m%d)
 BUILDENV	:= dev
-BUILDREV	:= $(BUILDDATE)+$(BUILDREF).$(BUILDENV)
+ifeq ($(OS),windows)
+	# on windows, the version is year.month.date
+	BUILDREV := $(shell date +%y).$(shell date +%m).$(shell date +%d)
+	BINSUFFIX := ".exe"
+else
+	# on *nix, the version is yearmonthdate+lastcommit.env
+	BUILDREV := $(shell date +%Y%m%d)+$(shell git log --pretty=format:'%h' -n 1).$(BUILDENV)
+	BINSUFFIX := ""
+endif
 
 # Supported OSes: linux darwin windows
 # Supported ARCHes: 386 amd64
-OS			:= linux
+OS			:= $(shell uname -s| tr '[:upper:]' '[:lower:]')
 ARCH		:= amd64
 
 ifeq ($(ARCH),amd64)
@@ -18,16 +24,13 @@ endif
 ifeq ($(ARCH),386)
 	FPMARCH := i386
 endif
-ifeq ($(OS),windows)
-	BINSUFFIX	:= ".exe"
-else
-	BINSUFFIX	:= ""
-endif
+
 PREFIX		:= /usr/local/
 DESTDIR		:= /
 BINDIR		:= bin/$(OS)/$(ARCH)
 AGTCONF		:= conf/mig-agent-conf.go
 AVAILMODS	:= conf/available_modules.go
+MSICONF		:= mig-agent-installer.wxs
 
 GCC			:= gcc
 CFLAGS		:=
@@ -111,9 +114,15 @@ go_get_deps:
 ifeq ($(OS),windows)
 	$(GOGETTER) code.google.com/p/winsvc/eventlog
 endif
-	$(GOGETTER) github.com/bobappleyard/readline
 ifeq ($(OS),darwin)
+	$(GOGETTER) github.com/bobappleyard/readline
 	echo 'make sure that you have readline installed via {port,brew} install readline'
+endif
+ifeq ($(OS),linux)
+	$(GOGETTER) github.com/bobappleyard/readline
+	echo 'make sure that you have readline installed via:'
+	echo '* yum install readline-devel'
+	echo '* apt-get install libreadline-dev'
 endif
 
 install: mig-agent mig-scheduler
@@ -150,6 +159,9 @@ deb-agent: mig-agent
 		-s dir -t deb .
 
 osxpkg-agent: mig-agent
+ifneq ($(OS),darwin)
+	echo 'you must set OS=darwin on the make command line to compile an OSX package'
+else
 	rm -fr tmp
 	mkdir 'tmp' 'tmp/sbin'
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
@@ -160,6 +172,7 @@ osxpkg-agent: mig-agent
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-install tmp/agent_install.sh \
 		-s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
+endif
 
 agent-install-script:
 	echo '#!/bin/sh'															> tmp/agent_install.sh
@@ -186,6 +199,19 @@ agent-cron:
 	echo 'MAILTO=""'																	>> tmp/etc/cron.d/mig-agent
 	echo '*/10 * * * * root /sbin/mig-agent -q=pid 2>&1 1>/dev/null || /sbin/mig-agent' >> tmp/etc/cron.d/mig-agent
 	chmod 0644 tmp/etc/cron.d/mig-agent
+
+msi-agent: mig-agent
+ifneq ($(OS),windows)
+	echo 'you must set OS=windows on the make command line to compile a MSI package'
+else
+	rm -fr tmp
+	mkdir 'tmp'
+	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV).exe tmp/mig-agent-$(BUILDREV).exe
+	cp conf/$(MSICONF) tmp/
+	sed -i "s/REPLACE_WITH_MIG_AGENT_VERSION/$(BUILDREV)/" tmp/$(MSICONF)
+	wixl tmp/mig-agent-installer.wxs
+	cp tmp/mig-agent-installer.msi mig-agent-$(BUILDREV).msi
+endif
 
 rpm-scheduler: mig-scheduler
 	rm -rf tmp

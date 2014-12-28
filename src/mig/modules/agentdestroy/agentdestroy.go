@@ -86,7 +86,7 @@ func (r Runner) Run(Args []byte) string {
 			return r.buildResults()
 		}
 	case "windows":
-		targetExecutable = fmt.Sprintf("C:/Windows/mig-agent-%s.exe", r.Parameters.Version)
+		targetExecutable = fmt.Sprintf("C:\\Program Files\\mig\\mig-agent-%s.exe", r.Parameters.Version)
 	default:
 		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("'%s' isn't a supported OS", runtime.GOOS))
 		return r.buildResults()
