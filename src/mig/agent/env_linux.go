@@ -144,5 +144,5 @@ func getInit() (initname string, err error) {
 }
 
 func getRunDir() string {
-	return "/var/run/mig/"
+	return "/var/lib/mig/"
 }
