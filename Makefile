@@ -139,7 +139,7 @@ rpm-agent: mig-agent
 #       --rpm-digest sha512 --rpm-sign
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
-	$(MKDIR) -p tmp/var/run/mig
+	$(MKDIR) -p tmp/var/lib/mig
 	make agent-install-script
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
@@ -150,7 +150,7 @@ rpm-agent: mig-agent
 deb-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
-	$(MKDIR) -p tmp/var/run/mig
+	$(MKDIR) -p tmp/var/lib/mig
 	make agent-install-script
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
@@ -165,7 +165,7 @@ else
 	rm -fr tmp
 	mkdir 'tmp' 'tmp/sbin'
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
-	$(MKDIR) -p tmp/var/run/mig
+	$(MKDIR) -p tmp/Library/Preferences/mig/
 	make agent-install-script
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
