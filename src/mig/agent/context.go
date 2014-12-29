@@ -245,6 +245,7 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 	idFile := ctx.Agent.RunDir + ".migagtid"
 	id, err := ioutil.ReadFile(idFile)
 	if err != nil {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("unable to read agent id from '%s': %v", idFile, err)}.Debug()
 		// ID file doesn't exist, create it
 		id, err = createIDFile(ctx)
 		if err != nil {
@@ -271,6 +272,7 @@ func createIDFile(ctx Context) (id []byte, err error) {
 	defer tdir.Close()
 	if err != nil {
 		// dir doesn't exist, create it
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("agent rundir is missing from '%s'. creating it", ctx.Agent.RunDir)}.Debug()
 		err = os.MkdirAll(ctx.Agent.RunDir, 0755)
 		if err != nil {
 			panic(err)
@@ -282,6 +284,7 @@ func createIDFile(ctx Context) (id []byte, err error) {
 			panic(err)
 		}
 		if !tdirMode.Mode().IsDir() {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("'%s' is not a directory. removing it", ctx.Agent.RunDir)}.Debug()
 			// not a valid dir. destroy whatever it is, and recreate
 			err = os.Remove(ctx.Agent.RunDir)
 			if err != nil {
@@ -300,7 +303,7 @@ func createIDFile(ctx Context) (id []byte, err error) {
 	_ = os.Remove(idFile)
 
 	// write the ID file
-	err = ioutil.WriteFile(idFile, []byte(sid), 0644)
+	err = ioutil.WriteFile(idFile, []byte(sid), 0400)
 	if err != nil {
 		panic(err)
 	}
@@ -309,6 +312,7 @@ func createIDFile(ctx Context) (id []byte, err error) {
 	if err != nil {
 		panic(err)
 	}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("agent id created in '%s'", idFile)}.Debug()
 	return
 }
 
