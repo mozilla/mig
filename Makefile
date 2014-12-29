@@ -158,20 +158,22 @@ deb-agent: mig-agent
 		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
 		-s dir -t deb .
 
-osxpkg-agent: mig-agent
+dmg-agent: mig-agent
 ifneq ($(OS),darwin)
-	echo 'you must set OS=darwin on the make command line to compile an OSX package'
+	echo 'you must be on MacOS and set OS=darwin on the make command line to build an OSX package'
 else
 	rm -fr tmp
-	mkdir 'tmp' 'tmp/sbin'
+	mkdir 'tmp' 'tmp/sbin' 'tmpdmg'
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
-	$(MKDIR) -p tmp/Library/Preferences/mig/
+	$(MKDIR) -p 'tmp/Library/Preferences/mig/'
 	make agent-install-script
 	make agent-remove-script
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-install tmp/agent_install.sh \
-		-s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig .
+		-s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig -p tmpdmg/mig-agent-$(BUILDREV)-$(FPMARCH).pkg .
+	hdiutil makehybrid -hfs -hfs-volume-name "Mozilla InvestiGator Agent" \
+		-o ./mig-agent-$(BUILDREV)-$(FPMARCH).dmg tmpdmg
 endif
 
 agent-install-script:
