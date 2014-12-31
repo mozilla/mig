@@ -86,11 +86,12 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 					AND investigators.id >= $12 AND investigators.id <= $13
 					AND investigators.name ILIKE $14
 					AND commands.status ILIKE $15
+					AND actions.threat#>>'{family}' ILIKE $16
 					GROUP BY commands.id, actions.id, agents.id
-					ORDER BY commands.id ASC LIMIT $16;`, ids.minActionID, ids.maxActionID,
+					ORDER BY commands.id ASC LIMIT $17;`, ids.minActionID, ids.maxActionID,
 			p.FoundAnything, p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName,
 			p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID,
-			p.InvestigatorName, p.Status, uint64(p.Limit))
+			p.InvestigatorName, p.Status, p.ThreatFamily, uint64(p.Limit))
 	} else {
 		rows, err = db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
 			actions.id, actions.name, actions.target, actions.description, actions.threat,
@@ -109,11 +110,12 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 			AND investigators.id >= $11 AND investigators.id <= $12
 			AND investigators.name ILIKE $13
 			AND commands.status ILIKE $14
+			AND actions.threat#>>'{family}' ILIKE $15
 			GROUP BY commands.id, actions.id, agents.id
-			ORDER BY commands.id DESC LIMIT $15`,
+			ORDER BY commands.id DESC LIMIT $16`,
 			p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
 			p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
-			p.Status, uint64(p.Limit))
+			p.Status, p.ThreatFamily, uint64(p.Limit))
 	}
 	if err != nil {
 		err = fmt.Errorf("Error while finding commands: '%v'", err)
@@ -136,13 +138,6 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
-		}
-		// Check for threatfamily, if asked
-		if p.ThreatFamily != "%" {
-			if p.ThreatFamily != cmd.Action.Threat.Family {
-				// skip this record
-				continue
-			}
 		}
 		err = json.Unmarshal(jRes, &cmd.Results)
 		if err != nil {
@@ -208,11 +203,12 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 		AND investigators.id >= $11 AND investigators.id <= $12
 		AND investigators.name ILIKE $13
 		AND actions.status ILIKE $14
+		AND actions.threat#>>'{family}' ILIKE $15
 		GROUP BY actions.id
-		ORDER BY actions.id DESC LIMIT $15`,
+		ORDER BY actions.id DESC LIMIT $16`,
 		p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
 		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
-		p.Status, uint64(p.Limit))
+		p.Status, p.ThreatFamily, uint64(p.Limit))
 	if err != nil {
 		err = fmt.Errorf("Error while finding actions: '%v'", err)
 		return
@@ -234,13 +230,6 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
-		}
-		// Check for threatfamily, if asked
-		if p.ThreatFamily != "%" {
-			if p.ThreatFamily != a.Threat.Family {
-				// skip this record
-				continue
-			}
 		}
 		err = json.Unmarshal(jDesc, &a.Description)
 		if err != nil {
