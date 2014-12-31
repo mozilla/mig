@@ -29,7 +29,17 @@ if __name__ == '__main__':
     token = makeToken("/home/ulfr/.gnupg", "E60892BB9BD89A69F759A1A0A3D652173B763E8F")
     r = requests.get(sys.argv[1],
         headers={'X-PGPAUTHORIZATION': token},
-        verify=False)
-    print token
-    print r.text
-
+        verify=True)
+    if r.status_code == 200:
+        print json.dumps(r.json(), sort_keys=True, indent=4, separators=(',', ': '))
+    elif r.status_code == 500:
+        # api returns a 500 with an error body on failures
+        migjson=r.json()
+        raise Exception("API returned HTTP code %s and error '%s:%s'" %
+                            (r.status_code,
+                            migjson['collection']['code'],
+                            migjson['collection']['message'])
+                        )
+    else:
+        # another type of failure that's unlikely to have an error body
+        raise Exception("Failed with HTTP code %s" % r.status_code)
