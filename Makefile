@@ -94,26 +94,32 @@ mig-agentsearch:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agentsearch $(GOLDFLAGS) mig/client/cmd/agentsearch
 
-go_get_deps_into_system:
-	make GOGETTER="go get -u" go_get_deps
-
-go_get_deps:
+go_get_common_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
+	$(GOGETTER) code.google.com/p/gcfg
+
+go_get_agent_deps: go_get_common_deps
 	$(GOGETTER) code.google.com/p/go.crypto/sha3
 	$(GOGETTER) github.com/streadway/amqp
-	$(GOGETTER) github.com/lib/pq
-	$(GOGETTER) github.com/howeyc/fsnotify
-	$(GOGETTER) code.google.com/p/gcfg
-	$(GOGETTER) github.com/gorilla/mux
-	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) bitbucket.org/kardianos/osext
 	$(GOGETTER) github.com/jvehent/service-go
-	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
-	$(GOGETTER) camlistore.org/pkg/misc/pinentry
 	$(GOGETTER) github.com/ccding/go-stun/stun
 ifeq ($(OS),windows)
 	$(GOGETTER) code.google.com/p/winsvc/eventlog
 endif
+
+go_get_platform_deps: go_get_common_deps
+	$(GOGETTER) github.com/streadway/amqp
+	$(GOGETTER) github.com/lib/pq
+	$(GOGETTER) github.com/howeyc/fsnotify
+	$(GOGETTER) github.com/gorilla/mux
+	$(GOGETTER) github.com/jvehent/cljs
+	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
+	$(GOGETTER) camlistore.org/pkg/misc/pinentry
+
+go_get_client_deps: go_get_common_deps
+	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
+	$(GOGETTER) camlistore.org/pkg/misc/pinentry
 ifeq ($(OS),darwin)
 	$(GOGETTER) github.com/bobappleyard/readline
 	echo 'make sure that you have readline installed via {port,brew} install readline'
@@ -124,6 +130,11 @@ ifeq ($(OS),linux)
 	echo '* yum install readline-devel'
 	echo '* apt-get install libreadline-dev'
 endif
+
+go_get_deps: go_get_common_deps go_get_agent_deps go_get_platform_deps go_get_client_deps
+
+go_get_deps_into_system:
+	make GOGETTER="go get -u" go_get_deps
 
 install: mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
