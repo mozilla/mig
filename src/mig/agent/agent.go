@@ -169,13 +169,14 @@ func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
 	// initialize the agent
 	ctx, err = Init(foreground, upgrading)
 	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Init failed: '%v'", err)
+		os.Exit(0)
 	}
 
 	err = startRoutines(ctx)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Failed to start agent routines: '%v'", err)
+		os.Exit(0)
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s in checkin mode", version, ctx.Agent.Hostname)}
 
