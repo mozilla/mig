@@ -361,6 +361,12 @@ BdUCSrvo/r7oAims8SyWE+ZObC+rw7u01Sut0ctnYrvklaM10+zkwGNOTszrduUy
         <section id="rabbitmq-permissions">
             <h3>5.2   RabbitMQ Permissions</h3>
             <ol type="1">
+                <li>If you want more than 1024 clients, you may have to increase the max number of file descriptors that rabbitmq is allowed to hold. On linux, increase <cite>nofile</cite> in <cite>/etc/security/limits.conf</cite> as follow:</li>
+            </ol>
+            <pre><code class="bash">rabbitmq - nofile 102400</code></pre>
+            <p>Then, make sure than <cite>pam_limits.so</cite> is included in <cite>/etc/pam.d/common-session</cite>:</p>
+            <pre><code class="bash">session    required     pam_limits.so</code></pre>
+            <ol type="1">
                 <li>
                     <p>On the rabbitmq server, create three users:</p>
                     <blockquote>

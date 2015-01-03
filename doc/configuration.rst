@@ -522,6 +522,20 @@ apt, and then install RabbitMQ using the packages from rabbitmq.com
 RabbitMQ Permissions
 ~~~~~~~~~~~~~~~~~~~~
 
+0. If you want more than 1024 clients, you may have to increase the max number
+   of file descriptors that rabbitmq is allowed to hold. On linux, increase
+   `nofile` in `/etc/security/limits.conf` as follow:
+
+.. code:: bash
+
+	rabbitmq - nofile 102400
+
+Then, make sure than `pam_limits.so` is included in `/etc/pam.d/common-session`:
+
+.. code:: bash
+
+	session    required     pam_limits.so
+
 1. On the rabbitmq server, create three users:
 
 	* **admin**, with the tag 'administrator'
