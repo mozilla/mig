@@ -13,7 +13,7 @@ digraph mig {
 0 - generate signed action\l
 1 - HTTP POST action\l
 2 - Generate ID, init timestamps, verify signature, set status to 'init'\l
-3 - Write action into database and scheduler spool\l
+3 - Write action into database\l
 4 - Verify action timestamps\l
 5 - Find target agents, set status 'preparing', write to database\l
 6 - Generate one command per action into the scheduler spool\l
@@ -61,7 +61,6 @@ digraph mig {
     "Console"->"/action/create"[label="1"];
     "/action/create"->"/action/create"[label="2"];
     "/action/create"->"Database"[label="3"];
-    "/action/create"->"SchedulerSpool"[label="3"];
     "SchedulerSpool"->"processNewAction"[label="4"];
     "processNewAction"->"Database"[label="5"];
     "processNewAction"->"SchedulerSpool"[label="6"];

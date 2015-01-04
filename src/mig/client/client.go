@@ -621,7 +621,7 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 		// exit follower mode if status isn't one we follow,
 		// or enough commands have returned
 		// or expiration time has passed
-		if (status != "init" && status != "preparing" && status != "inflight") ||
+		if (status != "pending" && status != "scheduled" && status != "preparing" && status != "inflight") ||
 			(a.Counters.Done > 0 && a.Counters.Done >= a.Counters.Sent) ||
 			(time.Now().After(a.ExpireAfter)) {
 			goto finish

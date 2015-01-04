@@ -11,7 +11,6 @@ import (
 	"io"
 	"mig"
 	migdb "mig/database"
-	"os"
 	"sync"
 	"time"
 )
@@ -27,18 +26,6 @@ type Context struct {
 	}
 	Channels struct {
 		Log chan mig.Log
-	}
-	Directories struct {
-		// configuration
-		Spool string
-		Tmp   string
-		// internal
-		Action struct {
-			New, InFlight, Done, Invalid string
-		}
-		Command struct {
-			Ready, InFlight, Returned, Done string
-		}
 	}
 	DB      migdb.DB
 	Keyring struct {
@@ -84,73 +71,7 @@ func Init(path string) (ctx Context, err error) {
 		panic(err)
 	}
 
-	ctx, err = initDirectories(ctx)
-	if err != nil {
-		panic(err)
-	}
-
 	ctx, err = initDB(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	return
-}
-
-// initDirectories() stores the directories used by the scheduler spool
-func initDirectories(orig_ctx Context) (ctx Context, err error) {
-	ctx = orig_ctx
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("initDirectories() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving initDirectories()"}.Debug()
-	}()
-
-	ctx.Directories.Action.New = ctx.Directories.Spool + "/action/new/"
-	err = os.MkdirAll(ctx.Directories.Action.New, 0750)
-	if err != nil {
-		panic(err)
-	}
-
-	ctx.Directories.Action.InFlight = ctx.Directories.Spool + "/action/inflight/"
-	err = os.MkdirAll(ctx.Directories.Action.InFlight, 0750)
-	if err != nil {
-		panic(err)
-	}
-
-	ctx.Directories.Action.Done = ctx.Directories.Spool + "/action/done"
-	err = os.MkdirAll(ctx.Directories.Action.Done, 0750)
-	if err != nil {
-		panic(err)
-	}
-
-	ctx.Directories.Action.Invalid = ctx.Directories.Spool + "/action/invalid"
-	err = os.MkdirAll(ctx.Directories.Action.Invalid, 0750)
-	if err != nil {
-		panic(err)
-	}
-
-	ctx.Directories.Command.Ready = ctx.Directories.Spool + "/command/ready"
-	err = os.MkdirAll(ctx.Directories.Command.Ready, 0750)
-	if err != nil {
-		panic(err)
-	}
-
-	ctx.Directories.Command.InFlight = ctx.Directories.Spool + "/command/inflight"
-	err = os.MkdirAll(ctx.Directories.Command.InFlight, 0750)
-	if err != nil {
-		panic(err)
-	}
-
-	ctx.Directories.Command.Returned = ctx.Directories.Spool + "/command/returned"
-	err = os.MkdirAll(ctx.Directories.Command.Returned, 0750)
-	if err != nil {
-		panic(err)
-	}
-
-	ctx.Directories.Command.Done = ctx.Directories.Spool + "/command/done"
-	err = os.MkdirAll(ctx.Directories.Command.Done, 0750)
 	if err != nil {
 		panic(err)
 	}

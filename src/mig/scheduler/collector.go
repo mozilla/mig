@@ -26,7 +26,11 @@ func spoolInspection(ctx Context) (err error) {
 	}()
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "initiating spool inspection"}.Debug()
 
-	err = loadNewActions(ctx)
+	err = loadNewActionsFromDB(ctx)
+	if err != nil {
+		panic(err)
+	}
+	err = loadNewActionsFromSpool(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -59,14 +63,36 @@ func spoolInspection(ctx Context) (err error) {
 	return
 }
 
-// loadNewActions walks through the new actions directories and load the actions
-// that are passed their scheduled date. It also delete expired actions.
-func loadNewActions(ctx Context) (err error) {
+// loadNewActionsFromDB retrieves action that are ready to run from the database
+// and writes them into the spool for scheduling
+func loadNewActionsFromDB(ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("loadNewActions() -> %v", e)
+			err = fmt.Errorf("loadNewActionsFromDB() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving loadNewActions()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving loadNewActionsFromDB()"}.Debug()
+	}()
+	actions, err := ctx.DB.SetupRunnableActions()
+	if err != nil {
+		panic(err)
+	}
+	for _, a := range actions {
+		err = setupAction(ctx, a)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return
+}
+
+// loadNewActionsFromSpool walks through the new actions spool and loads the actions
+// that are passed their scheduled date. It also deletes expired actions.
+func loadNewActionsFromSpool(ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("loadNewActionsFromSpool() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving loadNewActionsFromSpool()"}.Debug()
 	}()
 	dir, err := os.Open(ctx.Directories.Action.New)
 	dirContent, err := dir.Readdir(-1)

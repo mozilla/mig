@@ -54,6 +54,29 @@ import (
 	"time"
 )
 
+// setupAction takes an initialized action and writes it in the new action spool
+func setupAction(ctx Context, a mig.Action) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("setupAction() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: "leaving setupAction()"}.Debug()
+	}()
+	// move action to inflight dir
+	jsonA, err := json.Marshal(a)
+	if err != nil {
+		panic(err)
+	}
+	dest := fmt.Sprintf("%s/%.0f.json", ctx.Directories.Action.New, a.ID)
+	err = safeWrite(ctx, dest, jsonA)
+	if err != nil {
+		panic(err)
+	}
+	desc := fmt.Sprintf("setupAction(): Action '%s' has been setup", a.Name)
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: a.ID, Desc: desc}.Debug()
+	return
+}
+
 // flyAction moves an action file to the InFlight directory and
 // write it to database
 func flyAction(ctx Context, a mig.Action, origin string) (err error) {

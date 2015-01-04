@@ -278,3 +278,58 @@ func (db *DB) GetActionCounters(aid float64) (counters mig.ActionCounters, err e
 	}
 	return
 }
+
+// SetupRunnableActions retrieves actions that are ready to run. This function is designed
+// to run concurrently across multiple schedulers, by update the status of the action at
+// the same time as retrieving it. It returns an array of actions rady to be run.
+func (db *DB) SetupRunnableActions() (actions []mig.Action, err error) {
+	rows, err := db.c.Query(`UPDATE actions SET status='scheduled'
+		WHERE status='pending' AND validfrom < NOW() AND expireafter > NOW()
+		RETURNING id, name, target, description, threat, operations,
+		validfrom, expireafter, status, pgpsignatures, syntaxversion`)
+	if err != nil && err != sql.ErrNoRows {
+		rows.Close()
+		err = fmt.Errorf("Error while setting up runnable actions: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var jDesc, jThreat, jOps, jSig []byte
+		var a mig.Action
+		err = rows.Scan(&a.ID, &a.Name, &a.Target, &jDesc, &jThreat, &jOps,
+			&a.ValidFrom, &a.ExpireAfter, &a.Status, &jSig, &a.SyntaxVersion)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Error while retrieving action: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jDesc, &a.Description)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jThreat, &a.Threat)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jOps, &a.Operations)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jSig, &a.PGPSignatures)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+			return
+		}
+		actions = append(actions, a)
+	}
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
+	return
+}

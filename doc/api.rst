@@ -361,7 +361,7 @@ GET <root>/search
 	- `status`: filter on internal status, accept `ILIKE` pattern.
 	  Status depends on the type. Below are the available statuses per type:
 
-		- `action`: init, preparing, invalid, inflight, completed
+		- `action`: pending, scheduled, preparing, invalid, inflight, completed
 		- `agent`: online, upgraded, destroyed, offline, idle
 		- `command`: prepared, sent, success, timeout, cancelled, expired, failed
 		- `investigator`: active, disabled

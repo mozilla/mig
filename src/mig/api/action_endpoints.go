@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jvehent/cljs"
-	"io/ioutil"
 	"mig"
 	"mig/pgp"
 	"net/http"
@@ -81,7 +80,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	action.StartTime = date0
 	action.FinishTime = date1
 	action.LastUpdateTime = date0
-	action.Status = "init"
+	action.Status = "pending"
 
 	// load keyring and validate action
 	keyring, err := getKeyring()
@@ -128,19 +127,6 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 		}
 	}
 	ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "Action written to database"}
-
-	// write action to disk
-	destdir := fmt.Sprintf("%s/%.0f.json", ctx.Directories.Action.New, action.ID)
-	newAction, err := json.Marshal(action)
-	if err != nil {
-		panic(err)
-	}
-	err = ioutil.WriteFile(destdir, newAction, 0640)
-	if err != nil {
-		panic(err)
-	}
-	ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "Action committed to spool"}
-
 	err = resource.AddItem(cljs.Item{
 		Href: fmt.Sprintf("%s/action?actionid=%.0f", ctx.Server.BaseURL, action.ID),
 		Data: []cljs.Data{{Name: "action ID " + fmt.Sprintf("%.0f", action.ID), Value: action}},
