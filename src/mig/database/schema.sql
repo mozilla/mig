@@ -1,23 +1,3 @@
-#! /usr/bin/env bash
-[ ! -x $(which sudo) ] && echo "sudo isn't available, that won't work" && exit 1
-
-genpass=1
-pass=""
-[ ! -z $1 ] && pass=$1 && echo "using predefined password '$pass'" && genpass=0
-
-for user in "migadmin" "migapi" "migscheduler"; do
-    [ $genpass -gt 0 ] && pass=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
-    sudo su postgres -c "psql -c 'CREATE ROLE $user;'" 1>/dev/null
-    [ $? -ne 0 ] && echo "ERROR: user creation failed." && exit 123
-    sudo su postgres -c "psql -c \"ALTER ROLE $user WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD '$pass';\"" 1>/dev/null
-    [ $? -ne 0 ] && echo "ERROR: user creation failed." && exit 123
-    echo "Created user $user with password '$pass'"
-done
-sudo su postgres -c "psql -c 'CREATE DATABASE mig OWNER migadmin;'" 1>/dev/null
-[ $? -ne 0 ] && echo "ERROR: database creation failed." && exit 123
-
-createdbtemp=$(mktemp)
-cat > $createdbtemp << EOF
 CREATE TABLE actions (
     id numeric NOT NULL,
     name character varying(2048) NOT NULL,
@@ -31,7 +11,8 @@ CREATE TABLE actions (
     finishtime timestamp with time zone,
     lastupdatetime timestamp with time zone,
     status character varying(256),
-    syntaxversion integer
+    syntaxversion integer,
+    pgpsignature character varying(4096) NOT NULL
 );
 ALTER TABLE public.actions OWNER TO migadmin;
 ALTER TABLE ONLY actions
@@ -152,18 +133,6 @@ ALTER TABLE ONLY signatures
 
 ALTER TABLE ONLY signatures
     ADD CONSTRAINT signatures_investigatorid_fkey FOREIGN KEY (investigatorid) REFERENCES investigators(id);
-EOF
-
-chmod 777 $createdbtemp
-sudo su postgres -c "psql -d mig -f $createdbtemp" 1>/dev/null
-[ $? -ne 0 ] && echo "ERROR: tables creation failed." && exit 123
-rm "$createdbtemp"
-
-granttmp=$(mktemp)
-cat > $granttmp << EOF
-GRANT ALL PRIVILEGES ON DATABASE mig TO migadmin;
-
-\c mig
 
 -- Scheduler can read all tables, insert and select private keys in the investigators table, but cannot update investigators
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO migscheduler;
@@ -186,12 +155,3 @@ GRANT SELECT ON actions, agents, agtmodreq, commands, invagtmodperm, modules, si
 GRANT SELECT (id, name, pgpfingerprint, publickey, status, createdat, lastmodified) ON investigators TO migreadonly;
 GRANT migreadonly TO migapi;
 GRANT migreadonly TO migscheduler;
-
-EOF
-
-chmod 777 $granttmp
-sudo su postgres -c "psql -f $granttmp" 1>/dev/null
-[ $? -ne 0 ] && echo "ERROR: grants failed." && exit 123
-rm "$granttmp"
-
-echo "MIG Database created successfully."
