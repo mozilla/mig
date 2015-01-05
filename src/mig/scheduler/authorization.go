@@ -39,14 +39,22 @@ func isAgentAuthorized(agentQueueLoc string, ctx Context) (ok bool, err error) {
 		if err := scanner.Err(); err != nil {
 			panic(err)
 		}
-		re, err = regexp.Compile("^" + scanner.Text() + "$")
-		if err != nil {
-			panic(err)
-		}
-		if re.MatchString(agentQueueLoc) {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
-			ok = true
-			return
+		if len(scanner.Text()) > 4 && scanner.Text()[0:3] == "re:" {
+			re, err = regexp.Compile("^" + scanner.Text()[3:] + "$")
+			if err != nil {
+				panic(err)
+			}
+			if re.MatchString(agentQueueLoc) {
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
+				ok = true
+				return
+			}
+		} else {
+			if scanner.Text() == agentQueueLoc {
+				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
+				ok = true
+				return
+			}
 		}
 	}
 	// whitelist check failed, agent isn't authorized

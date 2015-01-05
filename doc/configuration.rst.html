@@ -210,6 +210,9 @@ sudo chown mig-user /var/cache/mig -R</code></pre>
 windows.db4.sub.example.com.56b2andxmyb00</code></pre>
             <p>If the scheduler receives a heartbeat from an agent that is not present in the whitelist, it will log an error message. An operator can process the logs and add agents to the whitelist manually.</p>
             <pre><code class="">Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized</code></pre>
+            <p>For environments that are particularly dynamic, it is possible to use regexes in the whitelist. This is done by prepending <cite>re:</cite> to the whitelist entry.</p>
+            <pre><code class="">re:linux.server[0-9]{1,4}.example.net.[a-z0-9]{13}</code></pre>
+            <p>Keep the list of regexes short. Until MIG implements a better agent validation mechanisms, the whitelist is reread for every registration, and regexes are recompiled every time. On a busy platform, this can be done hundreds of times per second and induce heavy cpu usage.</p>
         </section>
         <section id="database-creation">
             <h3>4.3   Database creation</h3>

@@ -289,6 +289,17 @@ add agents to the whitelist manually.
 
 	Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized
 
+For environments that are particularly dynamic, it is possible to use regexes
+in the whitelist. This is done by prepending `re:` to the whitelist entry.
+
+.. code::
+
+	re:linux.server[0-9]{1,4}.example.net.[a-z0-9]{13}
+
+Keep the list of regexes short. Until MIG implements a better agent validation
+mechanisms, the whitelist is reread for every registration, and regexes are
+recompiled every time. On a busy platform, this can be done hundreds of times
+per second and induce heavy cpu usage.
 
 Database creation
 ~~~~~~~~~~~~~~~~~
