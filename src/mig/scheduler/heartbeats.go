@@ -176,7 +176,6 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 		panic(err)
 	}
 
-	// declare the "mig" exchange used for all publications
 	//create a queue for agent
 	queue := fmt.Sprintf("mig.sched.%s", agt.QueueLoc)
 	_, err = agtResultsChan.QueueDeclare(queue, true, false, false, false, nil)
@@ -218,8 +217,27 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 			}
 		}
 	exit:
+		// cleanup on exit, don't leave cruft in the rabbitmq relay
 		desc = fmt.Sprintf("Closing listener for agent '%s'", agt.Name)
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+		// delete the queue that receives agents results
+		msgCount, err := agtResultsChan.QueueDelete(queue, false, false, false)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while deleting queue '%s': %v", queue, err)}.Err()
+		}
+		if msgCount > 0 {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d pending messages were deleted with queue '%s'", msgCount, queue)}.Warning()
+		}
+		// delete the queue that sends commands to agents
+		agtQueue := fmt.Sprintf("mig.agt.%s", agt.QueueLoc)
+		msgCount, err = agtResultsChan.QueueDelete(agtQueue, false, false, false)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while deleting queue '%s': %v", agtQueue, err)}.Err()
+		}
+		if msgCount > 0 {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d pending messages were deleted with queue '%s'", agtQueue, queue)}.Warning()
+		}
+		// close the amqp channel
 		err = agtResultsChan.Close()
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while attempt to close listener: %v", err)}.Err()
