@@ -21,16 +21,13 @@ func isAgentAuthorized(agentQueueLoc string, ctx Context) (ok bool, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving isAgentAuthorized()"}.Debug()
 	}()
-
-	ok = false
-
+	var re *regexp.Regexp
 	// bypass mode if there's no whitelist in the conf
 	if ctx.Agent.Whitelist == "" {
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "Agent authorization checking is disabled"}.Debug()
 		return
 	}
 
-	agtRe := regexp.MustCompile("^" + agentQueueLoc + "$")
 	wfd, err := os.Open(ctx.Agent.Whitelist)
 	if err != nil {
 		panic(err)
@@ -42,7 +39,11 @@ func isAgentAuthorized(agentQueueLoc string, ctx Context) (ok bool, err error) {
 		if err := scanner.Err(); err != nil {
 			panic(err)
 		}
-		if agtRe.MatchString(scanner.Text()) {
+		re, err = regexp.Compile("^" + scanner.Text() + "$")
+		if err != nil {
+			panic(err)
+		}
+		if re.MatchString(agentQueueLoc) {
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
 			ok = true
 			return
