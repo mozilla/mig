@@ -235,7 +235,7 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while deleting queue '%s': %v", agtQueue, err)}.Err()
 		}
 		if msgCount > 0 {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d pending messages were deleted with queue '%s'", agtQueue, queue)}.Warning()
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d pending messages were deleted with queue '%s'", msgCount, queue)}.Warning()
 		}
 		// close the amqp channel
 		err = agtResultsChan.Close()
