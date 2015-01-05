@@ -174,9 +174,9 @@ cat > /tmp/mig-scheduler.cfg << EOF
     level = "info"
     file = "/var/cache/mig/mig-scheduler.log"
 EOF
-sudo mv /tmp/mig-scheduler.cfg /etc/mig/ || fail
-sudo chown mig /etc/mig/mig-scheduler.cfg || fail
-sudo chmod 750 /etc/mig/mig-scheduler.cfg || fail
+sudo mv /tmp/mig-scheduler.cfg /etc/mig/scheduler.cfg || fail
+sudo chown mig /etc/mig/scheduler.cfg || fail
+sudo chmod 750 /etc/mig/scheduler.cfg || fail
 
 echo -e "\n---- Creating API configuration\n"
 cat > /tmp/mig-api.cfg << EOF
@@ -188,9 +188,6 @@ cat > /tmp/mig-api.cfg << EOF
     port = 12345
     host = "http://localhost:12345"
     baseroute = "/api/v1"
-[directories]
-    spool = "/var/cache/mig/"
-    tmp = "/var/tmp/"
 [postgres]
     host = "127.0.0.1"
     port = 5432
@@ -203,14 +200,14 @@ cat > /tmp/mig-api.cfg << EOF
     level = "debug"
     file = "/var/cache/mig/mig-api.log"
 EOF
-sudo mv /tmp/mig-api.cfg /etc/mig/ || fail
-sudo chown mig /etc/mig/mig-api.cfg || fail
-sudo chmod 750 /etc/mig/mig-api.cfg || fail
+sudo mv /tmp/mig-api.cfg /etc/mig/api.cfg || fail
+sudo chown mig /etc/mig/api.cfg || fail
+sudo chmod 750 /etc/mig/api.cfg || fail
 
 echo -e "\n---- Starting Scheduler and API in TMUX under mig user\n"
 sudo su mig -c "/usr/bin/tmux new-session -s 'mig' -d"
-sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-scheduler -c /etc/mig/mig-scheduler.cfg'"
-sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-api -c /etc/mig/mig-api.cfg'"
+sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-scheduler'"
+sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-api'"
 
 echo -e "\n---- Testing API status\n"
 sleep 2
