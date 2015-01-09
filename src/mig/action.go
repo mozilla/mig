@@ -241,14 +241,12 @@ func (a Action) VerifySignatures(keyring io.Reader) (err error) {
 
 //  concatenates Action components into a string
 func (a Action) String() (str string, err error) {
-	str = "name=" + a.Name + "; "
-	str += "target=" + a.Target + "; "
-	str += "validfrom=" + a.ValidFrom.String() + "; "
-	str += "expireafter=" + a.ExpireAfter.String() + "; "
-
 	args, err := json.Marshal(a.Operations)
-	str += "operations='" + fmt.Sprintf("%s", args) + "';"
-
+	if err != nil {
+		return
+	}
+	str += fmt.Sprintf("name=%s;target=%s;validfrom=%d;expireafter=%s;operations=%s;",
+		a.Name, a.Target, a.ValidFrom.UTC().Unix(), a.ExpireAfter.UTC().Unix(), args)
 	return
 }
 
