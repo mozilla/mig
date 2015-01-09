@@ -9,8 +9,8 @@ import (
 	"flag"
 	"fmt"
 	"mig"
+	"mig/client"
 	"os"
-	"os/user"
 )
 
 func main() {
@@ -27,12 +27,18 @@ func main() {
 
 	hasaction := false
 	hascommand := false
+	homedir := client.FindHomedir()
 
 	// command line options
 	var actionfile = flag.String("a", "/path/to/action", "Load action from file")
 	var commandfile = flag.String("c", "/path/to/command", "Load command from file")
-	var pubring = flag.String("pubring", "/path/to/pubring", "Use pubring at <path>")
+	var config = flag.String("conf", homedir+"/.migrc", "Load configuration from file")
 	flag.Parse()
+
+	conf, err := client.ReadConfiguration(*config)
+	if err != nil {
+		panic(err)
+	}
 
 	// if a file is defined, load action from that
 	if *actionfile != "/path/to/action" {
@@ -42,8 +48,9 @@ func main() {
 		hascommand = true
 	}
 	if (hasaction && hascommand) || (!hasaction && !hascommand) {
+		fmt.Println("[error] either an action file or a command file must be provided")
 		Usage()
-		panic(err)
+		os.Exit(1)
 	}
 
 	var a mig.Action
@@ -60,39 +67,23 @@ func main() {
 		a = c.Action
 	}
 
-	fmt.Printf("%s\n", a)
 	err = a.Validate()
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	// find keyring in default location
-	u, err := user.Current()
+	pubringFile, err := os.Open(conf.GPG.Home + "/pubring.gpg")
 	if err != nil {
 		panic(err)
 	}
-
-	if *pubring != "/path/to/pubring" {
-		// load keyring
-		var gnupghome string
-		gnupghome = os.Getenv("GNUPGHOME")
-		if gnupghome == "" {
-			gnupghome = "/.gnupg"
-		}
-		*pubring = u.HomeDir + gnupghome + "/pubring.gpg"
-	}
-	keyring, err := os.Open(*pubring)
-	if err != nil {
-		panic(err)
-	}
-	defer keyring.Close()
+	defer pubringFile.Close()
 
 	// syntax checking
-	err = a.VerifySignatures(keyring)
+	err = a.VerifySignatures(pubringFile)
 	if err != nil {
-		panic(err)
+		fmt.Println("[error]", err)
+	} else {
+		fmt.Println("Valid signature")
 	}
-
-	fmt.Println("Valid signature")
 
 }
