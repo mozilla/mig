@@ -513,7 +513,7 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 // recvAgentResults listens on the AMQP channel for command results from agents
 // each iteration processes one command received from one agent. The json.Body
 // in the message is extracted and written into ctx.Directories.Command.Done
-func recvAgentResults(msg amqp.Delivery, ctx Context) (err error) {
+func recvAgentResults(msg []byte, rk string, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("recvAgentResults() -> %v", e)
@@ -522,12 +522,12 @@ func recvAgentResults(msg amqp.Delivery, ctx Context) (err error) {
 	}()
 
 	// write to disk Returned directory
-	dest := fmt.Sprintf("%s/%.0f", ctx.Directories.Command.Returned, mig.GenID())
-	err = safeWrite(ctx, dest, msg.Body)
+	dest := fmt.Sprintf("%s/%.0f", ctx.Directories.Command.Returned, ctx.OpID)
+	err = safeWrite(ctx, dest, msg)
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("received result on '%s'", msg.RoutingKey)}
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("received result on '%s'", rk)}.Debug()
 
 	return
 }

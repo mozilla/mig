@@ -198,13 +198,15 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 		desc := fmt.Sprintf("Starting new listener for agent '%s' on queue '%s'", agt.Name, agt.QueueLoc)
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
 		for {
+			var delivery amqp.Delivery
+			delivery.Body = make([]byte, 0)
 			select {
-			case msg := <-consumeAgtResults:
+			case delivery = <-consumeAgtResults:
 				// process incoming agent messages
 				ctx.OpID = mig.GenID()
 				desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-				err := recvAgentResults(msg, ctx)
+				err := recvAgentResults(delivery.Body, delivery.RoutingKey, ctx)
 				if err != nil {
 					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
 					// TODO: agent is sending bogus results, do something about it
