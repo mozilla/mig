@@ -65,35 +65,7 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 		return
 	}
 	var rows *sql.Rows
-	if doFoundAnything {
-		rows, err = db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
-					actions.id, actions.name, actions.target, actions.description, actions.threat,
-					actions.operations, actions.validfrom, actions.expireafter,
-					actions.pgpsignatures, actions.syntaxversion,
-					agents.id, agents.name, agents.queueloc, agents.os, agents.version
-					FROM commands, actions, agents, investigators, signatures
-					WHERE commands.actionid=actions.id AND commands.agentid=agents.id
-					AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
-					AND commands.id IN (SELECT commands.id FROM commands, actions, json_array_elements(commands.results) as r
-					                    WHERE commands.actionid=actions.id
-					                    AND actions.id >= $1 AND actions.id <= $2
-					                    AND r#>>'{foundanything}' = $3)
-					AND commands.starttime <= $4 AND commands.starttime >= $5
-					AND commands.id >= $6 AND commands.id <= $7
-					AND actions.name ILIKE $8
-					AND agents.name ILIKE $9
-					AND agents.id >= $10 AND agents.id <= $11
-					AND investigators.id >= $12 AND investigators.id <= $13
-					AND investigators.name ILIKE $14
-					AND commands.status ILIKE $15
-					AND actions.threat#>>'{family}' ILIKE $16
-					GROUP BY commands.id, actions.id, agents.id
-					ORDER BY commands.id ASC LIMIT $17;`, ids.minActionID, ids.maxActionID,
-			p.FoundAnything, p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName,
-			p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID,
-			p.InvestigatorName, p.Status, p.ThreatFamily, uint64(p.Limit))
-	} else {
-		rows, err = db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
+	query := `SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
 			actions.id, actions.name, actions.target, actions.description, actions.threat,
 			actions.operations, actions.validfrom, actions.expireafter,
 			actions.pgpsignatures, actions.syntaxversion,
@@ -109,14 +81,33 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 			AND agents.id >= $9 AND agents.id <= $10
 			AND investigators.id >= $11 AND investigators.id <= $12
 			AND investigators.name ILIKE $13
-			AND commands.status ILIKE $14
-			AND actions.threat#>>'{family}' ILIKE $15
-			GROUP BY commands.id, actions.id, agents.id
-			ORDER BY commands.id DESC LIMIT $16`,
-			p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
-			p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
-			p.Status, p.ThreatFamily, uint64(p.Limit))
+			AND commands.status ILIKE $14 `
+	vals := []interface{}{}
+	vals = append(vals, p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
+		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName, p.Status)
+	valctr := 14
+	if doFoundAnything {
+		query += fmt.Sprintf(`AND commands.id IN (SELECT commands.id FROM commands, actions, json_array_elements(commands.results) as r
+							WHERE commands.actionid=actions.id
+							AND actions.id >= $%d AND actions.id <= $%d
+							AND r#>>'{foundanything}' = $%d) `, valctr+1, valctr+2, valctr+3)
+		vals = append(vals, ids.minActionID, ids.maxActionID, p.FoundAnything)
+		valctr += 3
 	}
+	if p.ThreatFamily != "%" {
+		query += fmt.Sprintf(`AND actions.threat#>>'{family}' ILIKE $%d `, valctr+1)
+		vals = append(vals, p.ThreatFamily)
+		valctr += 1
+	}
+	query += fmt.Sprintf(`GROUP BY commands.id, actions.id, agents.id ORDER BY commands.id ASC LIMIT $%d;`, valctr+1)
+	vals = append(vals, uint64(p.Limit))
+
+	stmt, err := db.c.Prepare(query)
+	if err != nil {
+		err = fmt.Errorf("Error while preparing search statement: '%v' in '%s'", err, query)
+		return
+	}
+	rows, err = stmt.Query(vals...)
 	if err != nil {
 		err = fmt.Errorf("Error while finding commands: '%v'", err)
 		return
