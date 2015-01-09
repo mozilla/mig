@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jvehent/cljs"
 	"mig"
+	migdb "mig/database"
 	"net/http"
 	"os"
 	"runtime"
@@ -322,7 +323,11 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 }
 
 func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
-	var err error
+	var (
+		err                                                                                error
+		onlineagtsum, idleagtsum                                                           []migdb.AgentsSum
+		onlineEndpts, idleEndpts, newEndpts, doubleAgts, disappearedEndpts, flappingEndpts float64
+	)
 	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
@@ -334,41 +339,74 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getDashboard()"}.Debug()
 	}()
-
-	onlineagtsum, err := ctx.DB.SumOnlineAgentsByVersion()
-	if err != nil {
-		panic(err)
+	done := make(chan bool)
+	go func() {
+		onlineagtsum, err = ctx.DB.SumOnlineAgentsByVersion()
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+	go func() {
+		idleagtsum, err = ctx.DB.SumIdleAgentsByVersion()
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+	go func() {
+		onlineEndpts, err = ctx.DB.CountOnlineEndpoints()
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+	go func() {
+		idleEndpts, err = ctx.DB.CountIdleEndpoints()
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+	go func() {
+		newEndpts, err = ctx.DB.CountNewEndpoints(time.Now().Add(-7 * 24 * time.Hour))
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+	go func() {
+		doubleAgts, err = ctx.DB.CountDoubleAgents()
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+	go func() {
+		disappearedEndpts, err = ctx.DB.CountDisappearedEndpoints(time.Now().Add(-7 * 24 * time.Hour))
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+	go func() {
+		flappingEndpts, err = ctx.DB.CountFlappingEndpoints()
+		if err != nil {
+			panic(err)
+		}
+		done <- true
+	}()
+	// each query is ran in parallel and return a boolean in the done channel
+	// so when we have received 8 messages in the channel, all queries are done
+	ctr := 0
+	for <-done {
+		ctr++
+		if ctr == 8 {
+			break
+		}
 	}
-	idleagtsum, err := ctx.DB.SumIdleAgentsByVersion()
-	if err != nil {
-		panic(err)
-	}
-	countonlineendpoints, err := ctx.DB.CountOnlineEndpoints()
-	if err != nil {
-		panic(err)
-	}
-	countidleendpoints, err := ctx.DB.CountIdleEndpoints()
-	if err != nil {
-		panic(err)
-	}
-	countnewendpoints, err := ctx.DB.CountNewEndpoints(time.Now().Add(-7 * 24 * time.Hour))
-	if err != nil {
-		panic(err)
-	}
-	double, err := ctx.DB.CountDoubleAgents()
-	if err != nil {
-		panic(err)
-	}
-	disappeared, err := ctx.DB.CountDisappearedEndpoints(time.Now().Add(-7 * 24 * time.Hour))
-	if err != nil {
-		panic(err)
-	}
-	flapping, err := ctx.DB.CountFlappingEndpoints()
-	if err != nil {
-		panic(err)
-	}
-	sumItem, err := agentsSummaryToItem(onlineagtsum, idleagtsum, countonlineendpoints, countidleendpoints,
-		countnewendpoints, double, disappeared, flapping, ctx)
+	sumItem, err := agentsSummaryToItem(onlineagtsum, idleagtsum, onlineEndpts,
+		idleEndpts, newEndpts, doubleAgts, disappearedEndpts, flappingEndpts, ctx)
 	resource.AddItem(sumItem)
 
 	// add the last 10 actions
