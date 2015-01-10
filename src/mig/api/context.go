@@ -35,7 +35,7 @@ type Context struct {
 	}
 	Postgres struct {
 		Host, User, Password, DBName, SSLMode string
-		Port                                  int
+		Port, MaxConn                         int
 	}
 	Server struct {
 		IP                       string
@@ -94,6 +94,7 @@ func initDB(orig_ctx Context) (ctx Context, err error) {
 	if err != nil {
 		panic(err)
 	}
+	ctx.DB.SetMaxOpenConns(ctx.Postgres.MaxConn)
 	ctx.Channels.Log <- mig.Log{Desc: "Database connection opened"}
 	return
 }

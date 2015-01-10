@@ -293,7 +293,7 @@ func (db *DB) CountOnlineEndpoints() (sum float64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents WHERE status=$1`,
 		mig.AgtStatusOnline).Scan(&sum)
 	if err != nil {
-		err = fmt.Errorf("Error while counting endpoints: '%v'", err)
+		err = fmt.Errorf("Error while counting online endpoints: '%v'", err)
 		return
 	}
 	if err == sql.ErrNoRows {
@@ -305,14 +305,17 @@ func (db *DB) CountOnlineEndpoints() (sum float64, err error) {
 // CountIdleEndpoints retrieves a count of unique endpoints that have idle agents
 // and do not have an online agent
 func (db *DB) CountIdleEndpoints() (sum float64, err error) {
-	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
-		WHERE status=$1
-		AND queueloc NOT IN (
-			SELECT DISTINCT(queueloc) FROM agents
-			WHERE status=$2
-		)`, mig.AgtStatusIdle, mig.AgtStatusOnline).Scan(&sum)
+	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
+			SELECT queueloc FROM agents
+			WHERE status=$1
+			AND queueloc NOT IN (
+				SELECT queueloc FROM agents
+				WHERE status=$2
+				GROUP BY queueloc
+			) GROUP BY queueloc
+		) AS idleendpoints`, mig.AgtStatusIdle, mig.AgtStatusOnline).Scan(&sum)
 	if err != nil {
-		err = fmt.Errorf("Error while counting endpoints: '%v'", err)
+		err = fmt.Errorf("Error while counting idle endpoints: '%v'", err)
 		return
 	}
 	if err == sql.ErrNoRows {
@@ -323,12 +326,17 @@ func (db *DB) CountIdleEndpoints() (sum float64, err error) {
 
 // CountNewEndpointsretrieves a count of new endpoints that started after `pointInTime`
 func (db *DB) CountNewEndpoints(pointInTime time.Time) (sum float64, err error) {
-	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
-		WHERE status=$1 AND queueloc NOT IN (
-			SELECT DISTINCT(queueloc) FROM agents
-			WHERE status=$2 OR status=$3
-		) AND starttime > $4`, mig.AgtStatusOnline, mig.AgtStatusIdle,
-		mig.AgtStatusOffline, pointInTime).Scan(&sum)
+	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
+				SELECT queueloc FROM agents
+				WHERE queueloc NOT IN (
+					SELECT queueloc FROM agents
+					WHERE heartbeattime > NOW() - interval '60 days'
+					AND heartbeattime < $1
+					GROUP BY queueloc
+				)
+				AND starttime > $1
+				GROUP BY queueloc
+			)AS newendpoints`, pointInTime).Scan(&sum)
 	if err != nil {
 		err = fmt.Errorf("Error while counting new endpoints: '%v'", err)
 		return
@@ -341,12 +349,16 @@ func (db *DB) CountNewEndpoints(pointInTime time.Time) (sum float64, err error) 
 
 // CountDoubleAgents counts the number of endpoints that run more than one agent
 func (db *DB) CountDoubleAgents() (sum float64, err error) {
-	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
-		WHERE queueloc IN (
+	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
 			SELECT queueloc FROM agents
-			WHERE status=$1
-			GROUP BY queueloc HAVING count(queueloc) > 1
-		)`, mig.AgtStatusOnline).Scan(&sum)
+			WHERE queueloc IN (
+				SELECT queueloc FROM agents
+				WHERE status=$1
+				GROUP BY queueloc
+				HAVING count(queueloc) > 1
+			)
+			GROUP BY queueloc
+		) AS doubleagents`, mig.AgtStatusOnline).Scan(&sum)
 	if err != nil {
 		err = fmt.Errorf("Error while counting double agents: '%v'", err)
 		return
@@ -359,14 +371,18 @@ func (db *DB) CountDoubleAgents() (sum float64, err error) {
 
 // CountDisappearedEndpoints a count of endpoints that have disappeared over a given period
 func (db *DB) CountDisappearedEndpoints(pointInTime time.Time) (sum float64, err error) {
-	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
-		WHERE status=$1 AND queueloc NOT IN (
-			SELECT DISTINCT(queueloc) FROM agents
-			WHERE status=$2 OR status=$3
-		) AND heartbeattime > $4`, mig.AgtStatusOffline, mig.AgtStatusIdle,
-		mig.AgtStatusOnline, pointInTime).Scan(&sum)
+	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
+			SELECT queueloc FROM agents
+			WHERE queueloc NOT IN (
+				SELECT queueloc FROM agents
+				WHERE status=$1 OR status=$2
+				GROUP BY queueloc
+			)
+			AND heartbeattime > $3
+			GROUP BY queueloc) AS disappeared`,
+		mig.AgtStatusIdle, mig.AgtStatusOnline, pointInTime).Scan(&sum)
 	if err != nil {
-		err = fmt.Errorf("Error while counting new disappeared endpoints: '%v'", err)
+		err = fmt.Errorf("Error while counting disappeared endpoints: '%v'", err)
 		return
 	}
 	if err == sql.ErrNoRows {
@@ -377,13 +393,12 @@ func (db *DB) CountDisappearedEndpoints(pointInTime time.Time) (sum float64, err
 
 // CountFlappingEndpoints a count of endpoints that have restarted their agent recently
 func (db *DB) CountFlappingEndpoints() (sum float64, err error) {
-	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents
-		WHERE queueloc IN (
-			SELECT queueloc FROM agents
-			WHERE status=$1 OR status=$2
-			GROUP BY queueloc
-			HAVING count(queueloc) > 1
-		)`, mig.AgtStatusOnline, mig.AgtStatusIdle).Scan(&sum)
+	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
+				SELECT queueloc FROM agents
+				WHERE status=$1 OR status=$2
+				GROUP BY queueloc
+				HAVING count(queueloc) > 1
+			) AS flapping`, mig.AgtStatusOnline, mig.AgtStatusIdle).Scan(&sum)
 	if err != nil {
 		err = fmt.Errorf("Error while counting flapping endpoints: '%v'", err)
 		return
