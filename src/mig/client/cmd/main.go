@@ -129,6 +129,9 @@ func main() {
 	// set the validity 60 second in the past to deal with clock skew
 	a.ValidFrom = time.Now().Add(-60 * time.Second).UTC()
 	period, err := time.ParseDuration(expiration)
+	if err != nil {
+		panic(err)
+	}
 	a.ExpireAfter = a.ValidFrom.Add(period)
 	// add extra 60 seconds taken for clock skew
 	a.ExpireAfter = a.ExpireAfter.Add(60 * time.Second).UTC()
