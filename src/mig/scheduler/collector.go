@@ -106,6 +106,11 @@ func loadNewActionsFromSpool(ctx Context) (err error) {
 			continue
 		}
 		filename := ctx.Directories.Action.New + "/" + DirEntry.Name()
+		err := waitForFileOrDelete(filename, 3)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("error while reading '%s': %v", filename, err)}.Err()
+			continue
+		}
 		a, err := mig.ActionFromFile(filename)
 		if err != nil {
 			// failing to load this file, log and skip it
@@ -147,6 +152,11 @@ func loadReturnedCommands(ctx Context) (err error) {
 			continue
 		}
 		filename := ctx.Directories.Command.Returned + "/" + DirEntry.Name()
+		err := waitForFileOrDelete(filename, 3)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("error while reading '%s': %v", filename, err)}.Err()
+			continue
+		}
 		cmd, err := mig.CmdFromFile(filename)
 		if err != nil {
 			// failing to load this file, log and skip it
@@ -182,6 +192,11 @@ func expireCommands(ctx Context) (err error) {
 			continue
 		}
 		filename := ctx.Directories.Command.InFlight + "/" + DirEntry.Name()
+		err := waitForFileOrDelete(filename, 3)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("error while reading '%s': %v", filename, err)}.Err()
+			continue
+		}
 		cmd, err := mig.CmdFromFile(filename)
 		if err != nil {
 			// failing to load this file, log and skip it

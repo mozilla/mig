@@ -199,6 +199,9 @@ func safeWrite(ctx Context, destination string, data []byte) (err error) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving safeWrite()"}.Debug()
 	}()
+	if len(data) == 0 {
+		return fmt.Errorf("data slice is empty. file not written")
+	}
 	// write the file temp dir
 	tmp := fmt.Sprintf("%s/%.0f", ctx.Directories.Tmp, mig.GenID())
 	err = ioutil.WriteFile(tmp, data, 0640)
@@ -211,4 +214,23 @@ func safeWrite(ctx Context, destination string, data []byte) (err error) {
 		panic(err)
 	}
 	return
+}
+
+// waitForFileOrDelete checks that a file has a non-zero size several time in a loop
+// waiting 200 milliseconds every time. If after several attempts, the file still has
+// size zero, it is removed and an error is returned.
+func waitForFileOrDelete(filepath string, tries int) error {
+	for i := 0; i < tries; i++ {
+		fi, err := os.Stat(filepath)
+		if err != nil {
+			os.Remove(filepath)
+			return fmt.Errorf("stat failed. file was deleted. error: %v", err)
+		}
+		if fi.Size() != 0 {
+			return nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	os.Remove(filepath)
+	return fmt.Errorf("file reached timeout with a zero size and has been deleted")
 }

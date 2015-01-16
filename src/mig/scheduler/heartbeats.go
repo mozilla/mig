@@ -170,48 +170,55 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 		}
 	}
 
-	// create a new channel
-	agtResultsChan, err := ctx.MQ.conn.Channel()
-	if err != nil {
-		panic(err)
-	}
-
-	//create a queue for agent
+	// create a queue specific to the agent and declare a consumer that will be destroyed once the scheduler
+	// stops listening to the queue
 	queue := fmt.Sprintf("mig.sched.%s", agt.QueueLoc)
-	_, err = agtResultsChan.QueueDeclare(queue, true, false, false, false, nil)
+	_, err = ctx.MQ.Chan.QueueDeclare(queue, true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
-
-	err = agtResultsChan.QueueBind(queue, queue, "mig", false, nil)
+	err = ctx.MQ.Chan.QueueBind(queue, queue, "mig", false, nil)
 	if err != nil {
 		panic(err)
 	}
-
-	consumeAgtResults, err := agtResultsChan.Consume(queue, "", true, false, false, false, nil)
+	consumerTag := mig.GenB32ID()
+	consumeAgtResults, err := ctx.MQ.Chan.Consume(queue, consumerTag, true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
 
 	// start a goroutine for this queue, with a timer that expires it after agtTimeOut
 	go func() {
-		desc := fmt.Sprintf("Starting new listener for agent '%s' on queue '%s'", agt.Name, agt.QueueLoc)
+		desc := fmt.Sprintf("Starting new consumer '%s' for agent '%s' on queue '%s'",
+			consumerTag, agt.Name, agt.QueueLoc)
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
 		for {
-			var delivery amqp.Delivery
-			delivery.Body = make([]byte, 0)
 			select {
-			case delivery = <-consumeAgtResults:
+			case delivery := <-consumeAgtResults:
 				// process incoming agent messages
 				ctx.OpID = mig.GenID()
 				desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-				err := recvAgentResults(delivery.Body, delivery.RoutingKey, ctx)
-				if err != nil {
-					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
-					// TODO: agent is sending bogus results, do something about it
+				// validate the size of the data received, and make sure its first and
+				// last bytes are valid json enclosures
+				if len(delivery.Body) < 10 || delivery.Body[0] != '{' || delivery.Body[len(delivery.Body)-1] != '}' {
+					ctx.Channels.Log <- mig.Log{
+						OpID: ctx.OpID,
+						Desc: fmt.Sprintf("received invalid results from %s", agt.QueueLoc),
+					}.Err()
+					break
 				}
-			case <-time.After(2 * agtTimeOut):
+				// write to disk in Returned directory
+				dest := fmt.Sprintf("%s/%.0f", ctx.Directories.Command.Returned, ctx.OpID)
+				err = safeWrite(ctx, dest, delivery.Body)
+				if err != nil {
+					ctx.Channels.Log <- mig.Log{
+						OpID: ctx.OpID,
+						Desc: fmt.Sprintf("failed to write agent results to disk: %v", err),
+					}.Err()
+					break
+				}
+			case <-time.After(agtTimeOut):
 				// expire listener and exit goroutine
 				desc := fmt.Sprintf("Listener timeout triggered for agent '%s'", agt.Name)
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
@@ -222,28 +229,28 @@ func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (e
 		// cleanup on exit, don't leave cruft in the rabbitmq relay
 		desc = fmt.Sprintf("Closing listener for agent '%s'", agt.Name)
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+		// stop the consumer
+		err = ctx.MQ.Chan.Cancel(consumerTag, true)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while cancelling consumer '%s': %v", consumerTag, err)}.Err()
+		}
 		// delete the queue that receives agents results
-		msgCount, err := agtResultsChan.QueueDelete(queue, false, false, false)
-		if err != nil {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while deleting queue '%s': %v", queue, err)}.Err()
-		}
-		if msgCount > 0 {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d pending messages were deleted with queue '%s'", msgCount, queue)}.Warning()
-		}
-		// delete the queue that sends commands to agents
-		agtQueue := fmt.Sprintf("mig.agt.%s", agt.QueueLoc)
-		msgCount, err = agtResultsChan.QueueDelete(agtQueue, false, false, false)
-		if err != nil {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while deleting queue '%s': %v", agtQueue, err)}.Err()
-		}
-		if msgCount > 0 {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d pending messages were deleted with queue '%s'", msgCount, queue)}.Warning()
-		}
-		// close the amqp channel
-		err = agtResultsChan.Close()
-		if err != nil {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while attempt to close listener: %v", err)}.Err()
-		}
+		//msgCount, err := ctx.MQ.Chan.QueueDelete(queue, false, false, false)
+		//if err != nil {
+		//	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while deleting queue '%s': %v", queue, err)}.Err()
+		//}
+		//if msgCount > 0 {
+		//	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d pending messages were deleted with queue '%s'", msgCount, queue)}.Warning()
+		//}
+		//// delete the queue that sends commands to agents
+		//agtQueue := fmt.Sprintf("mig.agt.%s", agt.QueueLoc)
+		//msgCount, err = ctx.MQ.Chan.QueueDelete(agtQueue, false, false, false)
+		//if err != nil {
+		//	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while deleting queue '%s': %v", agtQueue, err)}.Err()
+		//}
+		//if msgCount > 0 {
+		//	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d pending messages were deleted with queue '%s'", msgCount, queue)}.Warning()
+		//}
 		for i, q := range activeAgentsList {
 			if q == agt.QueueLoc {
 				// remove queue from active list

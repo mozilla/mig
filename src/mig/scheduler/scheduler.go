@@ -302,11 +302,11 @@ func watchDirectories(watcher *fsnotify.Watcher, ctx Context) {
 
 			// New file detected, but the file size might still be zero, because inotify wakes up before
 			// the file is fully written. If that's the case, wait a little and hope that's enough to finish writing
-			if fileHasSizeZero(ev.Name) {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("file '%s' is size zero. waiting for write to finish.", ev.Name)}.Debug()
-				time.Sleep(200 * time.Millisecond)
+			err := waitForFileOrDelete(ev.Name, 5)
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("error while reading '%s': %v", ev.Name, err)}.Err()
+				goto nextfile
 			}
-
 			// Use the prefix of the filename to send it to the appropriate channel
 			if strings.HasPrefix(ev.Name, ctx.Directories.Action.New) {
 				ctx.Channels.NewAction <- ev.Name
@@ -321,6 +321,7 @@ func watchDirectories(watcher *fsnotify.Watcher, ctx Context) {
 			// in case of error, raise an emergency
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("watchDirectories(): %v", err)}.Emerg()
 		}
+	nextfile:
 	}
 }
 
@@ -510,28 +511,6 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 	return
 }
 
-// recvAgentResults listens on the AMQP channel for command results from agents
-// each iteration processes one command received from one agent. The json.Body
-// in the message is extracted and written into ctx.Directories.Command.Done
-func recvAgentResults(msg []byte, rk string, ctx Context) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("recvAgentResults() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving recvAgentResults()"}.Debug()
-	}()
-
-	// write to disk Returned directory
-	dest := fmt.Sprintf("%s/%.0f", ctx.Directories.Command.Returned, ctx.OpID)
-	err = safeWrite(ctx, dest, msg)
-	if err != nil {
-		panic(err)
-	}
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("received result on '%s'", rk)}.Debug()
-
-	return
-}
-
 // returnCommands is called when commands have returned
 // it stores the result of a command and mark it as completed/failed and then
 // send a message to the Action completion routine to update the action status
@@ -641,15 +620,4 @@ func updateAction(cmds []mig.Command, ctx Context) (err error) {
 		}
 	}
 	return
-}
-
-func fileHasSizeZero(filepath string) bool {
-	fd, _ := os.Open(filepath)
-	defer fd.Close()
-	fi, _ := fd.Stat()
-	if fi.Size() == 0 {
-		return true
-	} else {
-		return false
-	}
 }
