@@ -456,7 +456,7 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 	}
 
 	// Limit the number of message the channel will receive at once
-	err = ctx.MQ.Chan.Qos(7, // prefetch count (in # of msg)
+	err = ctx.MQ.Chan.Qos(1, // prefetch count (in # of msg)
 		0,     // prefetch size (in bytes)
 		false) // is global
 
