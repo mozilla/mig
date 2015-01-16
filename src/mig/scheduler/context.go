@@ -295,14 +295,14 @@ func initRelay(orig_ctx Context) (ctx Context, err error) {
 // initChannels creates Go channels used by the disk watcher
 func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
-	ctx.Channels.NewAction = make(chan string, 173)
-	ctx.Channels.ActionDone = make(chan string, 127)
-	ctx.Channels.CommandReady = make(chan mig.Command, 13229)
-	ctx.Channels.UpdateCommand = make(chan string, 6833)
-	ctx.Channels.CommandReturned = make(chan string, 10559)
-	ctx.Channels.CommandDone = make(chan mig.Command, 14153)
-	ctx.Channels.DetectDupAgents = make(chan string, 29)
-	ctx.Channels.Log = make(chan mig.Log, 21559)
+	ctx.Channels.NewAction = make(chan string)
+	ctx.Channels.ActionDone = make(chan string)
+	ctx.Channels.CommandReady = make(chan mig.Command)
+	ctx.Channels.UpdateCommand = make(chan string)
+	ctx.Channels.CommandReturned = make(chan string)
+	ctx.Channels.CommandDone = make(chan mig.Command)
+	ctx.Channels.DetectDupAgents = make(chan string)
+	ctx.Channels.Log = make(chan mig.Log, 100000)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
 	return
 }
