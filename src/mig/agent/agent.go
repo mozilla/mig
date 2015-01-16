@@ -180,6 +180,9 @@ func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s in checkin mode", version, ctx.Agent.Hostname)}
 
+	// send one heartbeat before processing outstanding messages
+	heartbeat(ctx)
+
 	// The loop below retrieves messages from the relay. If no message is available,
 	// it will timeout and break out of the loop after 10 seconds, causing the agent to exit
 	for {
@@ -246,6 +249,9 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 		panic(err)
 	}
 
+	// GoRoutine that sends heartbeat messages to scheduler
+	go heartbeat(ctx)
+
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.Hostname)}
 
 	// The agent blocks here until a termination order is received
@@ -309,9 +315,6 @@ func startRoutines(ctx Context) (err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "closing sendResults channel"}
 	}()
-
-	// GoRoutine that sends heartbeat messages to scheduler
-	go heartbeat(ctx)
 
 	return
 }
