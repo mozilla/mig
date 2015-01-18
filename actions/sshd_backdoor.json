@@ -1,0 +1,41 @@
+{
+    "counters": {},
+    "description": {
+        "author": "Julien Vehent",
+        "email": "jvehent@mozilla.com",
+        "revision": 201402071130.0,
+        "url": "http://blog.sucuri.net/2013/02/linux-based-sshd-rootkit-floating-the-interwebs.html"
+    },
+    "expireafter": "0001-01-01T00:00:00Z",
+    "finishtime": "0001-01-01T00:00:00Z",
+    "id": 0,
+    "lastupdatetime": "0001-01-01T00:00:00Z",
+    "name": "Verify SSHD signature against Backdoor:Linux/SSHDoor.A",
+    "operations": [
+        {
+            "module": "file",
+            "parameters": {
+                "searches": {
+                    "lookforbackdooredsshdinentiresbindirectory": {
+                        "options": {},
+                        "paths": [
+                            "/usr/sbin/"
+                        ],
+                        "sha256": [
+                            "ebfd9354ed83635ed38bd117b375903f9984a18780ef86dbf7a642fc6584271c"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "pgpsignatures": null,
+    "starttime": "0001-01-01T00:00:00Z",
+    "syntaxversion": 2,
+    "target": "agents.os='linux'",
+    "threat": {
+        "family": "backdoor",
+        "level": "alert"
+    },
+    "validfrom": "0001-01-01T00:00:00Z"
+}

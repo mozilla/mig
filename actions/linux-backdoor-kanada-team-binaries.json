@@ -1,0 +1,72 @@
+{
+    "counters": {},
+    "description": {
+        "author": "Julien Vehent",
+        "email": "jvehent@mozilla.com",
+        "revision": 201402231700.0
+    },
+    "expireafter": "0001-01-01T00:00:00Z",
+    "finishtime": "0001-01-01T00:00:00Z",
+    "id": 0,
+    "lastupdatetime": "0001-01-01T00:00:00Z",
+    "name": "Linux backdoor, found on compromised host in 2014",
+    "operations": [
+        {
+            "module": "file",
+            "parameters": {
+                "searches": {
+                    "backdooredbinaries": {
+                        "options": {},
+                        "paths": [
+                            "/bin"
+                        ],
+                        "sha256": [
+                            "adbee847c12c73605ff657e668c8096df138f824eb542027a10c0b5c07619c8d",
+                            "7c9816b5f1b840eb8c5ecfc0fed29972877ca5bd909469d03f26d3b8f837043d",
+                            "3efee976d6565edd1492aa1047ffa10be6025de18206f6c68f91dd218801778f",
+                            "4735f97b31ddb8a1bbc61e8d66b4dbc08d8092142d8ae7564f9058e0a20bbbb6",
+                            "89a400077d74d1d76103180f41f40de6bcfffc89de461f497eef2ea763a68d73",
+                            "adbee847c12c73605ff657e668c8096df138f824eb542027a10c0b5c07619c8d",
+                            "939cc74b5343bde1a17dfa270f8e6dc719a4bc6b3143f4581b401c81fd9a110d",
+                            "89b68f8ea6a32d525fbf491878980180ffa395b042ea3104b11da229bade71db",
+                            "39823089fa324ceba00d5939d2e7b308fec28ee0f16c6caa4739a53ad6ecee64",
+                            "72a44f3e7c4d9c9b72b1bda77d687346447d8e398983965b8e690eeeadebdc76",
+                            "dbe7fc18667cd75317d494ed3b32cfe3cd077c870d015dc18b406a4a39747f55",
+                            "903c13171c7467271fd79244ad8281ded9f51e3cf27c3399b42a175c53806a99",
+                            "81dac9c6dc5e4ed615d496aea74fddc85925b00a6a54ddcbb90603c1469ce04c",
+                            "fd702be65b1d3abed4c0197854c0c777a2bb50632932e1e389129b19b14a1e69",
+                            "72589dd25b491ed53670bc7d04f4874075fc7d16361fc295c31fc86118d84cbd",
+                            "6114624bf5d7e29f738f939bcc2bc794de9bf377a571fe1e84ae9159794308cf",
+                            "467f34eee9d133653467a60ab0fe938d7c26918465a2ac938d2ffc6f2525b1ff",
+                            "1e2699ff1f9238c58390c1ada53f4f21032ca5e0946bfb54a5a144452e6efc82",
+                            "286c39ec3d8e4f15f353dca350ca7575e0269dba808206f3ce8d1a3ea142b353",
+                            "fc48883e129225dc8fc9e340a495fbd834c97f5ff7fa70ab6089ec216a465328",
+                            "5cba4433237e2ff202a5b20aad00a12d25bfc5564c3620a9463767eec2150cc1",
+                            "f45f3dbba8c49a9f900b7e7adf98a8aa04e838c9c631d645c6c4a969a1fc12e1",
+                            "56ccd35a247abcf99fa38ee17a7b82f16734cff469ed2601682c26e27ea9fd90",
+                            "e1d18f2594709e96de596e6df8c97c17f4d22c1428f46da3b16a222eebf88b36",
+                            "d4b44612e6ca959ef65b290c0942262f8844e21b32d25576f8e9ac1355895f6e",
+                            "e1d18f2594709e96de596e6df8c97c17f4d22c1428f46da3b16a222eebf88b36",
+                            "a548042ab13d03d20488c072146a7b37ad05f13ea1cd706727dccebcbdb06726",
+                            "2f522bfe22f9176ec0012733e24b98d7cb220cbfee7aca2965cf5cda8c4019c9",
+                            "baca5de3bbbe57f25ce79420dd410801ad4369ff3d334fb790706e3dc7aa4643",
+                            "a9ba6a6b1aa17d9bdd3c2d262ecea5b922707f425ff18d24f5fb0e26c5229233",
+                            "5dd16b6382e32ee15654d7993fb7a9f85d7e0da0c534fe684883947720685184",
+                            "a9ba6a6b1aa17d9bdd3c2d262ecea5b922707f425ff18d24f5fb0e26c5229233",
+                            "5e092470ec616d5b866aab0f1a69309b74a48567eec7a250c9a328901a21a498"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "pgpsignatures": null,
+    "starttime": "0001-01-01T00:00:00Z",
+    "syntaxversion": 2,
+    "target": "agents.os='linux'",
+    "threat": {
+        "family": "backdoor",
+        "level": "alert"
+    },
+    "validfrom": "0001-01-01T00:00:00Z"
+}

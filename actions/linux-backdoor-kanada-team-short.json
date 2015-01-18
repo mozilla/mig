@@ -1,0 +1,148 @@
+{
+    "counters": {},
+    "description": {
+        "author": "Julien Vehent",
+        "email": "jvehent@mozilla.com",
+        "revision": 201402241100.0
+    },
+    "expireafter": "0001-01-01T00:00:00Z",
+    "finishtime": "0001-01-01T00:00:00Z",
+    "id": 0,
+    "lastupdatetime": "0001-01-01T00:00:00Z",
+    "name": "kanada team linux backdoor",
+    "operations": [
+        {
+            "module": "file",
+            "parameters": {
+                "searches": {
+                    "backdoored/bin/ls": {
+                        "options": {},
+                        "paths": [
+                            "/bin/ls"
+                        ],
+                        "sha256": [
+                            "adbee847c12c73605ff657e668c8096df138f824eb542027a10c0b5c07619c8d"
+                        ]
+                    },
+                    "backdoored/bin/netstat": {
+                        "options": {},
+                        "paths": [
+                            "/bin/netstat"
+                        ],
+                        "sha256": [
+                            "39823089fa324ceba00d5939d2e7b308fec28ee0f16c6caa4739a53ad6ecee64"
+                        ]
+                    },
+                    "backdoored/bin/ps": {
+                        "options": {},
+                        "paths": [
+                            "/bin/ps"
+                        ],
+                        "sha256": [
+                            "72a44f3e7c4d9c9b72b1bda77d687346447d8e398983965b8e690eeeadebdc76"
+                        ]
+                    },
+                    "backdoored/sbin/ifconfig": {
+                        "options": {},
+                        "paths": [
+                            "/sbin/ifconfig"
+                        ],
+                        "sha256": [
+                            "89a400077d74d1d76103180f41f40de6bcfffc89de461f497eef2ea763a68d73"
+                        ]
+                    },
+                    "backdoored/usr/bin/dir": {
+                        "options": {},
+                        "paths": [
+                            "/usr/bin/dir"
+                        ],
+                        "sha256": [
+                            "adbee847c12c73605ff657e668c8096df138f824eb542027a10c0b5c07619c8d"
+                        ]
+                    },
+                    "backdoored/usr/bin/find": {
+                        "options": {},
+                        "paths": [
+                            "/usr/bin/find"
+                        ],
+                        "sha256": [
+                            "3efee976d6565edd1492aa1047ffa10be6025de18206f6c68f91dd218801778f"
+                        ]
+                    },
+                    "backdoored/usr/bin/md5sum": {
+                        "options": {},
+                        "paths": [
+                            "/usr/bin/md5sum"
+                        ],
+                        "sha256": [
+                            "89b68f8ea6a32d525fbf491878980180ffa395b042ea3104b11da229bade71db"
+                        ]
+                    },
+                    "backdoored/usr/bin/ps": {
+                        "options": {},
+                        "paths": [
+                            "/usr/bin/ps"
+                        ],
+                        "sha256": [
+                            "72a44f3e7c4d9c9b72b1bda77d687346447d8e398983965b8e690eeeadebdc76"
+                        ]
+                    },
+                    "backdoored/usr/bin/pstree": {
+                        "options": {},
+                        "paths": [
+                            "/usr/bin/pstree"
+                        ],
+                        "sha256": [
+                            "dbe7fc18667cd75317d494ed3b32cfe3cd077c870d015dc18b406a4a39747f55"
+                        ]
+                    },
+                    "backdoored/usr/bin/slocate": {
+                        "options": {},
+                        "paths": [
+                            "/usr/bin/slocate"
+                        ],
+                        "sha256": [
+                            "6114624bf5d7e29f738f939bcc2bc794de9bf377a571fe1e84ae9159794308cf"
+                        ]
+                    },
+                    "backdoored/usr/bin/top": {
+                        "options": {},
+                        "paths": [
+                            "/usr/bin/top"
+                        ],
+                        "sha256": [
+                            "286c39ec3d8e4f15f353dca350ca7575e0269dba808206f3ce8d1a3ea142b353"
+                        ]
+                    },
+                    "backdoored/usr/sbin/lsof": {
+                        "options": {},
+                        "paths": [
+                            "/usr/sbin/lsof"
+                        ],
+                        "sha256": [
+                            "939cc74b5343bde1a17dfa270f8e6dc719a4bc6b3143f4581b401c81fd9a110d"
+                        ]
+                    },
+                    "backdoored/usr/sbin/netstat": {
+                        "options": {},
+                        "paths": [
+                            "/usr/sbin/netstat"
+                        ],
+                        "sha256": [
+                            "39823089fa324ceba00d5939d2e7b308fec28ee0f16c6caa4739a53ad6ecee64"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "pgpsignatures": null,
+    "starttime": "0001-01-01T00:00:00Z",
+    "syntaxversion": 2,
+    "target": "agents.os='linux'",
+    "threat": {
+        "family": "backdoor",
+        "level": "alert"
+    },
+    "validfrom": "0001-01-01T00:00:00Z"
+}

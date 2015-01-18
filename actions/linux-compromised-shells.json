@@ -1,0 +1,36 @@
+{
+    "name": "compromised linux shells",
+    "target": "agents.os='linux'",
+    "threat": {
+        "family": "backdoor",
+        "level": "alert"
+    },
+    "description": {
+        "author": "Julien Vehent",
+        "email": "jvehent@mozilla.com",
+        "revision": 201402251100.0
+    },
+    "operations": [
+        {
+            "module": "file",
+            "parameters": {
+                "searches": {
+                    "compromisedshell": {
+                        "md5": [
+                            "cb85004baa97e6e4a90fdf04cace4fdf",
+                            "888c10531250a66365b010d22fe7eefe",
+                            "d6f31b6330b7e1f81bd647bef75ddac7",
+                            "05b6a2380d433bc5709921f42b175bd5"
+                        ],
+                        "paths": [
+                            "/usr",
+                            "/bin",
+                            "/sbin"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "syntaxversion": 2
+}

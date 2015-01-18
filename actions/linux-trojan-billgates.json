@@ -1,0 +1,122 @@
+{
+    "name": "BillGates Botnet Linux trojan modules - Backdoor.Linux.Mayday.f and Backdoor.Linux.Ganiw.a",
+    "target": "agents.os='linux'",
+    "threat": {
+        "family": "trojan",
+        "level": "alert"
+    },
+    "description": {
+        "author": "Julien Vehent",
+        "email": "ulfr@mozilla.com",
+        "revision": 201407141200.0,
+        "url": "http://securelist.com/analysis/publications/64361/versatile-ddos-trojan-for-linux/"
+    },
+    "operations": [
+        {
+            "module": "connected",
+            "parameters": {
+                "C&C server": [
+                    "116.10.189.246"
+                ]
+            }
+        },
+        {
+            "module": "file",
+            "parameters": {
+                "searches": {
+                    "atddd": {
+                        "md5": [
+                            "fade6e3ab4b396553b191f23d8c04cf1"
+                        ],
+                        "options": {},
+                        "paths": [
+                            "/bin",
+                            "/sbin",
+                            "/usr/sbin",
+                            "/usr/bin"
+                        ]
+                    },
+                    "cupsdd": {
+                        "md5": [
+                            "ce607e782faa5ace379c13a5de8052a3"
+                        ],
+                        "options": {},
+                        "paths": [
+                            "/bin",
+                            "/sbin",
+                            "/usr/sbin",
+                            "/usr/bin"
+                        ]
+                    },
+                    "ksapdd": {
+                        "md5": [
+                            "8cdb7abd20cf64764812cfccc90cb3dc"
+                        ],
+                        "options": {},
+                        "paths": [
+                            "/bin",
+                            "/sbin",
+                            "/usr/sbin",
+                            "/usr/bin"
+                        ]
+                    },
+                    "ksyapdd": {
+                        "md5": [
+                            "f3709e031a37d79773e757d37fe91fe4"
+                        ],
+                        "options": {},
+                        "paths": [
+                            "/bin",
+                            "/sbin",
+                            "/usr/sbin",
+                            "/usr/bin"
+                        ]
+                    },
+                    "modulenames": {
+                        "names": [
+                            "atddd",
+                            "cupsdd",
+                            "cupsddh",
+                            "ksapdd",
+                            "kysapdd",
+                            "skysapdd",
+                            "xfsdxd"
+                        ],
+                        "options": {},
+                        "paths": [
+                            "/bin",
+                            "/sbin",
+                            "/usr/sbin",
+                            "/usr/bin"
+                        ]
+                    },
+                    "skysapdd": {
+                        "md5": [
+                            "6739ca4a835c7976089e2f00150f252b"
+                        ],
+                        "options": {},
+                        "paths": [
+                            "/bin",
+                            "/sbin",
+                            "/usr/sbin",
+                            "/usr/bin"
+                        ]
+                    },
+                    "xfsdxd": {
+                        "md5": [
+                            "bbff498590d545cbc82007ec38d97d5a"
+                        ],
+                        "options": {},
+                        "paths": [
+                            "/bin",
+                            "/sbin",
+                            "/usr/sbin",
+                            "/usr/bin"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "syntaxversion": 2
+}

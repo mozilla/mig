@@ -1,0 +1,94 @@
+{
+    "counters": {},
+    "description": {
+        "author": "Julien Vehent",
+        "email": "jvehent@mozilla.com",
+        "revision": 201402260532.0
+    },
+    "expireafter": "0001-01-01T00:00:00Z",
+    "finishtime": "0001-01-01T00:00:00Z",
+    "id": 0,
+    "lastupdatetime": "0001-01-01T00:00:00Z",
+    "name": "botcode",
+    "operations": [
+        {
+            "module": "file",
+            "parameters": {
+                "searches": {
+                    "b26": {
+                        "options": {},
+                        "paths": [
+                            "/usr"
+                        ],
+                        "sha1": [
+                            "8a2c86ff5c7583e7ef953a897a705a7b135e8de4"
+                        ]
+                    },
+                    "cnet2": {
+                        "options": {},
+                        "paths": [
+                            "/usr"
+                        ],
+                        "sha1": [
+                            "a617e6fcfbfb55c60287d7066780b34778de3ca4"
+                        ]
+                    },
+                    "fake.cfg": {
+                        "options": {},
+                        "paths": [
+                            "/usr"
+                        ],
+                        "sha1": [
+                            "b888d18d5083b5f558333b5d0fbd0d390228b394"
+                        ]
+                    },
+                    "install.tar": {
+                        "options": {},
+                        "paths": [
+                            "/usr"
+                        ],
+                        "sha1": [
+                            "71e4602f80d4cb28cc9cc3ce8e91e013636d1f72"
+                        ]
+                    },
+                    "mysql515": {
+                        "options": {},
+                        "paths": [
+                            "/usr"
+                        ],
+                        "sha1": [
+                            "4d5e1c86e2353e28fd332262c262d0ccf53746df"
+                        ]
+                    },
+                    "socket": {
+                        "options": {},
+                        "paths": [
+                            "/usr"
+                        ],
+                        "sha1": [
+                            "506f8270d6ff38be909a699492c10132c3f7ecfa"
+                        ]
+                    },
+                    "taskgrm": {
+                        "options": {},
+                        "paths": [
+                            "/usr"
+                        ],
+                        "sha1": [
+                            "5c737f0b3858b94d1ccd352f17eca7ebd637b960"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "pgpsignatures": null,
+    "starttime": "0001-01-01T00:00:00Z",
+    "syntaxversion": 2,
+    "target": "agents.os='linux'",
+    "threat": {
+        "family": "backdoor",
+        "level": "alert"
+    },
+    "validfrom": "0001-01-01T00:00:00Z"
+}
