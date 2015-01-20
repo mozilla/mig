@@ -377,89 +377,134 @@ func (r Runner) ValidateParameters() (err error) {
 	var labels []string
 	for label, s := range r.Parameters.Searches {
 		labels = append(labels, label)
+		if debug {
+			fmt.Printf("validating label '%s'\n", label)
+		}
 		err = validateLabel(label)
 		if err != nil {
 			return
 		}
 		for _, r := range s.Contents {
+			if debug {
+				fmt.Printf("validating content '%s'\n", r)
+			}
 			err = validateRegex(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Names {
+			if debug {
+				fmt.Printf("validating name '%s'\n", r)
+			}
 			err = validateRegex(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Sizes {
+			if debug {
+				fmt.Printf("validating size '%s'\n", r)
+			}
 			err = validateSize(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Modes {
+			if debug {
+				fmt.Printf("validating mode '%s'\n", r)
+			}
 			err = validateRegex(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Mtimes {
+			if debug {
+				fmt.Printf("validating mtime '%s'\n", r)
+			}
 			err = validateMtime(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.MD5 {
+			if debug {
+				fmt.Printf("validating hash '%s'\n", hash)
+			}
 			err = validateHash(hash, checkMD5)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA1 {
+			if debug {
+				fmt.Printf("validating hash '%s'\n", hash)
+			}
 			err = validateHash(hash, checkSHA1)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA256 {
+			if debug {
+				fmt.Printf("validating hash '%s'\n", hash)
+			}
 			err = validateHash(hash, checkSHA256)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA384 {
+			if debug {
+				fmt.Printf("validating hash '%s'\n", hash)
+			}
 			err = validateHash(hash, checkSHA384)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA512 {
+			if debug {
+				fmt.Printf("validating hash '%s'\n", hash)
+			}
 			err = validateHash(hash, checkSHA512)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_224 {
+			if debug {
+				fmt.Printf("validating hash '%s'\n", hash)
+			}
 			err = validateHash(hash, checkSHA3_224)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_256 {
+			if debug {
+				fmt.Printf("validating hash '%s'\n", hash)
+			}
 			err = validateHash(hash, checkSHA3_256)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_384 {
+			if debug {
+				fmt.Printf("validating hash '%s'\n", hash)
+			}
 			err = validateHash(hash, checkSHA3_384)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_512 {
+			if debug {
+				fmt.Printf("validating hash '%s'\n", hash)
+			}
 			err = validateHash(hash, checkSHA3_512)
 			if err != nil {
 				return
@@ -469,32 +514,33 @@ func (r Runner) ValidateParameters() (err error) {
 	return
 }
 
-func validateLabel(label string) (err error) {
+func validateLabel(label string) error {
 	if len(label) < 1 {
 		return fmt.Errorf("empty labels are not permitted")
 	}
-	labelre := regexp.MustCompile("^[a-zA-Z0-9_-]{1,64}$")
+	labelregexp := `^([a-zA-Z0-9_-]|.){1,64}$`
+	labelre := regexp.MustCompile(labelregexp)
 	if !labelre.MatchString(label) {
-		return fmt.Errorf("The syntax of label '%s' is invalid. Must match regex ^[a-zA-Z0-9_-]{1,64}$", label)
+		return fmt.Errorf("The syntax of label '%s' is invalid. Must match regex %s", label, labelregexp)
 	}
-	return
+	return nil
 }
 
-func validateRegex(regex string) (err error) {
+func validateRegex(regex string) error {
 	if len(regex) < 1 {
 		return fmt.Errorf("Empty values are not permitted")
 	}
-	_, err = regexp.Compile(regex)
+	_, err := regexp.Compile(regex)
 	if err != nil {
 		return fmt.Errorf("Invalid regexp '%s'. Must be a regexp. Compilation failed with '%v'", regex, err)
 	}
-	return
+	return nil
 }
 
 // Size accepts the prefixes '<', '>' for lower than and greater than. if no prefix is specified, equality is assumed.
 // Size accepts the suffixes 'k', 'm', 'g', 't' for kilobyte, megabyte, gigabyte and terabyte. if not suffix is specified,
 // bytes are assumed. example: '>50m' will find files with a size greater than 50 megabytes
-func validateSize(size string) (err error) {
+func validateSize(size string) error {
 	if len(size) < 1 {
 		return fmt.Errorf("Empty values are not permitted")
 	}
@@ -503,10 +549,10 @@ func validateSize(size string) (err error) {
 	if !sizere.MatchString(size) {
 		return fmt.Errorf("Invalid size format for size '%s'. Must match regex %s", size, re)
 	}
-	return
+	return nil
 }
 
-func validateMtime(mtime string) (err error) {
+func validateMtime(mtime string) error {
 	if len(mtime) < 1 {
 		return fmt.Errorf("Empty values are not permitted")
 	}
@@ -515,10 +561,10 @@ func validateMtime(mtime string) (err error) {
 	if !mtimere.MatchString(mtime) {
 		return fmt.Errorf("Invalid mtime format for mtime '%s'. Must match regex %s", mtime, re)
 	}
-	return
+	return nil
 }
 
-func validateHash(hash string, hashType checkType) (err error) {
+func validateHash(hash string, hashType checkType) error {
 	if len(hash) < 1 {
 		return fmt.Errorf("Empty values are not permitted")
 	}
@@ -550,7 +596,7 @@ func validateHash(hash string, hashType checkType) (err error) {
 	if !hashre.MatchString(hash) {
 		return fmt.Errorf("Invalid checksum format for hash '%s'. Must match regex %s", hash, re)
 	}
-	return
+	return nil
 }
 
 /* Statistic counters:
