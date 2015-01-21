@@ -9,19 +9,23 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/jvehent/service-go"
+	"github.com/streadway/amqp"
 	"io/ioutil"
 	"mig"
 	"os"
 	"os/exec"
 	"runtime"
+	"sync"
 	"time"
-
-	"github.com/jvehent/service-go"
-	"github.com/streadway/amqp"
 )
 
 // build version
 var version string
+
+// publication lock is used to prevent publication when the channels are not
+// available, like during a shutdown
+var publication sync.Mutex
 
 type moduleResult struct {
 	id       float64
@@ -180,9 +184,6 @@ func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s in checkin mode", version, ctx.Agent.Hostname)}
 
-	// send one heartbeat before processing outstanding messages
-	heartbeat(ctx)
-
 	// The loop below retrieves messages from the relay. If no message is available,
 	// it will timeout and break out of the loop after 10 seconds, causing the agent to exit
 	for {
@@ -214,6 +215,8 @@ done:
 			break
 		}
 	}
+	// lock publication forever, we're shutting down
+	publication.Lock()
 	Destroy(ctx)
 	return
 }
@@ -249,9 +252,6 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 		panic(err)
 	}
 
-	// GoRoutine that sends heartbeat messages to scheduler
-	go heartbeat(ctx)
-
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.Hostname)}
 
 	// The agent blocks here until a termination order is received
@@ -260,7 +260,12 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 	exitReason := <-ctx.Channels.Terminate
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
 	time.Sleep(time.Second)
+
+	// lock publication forever, we're shutting down
+	publication.Lock()
 	Destroy(ctx)
+
+	// depending on the exit reason, we may or may not attempt a respawn of the agent before exiting
 	switch fmt.Sprintf("%v", exitReason) {
 	case "shutdown requested":
 		svc, _ := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
@@ -315,6 +320,9 @@ func startRoutines(ctx Context) (err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "closing sendResults channel"}
 	}()
+
+	// GoRoutine that sends heartbeat messages to scheduler
+	go heartbeat(ctx)
 
 	return
 }
@@ -446,7 +454,6 @@ func runModule(ctx Context, op moduleOp) (err error) {
 	}()
 
 	ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: fmt.Sprintf("executing module '%s'", op.mode)}.Debug()
-	// waiter is a channel that receives a message when the timeout expires
 	results := make(chan string, 1)
 
 	// calculate the max exec time but taking the smallest duration between the expiration date
@@ -462,7 +469,7 @@ func runModule(ctx Context, op moduleOp) (err error) {
 		panic(err)
 	}
 
-	// launch the waiter in a separate goroutine
+	// run the module in a separate goroutine
 	go func() {
 		results <- op.modRunner.Run(modargs)
 	}()
@@ -566,7 +573,6 @@ func sendResults(ctx Context, result mig.Command) (err error) {
 		}
 		ctx.Channels.Log <- mig.Log{CommandID: result.ID, ActionID: result.Action.ID, Desc: "leaving sendResults()"}.Debug()
 	}()
-
 	ctx.Channels.Log <- mig.Log{CommandID: result.ID, ActionID: result.Action.ID, Desc: "sending command results"}
 	result.Agent.QueueLoc = ctx.Agent.QueueLoc
 	body, err := json.Marshal(result)
@@ -599,6 +605,7 @@ func heartbeat(ctx Context) (err error) {
 
 	// loop forever
 	for {
+		// make a heartbeat
 		HeartBeat.HeartBeatTS = time.Now()
 		body, err := json.Marshal(HeartBeat)
 		if err != nil {
@@ -627,6 +634,10 @@ func publish(ctx Context, exchange, routingKey string, body []byte) (err error) 
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving publish()"}.Debug()
 	}()
+	// lock publication, unlock on exit
+	publication.Lock()
+	defer publication.Unlock()
+
 	msg := amqp.Publishing{
 		DeliveryMode: amqp.Persistent,
 		Timestamp:    time.Now(),
