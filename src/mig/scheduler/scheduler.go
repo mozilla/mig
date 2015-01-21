@@ -24,10 +24,6 @@ import (
 // build version
 var version string
 
-// the list of active agents is shared globally
-// TODO: make this a database thing to work with scheduler clusters
-var activeAgentsList []string
-
 // main initializes the mongodb connection, the directory watchers and the
 // AMQP ctx.MQ.Chan. It also launches the goroutines.
 func main() {
@@ -194,21 +190,13 @@ func main() {
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "updateAction() routine started"}
 
-	// Init is completed, restart queues of active agents
-	err = pickUpAliveAgents(ctx)
-	if err != nil {
-		panic(err)
-	}
-
 	// start a listening channel to receive heartbeats from agents
-	activeAgentsChan, err := startActiveAgentsChannel(ctx)
+	heartbeatsChan, err := startHeartbeatsListener(ctx)
 	if err != nil {
 		panic(err)
 	}
-
-	// launch the routine that processes agents heartbeats
 	go func() {
-		for msg := range activeAgentsChan {
+		for msg := range heartbeatsChan {
 			ctx.OpID = mig.GenID()
 			err := getHeartbeats(msg, ctx)
 			if err != nil {
@@ -216,7 +204,38 @@ func main() {
 			}
 		}
 	}()
-	ctx.Channels.Log <- mig.Log{Desc: "Agent KeepAlive routine started"}
+	ctx.Channels.Log <- mig.Log{Desc: "agents heartbeats listener routine started"}
+
+	// start a listening channel to results from agents
+	agtResultsChan, err := startResultsListener(ctx)
+	if err != nil {
+		panic(err)
+	}
+	go func() {
+		for delivery := range agtResultsChan {
+			ctx.OpID = mig.GenID()
+			// validate the size of the data received, and make sure its first and
+			// last bytes are valid json enclosures
+			if len(delivery.Body) < 10 || delivery.Body[0] != '{' || delivery.Body[len(delivery.Body)-1] != '}' {
+				ctx.Channels.Log <- mig.Log{
+					OpID: ctx.OpID,
+					Desc: fmt.Sprintf("discarding invalid message received in results channel"),
+				}.Err()
+				break
+			}
+			// write to disk in Returned directory
+			dest := fmt.Sprintf("%s/%.0f", ctx.Directories.Command.Returned, ctx.OpID)
+			err = safeWrite(ctx, dest, delivery.Body)
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{
+					OpID: ctx.OpID,
+					Desc: fmt.Sprintf("failed to write agent results to disk: %v", err),
+				}.Err()
+				break
+			}
+		}
+	}()
+	ctx.Channels.Log <- mig.Log{Desc: "agents results listener routine started"}
 
 	// launch the routine that regularly walks through the local directories
 	go func() {

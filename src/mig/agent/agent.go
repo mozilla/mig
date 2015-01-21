@@ -576,8 +576,7 @@ func sendResults(ctx Context, result mig.Command) (err error) {
 		panic(err)
 	}
 
-	routingKey := fmt.Sprintf("mig.sched.%s", ctx.Agent.QueueLoc)
-	err = publish(ctx, "mig", routingKey, body)
+	err = publish(ctx, "mig", "mig.agt.results", body)
 	if err != nil {
 		panic(err)
 	}
@@ -610,7 +609,7 @@ func heartbeat(ctx Context) (err error) {
 		}
 		desc := fmt.Sprintf("heartbeat '%s'", body)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
-		publish(ctx, "mig", "mig.heartbeat", body)
+		publish(ctx, "mig", "mig.agt.heartbeats", body)
 		// write the heartbeat to disk
 		err = ioutil.WriteFile(ctx.Agent.RunDir+"mig-agent.ok", []byte(time.Now().String()), 644)
 		if err != nil {

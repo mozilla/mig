@@ -14,55 +14,21 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// pickUpAliveAgents lists agents that have recent keepalive in the
-// database, and start listening queues for them
-func pickUpAliveAgents(ctx Context) (err error) {
+// startHeartbeatsListener initializes the routine that receives heartbeats from agents
+func startHeartbeatsListener(ctx Context) (heartbeatChan <-chan amqp.Delivery, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("pickUpAliveAgents() -> %v", e)
+			err = fmt.Errorf("startHeartbeatsListener() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving pickUpAliveAgents()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving startHeartbeatsListener()"}.Debug()
 	}()
 
-	// get a list of all agents that have a keepalive between ctx.Agent.TimeOut and now
-	agtTimeOut, err := time.ParseDuration(ctx.Agent.TimeOut)
-	if err != nil {
-		panic(err)
-	}
-	expirationDate := time.Now().Add(-agtTimeOut)
-	agents, err := ctx.DB.AgentsActiveSince(expirationDate)
+	_, err = ctx.MQ.Chan.QueueDeclare("mig.agt.heartbeats", true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	desc := fmt.Sprintf("Starting %d agents listeners. This may take a while", len(agents))
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}
-
-	for _, agt := range agents {
-		err = startAgentListener(agt, agtTimeOut, ctx)
-		if err != nil {
-			panic(err)
-		}
-	}
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "All agents listeners started successfully"}
-	return
-}
-
-// startActiveAgentsChannel initializes the keepalive AMQP queue
-func startActiveAgentsChannel(ctx Context) (activeAgentsChan <-chan amqp.Delivery, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("startActiveAgentsChannel() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving startActiveAgentsChannel()"}.Debug()
-	}()
-
-	_, err = ctx.MQ.Chan.QueueDeclare("mig.heartbeat", true, false, false, false, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	err = ctx.MQ.Chan.QueueBind("mig.heartbeat", "mig.heartbeat", "mig", false, nil)
+	err = ctx.MQ.Chan.QueueBind("mig.agt.heartbeats", "mig.agt.heartbeats", "mig", false, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -72,11 +38,11 @@ func startActiveAgentsChannel(ctx Context) (activeAgentsChan <-chan amqp.Deliver
 		panic(err)
 	}
 
-	activeAgentsChan, err = ctx.MQ.Chan.Consume("mig.heartbeat", "", true, false, false, false, nil)
+	heartbeatChan, err = ctx.MQ.Chan.Consume("mig.agt.heartbeats", "", true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "Active Agents channel initialized"}
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "agents heartbeats listener initialized"}
 
 	return
 }
@@ -131,13 +97,7 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 		}
 	}()
 
-	// start a listener for this agent, if needed
-	err = startAgentListener(agt, agtTimeOut, ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// If multiple agents are listening on the same queue, alert the cleanup routine
+	// If multiple agents are active at the same time, alert the cleanup routine
 	if ctx.Agent.DetectMultiAgents {
 		go func() {
 			agtCnt, _, err := findDupAgents(agt.QueueLoc, ctx)
@@ -149,120 +109,6 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 			}
 		}()
 	}
-	return
-}
-
-// startAgentsListener will create an AMQP consumer for this agent if none exist
-func startAgentListener(agt mig.Agent, agtTimeOut time.Duration, ctx Context) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("startAgentListener() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving startAgentListener()"}.Debug()
-	}()
-
-	// If a listener already exists for this agent, exit
-	for _, q := range activeAgentsList {
-		if q == agt.QueueLoc {
-			desc := fmt.Sprintf("startAgentListener() already has a listener for '%s'", agt.QueueLoc)
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-			return
-		}
-	}
-
-	// create a queue specific to the agent and declare a consumer that will be destroyed once the scheduler
-	// stops listening to the queue
-	queue := fmt.Sprintf("mig.sched.%s", agt.QueueLoc)
-	_, err = ctx.MQ.Chan.QueueDeclare(queue, true, false, false, false, nil)
-	if err != nil {
-		panic(err)
-	}
-	err = ctx.MQ.Chan.QueueBind(queue, queue, "mig", false, nil)
-	if err != nil {
-		panic(err)
-	}
-	consumerTag := mig.GenB32ID()
-	consumeAgtResults, err := ctx.MQ.Chan.Consume(queue, consumerTag, true, false, false, false, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	// start a goroutine for this queue, with a timer that expires it after agtTimeOut
-	go func() {
-		desc := fmt.Sprintf("Starting new consumer '%s' for agent '%s' on queue '%s'",
-			consumerTag, agt.Name, agt.QueueLoc)
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-		for {
-			select {
-			case delivery := <-consumeAgtResults:
-				// process incoming agent messages
-				ctx.OpID = mig.GenID()
-				desc := fmt.Sprintf("Received message from agent '%s' on '%s'.", agt.Name, agt.QueueLoc)
-				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-				// validate the size of the data received, and make sure its first and
-				// last bytes are valid json enclosures
-				if len(delivery.Body) < 10 || delivery.Body[0] != '{' || delivery.Body[len(delivery.Body)-1] != '}' {
-					ctx.Channels.Log <- mig.Log{
-						OpID: ctx.OpID,
-						Desc: fmt.Sprintf("received invalid results from %s", agt.QueueLoc),
-					}.Err()
-					break
-				}
-				// write to disk in Returned directory
-				dest := fmt.Sprintf("%s/%.0f", ctx.Directories.Command.Returned, ctx.OpID)
-				err = safeWrite(ctx, dest, delivery.Body)
-				if err != nil {
-					ctx.Channels.Log <- mig.Log{
-						OpID: ctx.OpID,
-						Desc: fmt.Sprintf("failed to write agent results to disk: %v", err),
-					}.Err()
-					break
-				}
-			case <-time.After(agtTimeOut):
-				// expire listener and exit goroutine
-				desc := fmt.Sprintf("Listener timeout triggered for agent '%s'", agt.Name)
-				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-				goto exit
-			}
-		}
-	exit:
-		// cleanup on exit, don't leave cruft in the rabbitmq relay
-		desc = fmt.Sprintf("Closing listener for agent '%s'", agt.Name)
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
-		// stop the consumer
-		err = ctx.MQ.Chan.Cancel(consumerTag, true)
-		if err != nil {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while cancelling consumer '%s': %v", consumerTag, err)}.Err()
-		}
-		// delete the queue that receives agents results
-		//msgCount, err := ctx.MQ.Chan.QueueDelete(queue, false, false, false)
-		//if err != nil {
-		//	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while deleting queue '%s': %v", queue, err)}.Err()
-		//}
-		//if msgCount > 0 {
-		//	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d pending messages were deleted with queue '%s'", msgCount, queue)}.Warning()
-		//}
-		//// delete the queue that sends commands to agents
-		//agtQueue := fmt.Sprintf("mig.agt.%s", agt.QueueLoc)
-		//msgCount, err = ctx.MQ.Chan.QueueDelete(agtQueue, false, false, false)
-		//if err != nil {
-		//	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Error while deleting queue '%s': %v", agtQueue, err)}.Err()
-		//}
-		//if msgCount > 0 {
-		//	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%d pending messages were deleted with queue '%s'", msgCount, queue)}.Warning()
-		//}
-		for i, q := range activeAgentsList {
-			if q == agt.QueueLoc {
-				// remove queue from active list
-				activeAgentsList = append(activeAgentsList[:i], activeAgentsList[i+1:]...)
-				break
-			}
-		}
-	}()
-
-	// add the new active queue to the activeAgentsList
-	activeAgentsList = append(activeAgentsList, agt.QueueLoc)
-
 	return
 }
 
@@ -287,4 +133,37 @@ func findDupAgents(queueloc string, ctx Context) (count int, agents []mig.Agent,
 		panic(err)
 	}
 	return len(agents), agents, err
+}
+
+// startResultsListener initializes the routine that receives heartbeats from agents
+func startResultsListener(ctx Context) (resultsChan <-chan amqp.Delivery, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("startResultsListener() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving startResultsListener()"}.Debug()
+	}()
+
+	_, err = ctx.MQ.Chan.QueueDeclare("mig.agt.results", true, false, false, false, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	err = ctx.MQ.Chan.QueueBind("mig.agt.results", "mig.agt.results", "mig", false, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	err = ctx.MQ.Chan.Qos(0, 0, false)
+	if err != nil {
+		panic(err)
+	}
+
+	resultsChan, err = ctx.MQ.Chan.Consume("mig.agt.results", "", true, false, false, false, nil)
+	if err != nil {
+		panic(err)
+	}
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "agents results listener initialized"}
+
+	return
 }
