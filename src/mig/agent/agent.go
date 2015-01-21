@@ -34,12 +34,13 @@ type moduleResult struct {
 }
 
 type moduleOp struct {
-	err        error
-	id         float64
-	mode       string
-	params     interface{}
-	resultChan chan moduleResult
-	position   int
+	err         error
+	id          float64
+	mode        string
+	params      interface{}
+	resultChan  chan moduleResult
+	position    int
+	expireafter time.Time
 }
 
 var runningOps = make(map[float64]moduleOp)
@@ -294,13 +295,13 @@ func startRoutines(ctx Context) (err error) {
 	// GoRoutine that executes commands that run as agent modules
 	go func() {
 		for op := range ctx.Channels.RunAgentCommand {
-			err = runAgentModule(ctx, op)
+			err = runModule(ctx, op)
 			if err != nil {
 				log := mig.Log{OpID: op.id, Desc: fmt.Sprintf("%v", err)}.Err()
 				ctx.Channels.Log <- log
 			}
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "closing runAgentModule goroutine"}
+		ctx.Channels.Log <- mig.Log{Desc: "closing runModule goroutine"}
 	}()
 
 	// GoRoutine that formats results and send them to scheduler
@@ -385,11 +386,14 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 	opsCounter := 0
 	for counter, operation := range cmd.Action.Operations {
 		// create an module operation object
-		currentOp := moduleOp{id: mig.GenID(),
-			mode:       operation.Module,
-			params:     operation.Parameters,
-			resultChan: resultChan,
-			position:   counter}
+		currentOp := moduleOp{
+			id:          mig.GenID(),
+			mode:        operation.Module,
+			params:      operation.Parameters,
+			resultChan:  resultChan,
+			position:    counter,
+			expireafter: cmd.Action.ExpireAfter,
+		}
 
 		desc := fmt.Sprintf("sending operation %d to module %s", counter, operation.Module)
 		ctx.Channels.Log <- mig.Log{OpID: currentOp.id, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: desc}
@@ -414,12 +418,12 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 	return
 }
 
-// runAgentModule is a generic module launcher that takes an operation and calls
+// runModule is a generic module launcher that takes an operation and calls
 // the mig-agent binary with the proper module parameters. It sets a timeout on
 // execution and kills the module if needed. On success, it stores the output from
 // the module in a moduleResult struct and passes it along to the function that aggregates
 // all results
-func runAgentModule(ctx Context, op moduleOp) (err error) {
+func runModule(ctx Context, op moduleOp) (err error) {
 	var result moduleResult
 	result.id = op.id
 	result.position = op.position
@@ -427,7 +431,7 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 		if e := recover(); e != nil {
 			// if running the module failed, store the error in the module result
 			// and sets the status to failed before passing the results along
-			err = fmt.Errorf("runAgentModule() -> %v", e)
+			err = fmt.Errorf("runModule() -> %v", e)
 			result.err = err
 			result.status = mig.StatusFailed
 		}
@@ -435,13 +439,20 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 		delete(runningOps, op.id)
 		// whatever happens, always send the results
 		op.resultChan <- result
-		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "leaving runAgentModule()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "leaving runModule()"}.Debug()
 	}()
 
 	ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: fmt.Sprintf("executing module '%s'", op.mode)}.Debug()
 	// waiter is a channel that receives a message when the timeout expires
 	waiter := make(chan error, 1)
 	var out bytes.Buffer
+
+	// calculate the max exec time but taking the smallest duration between the expiration date
+	// sent with the command, and the default MODULETIMEOUT value from the configuration
+	execTimeOut := MODULETIMEOUT
+	if op.expireafter.Before(time.Now().Add(MODULETIMEOUT)) {
+		execTimeOut = op.expireafter.Sub(time.Now())
+	}
 
 	// Command arguments must be in json format
 	tmpargs, err := json.Marshal(op.params)
@@ -467,7 +478,7 @@ func runAgentModule(ctx Context, op moduleOp) (err error) {
 	select {
 
 	// Timeout case: command has reached timeout, kill it
-	case <-time.After(MODULETIMEOUT):
+	case <-time.After(execTimeOut):
 		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command timed out. Killing it."}.Err()
 
 		// update the command status and send the response back
