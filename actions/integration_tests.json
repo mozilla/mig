@@ -12,7 +12,7 @@
     },
     "operations": [
         {
-            "module": "filechecker",
+            "module": "file",
             "parameters": {
                 "searches": {
                     "sshnotmatch": {
