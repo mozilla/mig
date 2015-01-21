@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -43,7 +45,6 @@ type moduleOp struct {
 	resultChan  chan moduleResult
 	position    int
 	expireafter time.Time
-	modRunner   mig.Moduler
 }
 
 var runningOps = make(map[float64]moduleOp)
@@ -407,10 +408,6 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 		// check that the module is available and pass the command to the execution channel
 		if _, ok := mig.AvailableModules[operation.Module]; ok {
-			// grab the run interface of the module into op.runner
-			runner := mig.AvailableModules[operation.Module]()
-			currentOp.modRunner = runner.(mig.Moduler)
-			// log and pass the op to the module runner goroutine
 			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("calling module '%s'", operation.Module)}.Debug()
 			runningOps[currentOp.id] = currentOp
 			ctx.Channels.RunAgentCommand <- currentOp
@@ -454,7 +451,9 @@ func runModule(ctx Context, op moduleOp) (err error) {
 	}()
 
 	ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: fmt.Sprintf("executing module '%s'", op.mode)}.Debug()
-	results := make(chan string, 1)
+	// waiter is a channel that receives a message when the timeout expires
+	waiter := make(chan error, 1)
+	var out bytes.Buffer
 
 	// calculate the max exec time but taking the smallest duration between the expiration date
 	// sent with the command, and the default MODULETIMEOUT value from the configuration
@@ -464,14 +463,24 @@ func runModule(ctx Context, op moduleOp) (err error) {
 	}
 
 	// Command arguments must be in json format
-	modargs, err := json.Marshal(op.params)
+	tmpargs, err := json.Marshal(op.params)
 	if err != nil {
 		panic(err)
 	}
 
-	// run the module in a separate goroutine
+	// stringify the arguments
+	cmdArgs := fmt.Sprintf("%s", tmpargs)
+
+	// build the command line and execute
+	cmd := exec.Command(ctx.Agent.BinPath, "-m", strings.ToLower(op.mode), cmdArgs)
+	cmd.Stdout = &out
+	if err := cmd.Start(); err != nil {
+		panic(err)
+	}
+
+	// launch the waiter in a separate goroutine
 	go func() {
-		results <- op.modRunner.Run(modargs)
+		waiter <- cmd.Wait()
 	}()
 
 	select {
@@ -483,17 +492,22 @@ func runModule(ctx Context, op moduleOp) (err error) {
 		// update the command status and send the response back
 		result.status = mig.StatusTimeout
 
-		results <- "" // allow goroutine to exit
+		// kill the command
+		err := cmd.Process.Kill()
+		if err != nil {
+			panic(err)
+		}
+		<-waiter // allow goroutine to exit
 
 	// Normal exit case: command has run successfully
-	case r := <-results:
-		if r == "" {
-			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "module execution failed"}.Err()
+	case err := <-waiter:
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command failed."}.Err()
 			panic(err)
 
 		} else {
-			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "module execution completed successfully"}
-			err = json.Unmarshal([]byte(r), &result.output)
+			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command done."}
+			err = json.Unmarshal(out.Bytes(), &result.output)
 			if err != nil {
 				panic(err)
 			}
