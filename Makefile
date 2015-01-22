@@ -243,6 +243,9 @@ rpm-api: mig-api
 	fpm -C tmp -n mig-api --license GPL --vendor mozilla --description "Mozilla InvestiGator API" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
 
+doc:
+	make -C doc doc
+
 test: mig-agent
 	$(BINDIR)/mig-agent-latest -m=file '{"searches": {"shouldmatch": {"names": ["^root"],"sizes": ["<10m"],"options": {"matchall": true},"paths": ["/etc/passwd"]},"shouldnotmatch": {"options": {"maxdepth": 1},"paths": ["/tmp"],"contents": ["should not match"]}}}'
 
@@ -256,4 +259,4 @@ clean: clean-agent
 	rm -rf tmp
 	find src/ -maxdepth 1 -mindepth 1 ! -name mig -exec rm -rf {} \;
 
-.PHONY: clean clean-all clean-agent doc go_get_deps_into_system mig-agent-386 mig-agent-amd64 agent-install-script agent-cron
+.PHONY: clean clean-agent doc go_get_deps_into_system mig-agent-386 mig-agent-amd64 agent-install-script agent-cron
