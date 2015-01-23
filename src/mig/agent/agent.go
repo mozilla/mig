@@ -225,7 +225,10 @@ done:
 // runAgent is the startup function for agent mode. It only exits when the agent
 // must shut down.
 func runAgent(foreground, upgrading, debug bool) (err error) {
-	var ctx Context
+	var (
+		ctx        Context
+		exitReason string
+	)
 	// initialize the agent
 	ctx, err = Init(foreground, upgrading)
 	if err != nil {
@@ -258,20 +261,24 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 	// The agent blocks here until a termination order is received
 	// The order is then evaluated to decide if a new agent must be respawned, or the agent
 	// service should simply be stopped.
-	exitReason := <-ctx.Channels.Terminate
+	exitReason = <-ctx.Channels.Terminate
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Shutting down agent: '%v'", exitReason)}.Emerg()
-	time.Sleep(time.Second)
+	time.Sleep(time.Second) // give a chance for work in progress to finish before we lock up
 
 	// lock publication forever, we're shutting down
 	publication.Lock()
 	Destroy(ctx)
 
 	// depending on the exit reason, we may or may not attempt a respawn of the agent before exiting
-	switch fmt.Sprintf("%v", exitReason) {
-	case "shutdown requested":
-		svc, _ := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
+	if exitReason == "shutdown requested" {
+		svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to invoke stop request to mig-agent service. exiting with code 0")
+			os.Exit(0)
+		}
 		svc.Stop()
-	default:
+		time.Sleep(time.Hour) // wait to be killed
+	} else {
 		// I'll be back!
 		if ctx.Agent.Respawn {
 			ctx.Channels.Log <- mig.Log{Desc: "Agent is immortal. Resuscitating!"}
@@ -675,6 +682,6 @@ func publish(ctx Context, exchange, routingKey string, body []byte) (err error) 
 	// if we're here, it mean publishing failed 3 times. we most likely
 	// lost the connection with the relay, best is to die and restart
 	ctx.Channels.Log <- mig.Log{Desc: "Publishing failed 3 times in a row. Sending agent termination order."}.Emerg()
-	ctx.Channels.Terminate <- fmt.Errorf("Publication to relay is failing")
+	ctx.Channels.Terminate <- "Publication to relay is failing"
 	return
 }

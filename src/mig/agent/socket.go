@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 )
 
 func initSocket(orig_ctx Context) (ctx Context, err error) {
@@ -34,33 +35,37 @@ func initSocket(orig_ctx Context) (ctx Context, err error) {
 
 func socketAccept(ctx Context) {
 	for {
+
 		fd, err := ctx.Socket.Listener.Accept()
 		if err != nil {
 			break
 		}
-		go socketServe(fd, ctx)
+		// lock publication, serve, then exit
+		publication.Lock()
+		socketServe(fd, ctx)
+		publication.Unlock()
 	}
 }
 
 // serveConn processes the request and close the connection. Connections to
 // the stat socket are single-request only.
 func socketServe(fd net.Conn, ctx Context) {
+	var resp string
 	defer func() {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("socketServe() -> %v", e)}.Err()
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving socketServe()"}.Debug()
 	}()
-	var resp string
 	buf := make([]byte, 8192)
 	n, err := fd.Read(buf)
 	if err != nil {
 		return
 	}
 	if n > 8190 {
-		resp = "Request too large. Max size is 8192 bytes\n"
+		resp = "Request too long. Max size is 8192 bytes\n"
 	} else if n < 2 {
-		resp = "Request too small. Min size is 1 byte\n"
+		resp = "Request too short. Min size is 1 byte\n"
 	} else {
 		// input data can have multiple fields, space separated
 		// the first field is always the request, the rest are optional parameters
@@ -75,6 +80,10 @@ pid		returns the PID of the running agent
 shutdown <id>	request agent shutdown. <id> is the agent's secret id
 `)
 		case "shutdown":
+			// to request a shutdown, the caller must provide the agent id
+			// as second argument. If the ID is valid, the string "shutdown requested"
+			// is written back to the caller, and injected into the terminate
+			// channel before returning
 			if len(fields) < 2 {
 				resp = "missing agent id, shutdown refused"
 				break
@@ -84,7 +93,6 @@ shutdown <id>	request agent shutdown. <id> is the agent's secret id
 				break
 			}
 			resp = "shutdown requested"
-			ctx.Channels.Terminate <- fmt.Errorf(resp)
 		default:
 			resp = "unknown command"
 		}
@@ -95,6 +103,9 @@ shutdown <id>	request agent shutdown. <id> is the agent's secret id
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("serveConn(): %d bytes written", n)}.Debug()
 	fd.Close()
+	if resp == "shutdown requested" {
+		ctx.Channels.Terminate <- resp
+	}
 }
 
 func socketQuery(bind, query string) (resp string, err error) {
@@ -120,7 +131,22 @@ func socketQuery(bind, query string) (resp string, err error) {
 	if err != nil {
 		panic(err)
 	}
+	conn.Close()
 	// remove newline
 	resp = resp[0 : len(resp)-1]
+	if len(query) > 8 && query[0:8] == "shutdown" {
+		fmt.Printf("agent shutdown requested, waiting for completion...")
+		for {
+			// loop until socket query fails, indicating the agent is dead
+			time.Sleep(353 * time.Millisecond)
+			fmt.Printf(".")
+			conn, err = net.Dial("tcp", bind)
+			if err != nil {
+				resp = "done"
+				return resp, nil
+			}
+			conn.Close()
+		}
+	}
 	return
 }

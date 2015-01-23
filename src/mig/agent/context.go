@@ -7,23 +7,23 @@
 package main
 
 import (
+	"bitbucket.org/kardianos/osext"
 	"bufio"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/jvehent/service-go"
+	"github.com/streadway/amqp"
 	"io/ioutil"
 	"mig"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
-
-	"bitbucket.org/kardianos/osext"
-	"github.com/jvehent/service-go"
-	"github.com/streadway/amqp"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -40,7 +40,7 @@ type Context struct {
 	}
 	Channels struct {
 		// internal
-		Terminate                           chan error
+		Terminate                           chan string
 		Log                                 chan mig.Log
 		NewCommand                          chan []byte
 		RunAgentCommand, RunExternalCommand chan moduleOp
@@ -198,6 +198,14 @@ mqdone:
 		panic("Failed to connect to the relay")
 	}
 
+	// catch interrupts
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		sig := <-c
+		ctx.Channels.Terminate <- sig.String()
+	}()
+
 	// try to connect the stat socket until it works
 	// this may fail if one agent is already running
 	if SOCKET != "" {
@@ -222,7 +230,7 @@ mqdone:
 
 func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
-	ctx.Channels.Terminate = make(chan error)
+	ctx.Channels.Terminate = make(chan string)
 	ctx.Channels.NewCommand = make(chan []byte, 7)
 	ctx.Channels.RunAgentCommand = make(chan moduleOp, 5)
 	ctx.Channels.RunExternalCommand = make(chan moduleOp, 5)
