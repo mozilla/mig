@@ -21,7 +21,7 @@ type Agent struct {
 	ID              float64     `json:"id,omitempty"`
 	Name            string      `json:"name"`
 	QueueLoc        string      `json:"queueloc"`
-	OS              string      `json:"os,omitempty"`
+	Mode            string      `json:"mode"`
 	Version         string      `json:"version,omitempty"`
 	PID             int         `json:"pid,omitempty"`
 	StartTime       time.Time   `json:"starttime,omitempty"`
@@ -37,6 +37,7 @@ type Agent struct {
 type AgentEnv struct {
 	Init      string   `json:"init,omitempty"`
 	Ident     string   `json:"ident,omitempty"`
+	OS        string   `json:"os,omitempty"`
 	Arch      string   `json:"arch,omitempty"`
 	IsProxied bool     `json:"isproxied"`
 	Proxy     string   `json:"proxy,omitempty"`

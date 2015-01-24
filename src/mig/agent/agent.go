@@ -178,6 +178,8 @@ func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
 		os.Exit(0)
 	}
 
+	ctx.Agent.Mode = "checkin"
+
 	err = startRoutines(ctx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to start agent routines: '%v'", err)
@@ -247,6 +249,7 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 		}
 		os.Exit(1)
 	}
+	ctx.Agent.Mode = "daemon"
 
 	// Goroutine that receives messages from AMQP
 	go getCommands(ctx)
@@ -620,7 +623,7 @@ func heartbeat(ctx Context) (err error) {
 	// declare an Agent registration message
 	HeartBeat := mig.Agent{
 		Name:      ctx.Agent.Hostname,
-		OS:        ctx.Agent.OS,
+		Mode:      ctx.Agent.Mode,
 		Version:   version,
 		PID:       os.Getpid(),
 		QueueLoc:  ctx.Agent.QueueLoc,

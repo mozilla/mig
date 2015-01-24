@@ -22,7 +22,7 @@ CREATE TABLE agents (
     id numeric NOT NULL,
     name character varying(2048) NOT NULL,
     queueloc character varying(2048) NOT NULL,
-    os character varying(2048) NOT NULL,
+    mode character varying(2048) NOT NULL,
     version character varying(2048) NOT NULL,
     pid integer NOT NULL,
     starttime timestamp with time zone NOT NULL,

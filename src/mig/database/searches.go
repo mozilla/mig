@@ -69,7 +69,7 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 			actions.id, actions.name, actions.target, actions.description, actions.threat,
 			actions.operations, actions.validfrom, actions.expireafter,
 			actions.pgpsignatures, actions.syntaxversion,
-			agents.id, agents.name, agents.queueloc, agents.os, agents.version
+			agents.id, agents.name, agents.queueloc, agents.mode, agents.version
 			FROM commands, actions, agents, investigators, signatures
 			WHERE commands.actionid=actions.id AND commands.agentid=agents.id
 			AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
@@ -118,7 +118,7 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 		err = rows.Scan(&cmd.ID, &cmd.Status, &jRes, &cmd.StartTime, &cmd.FinishTime,
 			&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jDesc, &jThreat, &jOps,
 			&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
-			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.OS, &cmd.Agent.Version)
+			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.Mode, &cmd.Agent.Version)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to retrieve command: '%v'", err)
@@ -264,7 +264,7 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 	if err != nil {
 		return
 	}
-	rows, err := db.c.Query(`SELECT agents.id, agents.name, agents.queueloc, agents.os,
+	rows, err := db.c.Query(`SELECT agents.id, agents.name, agents.queueloc, agents.mode,
 		agents.version, agents.pid, agents.starttime, agents.destructiontime,
 		agents.heartbeattime, agents.status
 		FROM commands, actions, agents, investigators, signatures
@@ -290,7 +290,7 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 	}
 	for rows.Next() {
 		var agent mig.Agent
-		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.OS, &agent.Version,
+		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version,
 			&agent.PID, &agent.StartTime, &agent.DestructionTime, &agent.HeartBeatTS,
 			&agent.Status)
 		if err != nil {

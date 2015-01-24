@@ -73,13 +73,14 @@ func agentReader(input string, cli client.Client) (err error) {
 name       %s
 last seen  %s ago
 version    %s
+mode       %s
 location   %s
-os         %s
+platform   %s %s
 pid        %d
 starttime  %s
 status     %s
-`, agt.ID, agt.Name, time.Now().Sub(agt.HeartBeatTS).String(), agt.Version,
-				agt.QueueLoc, agt.OS, agt.PID, agt.StartTime, agt.Status)
+`, agt.ID, agt.Name, time.Now().Sub(agt.HeartBeatTS).String(), agt.Version, agt.Mode, agt.QueueLoc,
+				agt.Env.OS, agt.Env.Arch, agt.PID, agt.StartTime, agt.Status)
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit

@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -32,11 +33,11 @@ import (
 type Context struct {
 	ACL   mig.ACL
 	Agent struct {
-		Hostname, OS, QueueLoc, UID, BinPath, RunDir string
-		Respawn                                      bool
-		CheckIn                                      bool
-		Env                                          mig.AgentEnv
-		Tags                                         interface{}
+		Hostname, QueueLoc, Mode, UID, BinPath, RunDir string
+		Respawn                                        bool
+		CheckIn                                        bool
+		Env                                            mig.AgentEnv
+		Tags                                           interface{}
 	}
 	Channels struct {
 		// internal
@@ -117,6 +118,8 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	}
 
 	// retrieve information about the operating system
+	ctx.Agent.Env.OS = runtime.GOOS
+	ctx.Agent.Env.Arch = runtime.GOARCH
 	ctx, err = findOSInfo(ctx)
 	if err != nil {
 		panic(err)
@@ -144,7 +147,7 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	}
 
 	// build the agent message queue location
-	ctx.Agent.QueueLoc = fmt.Sprintf("%s.%s.%s", ctx.Agent.OS, ctx.Agent.Hostname, ctx.Agent.UID)
+	ctx.Agent.QueueLoc = fmt.Sprintf("%s.%s.%s", ctx.Agent.Env.OS, ctx.Agent.Hostname, ctx.Agent.UID)
 
 	// daemonize if not in foreground mode
 	if !foreground {

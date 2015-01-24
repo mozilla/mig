@@ -17,9 +17,9 @@ import (
 
 // AgentByQueueAndPID returns a single agent that is located at a given queueloc and has a given PID
 func (db *DB) AgentByQueueAndPID(queueloc string, pid int) (agent mig.Agent, err error) {
-	err = db.c.QueryRow(`SELECT id, name, queueloc, os, version, pid, starttime, heartbeattime,
+	err = db.c.QueryRow(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime,
 		status FROM agents WHERE queueloc=$1 AND pid=$2`, queueloc, pid).Scan(
-		&agent.ID, &agent.Name, &agent.QueueLoc, &agent.OS, &agent.Version, &agent.PID,
+		&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version, &agent.PID,
 		&agent.StartTime, &agent.HeartBeatTS, &agent.Status)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving agent: '%v'", err)
@@ -33,9 +33,9 @@ func (db *DB) AgentByQueueAndPID(queueloc string, pid int) (agent mig.Agent, err
 
 // AgentByID returns a single agent identified by its ID
 func (db *DB) AgentByID(id float64) (agent mig.Agent, err error) {
-	err = db.c.QueryRow(`SELECT id, name, queueloc, os, version, pid, starttime, heartbeattime,
+	err = db.c.QueryRow(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime,
 		status FROM agents WHERE id=$1`, id).Scan(
-		&agent.ID, &agent.Name, &agent.QueueLoc, &agent.OS, &agent.Version, &agent.PID,
+		&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version, &agent.PID,
 		&agent.StartTime, &agent.HeartBeatTS, &agent.Status)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving agent: '%v'", err)
@@ -87,10 +87,10 @@ func (db *DB) InsertAgent(agt mig.Agent) (err error) {
 	}
 	agtid := mig.GenID()
 	_, err = db.c.Exec(`INSERT INTO agents
-		(id, name, queueloc, os, version, pid, starttime, destructiontime,
+		(id, name, queueloc, mode, version, pid, starttime, destructiontime,
 		heartbeattime, status, environment, tags)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-		agtid, agt.Name, agt.QueueLoc, agt.OS, agt.Version, agt.PID,
+		agtid, agt.Name, agt.QueueLoc, agt.Mode, agt.Version, agt.PID,
 		agt.StartTime, agt.DestructionTime, agt.HeartBeatTS, agt.Status, jEnv, jTags)
 	if err != nil {
 		return fmt.Errorf("Failed to insert agent in database: '%v'", err)
@@ -128,17 +128,15 @@ func (db *DB) InsertOrUpdateAgent(agt mig.Agent) (err error) {
 
 // ActiveAgentsByQueue retrieves an array of agents identified by their QueueLoc value
 func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agents []mig.Agent, err error) {
-	rows, err := db.c.Query(`SELECT agents.id, agents.name, agents.queueloc, agents.os,
-		agents.version, agents.pid, agents.starttime, agents.heartbeattime, agents.status
-		FROM agents
-		WHERE agents.heartbeattime > $1 AND agents.queueloc=$2`, pointInTime, queueloc)
+	rows, err := db.c.Query(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime, status
+		FROM agents WHERE agents.heartbeattime > $1 AND agents.queueloc=$2`, pointInTime, queueloc)
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
 	}
 	for rows.Next() {
 		var agent mig.Agent
-		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.OS, &agent.Version,
+		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version,
 			&agent.PID, &agent.StartTime, &agent.HeartBeatTS, &agent.Status)
 		if err != nil {
 			rows.Close()
@@ -171,7 +169,7 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 		_ = txn.Rollback()
 		return
 	}
-	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc, os, version, pid,
+	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc, mode, version, pid,
 		starttime, destructiontime, heartbeattime, status
 		FROM agents
 		WHERE agents.status IN ('%s', '%s') AND (%s)
@@ -183,7 +181,7 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 	}
 	for rows.Next() {
 		var agent mig.Agent
-		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.OS, &agent.Version,
+		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version,
 			&agent.PID, &agent.StartTime, &agent.DestructionTime, &agent.HeartBeatTS,
 			&agent.Status)
 		if err != nil {

@@ -42,8 +42,6 @@ func findOSInfo(orig_ctx Context) (ctx Context, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving findOSInfo()"}.Debug()
 	}()
-	ctx.Agent.OS = runtime.GOOS
-	ctx.Agent.Env.Arch = runtime.GOARCH
 	sysv, kerv, err := getSysProf()
 	if err != nil {
 		panic(err)

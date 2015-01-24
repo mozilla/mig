@@ -61,7 +61,7 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	desc := fmt.Sprintf("Received heartbeat for Agent '%s' OS '%s' QueueLoc '%s'", agt.Name, agt.OS, agt.QueueLoc)
+	desc := fmt.Sprintf("Received heartbeat for Agent '%s' QueueLoc '%s'", agt.Name, agt.QueueLoc)
 	ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 
 	// discard expired heartbeats

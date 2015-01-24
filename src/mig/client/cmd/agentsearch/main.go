@@ -46,7 +46,7 @@ func main() {
 				panic(err)
 			}
 			fmt.Printf("%s %.0f %s %d %s %t\n",
-				agt.Name, agt.ID, agt.OS, agt.PID,
+				agt.Name, agt.ID, agt.Env.OS, agt.PID,
 				agt.Status, agt.Env.IsProxied)
 		}
 	}

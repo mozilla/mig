@@ -43,8 +43,6 @@ func findOSInfo(orig_ctx Context) (ctx Context, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving findOSInfo()"}.Debug()
 	}()
-	ctx.Agent.OS = runtime.GOOS
-	ctx.Agent.Env.Arch = runtime.GOARCH
 	hostname, domain, osname, osversion, err := getSysInfo()
 	if err != nil {
 		panic(err)
