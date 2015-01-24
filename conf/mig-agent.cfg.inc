@@ -4,6 +4,9 @@
     ; connection string to the MIG relay. must contain credentials.
     relay            = "amqp://guest:guest@localhost:5672/"
 
+    ; location of the mig api
+    api             = "http://localhost:1664/api/v1/"
+
     ; location of the local stat socket
     socket           = "127.0.0.1:51664"
 

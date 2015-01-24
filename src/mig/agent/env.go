@@ -8,10 +8,10 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"mig"
 	"net"
-
-	"github.com/ccding/go-stun/stun"
+	"net/http"
 )
 
 func findLocalIPs(orig_ctx Context) (ctx Context, err error) {
@@ -31,62 +31,24 @@ func findLocalIPs(orig_ctx Context) (ctx Context, err error) {
 	return
 }
 
-var stunHosts = map[string]int{
-	"stun01.sipphone.com": 3478,
-	"stun.ekiga.net":      3478,
-	"stun.fwdnet.net":     3478,
-	"stun.ideasip.com":    3478,
-	"stun.iptel.org":      3478,
-	"stun.rixtelecom.se":  3478,
-	"stun.softjoys.com":   3478,
-	"stun.voiparound.com": 3478,
-	"stun.voipbuster.com": 3478,
-	"stun.voipstunt.com":  3478,
-	"stun.voxgratia.org":  3478,
-	"stun.xten.com":       3478,
-}
-
-func findNATviaStun(orig_ctx Context) (ctx Context, err error) {
+// findPublicIP queries the ip endpoint of the mig api to discover the
+// public ip of the agent
+func findPublicIP(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
-	attempt := 0
-	for stunSrv, stunPort := range stunHosts {
-		stun.SetServerHost(stunSrv, stunPort)
-		nat, host, err := stun.Discover()
-		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("STUN discovery failed against %s:%d with error '%v'", stunSrv, stunPort, err)}.Debug()
-		}
-		switch nat {
-		case stun.NAT_ERROR:
-			ctx.Agent.Env.NAT.Result = "Test failed"
-		case stun.NAT_UNKNOWN:
-			ctx.Agent.Env.NAT.Result = "Unexpected response from the STUN server"
-		case stun.NAT_BLOCKED:
-			ctx.Agent.Env.NAT.Result = "UDP is blocked"
-		case stun.NAT_FULL:
-			ctx.Agent.Env.NAT.Result = "Full cone NAT"
-		case stun.NAT_SYMETRIC:
-			ctx.Agent.Env.NAT.Result = "Symmetric NAT"
-		case stun.NAT_RESTRICTED:
-			ctx.Agent.Env.NAT.Result = "Restricted NAT"
-		case stun.NAT_PORT_RESTRICTED:
-			ctx.Agent.Env.NAT.Result = "Port restricted NAT"
-		case stun.NAT_NONE:
-			ctx.Agent.Env.NAT.Result = "Not behind a NAT"
-		case stun.NAT_SYMETRIC_UDP_FIREWALL:
-			ctx.Agent.Env.NAT.Result = "Symmetric UDP firewall"
-		default:
-			ctx.Agent.Env.NAT.Result = "Unknown"
-		}
-		if host != nil {
-			ctx.Agent.Env.NAT.IP = host.Ip()
-			ctx.Agent.Env.NAT.StunServer = fmt.Sprintf("%s:%d", stunSrv, stunPort)
-			break
-		}
-		attempt++
-		if attempt == 3 {
-			ctx.Agent.Env.NAT.Result = "Attempted 3 lookups without results"
-			break
-		}
+	resp, err := http.Get(APIURL + "/" + "ip")
+	if err != nil {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to retrieve public ip from api: %v", err)}.Err()
+		return
 	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	ip := net.ParseIP(string(body))
+	if ip == nil {
+		err = fmt.Errorf("Public IP API returned bad results")
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+		return
+	}
+	ctx.Agent.Env.PublicIP = ip.String()
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Found public ip %s", ctx.Agent.Env.PublicIP)}.Debug()
 	return
 }

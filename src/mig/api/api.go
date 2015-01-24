@@ -60,8 +60,9 @@ func main() {
 	// register routes
 	r := mux.NewRouter()
 	s := r.PathPrefix(ctx.Server.BaseRoute).Subrouter()
-	// heartbeat is not authenticated
+	// unauthenticated endpoints
 	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")
+	s.HandleFunc("/ip", getIP).Methods("GET")
 	// all other resources require authentication
 	s.HandleFunc("/", authenticate(getHome)).Methods("GET")
 	s.HandleFunc("/search", authenticate(search)).Methods("GET")
@@ -103,7 +104,7 @@ type opIDType float64
 
 const opID opIDType = 0
 
-// getOpID returns an operation ID from a request context, and if not found, generate one
+// getOpID returns an operation ID from a request context, and if not found, generates one
 func getOpID(r *http.Request) float64 {
 	if opid := context.Get(r, opID); opid != nil {
 		return opid.(float64)
@@ -131,7 +132,8 @@ func authenticate(pass handler) handler {
 			goto authorized
 		}
 		if r.Header.Get("X-PGPAUTHORIZATION") == "" {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("[auth missing] %s", r.URL.String())}.Err()
+			logline := fmt.Sprintf("%s [missing authentication] %s", remoteAddresses(r), r.URL.String())
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: logline}.Err()
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: "X-PGPAUTHORIZATION header not found"})
 			respond(401, resource, w, r)
@@ -139,7 +141,8 @@ func authenticate(pass handler) handler {
 		}
 		inv, err = verifySignedToken(r.Header.Get("X-PGPAUTHORIZATION"))
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("[auth failed] %s %v", r.URL.String(), err)}.Err()
+			logline := fmt.Sprintf("%s [failed authentication] %s %v", remoteAddresses(r), r.URL.String(), err)
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: logline}.Err()
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Authorization verification failed with error '%v'", err)})
 			respond(401, resource, w, r)
@@ -151,12 +154,26 @@ func authenticate(pass handler) handler {
 		context.Set(r, authenticatedInvID, inv.ID)
 		ctx.Channels.Log <- mig.Log{
 			OpID: opid,
-			Desc: fmt.Sprintf("[authenticated name='%s' id='%.0f'] %s",
-				inv.Name, inv.ID, r.URL.String()),
+			Desc: fmt.Sprintf("%s [authenticated name='%s' id='%.0f'] %s",
+				remoteAddresses(r), inv.Name, inv.ID, r.URL.String()),
 		}
 		// accept request
 		pass(w, r)
 	}
+}
+
+func remoteAddresses(r *http.Request) (ips string) {
+	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{OpID: getOpID(r), Desc: fmt.Sprintf("%v", e)}.Err()
+		}
+		ctx.Channels.Log <- mig.Log{OpID: getOpID(r), Desc: "leaving remoteAddresses()"}.Debug()
+	}()
+	if r.Header.Get("X-FORWARDED-FOR") != "" {
+		ips += r.Header.Get("X-FORWARDED-FOR") + ","
+	}
+	ips += r.RemoteAddr
+	return
 }
 
 // respond builds a Collection+JSON body and sends it to the client
@@ -189,11 +206,30 @@ func getHeartbeat(respWriter http.ResponseWriter, request *http.Request) {
 	}()
 	ctx.Channels.Log <- mig.Log{
 		OpID: opid,
-		Desc: fmt.Sprintf("[no auth] %s", request.URL.String()),
+		Desc: fmt.Sprintf("%s [-] %s", remoteAddresses(request), request.URL.String()),
 	}
 	respWriter.Header().Set("Cache-Control", "no-cache")
 	respWriter.WriteHeader(200)
 	respWriter.Write([]byte("gatorz say hi"))
+}
+
+// getIP returns a the public IP of the caller as read from X-Forwarded-For
+func getIP(respWriter http.ResponseWriter, request *http.Request) {
+	opid := mig.GenID()
+	defer func() {
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getIP()"}.Debug()
+	}()
+	ctx.Channels.Log <- mig.Log{
+		OpID: opid,
+		Desc: fmt.Sprintf("%s [-] %s", remoteAddresses(request), request.URL.String()),
+	}
+	respWriter.Header().Set("Cache-Control", "no-cache")
+	respWriter.WriteHeader(200)
+	if request.Header.Get("X-FORWARDED-FOR") != "" {
+		respWriter.Write([]byte(request.Header.Get("X-FORWARDED-FOR")))
+	} else {
+		respWriter.Write([]byte(request.RemoteAddr))
+	}
 }
 
 // getHome returns a basic document that presents the different ressources

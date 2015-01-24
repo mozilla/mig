@@ -126,9 +126,9 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 		panic(err)
 	}
 
-	// Attempt to discover the public IP by querying a STUN server
+	// Attempt to discover the public IP
 	if DISCOVERPUBLICIP {
-		ctx, err = findNATviaStun(ctx)
+		ctx, err = findPublicIP(ctx)
 		if err != nil {
 			panic(err)
 		}
@@ -510,7 +510,6 @@ func Destroy(ctx Context) (err error) {
 	close(ctx.Channels.Results)
 	// give one second for the goroutines to close
 	time.Sleep(1 * time.Second)
-	close(ctx.Channels.Log)
 	ctx.MQ.conn.Close()
 	return
 }

@@ -25,6 +25,7 @@ type config struct {
 		Socket           string
 		HeartbeatFreq    string
 		ModuleTimeout    string
+		Api              string
 	}
 	Certs struct {
 		Ca, Cert, Key string
@@ -51,6 +52,7 @@ func configLoad(path string) (err error) {
 	CHECKIN = config.Agent.CheckIn
 	LOGGINGCONF = config.Logging
 	AMQPBROKER = config.Agent.Relay
+	APIURL = config.Agent.Api
 	HEARTBEATFREQ, err = time.ParseDuration(config.Agent.HeartbeatFreq)
 	if err != nil {
 		panic(err)

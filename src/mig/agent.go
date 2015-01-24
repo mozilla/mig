@@ -41,12 +41,5 @@ type AgentEnv struct {
 	IsProxied bool     `json:"isproxied"`
 	Proxy     string   `json:"proxy,omitempty"`
 	Addresses []string `json:"addresses,omitempty"`
-	NAT       NAT      `json:"nat,omitempty"`
-}
-
-// NAT stores Network Address Translation information of an endpoint
-type NAT struct {
-	IP         string `json:"ip,omitempty"`
-	Result     string `json:"result,omitempty"`
-	StunServer string `json:"stunserver,omitempty"`
+	PublicIP  string   `json:"publicip,omitempty"`
 }
