@@ -269,6 +269,11 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 	publication.Lock()
 	Destroy(ctx)
 
+	// if we're in debug mode, exit right away
+	if debug {
+		return
+	}
+
 	// depending on the exit reason, we may or may not attempt a respawn of the agent before exiting
 	if exitReason == "shutdown requested" {
 		svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
@@ -281,7 +286,7 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 	} else {
 		// I'll be back!
 		if ctx.Agent.Respawn {
-			ctx.Channels.Log <- mig.Log{Desc: "Agent is immortal. Resuscitating!"}
+			fmt.Fprintf(os.Stderr, "Agent is immortal. Resuscitating!")
 			cmd := exec.Command(ctx.Agent.BinPath, "-f")
 			_ = cmd.Start()
 			os.Exit(0)
