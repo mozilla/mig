@@ -1,259 +1,38 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
-<title>Mozilla InvestiGator Cheat Sheet</title>
-<meta name="author" content="Guillaume Destuynder &lt;kang&#64;mozilla.com&gt;" />
-<style type="text/css">
-
-body {
-  width: 95%;
-  max-width: 900px;
-  margin: 20px;
-  padding: 0;
-  background: #151515 url("../images/bkg.png") 0 0;
-  color: #eaeaea;
-  font: 16px;
-  line-height: 1.5;
-  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
-}
-
-/* General & 'Reset' Stuff */
-
-.container {
-  width: 95%;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-section {
-  display: block;
-  margin: 0 0 20px 0;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  /*margin: 0 0 20px;*/
-  margin: 0;
-}
-
-li {
-  line-height: 1.4 ;
-}
-
-/* Header, <header>
- *    header   - container
- *       h1       - project name
- *          h2       - project description
- *          */
-
-header {
-  background: rgba(0, 0, 0, 0.1);
-  width: 100%;
-  border-bottom: 1px dashed #b5e853;
-  /*padding: 20px 0;
- *   margin: 0 0 40px 0;*/
-  padding: 5px 0;
-  margin: 0 0 10px 0;
-}
-
-header h1 {
-  font-size: 30px;
-  line-height: 1.5;
-  margin: 0 0 0 -40px;
-  font-weight: bold;
-  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
-  /*color: #b5e853;*/
-  color: #089d00;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
-               0 0 5px rgba(181, 232, 83, 0.1),
-               0 0 10px rgba(181, 232, 83, 0.1);
-  letter-spacing: -1px;
-  -webkit-font-smoothing: antialiased;
-}
-
-header h1:before {
-  content: "./ ";
-  font-size: 24px;
-}
-
-header h2 {
-  font-size: 18px;
-  font-weight: 300;
-  /*color: #666;*/
-  color: #ff7800;
-}
-
-/* Main Content
- * */
-
-#main_content {
-  width: 100%;
-  -webkit-font-smoothing: antialiased;
-}
-section img {
-  max-width: 100%
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-weight: normal;
-  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
-  color: #b5e853;
-  letter-spacing: -0.03em;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
-               0 0 5px rgba(181, 232, 83, 0.1),
-               0 0 10px rgba(181, 232, 83, 0.1);
-}
-
-#main_content h1 {
-  font-size: 30px;
-}
-
-#main_content h2 {
-  font-size: 24px;
-}
-
-#main_content h3 {
-  font-size: 18px;
-}
-
-#main_content h4 {
-  font-size: 14px;
-}
-
-#main_content h5 {
-  font-size: 12px;
-  text-transform: uppercase;
-  margin: 0 0 5px 0;
-}
-
-#main_content h6 {
-  font-size: 12px;
-  text-transform: uppercase;
-  color: #999;
-  margin: 0 0 5px 0;
-}
-
-dt {
-  font-style: italic;
-  font-weight: bold;
-}
-/*
-ul li {
-  list-style: none;
-}
-*/
-/*
-ul li:before {
-  content: ">>";
-  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
-  font-size: 13px;
-  color: #b5e853;
-  margin-left: -37px;
-  margin-right: 21px;
-  line-height: 16px;
-}
-*/
-
-blockquote {
-  color: #aaa;
-  padding-left: 10px;
-  border-left: 1px dotted #666;
-}
-
-pre {
-  background: rgba(0, 0, 0, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 10px;
-  font-size: 14px;
-  color: #b5e853;
-  border-radius: 2px;
-  -moz-border-radius: 2px;
-  -webkit-border-radius: 2px;
-  text-wrap: normal;
-  overflow: auto;
-  overflow-y: hidden;
-}
-
-table {
-  width: 100%;
-  margin: 0 0 20px 0;
-}
-
-th {
-  text-align: left;
-  border-bottom: 1px dashed #b5e853;
-  padding: 5px 10px;
-}
-
-td {
-  padding: 5px 10px;
-}
-
-hr {
-  height: 0;
-  border: 0;
-  border-bottom: 1px dashed #b5e853;
-  color: #b5e853;
-}
-/* Links
- *    a, a:hover, a:visited
- *    */
-
-a {
-  color: #63c0f5;
-  text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);
-}
-
-
-</style>
+    <meta charset="utf-8" />
+    <link href="docstyle.css" rel="stylesheet" />
+    <title>Mozilla InvestiGator Cheat Sheet</title>
+    <meta content="Guillaume Destuynder &lt;kang@mozilla.com&gt;" name="author" />
 </head>
 <body>
-<div class="document" id="mozilla-investigator-cheat-sheet">
-<h1 class="title">Mozilla InvestiGator Cheat Sheet</h1>
-<table class="docinfo" frame="void" rules="none">
-<col class="docinfo-name" />
-<col class="docinfo-content" />
-<tbody valign="top">
-<tr><th class="docinfo-name">Author:</th>
-<td>Guillaume Destuynder &lt;<a class="reference external" href="mailto:kang&#64;mozilla.com">kang&#64;mozilla.com</a>&gt;</td></tr>
-</tbody>
-</table>
-<div class="contents topic" id="table-of-contents">
-<p class="topic-title first">Table of Contents</p>
-<ul class="auto-toc simple">
-<li><a class="reference internal" href="#file-filechecker-module-operations" id="id1">1&nbsp;&nbsp;&nbsp;File/Filechecker module operations</a></li>
-</ul>
-</div>
-<p>This is a list of common operations you may want to run with MIG.</p>
-<div class="section" id="file-filechecker-module-operations">
-<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;File/Filechecker module operations</a></h1>
-<ul class="simple">
-<li>Find if files in /etc/cron.d contain &quot;mysql://&quot; on hosts &quot;<em>buildbot</em>&quot;</li>
-</ul>
-<pre class="code bash literal-block">
-mig file -t <span class="literal string double">&quot;os='linux' AND name like '%buildbot%'&quot;</span> -path /etc/cron.d/ -content <span class="literal string double">&quot;mysql://&quot;</span>
-</pre>
-<ul class="simple">
-<li>Find if file /etc/passwd has been modified in the past 2 days</li>
-</ul>
-<pre class="code bash literal-block">
-mig file -t <span class="literal string double">&quot;os='linux'&quot;</span> -path /etc/passwd -mtime &lt;2d
-</pre>
-<ul class="simple">
-<li>Find endpoints with high uptime</li>
-</ul>
-<pre class="code bash literal-block">
-mig file -t <span class="literal string double">&quot;os='linux' OR os='darwin'&quot;</span> -path /proc/uptime -content <span class="literal string double">&quot;^[5-9]{1}[0-9]{7,}\\.&quot;</span>
-</pre>
-<ul class="simple">
-<li>Find endpoints running process &quot;/sbin/auditd&quot;</li>
-</ul>
-<pre class="code bash literal-block">
-mig file -t <span class="literal string double">&quot;os='linux'&quot;</span> -path /proc/ -name cmdline -content <span class="literal string double">&quot;/sbin/auditd&quot;</span>
-</pre>
-</div>
-</div>
+    <h1>Mozilla InvestiGator Cheat Sheet</h1>
+    <aside class="topic contents" id="table-of-contents">
+        <h1>Table of Contents</h1>
+        <ul class="auto-toc">
+            <li><a href="#file-filechecker-module-operations">1   File/Filechecker module operations</a></li>
+        </ul>
+    </aside>
+    <p>This is a list of common operations you may want to run with MIG.</p>
+    <section id="file-filechecker-module-operations">
+        <h2>1   File/Filechecker module operations</h2>
+        <ul>
+            <li>Find if files in /etc/cron.d contain "mysql://" on hosts "<em>buildbot</em>"</li>
+        </ul>
+        <pre><code class="bash">mig file -t <span class="s2">"os='linux' AND name like '%buildbot%'"</span> -path /etc/cron.d/ -content <span class="s2">"mysql://"</span></code></pre>
+        <ul>
+            <li>Find if file /etc/passwd has been modified in the past 2 days</li>
+        </ul>
+        <pre><code class="bash">mig file -t <span class="s2">"os='linux'"</span> -path /etc/passwd -mtime &lt;2d</code></pre>
+        <ul>
+            <li>Find endpoints with high uptime</li>
+        </ul>
+        <pre><code class="bash">mig file -t <span class="s2">"os='linux' OR os='darwin'"</span> -path /proc/uptime -content <span class="s2">"^[5-9]{1}[0-9]{7,}\\."</span></code></pre>
+        <ul>
+            <li>Find endpoints running process "/sbin/auditd"</li>
+        </ul>
+        <pre><code class="bash">mig file -t <span class="s2">"os='linux'"</span> -path /proc/ -name cmdline -content <span class="s2">"/sbin/auditd"</span></code></pre>
+    </section>
 </body>
 </html>

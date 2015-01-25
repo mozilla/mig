@@ -5,13 +5,33 @@ Mozilla InvestiGator Configuration Documentation
 .. sectnum::
 .. contents:: Table of Contents
 
-This document describes the steps to build and configure a complete MIG
-platform.
+This document describes the steps to build and configure a MIG platform.
+MIG has 6 major components. The Postgresql database and RabbitMQ relay are
+external dependencies, and while this document shows one way of deploying them,
+you are free to use your own method. All other components (scheduler, api,
+agents and clients) require specific compilation and configuration steps that
+are explained in this document.
 
-The quick compilation doc
--------------------------
+Due to the fast changing pace of Go, MIG and its third party packages, we do
+not currently provide binary packages. You will have to compile the components
+yourself, which is explained below.
 
-First, install Go:
+A complete environment should be configured in the following order:
+
+1. retrieve the source and prepare your build environment
+2. deploy the postgresql database
+3. deploy the rabbitmq relay
+4. build, configure and deploy the scheduler
+5. build, configure and deploy the api
+6. build the clients and create an investigator
+7. configure and deploy agents
+
+1. Prepare a build environment
+------------------------------
+
+Install Go from your package manager or `from source`_.
+
+.. _`from source`: http://golang.org/doc/install/source
 
 .. code:: bash
 
@@ -22,7 +42,7 @@ First, install Go:
     $ go version
     go version go1.2.2 linux/amd64
 
-Then, download MIG:
+Then, clone the MIG source code:
 
 .. code:: bash
 
@@ -305,18 +325,19 @@ Database creation
 ~~~~~~~~~~~~~~~~~
 
 The dabase for MIG is PostgreSQL. If you are using a local postgres database,
-you can run the script in `doc/.files/createdb.sh`_, which will create the
+you can run the script in `src/mig/database/createlocaldb.sh`_, which will create the
 database and 3 users: `migadmin`, `migscheduler` and `migapi`. Each user has
 different permissions on the database.
 
-.. _`doc/.files/createdb.sh`: https://github.com/mozilla/mig/blob/master/doc/.files/createdb.sh
+.. _`src/mig/database/createlocaldb.sh`: https://github.com/mozilla/mig/blob/master/src/mig/database/createlocaldb.sh
 
-If you are using a remote database, create the database `mig` and user
-`migadmin`, the run the script from `doc/.files/createremotedb.sh`_ that will
-create the tables, users and permissions. This approach works well with Amazon
-RDS.
+If you are using a remote database, create a database and an admin user, then
+modify the variables at the top of `src/mig/database/createremotedb.sh`_ and
+run it. The script will create the DB schema and output the credentials for
+users `migscheduler` and `migapi`. These credentials need to be references in
+the MIG Scheduler and API configuration files.
 
-.. _`doc/.files/createremotedb.sh`: https://github.com/mozilla/mig/blob/master/doc/.files/createremotedb.sh
+.. _`src/mig/database/createremotedb.sh`: https://github.com/mozilla/mig/blob/master/src/mig/database/createremotedb.sh
 
 Edit the variables in the script `createremotedb.sh`:
 
@@ -330,7 +351,8 @@ Edit the variables in the script `createremotedb.sh`:
 	PGHOST='192.168.0.1'
 	PGPORT=5432
 
-Then run it against your database server.
+Then run it against your database server. Make sure that the Postgresql client
+command line `psql` is installed locally.
 
 .. code:: bash
 
@@ -357,7 +379,8 @@ files or the scheduler and the api.
 		sslmode = "verify-full"
 
 Note that `sslmode` can take the values `disable`, `require` (no cert
-verification) and `verify-full` (requires cert verification).
+verification) and `verify-full` (requires cert verification). A proper
+installation should use `verify-full`.
 
 Database tuning
 ~~~~~~~~~~~~~~~

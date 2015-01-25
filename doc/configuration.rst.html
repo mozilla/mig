@@ -11,7 +11,7 @@
     <aside class="topic contents" id="table-of-contents">
         <h1>Table of Contents</h1>
         <ul class="auto-toc">
-            <li><a href="#the-quick-compilation-doc">1   The quick compilation doc</a></li>
+            <li><a href="#prepare-a-build-environment">1   1. Prepare a build environment</a></li>
             <li>
                 <p><a href="#agent-configuration">2   Agent Configuration</a></p>
                 <ul class="auto-toc">
@@ -62,17 +62,28 @@
             </li>
         </ul>
     </aside>
-    <p>This document describes the steps to build and configure a complete MIG platform.</p>
-    <section id="the-quick-compilation-doc">
-        <h2>1   The quick compilation doc</h2>
-        <p>First, install Go:</p>
+    <p>This document describes the steps to build and configure a MIG platform. MIG has 6 major components. The Postgresql database and RabbitMQ relay are external dependencies, and while this document shows one way of deploying them, you are free to use your own method. All other components (scheduler, api, agents and clients) require specific compilation and configuration steps that are explained in this document.</p>
+    <p>Due to the fast changing pace of Go, MIG and its third party packages, we do not currently provide binary packages. You will have to compile the components yourself, which is explained below.</p>
+    <p>A complete environment should be configured in the following order:</p>
+    <ol type="1">
+        <li>retrieve the source and prepare your build environment</li>
+        <li>deploy the postgresql database</li>
+        <li>deploy the rabbitmq relay</li>
+        <li>build, configure and deploy the scheduler</li>
+        <li>build, configure and deploy the api</li>
+        <li>build the clients and create an investigator</li>
+        <li>configure and deploy agents</li>
+    </ol>
+    <section id="prepare-a-build-environment">
+        <h2>1   1. Prepare a build environment</h2>
+        <p>Install Go from your package manager or <a href="http://golang.org/doc/install/source">from source</a>.</p>
         <pre><code class="bash"><span class="nv">$ </span>wget https://storage.googleapis.com/golang/go1.2.2.linux-amd64.tar.gz
 <span class="nv">$ </span>tar -xzvf go1.2.2.linux-amd64.tar.gz
 <span class="nv">$ </span><span class="nb">export </span><span class="nv">GOROOT</span><span class="o">=</span>~/go
 <span class="nv">$ </span><span class="nb">export </span><span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:<span class="nv">$HOME</span>/go/bin
 <span class="nv">$ </span>go version
 go version go1.2.2 linux/amd64</code></pre>
-        <p>Then, download MIG:</p>
+        <p>Then, clone the MIG source code:</p>
         <pre><code class="bash"><span class="nv">$ </span>git clone git@github.com:mozilla/mig.git</code></pre>
         <p>Download the dependencies:</p>
         <pre><code class="bash"><span class="nv">$ </span>make go_get_deps
@@ -216,8 +227,8 @@ windows.db4.sub.example.com.56b2andxmyb00</code></pre>
         </section>
         <section id="database-creation">
             <h3>4.3   Database creation</h3>
-            <p>The dabase for MIG is PostgreSQL. If you are using a local postgres database, you can run the script in <a href="https://github.com/mozilla/mig/blob/master/doc/.files/createdb.sh">doc/.files/createdb.sh</a>, which will create the database and 3 users: <cite>migadmin</cite>, <cite>migscheduler</cite> and <cite>migapi</cite>. Each user has different permissions on the database.</p>
-            <p>If you are using a remote database, create the database <cite>mig</cite> and user <cite>migadmin</cite>, the run the script from <a href="https://github.com/mozilla/mig/blob/master/doc/.files/createremotedb.sh">doc/.files/createremotedb.sh</a> that will create the tables, users and permissions. This approach works well with Amazon RDS.</p>
+            <p>The dabase for MIG is PostgreSQL. If you are using a local postgres database, you can run the script in <a href="https://github.com/mozilla/mig/blob/master/src/mig/database/createlocaldb.sh">src/mig/database/createlocaldb.sh</a>, which will create the database and 3 users: <cite>migadmin</cite>, <cite>migscheduler</cite> and <cite>migapi</cite>. Each user has different permissions on the database.</p>
+            <p>If you are using a remote database, create a database and an admin user, then modify the variables at the top of <a href="https://github.com/mozilla/mig/blob/master/src/mig/database/createremotedb.sh">src/mig/database/createremotedb.sh</a> and run it. The script will create the DB schema and output the credentials for users <cite>migscheduler</cite> and <cite>migapi</cite>. These credentials need to be references in the MIG Scheduler and API configuration files.</p>
             <p>Edit the variables in the script <cite>createremotedb.sh</cite>:</p>
             <pre><code class="bash"><span class="nv">$ </span>vim createremotedb.sh
 
@@ -226,7 +237,7 @@ windows.db4.sub.example.com.56b2andxmyb00</code></pre>
 <span class="nv">PGPASS</span><span class="o">=</span><span class="s1">'MYDATABASEPASSWORD'</span>
 <span class="nv">PGHOST</span><span class="o">=</span><span class="s1">'192.168.0.1'</span>
 <span class="nv">PGPORT</span><span class="o">=</span>5432</code></pre>
-            <p>Then run it against your database server.</p>
+            <p>Then run it against your database server. Make sure that the Postgresql client command line <cite>psql</cite> is installed locally.</p>
             <pre><code class="bash"><span class="nv">$ </span>which psql
 /usr/bin/psql
 
@@ -245,7 +256,7 @@ created users: migscheduler/4NvQFdwdQ8UOU4ekEOgWDWi3gzG5cg2X migapi/xcJyJhLg1cld
     password = "xcJyJhLg1cldIp7eXcxv0U-UqV80tMb-"
     sslmode = "verify-full"</pre>
             </blockquote>
-            <p>Note that <cite>sslmode</cite> can take the values <cite>disable</cite>, <cite>require</cite> (no cert verification) and <cite>verify-full</cite> (requires cert verification).</p>
+            <p>Note that <cite>sslmode</cite> can take the values <cite>disable</cite>, <cite>require</cite> (no cert verification) and <cite>verify-full</cite> (requires cert verification). A proper installation should use <cite>verify-full</cite>.</p>
         </section>
         <section id="database-tuning">
             <h3>4.4   Database tuning</h3>
