@@ -231,21 +231,23 @@ func actionToItem(a mig.Action, addCommands bool, ctx Context) (item cljs.Item, 
 	item.Data = []cljs.Data{
 		{Name: "action", Value: a},
 	}
-	if addCommands {
-		links := make([]cljs.Link, 0)
-		commands, err := ctx.DB.CommandsByActionID(a.ID)
-		if err != nil {
-			err = fmt.Errorf("ActionToItem() -> '%v'", err)
-			return item, err
-		}
-		for _, cmd := range commands {
-			link := cljs.Link{
-				Rel:  fmt.Sprintf("Command ID %.0f on agent %s", cmd.ID, cmd.Agent.Name),
-				Href: fmt.Sprintf("%s/command?commandid=%.0f", ctx.Server.BaseURL, cmd.ID),
+	/*
+		if addCommands {
+			links := make([]cljs.Link, 0)
+			commands, err := ctx.DB.CommandsByActionID(a.ID)
+			if err != nil {
+				err = fmt.Errorf("ActionToItem() -> '%v'", err)
+				return item, err
 			}
-			links = append(links, link)
+			for _, cmd := range commands {
+				link := cljs.Link{
+					Rel:  fmt.Sprintf("Command ID %.0f on agent %s", cmd.ID, cmd.Agent.Name),
+					Href: fmt.Sprintf("%s/command?commandid=%.0f", ctx.Server.BaseURL, cmd.ID),
+				}
+				links = append(links, link)
+			}
+			item.Links = links
 		}
-		item.Links = links
-	}
+	*/
 	return
 }
