@@ -1,6 +1,6 @@
 {
   "name": "Shellshock IOCs (nginx and more)",
-  "target": "os='linux' and heartbeattime \u003e NOW() - interval '5 minutes'",
+  "target": "queueloc like 'linux.%'",
   "threat": {
     "family": "malware",
     "level": "high"

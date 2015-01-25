@@ -24,7 +24,7 @@
     "pgpsignatures": null,
     "starttime": "0001-01-01T00:00:00Z",
     "syntaxversion": 2,
-    "target": "agents.os='linux'",
+    "target": "agents.queueloc like 'linux.%'",
     "threat": {
         "family": "backdoor",
         "level": "alert"

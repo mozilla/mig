@@ -1,6 +1,6 @@
 {
     "name": "BillGates Botnet Linux trojan modules - Backdoor.Linux.Mayday.f and Backdoor.Linux.Ganiw.a",
-    "target": "agents.os='linux'",
+    "target": "agents.queueloc like 'linux.%'",
     "threat": {
         "family": "trojan",
         "level": "alert"

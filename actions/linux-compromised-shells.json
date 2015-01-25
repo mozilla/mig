@@ -1,6 +1,6 @@
 {
     "name": "compromised linux shells",
-    "target": "agents.os='linux'",
+    "target": "agents.queueloc like 'linux.%'",
     "threat": {
         "family": "backdoor",
         "level": "alert"
