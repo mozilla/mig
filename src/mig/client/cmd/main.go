@@ -69,7 +69,7 @@ func main() {
 	fs.StringVar(&migrc, "c", homedir+"/.migrc", "alternative configuration file")
 	fs.StringVar(&show, "show", "found", "type of results to show")
 	fs.StringVar(&target, "t", `status='online'`, "action target")
-	fs.StringVar(&expiration, "e", "60s", "expiration")
+	fs.StringVar(&expiration, "e", "300s", "expiration")
 
 	// if first argument is missing, or is help, print help
 	// otherwise, pass the remainder of the arguments to the module for parsing

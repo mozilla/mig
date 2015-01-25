@@ -17,8 +17,8 @@ import (
 	"time"
 )
 
-// default expiration is 60 seconds
-var defaultExpiration = "60s"
+// default expiration is 300 seconds
+var defaultExpiration = "300s"
 
 // actionLauncher prepares an action for launch, either by starting with an empty
 // template, or by loading an existing action from the api or the local disk
