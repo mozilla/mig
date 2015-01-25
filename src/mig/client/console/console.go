@@ -14,7 +14,6 @@ import (
 	"log"
 	"mig"
 	"mig/client"
-	migdb "mig/database"
 	"os"
 	"strconv"
 	"strings"
@@ -240,7 +239,7 @@ func printStatus(cli client.Client) (err error) {
 				if err != nil {
 					panic(err)
 				}
-				var sum []migdb.AgentsSum
+				var sum []mig.AgentsVersionsSum
 				err = json.Unmarshal(bData, &sum)
 				if err != nil {
 					panic(err)
@@ -257,7 +256,7 @@ func printStatus(cli client.Client) (err error) {
 				if err != nil {
 					panic(err)
 				}
-				var sum []migdb.AgentsSum
+				var sum []mig.AgentsVersionsSum
 				err = json.Unmarshal(bData, &sum)
 				if err != nil {
 					panic(err)

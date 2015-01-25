@@ -33,15 +33,26 @@ func (db *DB) AgentByQueueAndPID(queueloc string, pid int) (agent mig.Agent, err
 
 // AgentByID returns a single agent identified by its ID
 func (db *DB) AgentByID(id float64) (agent mig.Agent, err error) {
+	var jTags, jEnv []byte
 	err = db.c.QueryRow(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime,
-		status FROM agents WHERE id=$1`, id).Scan(
+		status, tags, environment FROM agents WHERE id=$1`, id).Scan(
 		&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version, &agent.PID,
-		&agent.StartTime, &agent.HeartBeatTS, &agent.Status)
+		&agent.StartTime, &agent.HeartBeatTS, &agent.Status, &jTags, &jEnv)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving agent: '%v'", err)
 		return
 	}
 	if err == sql.ErrNoRows {
+		return
+	}
+	err = json.Unmarshal(jTags, &agent.Tags)
+	if err != nil {
+		err = fmt.Errorf("failed to unmarshal agent tags")
+		return
+	}
+	err = json.Unmarshal(jEnv, &agent.Env)
+	if err != nil {
+		err = fmt.Errorf("failed to unmarshal agent environment")
 		return
 	}
 	return
@@ -169,10 +180,8 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 		_ = txn.Rollback()
 		return
 	}
-	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc, mode, version, pid,
-		starttime, destructiontime, heartbeattime, status
-		FROM agents
-		WHERE agents.status IN ('%s', '%s') AND (%s)
+	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc, version, pid, status
+		FROM agents WHERE agents.status IN ('%s', '%s') AND (%s)
 		ORDER BY agents.queueloc, agents.heartbeattime DESC`, mig.AgtStatusOnline, mig.AgtStatusIdle, target))
 	if err != nil {
 		_ = txn.Rollback()
@@ -181,9 +190,7 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 	}
 	for rows.Next() {
 		var agent mig.Agent
-		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version,
-			&agent.PID, &agent.StartTime, &agent.DestructionTime, &agent.HeartBeatTS,
-			&agent.Status)
+		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Version, &agent.PID, &agent.Status)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
@@ -229,13 +236,76 @@ func (db *DB) MarkAgentDestroyed(agent mig.Agent) (err error) {
 	return
 }
 
-type AgentsSum struct {
-	Version string  `json:"version"`
-	Count   float64 `json:"count"`
+// GetAgentsStats retrieves the latest agents statistics. limit controls how many rows
+// of statistics are returned
+func (db *DB) GetAgentsStats(limit int) (stats []mig.AgentsStats, err error) {
+	rows, err := db.c.Query(`SELECT timestamp, online_agents, online_agents_by_version,
+		online_endpoints, idle_agents, idle_agents_by_version, idle_endpoints, new_endpoints,
+		multi_agents_endpoints, disappeared_endpoints, flapping_endpoints
+		FROM agents_stats ORDER BY timestamp DESC LIMIT $1`, limit)
+	if err != nil {
+		err = fmt.Errorf("Error while retrieving agent statistics: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var jOnlAgtVer, jIdlAgtVer []byte
+		var s mig.AgentsStats
+		err = rows.Scan(&s.Timestamp, &s.OnlineAgents, &jOnlAgtVer, &s.OnlineEndpoints,
+			&s.IdleAgents, &jIdlAgtVer, &s.IdleEndpoints, &s.NewEndpoints,
+			&s.MultiAgentsEndpoints, &s.DisappearedEndpoints, &s.FlappingEndpoints)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to retrieve agent statistics data: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jOnlAgtVer, &s.OnlineAgentsByVersion)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to unmarshal online agent by version statistics: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jIdlAgtVer, &s.IdleAgentsByVersion)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to unmarshal idle agent by version statistics: '%v'", err)
+			return
+		}
+		stats = append(stats, s)
+	}
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
+	return
+}
+
+// StoreAgentsStats store a new row of agents statistics and sets the timestamp to the current time
+func (db *DB) StoreAgentsStats(stats mig.AgentsStats) (err error) {
+	jOnlAgtVer, err := json.Marshal(stats.OnlineAgentsByVersion)
+	if err != nil {
+		err = fmt.Errorf("Failed to marshal online agents by version: '%v'", err)
+		return
+	}
+	jIdlAgtVer, err := json.Marshal(stats.IdleAgentsByVersion)
+	if err != nil {
+		err = fmt.Errorf("Failed to marshal idle agents by version: '%v'", err)
+		return
+	}
+	_, err = db.c.Exec(`INSERT INTO agents_stats
+		(timestamp, online_agents, online_agents_by_version, online_endpoints,
+		idle_agents, idle_agents_by_version, idle_endpoints, new_endpoints,
+		multi_agents_endpoints, disappeared_endpoints, flapping_endpoints)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		time.Now().UTC(), stats.OnlineAgents, jOnlAgtVer, stats.OnlineEndpoints,
+		stats.IdleAgents, jIdlAgtVer, stats.IdleEndpoints, stats.NewEndpoints,
+		stats.MultiAgentsEndpoints, stats.DisappearedEndpoints, stats.FlappingEndpoints)
+	if err != nil {
+		return fmt.Errorf("Failed to insert agent statistics in database: '%v'", err)
+	}
+	return
 }
 
 // SumOnlineAgentsByVersion retrieves a sum of online agents grouped by version
-func (db *DB) SumOnlineAgentsByVersion() (sum []AgentsSum, err error) {
+func (db *DB) SumOnlineAgentsByVersion() (sum []mig.AgentsVersionsSum, err error) {
 	rows, err := db.c.Query(`SELECT COUNT(*), version FROM agents
 		WHERE agents.status=$1 GROUP BY version`, mig.AgtStatusOnline)
 	if err != nil {
@@ -243,7 +313,7 @@ func (db *DB) SumOnlineAgentsByVersion() (sum []AgentsSum, err error) {
 		return
 	}
 	for rows.Next() {
-		var asum AgentsSum
+		var asum mig.AgentsVersionsSum
 		err = rows.Scan(&asum.Count, &asum.Version)
 		if err != nil {
 			rows.Close()
@@ -260,7 +330,7 @@ func (db *DB) SumOnlineAgentsByVersion() (sum []AgentsSum, err error) {
 
 // SumIdleAgentsByVersion retrieves a sum of idle agents grouped by version
 // and excludes endpoints where an online agent is running
-func (db *DB) SumIdleAgentsByVersion() (sum []AgentsSum, err error) {
+func (db *DB) SumIdleAgentsByVersion() (sum []mig.AgentsVersionsSum, err error) {
 	rows, err := db.c.Query(`SELECT COUNT(*), version FROM agents
 		WHERE agents.status=$1 AND agents.queueloc NOT IN (
 			SELECT distinct(queueloc) FROM agents
@@ -271,7 +341,7 @@ func (db *DB) SumIdleAgentsByVersion() (sum []AgentsSum, err error) {
 		return
 	}
 	for rows.Next() {
-		var asum AgentsSum
+		var asum mig.AgentsVersionsSum
 		err = rows.Scan(&asum.Count, &asum.Version)
 		if err != nil {
 			rows.Close()
@@ -323,18 +393,18 @@ func (db *DB) CountIdleEndpoints() (sum float64, err error) {
 }
 
 // CountNewEndpointsretrieves a count of new endpoints that started after `pointInTime`
-func (db *DB) CountNewEndpoints(pointInTime time.Time) (sum float64, err error) {
+func (db *DB) CountNewEndpoints(recent, old time.Time) (sum float64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
 				SELECT queueloc FROM agents
 				WHERE queueloc NOT IN (
 					SELECT queueloc FROM agents
-					WHERE heartbeattime > NOW() - interval '60 days'
+					WHERE heartbeattime > $2
 					AND heartbeattime < $1
 					GROUP BY queueloc
 				)
 				AND starttime > $1
 				GROUP BY queueloc
-			)AS newendpoints`, pointInTime).Scan(&sum)
+			)AS newendpoints`, recent, old).Scan(&sum)
 	if err != nil {
 		err = fmt.Errorf("Error while counting new endpoints: '%v'", err)
 		return

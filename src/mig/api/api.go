@@ -12,11 +12,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jvehent/cljs"
 	"mig"
-	migdb "mig/database"
 	"net/http"
 	"os"
 	"runtime"
-	"time"
 )
 
 var ctx Context
@@ -360,9 +358,8 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 
 func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 	var (
-		err                                                                                error
-		onlineagtsum, idleagtsum                                                           []migdb.AgentsSum
-		onlineEndpts, idleEndpts, newEndpts, doubleAgts, disappearedEndpts, flappingEndpts float64
+		err         error
+		agentsStats mig.AgentsStats
 	)
 	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
@@ -375,98 +372,15 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getDashboard()"}.Debug()
 	}()
-	done := make(chan bool)
-	go func() {
-		start := time.Now()
-		onlineagtsum, err = ctx.DB.SumOnlineAgentsByVersion()
-		if err != nil {
-			panic(err)
-		}
-		done <- true
-		d := time.Since(start)
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("SumOnlineAgentsByVersion() took %v to run", d)}.Debug()
-	}()
-	go func() {
-		start := time.Now()
-		idleagtsum, err = ctx.DB.SumIdleAgentsByVersion()
-		if err != nil {
-			panic(err)
-		}
-		done <- true
-		d := time.Since(start)
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("SumIdleAgentsByVersion() took %v to run", d)}.Debug()
-	}()
-	go func() {
-		start := time.Now()
-		onlineEndpts, err = ctx.DB.CountOnlineEndpoints()
-		if err != nil {
-			panic(err)
-		}
-		done <- true
-		d := time.Since(start)
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("CountOnlineEndpoints() took %v to run", d)}.Debug()
-	}()
-	go func() {
-		start := time.Now()
-		idleEndpts, err = ctx.DB.CountIdleEndpoints()
-		if err != nil {
-			panic(err)
-		}
-		done <- true
-		d := time.Since(start)
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("CountIdleEndpoints() took %v to run", d)}.Debug()
-	}()
-	go func() {
-		start := time.Now()
-		newEndpts, err = ctx.DB.CountNewEndpoints(time.Now().Add(-7 * 24 * time.Hour))
-		if err != nil {
-			panic(err)
-		}
-		done <- true
-		d := time.Since(start)
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("CountNewEndpoints() took %v to run", d)}.Debug()
-	}()
-	go func() {
-		start := time.Now()
-		doubleAgts, err = ctx.DB.CountDoubleAgents()
-		if err != nil {
-			panic(err)
-		}
-		done <- true
-		d := time.Since(start)
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("CountDoubleAgents() took %v to run", d)}.Debug()
-	}()
-	go func() {
-		start := time.Now()
-		disappearedEndpts, err = ctx.DB.CountDisappearedEndpoints(time.Now().Add(-7 * 24 * time.Hour))
-		if err != nil {
-			panic(err)
-		}
-		done <- true
-		d := time.Since(start)
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("CountDisappearedEndpoints() took %v to run", d)}.Debug()
-	}()
-	go func() {
-		start := time.Now()
-		flappingEndpts, err = ctx.DB.CountFlappingEndpoints()
-		if err != nil {
-			panic(err)
-		}
-		done <- true
-		d := time.Since(start)
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("CountFlappingEndpoints() took %v to run", d)}.Debug()
-	}()
-	// each query is ran in parallel and return a boolean in the done channel
-	// so when we have received 8 messages in the channel, all queries are done
-	ctr := 0
-	for <-done {
-		ctr++
-		if ctr == 8 {
-			break
-		}
+	stats, err := ctx.DB.GetAgentsStats(1)
+	if err != nil {
+		panic(err)
 	}
-	sumItem, err := agentsSummaryToItem(onlineagtsum, idleagtsum, onlineEndpts,
-		idleEndpts, newEndpts, doubleAgts, disappearedEndpts, flappingEndpts, ctx)
+	if len(stats) != 1 {
+		panic(fmt.Sprintf("expected 1 set of agents stats, got %d", len(stats)))
+	}
+	agentsStats = stats[0]
+	sumItem, err := agentsSummaryToItem(agentsStats, ctx)
 	resource.AddItem(sumItem)
 
 	// add the last 10 actions

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/jvehent/cljs"
 	"mig"
-	migdb "mig/database"
 	"net/http"
 	"strconv"
 )
@@ -77,30 +76,19 @@ func agentToItem(agt mig.Agent) (item cljs.Item, err error) {
 
 // agentsSumToItem receives an AgentsSum and returns an Item
 // in the Collection+JSON format
-func agentsSummaryToItem(onlineagtsum, idleagtsum []migdb.AgentsSum,
-	countonlineendpoints, countidleendpoints, countnewendpoints, countdoubleagents, countdisappearedendpoints, countflappingendpoints float64,
-	ctx Context) (item cljs.Item, err error) {
+func agentsSummaryToItem(stats mig.AgentsStats, ctx Context) (item cljs.Item, err error) {
 	item.Href = fmt.Sprintf("%s/dashboard", ctx.Server.BaseURL)
-	var (
-		totalOnlineAgents, totalIdleAgents float64
-	)
-	for _, asum := range onlineagtsum {
-		totalOnlineAgents += asum.Count
-	}
-	for _, asum := range idleagtsum {
-		totalIdleAgents += asum.Count
-	}
 	item.Data = []cljs.Data{
-		{Name: "online agents", Value: totalOnlineAgents},
-		{Name: "online endpoints", Value: countonlineendpoints},
-		{Name: "idle agents", Value: totalIdleAgents},
-		{Name: "idle endpoints", Value: countidleendpoints},
-		{Name: "new endpoints", Value: countnewendpoints},
-		{Name: "endpoints running 2 or more agents", Value: countdoubleagents},
-		{Name: "disappeared endpoints", Value: countdisappearedendpoints},
-		{Name: "flapping endpoints", Value: countflappingendpoints},
-		{Name: "online agents by version", Value: onlineagtsum},
-		{Name: "idle agents by version", Value: idleagtsum},
+		{Name: "online agents", Value: stats.OnlineAgents},
+		{Name: "online agents by version", Value: stats.OnlineAgentsByVersion},
+		{Name: "online endpoints", Value: stats.OnlineEndpoints},
+		{Name: "idle agents", Value: stats.IdleAgents},
+		{Name: "idle agents by version", Value: stats.IdleAgentsByVersion},
+		{Name: "idle endpoints", Value: stats.IdleEndpoints},
+		{Name: "new endpoints", Value: stats.NewEndpoints},
+		{Name: "endpoints running 2 or more agents", Value: stats.MultiAgentsEndpoints},
+		{Name: "disappeared endpoints", Value: stats.DisappearedEndpoints},
+		{Name: "flapping endpoints", Value: stats.FlappingEndpoints},
 	}
 	return
 }

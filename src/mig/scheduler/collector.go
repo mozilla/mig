@@ -13,11 +13,11 @@ import (
 	"time"
 )
 
-// spoolInspection walks through the local directories and performs the following
+// collector walks through the local directories and performs the following
 // 1. load actions and commandsthat are sitting in the directories and waiting for processing
 // 2. evaluate actions and commands that are inflight (todo)
 // 3. remove finished and invalid actions and commands once the DeleteAfter period is passed
-func spoolInspection(ctx Context) (err error) {
+func collector(ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("spoolInspection() -> %v", e)
@@ -42,23 +42,6 @@ func spoolInspection(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	err = cleanDir(ctx, ctx.Directories.Action.Done)
-	if err != nil {
-		panic(err)
-	}
-	err = cleanDir(ctx, ctx.Directories.Action.Invalid)
-	if err != nil {
-		panic(err)
-	}
-	err = markOfflineAgents(ctx)
-	if err != nil {
-		panic(err)
-	}
-	err = markIdleAgents(ctx)
-	if err != nil {
-		panic(err)
-	}
-
 	return
 }
 
@@ -223,78 +206,5 @@ func expireCommands(ctx Context) (err error) {
 		}
 	}
 	dir.Close()
-	return
-}
-
-// cleanDir walks through a directory and delete the files that
-// are older than the configured DeleteAfter parameter
-func cleanDir(ctx Context, targetDir string) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("cleanDir() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving cleanDir()"}.Debug()
-	}()
-	deletionPoint, err := time.ParseDuration(ctx.Collector.DeleteAfter)
-	dir, err := os.Open(targetDir)
-	dirContent, err := dir.Readdir(-1)
-	if err != nil {
-		panic(err)
-	}
-	// loop over the content of the directory
-	for _, DirEntry := range dirContent {
-		if !DirEntry.Mode().IsRegular() {
-			// ignore non file
-			continue
-		}
-		// if the DeleteAfter value is after the time of last modification,
-		// the file is due for deletion
-		if time.Now().Add(-deletionPoint).After(DirEntry.ModTime()) {
-			filename := targetDir + "/" + DirEntry.Name()
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("removing '%s'", filename)}
-			os.Remove(filename)
-		}
-	}
-	dir.Close()
-	return
-}
-
-// markOfflineAgents updates the status of idle agents that passed the agent timeout to "offline"
-func markOfflineAgents(ctx Context) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("markOfflineAgents() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving markOfflineAgents()"}.Debug()
-	}()
-	timeOutPeriod, err := time.ParseDuration(ctx.Agent.TimeOut)
-	if err != nil {
-		panic(err)
-	}
-	pointInTime := time.Now().Add(-timeOutPeriod)
-	err = ctx.DB.MarkOfflineAgents(pointInTime)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-// markIdleAgents updates the status of agents that stopped sending heartbeats
-func markIdleAgents(ctx Context) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("markIdleAgents() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving markIdleAgents()"}.Debug()
-	}()
-	hbFreq, err := time.ParseDuration(ctx.Agent.HeartbeatFreq)
-	if err != nil {
-		panic(err)
-	}
-	pointInTime := time.Now().Add(-hbFreq * 5)
-	err = ctx.DB.MarkIdleAgents(pointInTime)
-	if err != nil {
-		panic(err)
-	}
 	return
 }

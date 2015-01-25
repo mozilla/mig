@@ -44,3 +44,22 @@ type AgentEnv struct {
 	Addresses []string `json:"addresses,omitempty"`
 	PublicIP  string   `json:"publicip,omitempty"`
 }
+
+type AgentsStats struct {
+	Timestamp             time.Time           `json:"timestamp"`
+	OnlineAgents          float64             `json:"onlineagents"`
+	OnlineAgentsByVersion []AgentsVersionsSum `json:"onlineagentsbyversion"`
+	OnlineEndpoints       float64             `json:"onlineendpoints"`
+	IdleAgents            float64             `json:"idleagents"`
+	IdleAgentsByVersion   []AgentsVersionsSum `json:"idleagentsbyversion"`
+	IdleEndpoints         float64             `json:"idleendpoints"`
+	NewEndpoints          float64             `json:"newendpoints"`
+	MultiAgentsEndpoints  float64             `json:"multiagentsendpoints"`
+	DisappearedEndpoints  float64             `json:"disappearedendpoints"`
+	FlappingEndpoints     float64             `json:"flappingendpoints"`
+}
+
+type AgentsVersionsSum struct {
+	Version string  `json:"version"`
+	Count   float64 `json:"count"`
+}

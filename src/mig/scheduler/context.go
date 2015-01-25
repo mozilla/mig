@@ -42,6 +42,9 @@ type Context struct {
 		DetectDupAgents                                       chan string
 	}
 	Collector struct {
+		Freq string
+	}
+	Periodic struct {
 		Freq, DeleteAfter string
 	}
 	Directories struct {
