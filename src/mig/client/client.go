@@ -151,7 +151,8 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 	// execute the request
 	resp, err = cli.API.Do(r)
 	if err != nil {
-		panic(err)
+		msg := fmt.Errorf("request failed error: %d %s (%v)", resp.StatusCode, resp.Status, err)
+		panic(msg)
 	}
 	// if the request failed because of an auth issue, it may be that the auth token has expired.
 	// try the request again with a fresh token
@@ -188,17 +189,18 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
-	// unmarshal the body. don't attempt to interpret it, as long as it
-	// fits into a cljs.Resource, it's acceptable
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	if len(body) > 1 {
-		err = json.Unmarshal(body, &resource)
+	if resp.Body != nil {
+		// unmarshal the body. don't attempt to interpret it, as long as it
+		// fits into a cljs.Resource, it's acceptable
+		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			panic(err)
+		}
+		if len(body) > 1 {
+			err = json.Unmarshal(body, &resource)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	if resp.StatusCode != 200 {
