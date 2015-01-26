@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 )
 
 var ctx Context
@@ -87,15 +88,32 @@ func main() {
 	}
 }
 
+// Context variables:
 // invNameType defines a type to store the name of an investigator in the request context
 type invNameType string
 
 const authenticatedInvName invNameType = ""
 
+// getInvName returns the Name of the investigator, "noauth" if not found, an error string if auth failed
+func getInvName(r *http.Request) string {
+	if name := context.Get(r, authenticatedInvName); name != nil {
+		return name.(string)
+	}
+	return "noauth"
+}
+
 // invIDType defines a type to store the ID of an investigator in the request context
 type invIDType float64
 
 const authenticatedInvID invIDType = 0
+
+// getInvID returns the ID of the investigator, 0 if not found, -1 if auth failed
+func getInvID(r *http.Request) float64 {
+	if id := context.Get(r, authenticatedInvID); id != nil {
+		return id.(float64)
+	}
+	return 0.0
+}
 
 // opIDType defines a type for the operation ID
 type opIDType float64
@@ -130,8 +148,8 @@ func authenticate(pass handler) handler {
 			goto authorized
 		}
 		if r.Header.Get("X-PGPAUTHORIZATION") == "" {
-			logline := fmt.Sprintf("%s [missing authentication] %s", remoteAddresses(r), r.URL.String())
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: logline}.Err()
+			inv.Name = "authmissing"
+			inv.ID = -1
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: "X-PGPAUTHORIZATION header not found"})
 			respond(401, resource, w, r)
@@ -139,8 +157,8 @@ func authenticate(pass handler) handler {
 		}
 		inv, err = verifySignedToken(r.Header.Get("X-PGPAUTHORIZATION"))
 		if err != nil {
-			logline := fmt.Sprintf("%s [failed authentication] %s %v", remoteAddresses(r), r.URL.String(), err)
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: logline}.Err()
+			inv.Name = "authfailed"
+			inv.ID = -1
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Authorization verification failed with error '%v'", err)})
 			respond(401, resource, w, r)
@@ -150,11 +168,6 @@ func authenticate(pass handler) handler {
 		// store investigator identity in request context
 		context.Set(r, authenticatedInvName, inv.Name)
 		context.Set(r, authenticatedInvID, inv.ID)
-		ctx.Channels.Log <- mig.Log{
-			OpID: opid,
-			Desc: fmt.Sprintf("%s [authenticated name='%s' id='%.0f'] %s",
-				remoteAddresses(r), inv.Name, inv.ID, r.URL.String()),
-		}
 		// accept request
 		pass(w, r)
 	}
@@ -170,22 +183,29 @@ func remoteAddresses(r *http.Request) (ips string) {
 	if r.Header.Get("X-FORWARDED-FOR") != "" {
 		ips += r.Header.Get("X-FORWARDED-FOR") + ","
 	}
-	ips += r.RemoteAddr
+	// strip port from remoteaddr received from request
+	pos := strings.LastIndex(r.RemoteAddr, ":")
+	ips += r.RemoteAddr[0:pos]
 	return
 }
 
 // respond builds a Collection+JSON body and sends it to the client
-func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, request *http.Request) (err error) {
-	opid := getOpID(request)
+func respond(code int, response interface{}, respWriter http.ResponseWriter, r *http.Request) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
+			ctx.Channels.Log <- mig.Log{OpID: getOpID(r), Desc: fmt.Sprintf("%v", e)}.Err()
 		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving respond()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: getOpID(r), Desc: "leaving respond()"}.Debug()
 	}()
-	body, err := response.Marshal()
-	if err != nil {
-		panic(err)
+	var body []byte
+	// if the response is a cljs resource, marshal it, other treat it as a slice of bytes
+	if _, ok := response.(*cljs.Resource); ok {
+		body, err = response.(*cljs.Resource).Marshal()
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		body = []byte(response.([]byte))
 	}
 
 	respWriter.Header().Set("Content-Type", "application/json")
@@ -193,22 +213,40 @@ func respond(code int, response *cljs.Resource, respWriter http.ResponseWriter, 
 	respWriter.WriteHeader(code)
 	respWriter.Write(body)
 
+	ctx.Channels.Log <- mig.Log{
+		OpID: getOpID(r),
+		Desc: fmt.Sprintf("src=%s auth=[%s %.0f] %s %s %s resp_code=%d resp_size=%d",
+			remoteAddresses(r), getInvName(r), getInvID(r), r.Method, r.Proto,
+			r.URL.String(), code, len(body)),
+	}
 	return
 }
 
 // getHeartbeat returns a 200
 func getHeartbeat(respWriter http.ResponseWriter, request *http.Request) {
 	opid := mig.GenID()
+	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
+	resource := cljs.New(loc)
 	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
+			respond(500, resource, respWriter, request)
+		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getHeartbeat()"}.Debug()
 	}()
-	ctx.Channels.Log <- mig.Log{
-		OpID: opid,
-		Desc: fmt.Sprintf("%s [-] %s", remoteAddresses(request), request.URL.String()),
+	err := resource.AddItem(cljs.Item{
+		Href: request.URL.String(),
+		Data: []cljs.Data{
+			{
+				Name:  "heartbeat",
+				Value: "gatorz say hi",
+			},
+		}})
+	if err != nil {
+		panic(err)
 	}
-	respWriter.Header().Set("Cache-Control", "no-cache")
-	respWriter.WriteHeader(200)
-	respWriter.Write([]byte("gatorz say hi"))
+	respond(200, resource, respWriter, request)
 }
 
 // getIP returns a the public IP of the caller as read from X-Forwarded-For
@@ -217,16 +255,10 @@ func getIP(respWriter http.ResponseWriter, request *http.Request) {
 	defer func() {
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getIP()"}.Debug()
 	}()
-	ctx.Channels.Log <- mig.Log{
-		OpID: opid,
-		Desc: fmt.Sprintf("%s [-] %s", remoteAddresses(request), request.URL.String()),
-	}
-	respWriter.Header().Set("Cache-Control", "no-cache")
-	respWriter.WriteHeader(200)
 	if request.Header.Get("X-FORWARDED-FOR") != "" {
-		respWriter.Write([]byte(request.Header.Get("X-FORWARDED-FOR")))
+		respond(200, []byte(request.Header.Get("X-FORWARDED-FOR")), respWriter, request)
 	} else {
-		respWriter.Write([]byte(request.RemoteAddr))
+		respond(200, []byte(request.RemoteAddr), respWriter, request)
 	}
 }
 
