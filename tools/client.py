@@ -33,12 +33,13 @@ if __name__ == '__main__':
     if r.status_code == 200:
         print json.dumps(r.json(), sort_keys=True, indent=4, separators=(',', ': '))
     elif r.status_code == 500:
+        print r.json()
         # api returns a 500 with an error body on failures
         migjson=r.json()
         raise Exception("API returned HTTP code %s and error '%s:%s'" %
                             (r.status_code,
-                            migjson['collection']['code'],
-                            migjson['collection']['message'])
+                            migjson['collection']['error']['code'],
+                            migjson['collection']['error']['message'])
                         )
     else:
         # another type of failure that's unlikely to have an error body
