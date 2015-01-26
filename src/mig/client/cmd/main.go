@@ -24,6 +24,7 @@ usage: %s <module> <global options> <module parameters>
 -c <path>	path to an alternative config file. If not set, use ~/.migrc
 -e <duration>	time after which the action expires. 60 seconds by default.
 		example: -e 300s (5 minutes)
+-i <file>	load and run action from a file. supersedes other action flags.
 -show <mode>	type of results to show. if not set, default is 'found'.
 		* found: 	only print positive results
 		* notfound: 	only print negative results
@@ -52,11 +53,14 @@ func continueOnFlagError() {
 
 func main() {
 	var (
-		err                             error
-		op                              mig.Operation
-		a                               mig.Action
-		migrc, show, target, expiration string
-		modargs                         []string
+		conf                                   client.Configuration
+		cli                                    client.Client
+		err                                    error
+		op                                     mig.Operation
+		a                                      mig.Action
+		migrc, show, target, expiration, afile string
+		modargs                                []string
+		modRunner                              interface{}
 	)
 	defer func() {
 		if e := recover(); e != nil {
@@ -70,12 +74,29 @@ func main() {
 	fs.StringVar(&show, "show", "found", "type of results to show")
 	fs.StringVar(&target, "t", `status='online'`, "action target")
 	fs.StringVar(&expiration, "e", "300s", "expiration")
+	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
 
 	// if first argument is missing, or is help, print help
 	// otherwise, pass the remainder of the arguments to the module for parsing
 	// this client is agnostic to module parameters
 	if len(os.Args) < 2 || os.Args[1] == "help" || os.Args[1] == "-h" || os.Args[1] == "--help" {
 		usage()
+	}
+
+	// when reading the action from a file, go directly to launch
+	if os.Args[1] == "-i" {
+		err = fs.Parse(os.Args[1:])
+		if err != nil {
+			panic(err)
+		}
+		if afile == "/path/to/file" {
+			panic("-i flag must take an action file path as argument")
+		}
+		a, err = mig.ActionFromFile(afile)
+		if err != nil {
+			panic(err)
+		}
+		goto readytolaunch
 	}
 
 	// arguments parsing works as follow:
@@ -106,7 +127,7 @@ func main() {
 	for _, arg := range fs.Args() {
 		modargs = append(modargs, arg)
 	}
-	modRunner := mig.AvailableModules[op.Module]()
+	modRunner = mig.AvailableModules[op.Module]()
 	if _, ok := modRunner.(mig.HasParamsParser); !ok {
 		fmt.Fprintf(os.Stderr, "[error] module '%s' does not support command line invocation\n", op.Module)
 		os.Exit(2)
@@ -117,15 +138,17 @@ func main() {
 	}
 	a.Operations = append(a.Operations, op)
 
+	a.Name = op.Module + " on '" + target + "'"
+	a.Target = target
+
+readytolaunch:
 	// instanciate an API client
-	conf, err := client.ReadConfiguration(migrc)
+	conf, err = client.ReadConfiguration(migrc)
 	if err != nil {
 		panic(err)
 	}
-	cli := client.NewClient(conf)
+	cli = client.NewClient(conf)
 
-	a.Name = op.Module + " on '" + target + "'"
-	a.Target = target
 	// set the validity 60 second in the past to deal with clock skew
 	a.ValidFrom = time.Now().Add(-60 * time.Second).UTC()
 	period, err := time.ParseDuration(expiration)
