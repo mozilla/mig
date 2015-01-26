@@ -459,6 +459,35 @@ func (db *DB) CountDisappearedEndpoints(pointInTime time.Time) (sum float64, err
 	return
 }
 
+// GetDisappearedEndpoints retrieves a list of queues from endpoints that are no longer active
+func (db *DB) GetDisappearedEndpoints(oldest time.Time) (queues []string, err error) {
+	rows, err := db.c.Query(`SELECT queueloc FROM agents
+		WHERE status='offline' AND heartbeattime > $1 AND queueloc NOT IN (
+			SELECT queueloc FROM agents
+			WHERE status='idle' or status='online'
+			GROUP BY queueloc
+			)
+		GROUP BY queueloc`, oldest)
+	if err != nil {
+		err = fmt.Errorf("Error while retrieving disappeared endpoints: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var q string
+		err = rows.Scan(&q)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to retrieve endpoint queue: '%v'", err)
+			return
+		}
+		queues = append(queues, q)
+	}
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
+	return
+}
+
 // CountFlappingEndpoints a count of endpoints that have restarted their agent recently
 func (db *DB) CountFlappingEndpoints() (sum float64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
