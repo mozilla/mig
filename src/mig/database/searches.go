@@ -69,7 +69,7 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 			actions.id, actions.name, actions.target, actions.description, actions.threat,
 			actions.operations, actions.validfrom, actions.expireafter,
 			actions.pgpsignatures, actions.syntaxversion,
-			agents.id, agents.name, agents.queueloc, agents.mode, agents.version
+			agents.id, agents.name, agents.version
 			FROM commands, actions, agents, investigators, signatures
 			WHERE commands.actionid=actions.id AND commands.agentid=agents.id
 			AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
@@ -118,7 +118,7 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 		err = rows.Scan(&cmd.ID, &cmd.Status, &jRes, &cmd.StartTime, &cmd.FinishTime,
 			&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jDesc, &jThreat, &jOps,
 			&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
-			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.Mode, &cmd.Agent.Version)
+			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.Version)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to retrieve command: '%v'", err)

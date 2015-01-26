@@ -70,7 +70,7 @@ func (db *DB) CommandsByActionID(actionid float64) (commands []mig.Command, err 
 		actions.id, actions.name, actions.target, actions.description, actions.threat,
 		actions.operations, actions.validfrom, actions.expireafter,
 		actions.pgpsignatures, actions.syntaxversion,
-		agents.id, agents.name, agents.queueloc, agents.mode, agents.version
+		agents.id, agents.name, agents.version
 		FROM commands, actions, agents
 		WHERE commands.actionid=actions.id AND commands.agentid=agents.id AND actions.id=$1`, actionid)
 	if err != nil {
@@ -83,7 +83,7 @@ func (db *DB) CommandsByActionID(actionid float64) (commands []mig.Command, err 
 		err = rows.Scan(&cmd.ID, &cmd.Status, &jRes, &cmd.StartTime, &cmd.FinishTime,
 			&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jDesc, &jThreat, &jOps,
 			&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
-			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.QueueLoc, &cmd.Agent.Mode, &cmd.Agent.Version)
+			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.Version)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to retrieve command: '%v'", err)
