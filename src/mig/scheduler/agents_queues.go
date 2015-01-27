@@ -53,7 +53,9 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("getHeartbeats() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving getHeartbeats()"}.Debug()
+		if ctx.Debug.Heartbeats {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving getHeartbeats()"}.Debug()
+		}
 	}()
 
 	var agt mig.Agent
@@ -61,9 +63,10 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	desc := fmt.Sprintf("Received heartbeat for Agent '%s' QueueLoc '%s'", agt.Name, agt.QueueLoc)
-	ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
-
+	if ctx.Debug.Heartbeats {
+		desc := fmt.Sprintf("Received heartbeat for Agent '%s' QueueLoc '%s'", agt.Name, agt.QueueLoc)
+		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
+	}
 	// discard expired heartbeats
 	agtTimeOut, err := time.ParseDuration(ctx.Agent.TimeOut)
 	if err != nil {
@@ -75,7 +78,6 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Notice()
 		return
 	}
-
 	// if agent is not authorized, ack the message and skip the registration
 	// nothing is returned to the agent. it's simply ignored.
 	ok, err := isAgentAuthorized(agt.QueueLoc, ctx)
@@ -87,7 +89,6 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Warning()
 		return
 	}
-	//ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Received valid keepalive from agent '%s'", agt.Name)}.Debug()
 
 	// write to database in a goroutine to avoid blocking
 	go func() {
@@ -120,7 +121,9 @@ func findDupAgents(queueloc string, ctx Context) (count int, agents []mig.Agent,
 		if e := recover(); e != nil {
 			err = fmt.Errorf("findDupAgents() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving findDupAgents()"}.Debug()
+		if ctx.Debug.Heartbeats {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving findDupAgents()"}.Debug()
+		}
 	}()
 	// retrieve agents that have sent in heartbeat in twice their heartbeat time
 	timeOutPeriod, err := time.ParseDuration(ctx.Agent.HeartbeatFreq)

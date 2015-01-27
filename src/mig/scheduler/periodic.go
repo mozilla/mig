@@ -128,6 +128,7 @@ func markIdleAgents(ctx Context) (err error) {
 // longer have any agent running on them. Only the queues with 0 consumers and 0
 // pending messages are deleted.
 func cleanQueueDisappearedEndpoints(ctx Context) (err error) {
+	start := time.Now()
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("cleanQueueDisappearedEndpoints() -> %v", e)
@@ -143,6 +144,7 @@ func cleanQueueDisappearedEndpoints(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("cleanQueueDisappearedEndpoints(): inspecting %d queues from disappeared endpoints", len(queues))}.Debug()
 	// create a new channel to do the maintenance. reusing the channel that exists in the
 	// context has strange side effect, like reducing the consumption rates of heartbeats to
 	// just a few messages per second. Thus, we prefer using a separate throwaway channel.
@@ -169,6 +171,8 @@ func cleanQueueDisappearedEndpoints(ctx Context) (err error) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("removed endpoint queue %s", queue)}
 	}
+	d := time.Since(start)
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("cleanQueueDisappearedEndpoints(): done in %v", d)}.Debug()
 	return
 }
 

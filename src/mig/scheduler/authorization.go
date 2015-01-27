@@ -19,12 +19,16 @@ func isAgentAuthorized(agentQueueLoc string, ctx Context) (ok bool, err error) {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("isAgentAuthorized() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving isAgentAuthorized()"}.Debug()
+		if ctx.Debug.Heartbeats {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving isAgentAuthorized()"}.Debug()
+		}
 	}()
 	var re *regexp.Regexp
 	// bypass mode if there's no whitelist in the conf
 	if ctx.Agent.Whitelist == "" {
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "Agent authorization checking is disabled"}.Debug()
+		if ctx.Debug.Heartbeats {
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "Agent authorization checking is disabled"}.Debug()
+		}
 		return
 	}
 
@@ -45,13 +49,17 @@ func isAgentAuthorized(agentQueueLoc string, ctx Context) (ok bool, err error) {
 				panic(err)
 			}
 			if re.MatchString(agentQueueLoc) {
-				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
+				if ctx.Debug.Heartbeats {
+					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
+				}
 				ok = true
 				return
 			}
 		} else {
 			if scanner.Text() == agentQueueLoc {
-				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
+				if ctx.Debug.Heartbeats {
+					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
+				}
 				ok = true
 				return
 			}

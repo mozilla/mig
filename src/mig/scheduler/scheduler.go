@@ -247,10 +247,6 @@ func returnCommands(cmdFiles []string, ctx Context) (err error) {
 		if err != nil {
 			panic(err)
 		}
-		//FIXME: backward compatibility hack, must remove after Dec. 1st 2014
-		if cmd.Status == "done" {
-			cmd.Status = mig.StatusSuccess
-		}
 		cmd.FinishTime = time.Now().UTC()
 		// update command in database
 		go func() {

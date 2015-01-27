@@ -84,6 +84,9 @@ type Context struct {
 	Stats struct {
 	}
 	Logging mig.Logging
+	Debug   struct {
+		Heartbeats bool
+	}
 }
 
 // Init() initializes a context from a configuration file into an
