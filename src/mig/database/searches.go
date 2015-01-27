@@ -69,7 +69,7 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 			actions.id, actions.name, actions.target, actions.description, actions.threat,
 			actions.operations, actions.validfrom, actions.expireafter,
 			actions.pgpsignatures, actions.syntaxversion,
-			agents.id, agents.name, agents.version
+			agents.id, agents.name, agents.version, agents.tags
 			FROM commands, actions, agents, investigators, signatures
 			WHERE commands.actionid=actions.id AND commands.agentid=agents.id
 			AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
@@ -113,12 +113,12 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 		return
 	}
 	for rows.Next() {
-		var jRes, jDesc, jThreat, jOps, jSig []byte
+		var jRes, jDesc, jThreat, jOps, jSig, jAgtTags []byte
 		var cmd mig.Command
 		err = rows.Scan(&cmd.ID, &cmd.Status, &jRes, &cmd.StartTime, &cmd.FinishTime,
 			&cmd.Action.ID, &cmd.Action.Name, &cmd.Action.Target, &jDesc, &jThreat, &jOps,
 			&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
-			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.Version)
+			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.Version, &jAgtTags)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to retrieve command: '%v'", err)
@@ -152,6 +152,12 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jAgtTags, &cmd.Agent.Tags)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to unmarshal agent tags: '%v'", err)
 			return
 		}
 		cmd.Action.Counters, err = db.GetActionCounters(cmd.Action.ID)

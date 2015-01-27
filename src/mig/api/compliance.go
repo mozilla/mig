@@ -20,6 +20,7 @@ type ComplianceItem struct {
 	Check        ComplianceCheck  `json:"check"`
 	Compliance   bool             `json:"compliance"`
 	Link         string           `json:"link"`
+	Tags         interface{}      `json:"tags"`
 }
 
 type CompliancePolicy struct {
@@ -41,6 +42,10 @@ type ComplianceTest struct {
 	Value string `json:"value"`
 }
 
+type ComplianceTags struct {
+	Operator string `json:"operator"`
+}
+
 func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, err error) {
 	for _, cmd := range commands {
 		var bitem ComplianceItem
@@ -52,6 +57,11 @@ func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, 
 		bitem.Check.Ref = cmd.Action.Threat.Ref
 		bitem.Check.Description = cmd.Action.Name
 		bitem.Link = fmt.Sprintf("%s/command?commandid=%.0f", ctx.Server.BaseURL, cmd.ID)
+		if _, ok := cmd.Agent.Tags.(map[string]interface{})["operator"]; ok {
+			var t ComplianceTags
+			t.Operator = cmd.Agent.Tags.(map[string]interface{})["operator"].(string)
+			bitem.Tags = t
+		}
 		for i, result := range cmd.Results {
 			buf, err := json.Marshal(result)
 			if err != nil {
