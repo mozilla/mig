@@ -11,7 +11,7 @@
     <aside class="topic contents" id="table-of-contents">
         <h1>Table of Contents</h1>
         <ul class="auto-toc">
-            <li><a href="#the-quick-compilation-doc">1   The quick compilation doc</a></li>
+            <li><a href="#prepare-a-build-environment">1   1. Prepare a build environment</a></li>
             <li>
                 <p><a href="#agent-configuration">2   Agent Configuration</a></p>
                 <ul class="auto-toc">
@@ -62,17 +62,28 @@
             </li>
         </ul>
     </aside>
-    <p>This document describes the steps to build and configure a complete MIG platform.</p>
-    <section id="the-quick-compilation-doc">
-        <h2>1   The quick compilation doc</h2>
-        <p>First, install Go:</p>
+    <p>This document describes the steps to build and configure a MIG platform. MIG has 6 major components. The Postgresql database and RabbitMQ relay are external dependencies, and while this document shows one way of deploying them, you are free to use your own method. All other components (scheduler, api, agents and clients) require specific compilation and configuration steps that are explained in this document.</p>
+    <p>Due to the fast changing pace of Go, MIG and its third party packages, we do not currently provide binary packages. You will have to compile the components yourself, which is explained below.</p>
+    <p>A complete environment should be configured in the following order:</p>
+    <ol type="1">
+        <li>retrieve the source and prepare your build environment</li>
+        <li>deploy the postgresql database</li>
+        <li>deploy the rabbitmq relay</li>
+        <li>build, configure and deploy the scheduler</li>
+        <li>build, configure and deploy the api</li>
+        <li>build the clients and create an investigator</li>
+        <li>configure and deploy agents</li>
+    </ol>
+    <section id="prepare-a-build-environment">
+        <h2>1   1. Prepare a build environment</h2>
+        <p>Install Go from your package manager or <a href="http://golang.org/doc/install/source">from source</a>.</p>
         <pre><code class="bash"><span class="nv">$ </span>wget https://storage.googleapis.com/golang/go1.2.2.linux-amd64.tar.gz
 <span class="nv">$ </span>tar -xzvf go1.2.2.linux-amd64.tar.gz
 <span class="nv">$ </span><span class="nb">export </span><span class="nv">GOROOT</span><span class="o">=</span>~/go
 <span class="nv">$ </span><span class="nb">export </span><span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:<span class="nv">$HOME</span>/go/bin
 <span class="nv">$ </span>go version
 go version go1.2.2 linux/amd64</code></pre>
-        <p>Then, download MIG:</p>
+        <p>Then, clone the MIG source code:</p>
         <pre><code class="bash"><span class="nv">$ </span>git clone git@github.com:mozilla/mig.git</code></pre>
         <p>Download the dependencies:</p>
         <pre><code class="bash"><span class="nv">$ </span>make go_get_deps
@@ -206,24 +217,18 @@ sudo chown mig-user /var/cache/mig -R</code></pre>
         <section id="whitelist">
             <h3>4.2   Whitelist</h3>
             <p>Agents's queuelocs must be listed in a whitelist file for the scheduler to accept their registrations. The location of the whitelist is configurable, but a good place for it is in <cite>/var/cache/mig/agents_whitelist.txt</cite>. The file contains one queueloc string on each line. The agent queueloc is taken from the hostname of the endpoint the agent runs on, plus a random value only known to the endpoint and the MIG platform.</p>
-            <blockquote>
-                <dl>
-                    <dt>::</dt>
-                    <dd>linux.agent123.example.net.58b3mndjmbb00 windows.db4.sub.example.com.56b2andxmyb00 ...</dd>
-                </dl>
-            </blockquote>
+            <pre><code class="">linux.agent123.example.net.58b3mndjmbb00
+windows.db4.sub.example.com.56b2andxmyb00</code></pre>
             <p>If the scheduler receives a heartbeat from an agent that is not present in the whitelist, it will log an error message. An operator can process the logs and add agents to the whitelist manually.</p>
-            <blockquote>
-                <dl>
-                    <dt>::</dt>
-                    <dd>Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized</dd>
-                </dl>
-            </blockquote>
+            <pre><code class="">Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized</code></pre>
+            <p>For environments that are particularly dynamic, it is possible to use regexes in the whitelist. This is done by prepending <cite>re:</cite> to the whitelist entry.</p>
+            <pre><code class="">re:linux.server[0-9]{1,4}.example.net.[a-z0-9]{13}</code></pre>
+            <p>Keep the list of regexes short. Until MIG implements a better agent validation mechanisms, the whitelist is reread for every registration, and regexes are recompiled every time. On a busy platform, this can be done hundreds of times per second and induce heavy cpu usage.</p>
         </section>
         <section id="database-creation">
             <h3>4.3   Database creation</h3>
-            <p>The dabase for MIG is PostgreSQL. If you are using a local postgres database, you can run the script in <a href=".files/createdb.sh">doc/.files/createdb.sh</a>, which will create the database and 3 users: <cite>migadmin</cite>, <cite>migscheduler</cite> and <cite>migapi</cite>. Each user has different permissions on the database.</p>
-            <p>If you are using a remote database, create the database <cite>mig</cite> and user <cite>migadmin</cite>, the run the script from <a href=".files/createremotedb.sh">doc/.files/createremotedb.sh</a> that will create the tables, users and permissions. This approach works well with Amazon RDS.</p>
+            <p>The dabase for MIG is PostgreSQL. If you are using a local postgres database, you can run the script in <a href="https://github.com/mozilla/mig/blob/master/src/mig/database/createlocaldb.sh">src/mig/database/createlocaldb.sh</a>, which will create the database and 3 users: <cite>migadmin</cite>, <cite>migscheduler</cite> and <cite>migapi</cite>. Each user has different permissions on the database.</p>
+            <p>If you are using a remote database, create a database and an admin user, then modify the variables at the top of <a href="https://github.com/mozilla/mig/blob/master/src/mig/database/createremotedb.sh">src/mig/database/createremotedb.sh</a> and run it. The script will create the DB schema and output the credentials for users <cite>migscheduler</cite> and <cite>migapi</cite>. These credentials need to be references in the MIG Scheduler and API configuration files.</p>
             <p>Edit the variables in the script <cite>createremotedb.sh</cite>:</p>
             <pre><code class="bash"><span class="nv">$ </span>vim createremotedb.sh
 
@@ -232,7 +237,7 @@ sudo chown mig-user /var/cache/mig -R</code></pre>
 <span class="nv">PGPASS</span><span class="o">=</span><span class="s1">'MYDATABASEPASSWORD'</span>
 <span class="nv">PGHOST</span><span class="o">=</span><span class="s1">'192.168.0.1'</span>
 <span class="nv">PGPORT</span><span class="o">=</span>5432</code></pre>
-            <p>Then run it against your database server.</p>
+            <p>Then run it against your database server. Make sure that the Postgresql client command line <cite>psql</cite> is installed locally.</p>
             <pre><code class="bash"><span class="nv">$ </span>which psql
 /usr/bin/psql
 
@@ -251,7 +256,7 @@ created users: migscheduler/4NvQFdwdQ8UOU4ekEOgWDWi3gzG5cg2X migapi/xcJyJhLg1cld
     password = "xcJyJhLg1cldIp7eXcxv0U-UqV80tMb-"
     sslmode = "verify-full"</pre>
             </blockquote>
-            <p>Note that <cite>sslmode</cite> can take the values <cite>disable</cite>, <cite>require</cite> (no cert verification) and <cite>verify-full</cite> (requires cert verification).</p>
+            <p>Note that <cite>sslmode</cite> can take the values <cite>disable</cite>, <cite>require</cite> (no cert verification) and <cite>verify-full</cite> (requires cert verification). A proper installation should use <cite>verify-full</cite>.</p>
         </section>
         <section id="database-tuning">
             <h3>4.4   Database tuning</h3>
@@ -369,6 +374,12 @@ BdUCSrvo/r7oAims8SyWE+ZObC+rw7u01Sut0ctnYrvklaM10+zkwGNOTszrduUy
         </section>
         <section id="rabbitmq-permissions">
             <h3>5.2   RabbitMQ Permissions</h3>
+            <ol type="1">
+                <li>If you want more than 1024 clients, you may have to increase the max number of file descriptors that rabbitmq is allowed to hold. On linux, increase <cite>nofile</cite> in <cite>/etc/security/limits.conf</cite> as follow:</li>
+            </ol>
+            <pre><code class="bash">rabbitmq - nofile 102400</code></pre>
+            <p>Then, make sure than <cite>pam_limits.so</cite> is included in <cite>/etc/pam.d/common-session</cite>:</p>
+            <pre><code class="bash">session    required     pam_limits.so</code></pre>
             <ol type="1">
                 <li>
                     <p>On the rabbitmq server, create three users:</p>
