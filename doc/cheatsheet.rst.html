@@ -11,28 +11,65 @@
     <aside class="topic contents" id="table-of-contents">
         <h1>Table of Contents</h1>
         <ul class="auto-toc">
-            <li><a href="#file-filechecker-module-operations">1   File/Filechecker module operations</a></li>
+            <li>
+                <p><a href="#file-module">1   File module</a></p>
+                <ul class="auto-toc">
+                    <li><a href="#find-files-in-etc-cron-d-that-contain-mysql-on-hosts-buildbot">1.1   Find files in /etc/cron.d that contain "mysql://" on hosts "<em>buildbot</em>"</a></li>
+                    <li><a href="#find-files-etc-passwd-that-have-been-modified-in-the-past-2-days">1.2   Find files /etc/passwd that have been modified in the past 2 days</a></li>
+                    <li><a href="#find-endpoints-with-high-uptime">1.3   Find endpoints with high uptime</a></li>
+                    <li><a href="#find-endpoints-running-process-sbin-auditd">1.4   Find endpoints running process "/sbin/auditd"</a></li>
+                </ul>
+            </li>
+            <li>
+                <p><a href="#netstat-module">2   Netstat module</a></p>
+                <ul class="auto-toc">
+                    <li><a href="#searching-for-a-fraudulent-ip">2.1   Searching for a fraudulent IP</a></li>
+                    <li><a href="#locating-a-device-by-its-mac-address">2.2   Locating a device by its mac address</a></li>
+                </ul>
+            </li>
         </ul>
     </aside>
     <p>This is a list of common operations you may want to run with MIG.</p>
-    <section id="file-filechecker-module-operations">
-        <h2>1   File/Filechecker module operations</h2>
-        <ul>
-            <li>Find if files in /etc/cron.d contain "mysql://" on hosts "<em>buildbot</em>"</li>
-        </ul>
-        <pre><code class="bash">mig file -t <span class="s2">"os='linux' AND name like '%buildbot%'"</span> -path /etc/cron.d/ -content <span class="s2">"mysql://"</span></code></pre>
-        <ul>
-            <li>Find if file /etc/passwd has been modified in the past 2 days</li>
-        </ul>
-        <pre><code class="bash">mig file -t <span class="s2">"os='linux'"</span> -path /etc/passwd -mtime &lt;2d</code></pre>
-        <ul>
-            <li>Find endpoints with high uptime</li>
-        </ul>
-        <pre><code class="bash">mig file -t <span class="s2">"os='linux' OR os='darwin'"</span> -path /proc/uptime -content <span class="s2">"^[5-9]{1}[0-9]{7,}\\."</span></code></pre>
-        <ul>
-            <li>Find endpoints running process "/sbin/auditd"</li>
-        </ul>
-        <pre><code class="bash">mig file -t <span class="s2">"os='linux'"</span> -path /proc/ -name cmdline -content <span class="s2">"/sbin/auditd"</span></code></pre>
+    <section id="file-module">
+        <h2>1   File module</h2>
+        <p>You can find detailled documentation by running <cite>mig file help</cite> or in the online doc at <cite>doc/module_file.html</cite>.</p>
+        <section id="find-files-in-etc-cron-d-that-contain-mysql-on-hosts-buildbot">
+            <h3>1.1   Find files in /etc/cron.d that contain "mysql://" on hosts "<em>buildbot</em>"</h3>
+            <p>This is a simple file content check that looks into all the files contained in <cite>/etc/cron.d</cite> for a string that matched <cite>mysql://</cite>.</p>
+            <pre><code class="bash">mig file -t <span class="s2">"queueloc LIKE 'linux.%' AND name LIKE '%buildbot%'"</span> -path /etc/cron.d/ -content <span class="s2">"mysql://"</span></code></pre>
+        </section>
+        <section id="find-files-etc-passwd-that-have-been-modified-in-the-past-2-days">
+            <h3>1.2   Find files /etc/passwd that have been modified in the past 2 days</h3>
+            <p>The <cite>mtime</cite> check of the file module matches against the last modified timestamp of a file.</p>
+            <pre><code class="bash">mig file -t <span class="s2">"queueloc LIKE 'linux.%'"</span> -path /etc/passwd -mtime &lt;2d</code></pre>
+        </section>
+        <section id="find-endpoints-with-high-uptime">
+            <h3>1.3   Find endpoints with high uptime</h3>
+            <p>On Linux and MacOS, the uptime of a host is kept in <cite>/proc/uptime</cite>. We can apply a regex on that file to list hosts with an uptime larger or lower than any amount.</p>
+            <p>Note the search target that uses postgres's regex format <cite>~*</cite>.</p>
+            <pre><code class="bash">mig file -t <span class="s2">"queueloc ~* '^(linux|darwin).%'"</span> -path /proc/uptime -content <span class="s2">"^[5-9]{1}[0-9]{7,}\\."</span></code></pre>
+        </section>
+        <section id="find-endpoints-running-process-sbin-auditd">
+            <h3>1.4   Find endpoints running process "/sbin/auditd"</h3>
+            <p>Here, the '^' in the content regex is important to prevent mig from listing itself while searching for the command line.</p>
+            <pre><code class="bash">mig file -t <span class="s2">"queueloc LIKE 'linux.%'"</span> -path /proc/ -name cmdline -content <span class="s2">"^/sbin/auditd"</span></code></pre>
+        </section>
+    </section>
+    <section id="netstat-module">
+        <h2>2   Netstat module</h2>
+        <p>You can find detailled documentation by running <cite>mig netstat help</cite>.</p>
+        <section id="searching-for-a-fraudulent-ip">
+            <h3>2.1   Searching for a fraudulent IP</h3>
+            <p>Given an ip 1.2.3.4 associated with fraudulent traffic, we can use the netstat module to verify that the IP isn't currently connected to any endpoint.</p>
+            <pre><code class="bash">mig netstat -ci 1.2.3.4</code></pre>
+            <p><cite>-ci</cite> stands for connected IP, and accepts an IP or a CIDR, in v4 or v6.</p>
+        </section>
+        <section id="locating-a-device-by-its-mac-address">
+            <h3>2.2   Locating a device by its mac address</h3>
+            <p>MIG <cite>netstat</cite> can be used to find endpoints that have a given mac address in their arp tables, which helps geographically locating an endpoint.</p>
+            <pre><code class="bash">mig netstat -nm 8c:70:5a:c8:be:50</code></pre>
+            <p><cite>-nm</cite> stands for neighbor mac and takes a regex (ex: <cite>^8c:70:[0-9a-f]</cite>).</p>
+        </section>
     </section>
 </body>
 </html>
