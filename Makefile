@@ -114,6 +114,9 @@ go_get_ping_deps:
 	$(GOGETTER) golang.org/x/net/ipv4
 	$(GOGETTER) golang.org/x/net/ipv6
 
+go_get_memory_deps:
+	$(GOGETTER) github.com/mozilla/masche/...
+
 go_get_platform_deps: go_get_common_deps
 	$(GOGETTER) github.com/streadway/amqp
 	$(GOGETTER) github.com/jvehent/gozdef
