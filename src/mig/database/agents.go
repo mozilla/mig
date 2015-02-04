@@ -18,7 +18,8 @@ import (
 // AgentByQueueAndPID returns a single agent that is located at a given queueloc and has a given PID
 func (db *DB) AgentByQueueAndPID(queueloc string, pid int) (agent mig.Agent, err error) {
 	err = db.c.QueryRow(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime,
-		status FROM agents WHERE queueloc=$1 AND pid=$2`, queueloc, pid).Scan(
+		status FROM agents WHERE queueloc=$1 AND pid=$2 AND status!=$3`,
+		queueloc, pid, mig.AgtStatusOffline).Scan(
 		&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version, &agent.PID,
 		&agent.StartTime, &agent.HeartBeatTS, &agent.Status)
 	if err != nil {
