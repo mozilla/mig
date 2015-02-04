@@ -45,7 +45,7 @@ type Context struct {
 		Freq string
 	}
 	Periodic struct {
-		Freq, DeleteAfter string
+		Freq, DeleteAfter, QueuesCleanupFreq string
 	}
 	Directories struct {
 		// configuration
@@ -294,7 +294,7 @@ func initRelay(orig_ctx Context) (ctx Context, err error) {
 		panic(err)
 	}
 
-	ctx.Channels.Log <- mig.Log{Sev: "info", Desc: "AMQP connection opened"}
+	ctx.Channels.Log <- mig.Log{Desc: "AMQP connection opened"}
 	return
 }
 

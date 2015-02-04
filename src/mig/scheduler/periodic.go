@@ -14,14 +14,16 @@ import (
 
 // periodic runs tasks at regular interval
 func periodic(ctx Context) (err error) {
+	start := time.Now()
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("periodic() -> %v", e)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving periodic()"}.Debug()
+		d := time.Since(start)
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("periodic run done in %v", d)}
 	}()
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "initiating periodic run"}
-	start := time.Now()
 	err = cleanDir(ctx, ctx.Directories.Action.Done)
 	if err != nil {
 		panic(err)
@@ -38,16 +40,10 @@ func periodic(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	err = cleanQueueDisappearedEndpoints(ctx)
-	if err != nil {
-		panic(err)
-	}
 	err = computeAgentsStats(ctx)
 	if err != nil {
 		panic(err)
 	}
-	d := time.Since(start)
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("periodic run done in %v", d)}
 	return
 }
 
@@ -123,60 +119,6 @@ func markIdleAgents(ctx Context) (err error) {
 	}
 	return
 }
-
-// cleanQueueDisappearedEndpoints deletes rabbitmq queues of endpoints that no
-// longer have any agent running on them. Only the queues with 0 consumers and 0
-// pending messages are deleted.
-func cleanQueueDisappearedEndpoints(ctx Context) (err error) {
-	start := time.Now()
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("cleanQueueDisappearedEndpoints() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving cleanQueueDisappearedEndpoints()"}.Debug()
-	}()
-	agtTimeout, err := time.ParseDuration(ctx.Agent.TimeOut)
-	if err != nil {
-		panic(err)
-	}
-	oldest := time.Now().Add(-agtTimeout * 2)
-	queues, err := ctx.DB.GetDisappearedEndpoints(oldest)
-	if err != nil {
-		panic(err)
-	}
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("cleanQueueDisappearedEndpoints(): inspecting %d queues from disappeared endpoints", len(queues))}.Debug()
-	// create a new channel to do the maintenance. reusing the channel that exists in the
-	// context has strange side effect, like reducing the consumption rates of heartbeats to
-	// just a few messages per second. Thus, we prefer using a separate throwaway channel.
-	amqpchan, err := ctx.MQ.conn.Channel()
-	if err != nil {
-		panic(err)
-	}
-	defer amqpchan.Close()
-	for _, queue := range queues {
-		// the call to inspect will fail if the queue doesn't exist, so we fail silently and continue
-		qstat, err := amqpchan.QueueInspect("mig.agt." + queue)
-		if err != nil {
-			continue
-		}
-		if qstat.Consumers != 0 || qstat.Messages != 0 {
-			desc := fmt.Sprintf("skipped deletion of agent queue %s, it has %d consumers and %d pending messages",
-				queue, qstat.Consumers, qstat.Messages)
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}
-			continue
-		}
-		_, err = amqpchan.QueueDelete("mig.agt."+queue, true, true, true)
-		if err != nil {
-			panic(err)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("removed endpoint queue %s", queue)}
-	}
-	d := time.Since(start)
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("cleanQueueDisappearedEndpoints(): done in %v", d)}.Debug()
-	return
-}
-
-// computeAgentsStats computes and stores statistics about agents and endpoints
 
 // computeAgentsStats computes and stores statistics about agents and endpoints
 func computeAgentsStats(ctx Context) (err error) {

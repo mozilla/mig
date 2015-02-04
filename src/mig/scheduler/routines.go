@@ -166,7 +166,7 @@ func startRoutines(ctx Context) {
 			ctx.OpID = mig.GenID()
 			err := getHeartbeats(msg, ctx)
 			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("heartbeat routine failed with error '%v'", err)}.Err()
 			}
 		}
 	}()
@@ -213,7 +213,7 @@ func startRoutines(ctx Context) {
 			ctx.OpID = mig.GenID()
 			err := collector(ctx)
 			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("collector routined failed with error '%v'", err)}.Err()
 			}
 			time.Sleep(collectorSleeper)
 		}
@@ -230,12 +230,29 @@ func startRoutines(ctx Context) {
 			ctx.OpID = mig.GenID()
 			err := periodic(ctx)
 			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("period routine failed with error '%v'", err)}.Err()
 			}
 			time.Sleep(periodicSleeper)
 		}
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "periodic routine started"}
+
+	// launch the routine that cleans up unused amqp queues
+	go func() {
+		sleeper, err := time.ParseDuration(ctx.Periodic.QueuesCleanupFreq)
+		if err != nil {
+			panic(err)
+		}
+		for {
+			ctx.OpID = mig.GenID()
+			err = QueuesCleanup(ctx)
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("queues cleanup routine failed with error '%v'", err)}.Err()
+			}
+			time.Sleep(sleeper)
+		}
+	}()
+	ctx.Channels.Log <- mig.Log{Desc: "queue cleanup routine started"}
 
 	// launch the routine that handles multi agents on same queue
 	go func() {

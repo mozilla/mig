@@ -30,10 +30,16 @@
 ; the periodic runs less often that
 ; the collector and does cleanup and DB updates
 [periodic]
+    ; frequency at which the periodic jobs run
     freq = "87s"
+
     ; delete finished actions, commands and invalids after
     ; this period has passed
     deleteafter = "72h"
+
+    ; run a rabbitmq unused queues cleanup job at this frequency
+    ; this is DB & amqp intensive so don't run it too often
+    queuescleanupfreq = "24h"
 
 [directories]
     spool = "/var/cache/mig/"
