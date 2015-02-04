@@ -113,29 +113,12 @@ func (db *DB) InsertAgent(agt mig.Agent) (err error) {
 // UpdateAgentHeartbeat updates the heartbeat timestamp of an agent in the database
 // unless the agent has been marked as destroyed or upgraded
 func (db *DB) UpdateAgentHeartbeat(agt mig.Agent) (err error) {
-	_, err = db.c.Exec(`UPDATE agents
-		SET status=$1, heartbeattime=$2 WHERE id=$3 and status!=$4 and status!=$5`,
-		mig.AgtStatusOnline, agt.HeartBeatTS, agt.ID, mig.AgtStatusDestroyed, mig.AgtStatusUpgraded)
+	_, err = db.c.Exec(`UPDATE agents SET status=$1, heartbeattime=$2 WHERE id=$3`,
+		mig.AgtStatusOnline, agt.HeartBeatTS, agt.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to update agent in database: '%v'", err)
 	}
 	return
-}
-
-// InsertOrUpdateAgent will first search for a given agent in database and update it
-// if it exists, or insert it if it doesn't
-func (db *DB) InsertOrUpdateAgent(agt mig.Agent) (err error) {
-	agent, err := db.AgentByQueueAndPID(agt.QueueLoc, agt.PID)
-	if err != nil {
-		agt.DestructionTime = time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
-		agt.Status = mig.AgtStatusOnline
-		// create a new agent
-		return db.InsertAgent(agt)
-	} else {
-		agt.ID = agent.ID
-		// agent exists in DB, update it
-		return db.UpdateAgentHeartbeat(agt)
-	}
 }
 
 // ListMultiAgentsQueues retrieves an array of queues that have more than one active agent

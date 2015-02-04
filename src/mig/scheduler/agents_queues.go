@@ -92,9 +92,36 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 
 	// write to database in a goroutine to avoid blocking
 	go func() {
-		err = ctx.DB.InsertOrUpdateAgent(agt)
+		// if an agent already exists in database, we update it, otherwise we insert it
+		agent, err := ctx.DB.AgentByQueueAndPID(agt.QueueLoc, agt.PID)
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Heartbeat DB insertion failed with error '%v' for agent '%s'", err, agt.Name)}.Err()
+			agt.DestructionTime = time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
+			agt.Status = mig.AgtStatusOnline
+			// create a new agent
+			err = ctx.DB.InsertAgent(agt)
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Heartbeat DB insertion failed with error '%v' for agent '%s'", err, agt.Name)}.Err()
+			}
+		} else {
+			// the agent exists in database. reuse the existing ID, and keep the status if it was
+			// previously set to destroyed or upgraded. otherwise set status to online
+			agt.ID = agent.ID
+			if agent.Status == mig.AgtStatusDestroyed || agent.Status == mig.AgtStatusUpgraded {
+				agt.Status = agent.Status
+			} else {
+				agt.Status = mig.AgtStatusOnline
+			}
+			err = ctx.DB.UpdateAgentHeartbeat(agt)
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Heartbeat DB update failed with error '%v' for agent '%s'", err, agt.Name)}.Err()
+			}
+			// if the agent that exists in the database has a status of 'destroyed'
+			// we should not be received a heartbeat from it. so, if detectmultiagents
+			// is set in the scheduler configuration, we pass the agent queue over to the
+			// routine than handles the destruction of agents
+			if agent.Status == mig.AgtStatusDestroyed && ctx.Agent.DetectMultiAgents {
+				ctx.Channels.DetectDupAgents <- agent.QueueLoc
+			}
 		}
 	}()
 
