@@ -72,18 +72,26 @@ func markUpgradedAgents(cmd mig.Command, ctx Context) {
 	return
 }
 
-// inspectMultiAgents takes a number of actions when several agents are found
-// to be listening on the same queue. It will trigger an agentdestroy action
-// for agents that are flagged as upgraded, and log alerts for agents that
-// are not, such that an investigator can look at them.
-func inspectMultiAgents(queueLoc string, ctx Context) (err error) {
+// killDupAgents takes a number of actions when several agents are found
+// to be running on the same endpoint. If killdupagents is set in the
+// scheduler configuration, it will kill multiple agents running on the
+// same endpoint. If killdupagents is not set, it will only kill agents as
+// part of the upgrade protocol, when a given agent has been marked as upgraded
+// in the database.
+func killDupAgents(queueLoc string, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("inspectMultiAgents() -> %v", e)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving inspectMultiAgents()"}.Debug()
 	}()
-	agentsCount, agents, err := findDupAgents(queueLoc, ctx)
+	hbfreq, err := time.ParseDuration(ctx.Agent.HeartbeatFreq)
+	if err != nil {
+		return err
+	}
+	pointInTime := time.Now().Add(-hbfreq)
+	agents, err := ctx.DB.ActiveAgentsByQueue(queueLoc, pointInTime)
+	agentsCount := len(agents)
 	if agentsCount < 2 {
 		return
 	}
@@ -93,7 +101,7 @@ func inspectMultiAgents(queueLoc string, ctx Context) (err error) {
 		switch agent.Status {
 		case "upgraded":
 			// upgraded agents must die
-			err = destroyAgent(agent, ctx)
+			err = issueKillAction(agent, ctx)
 			if err != nil {
 				panic(err)
 			}
@@ -110,7 +118,7 @@ func inspectMultiAgents(queueLoc string, ctx Context) (err error) {
 			}
 			pointInTime := time.Now().Add(-hbFreq * 3)
 			if agent.DestructionTime.Before(pointInTime) {
-				err = destroyAgent(agent, ctx)
+				err = issueKillAction(agent, ctx)
 				if err != nil {
 					panic(err)
 				}
@@ -138,33 +146,33 @@ func inspectMultiAgents(queueLoc string, ctx Context) (err error) {
 			}
 			desc := fmt.Sprintf("Issuing destruction action for agent '%s' with PID '%d'.", oldest.Name, oldest.PID)
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}
-			err = destroyAgent(oldest, ctx)
+			err = issueKillAction(oldest, ctx)
 			if err != nil {
 				panic(err)
 			}
 			// throttling to prevent issuing too many kill orders at the same time
 			time.Sleep(5 * time.Second)
 		} else {
-			desc := fmt.Sprintf("Found '%d' agents running on '%s'. Require manual inspection.", remainingAgents, queueLoc)
+			desc := fmt.Sprintf("found '%d' agents running on '%s'. Require manual inspection.", remainingAgents, queueLoc)
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Warning()
 		}
 	}
 	return
 }
 
-// destroyAgent issues an `agentdestroy` action targetted to a specific agent
+// issueKillAction issues an `agentdestroy` action targetted to a specific agent
 // and updates the status of the agent in the database
-func destroyAgent(agent mig.Agent, ctx Context) (err error) {
+func issueKillAction(agent mig.Agent, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("destroyAgent() -> %v", e)
+			err = fmt.Errorf("issueKillAction() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving destroyAgent()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving issueKillAction()"}.Debug()
 	}()
 	// generate an `agentdestroy` action for this agent
 	killAction := mig.Action{
 		ID:            mig.GenID(),
-		Name:          fmt.Sprintf("Destroy agent %s", agent.Name),
+		Name:          fmt.Sprintf("Kill agent %s", agent.Name),
 		Target:        fmt.Sprintf("queueloc='%s'", agent.QueueLoc),
 		ValidFrom:     time.Now().Add(-60 * time.Second).UTC(),
 		ExpireAfter:   time.Now().Add(30 * time.Minute).UTC(),
@@ -210,6 +218,6 @@ func destroyAgent(agent mig.Agent, ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Requested destruction of agent '%s' with PID '%d'", agent.Name, agent.PID)}.Info()
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("issued kill action for agent '%s' with PID '%d'", agent.Name, agent.PID)}.Warning()
 	return
 }

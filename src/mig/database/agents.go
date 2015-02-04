@@ -137,6 +137,31 @@ func (db *DB) InsertOrUpdateAgent(agt mig.Agent) (err error) {
 	}
 }
 
+// ListMultiAgentsQueues retrieves an array of queues that have more than one active agent
+func (db *DB) ListMultiAgentsQueues(pointInTime time.Time) (queues []string, err error) {
+	rows, err := db.c.Query(`SELECT queueloc FROM agents
+		WHERE heartbeattime > $1 AND mode != 'checkin'
+		GROUP BY queueloc HAVING COUNT(queueloc) > 1`, pointInTime)
+	if err != nil {
+		err = fmt.Errorf("Error while listing multi agents queues: '%v'", err)
+		return
+	}
+	for rows.Next() {
+		var q string
+		err = rows.Scan(&q)
+		if err != nil {
+			rows.Close()
+			err = fmt.Errorf("Failed to retrieve agent queue: '%v'", err)
+			return
+		}
+		queues = append(queues, q)
+	}
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
+	return
+}
+
 // ActiveAgentsByQueue retrieves an array of agents identified by their QueueLoc value
 func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agents []mig.Agent, err error) {
 	rows, err := db.c.Query(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime, status

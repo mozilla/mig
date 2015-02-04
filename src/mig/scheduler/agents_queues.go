@@ -98,44 +98,7 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 		}
 	}()
 
-	// If multiple agents are active at the same time, alert the cleanup routine
-	if ctx.Agent.DetectMultiAgents {
-		go func() {
-			agtCnt, _, err := findDupAgents(agt.QueueLoc, ctx)
-			if err != nil {
-				panic(err)
-			}
-			if agtCnt > 1 {
-				ctx.Channels.DetectDupAgents <- agt.QueueLoc
-			}
-		}()
-	}
 	return
-}
-
-// findDupAgents counts agents that are listening on a given queue and
-// have sent a heartbeat in recent times, to detect systems that are running
-// two or more agents
-func findDupAgents(queueloc string, ctx Context) (count int, agents []mig.Agent, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("findDupAgents() -> %v", e)
-		}
-		if ctx.Debug.Heartbeats {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving findDupAgents()"}.Debug()
-		}
-	}()
-	// retrieve agents that have sent in heartbeat in twice their heartbeat time
-	timeOutPeriod, err := time.ParseDuration(ctx.Agent.HeartbeatFreq)
-	if err != nil {
-		panic(err)
-	}
-	pointInTime := time.Now().Add(-timeOutPeriod * 2)
-	agents, err = ctx.DB.ActiveAgentsByQueue(queueloc, pointInTime)
-	if err != nil {
-		panic(err)
-	}
-	return len(agents), agents, err
 }
 
 // startResultsListener initializes the routine that receives heartbeats from agents

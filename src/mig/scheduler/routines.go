@@ -255,16 +255,18 @@ func startRoutines(ctx Context) {
 	ctx.Channels.Log <- mig.Log{Desc: "queue cleanup routine started"}
 
 	// launch the routine that handles multi agents on same queue
-	go func() {
-		for queueLoc := range ctx.Channels.DetectDupAgents {
-			ctx.OpID = mig.GenID()
-			err = inspectMultiAgents(queueLoc, ctx)
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+	if ctx.Agent.KillDupAgents {
+		go func() {
+			for queueLoc := range ctx.Channels.DetectDupAgents {
+				ctx.OpID = mig.GenID()
+				err = killDupAgents(queueLoc, ctx)
+				if err != nil {
+					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+				}
 			}
-		}
-	}()
-	ctx.Channels.Log <- mig.Log{Desc: "inspectMultiAgents() routine started"}
+		}()
+		ctx.Channels.Log <- mig.Log{Desc: "killDupAgents() routine started"}
+	}
 
 	// block here until a terminate message is received
 	exitReason := <-ctx.Channels.Terminate

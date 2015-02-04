@@ -44,6 +44,10 @@ func periodic(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
+	err = detectMultiAgents(ctx)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
@@ -230,6 +234,36 @@ func computeAgentsStats(ctx Context) (err error) {
 	err = ctx.DB.StoreAgentsStats(stats)
 	if err != nil {
 		panic(err)
+	}
+	return
+}
+
+// detectMultiAgents lists endpoint queues that are running more than one agent, and sends
+// the queues names to a channel were destruction orders can be emitted to shut down
+// duplication agents
+func detectMultiAgents(ctx Context) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("detectMultiAgents() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving detectMultiAgents()"}.Debug()
+	}()
+	// if detectmultiagents is not set in the scheduler configuration, do nothing
+	if !ctx.Agent.DetectMultiAgents {
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "detectMultiAgents is not activated. skipping"}.Debug()
+		return
+	}
+	hbfreq, err := time.ParseDuration(ctx.Agent.HeartbeatFreq)
+	if err != nil {
+		return err
+	}
+	pointInTime := time.Now().Add(-hbfreq)
+	queues, err := ctx.DB.ListMultiAgentsQueues(pointInTime)
+	if err != nil {
+		return err
+	}
+	for _, q := range queues {
+		ctx.Channels.DetectDupAgents <- q
 	}
 	return
 }
