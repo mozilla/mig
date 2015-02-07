@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/crc32"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -134,26 +133,19 @@ func (a Action) ToTempFile() (filename string, err error) {
 
 const MAXINT = int(^uint(0) >> 1)
 
-// GenID returns an ID composed of a unix timestamp and a random CRC32
+// GenID returns a unique ID 64 bits nanosecond timestamp
 func GenID() float64 {
-	h := crc32.NewIEEE()
-	t := time.Now().UTC().Format(time.RFC3339Nano)
-	r := rand.New(rand.NewSource(65537))
-	rand := string(r.Intn(MAXINT))
-	h.Write([]byte(t + rand))
-	// concatenate timestamp and hash into 64 bits ID
-	// id = <32 bits unix ts><32 bits CRC hash>
-	uid := uint64(time.Now().Unix())
-	uid = uid << 32
-	sum := float64(h.Sum32())
-	id := float64(uid) + sum
-	return id
+	id := time.Now().UnixNano()
+	if id < 1 {
+		return float64(rand.Int63())
+	}
+	return float64(id)
 }
 
 // GenHexID returns a string with an hexadecimal encoded ID
 func GenB32ID() string {
 	id := GenID()
-	return strconv.FormatUint(uint64(id), 32)
+	return strconv.FormatUint(uint64(id), 36)
 }
 
 // Validate verifies that the Action received contained all the
