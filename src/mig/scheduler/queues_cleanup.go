@@ -24,15 +24,22 @@ func QueuesCleanup(ctx Context) (err error) {
 			tmpctx.MQ.conn.Close()
 		}
 	}()
-	// cleanup runs every QueuesCleanupFreq, so we run a query that lists all offline agents
-	// between now and up to "QueuesCleanupFreq" ago. For a typical value of QueuesCleanupFreq
-	// set to 24 hours, each iteration of this job will list all agents that went offline over
-	// the last 24 hours, plus two hours for good measure...
-	pointInTime, err := time.ParseDuration(ctx.Periodic.QueuesCleanupFreq)
+	// cleanup runs every QueuesCleanupFreq and lists endpoints queues that have disappeared
+	// and for which the rabbitmq queue should be deleted.
+	//
+	// Agents are marked offline after a given period of inactivity determined by ctx.Agent.TimeOut.
+	// The cleanup job lists endpoints that have sent their last heartbeats between X time ago and
+	// now, where X = ctx.Agent.TimeOut + ctx.Periodic.QueuesCleanupFreq + 2 hours.
+	// For example, with timeout = 12 hours and queuecleanupfreq = 24 hours, X = 38 hours ago
+	to, err := time.ParseDuration(ctx.Agent.TimeOut)
 	if err != nil {
 		panic(err)
 	}
-	oldest := time.Now().Add(-(pointInTime + 2*time.Hour))
+	qcf, err := time.ParseDuration(ctx.Periodic.QueuesCleanupFreq)
+	if err != nil {
+		panic(err)
+	}
+	oldest := time.Now().Add(-(to + qcf + 2*time.Hour))
 	queues, err := ctx.DB.GetDisappearedEndpoints(oldest)
 	if err != nil {
 		panic(err)
