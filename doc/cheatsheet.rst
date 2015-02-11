@@ -106,3 +106,13 @@ CIDR (the netstat module doesn't have an `exclude` option).
 	-ci 192.160.0.0/13 -ci 192.169.0.0/16 -ci 192.170.0.0/15 -ci 192.172.0.0/14 \
 	-ci 192.176.0.0/12 -ci 192.192.0.0/10 -ci 193.0.0.0/8 -ci 194.0.0.0/7 \
 	-ci 196.0.0.0/6 -ci 200.0.0.0/5 -ci 208.0.0.0/4
+
+Find which machines have a specific USB device connected
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In this example, we'll look for the CryptoStick USB device (vendor:product 20a0:4107).
+You can find more device id's with the command `lsusb`.
+
+.. code:: bash
+
+        mig file -matchany -path /sys/devices/ -name "^uevent$" -content "PRODUCT=20a0/4107"
