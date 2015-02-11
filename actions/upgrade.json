@@ -5,7 +5,7 @@
         "Email": "jvehent@mozilla.com",
         "Revision": 201408261000
     },
-    "Target": "agents.os = 'linux' AND agents.environment->>'arch' = 'amd64'",
+    "Target": "agents.environment->>'os' = 'linux' AND agents.environment->>'arch' = 'amd64'",
     "Operations": [
         {
             "Module": "upgrade",

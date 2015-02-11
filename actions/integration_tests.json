@@ -5,7 +5,7 @@
         "email": "ulfr@mozilla.com",
         "revision": 201409031000
     },
-    "target": "agents.os = 'linux'",
+    "target": "queueloc like 'linux.%'",
     "threat": {
         "level": "-",
         "family": "test"

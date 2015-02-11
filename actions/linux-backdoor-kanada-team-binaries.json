@@ -1,15 +1,15 @@
 {
-    "counters": {},
+    "name": "Linux backdoor, found on compromised host in 2014",
     "description": {
         "author": "Julien Vehent",
         "email": "jvehent@mozilla.com",
         "revision": 201402231700.0
     },
-    "expireafter": "0001-01-01T00:00:00Z",
-    "finishtime": "0001-01-01T00:00:00Z",
-    "id": 0,
-    "lastupdatetime": "0001-01-01T00:00:00Z",
-    "name": "Linux backdoor, found on compromised host in 2014",
+    "target": "agents.queueloc like 'linux.%'",
+    "threat": {
+        "family": "backdoor",
+        "level": "alert"
+    },
     "operations": [
         {
             "module": "file",
@@ -60,13 +60,5 @@
             }
         }
     ],
-    "pgpsignatures": null,
-    "starttime": "0001-01-01T00:00:00Z",
-    "syntaxversion": 2,
-    "target": "agents.queueloc like 'linux.%'",
-    "threat": {
-        "family": "backdoor",
-        "level": "alert"
-    },
-    "validfrom": "0001-01-01T00:00:00Z"
+    "syntaxversion": 2
 }

@@ -5,7 +5,7 @@
         "email": "ulfr@mozilla.com",
         "revision": 201409031800
     },
-    "target": "agents.os = 'windows'",
+    "target": "agents.environment->>'os' = 'windows'",
     "threat": {
         "level": "-",
         "family": "test"

@@ -6,7 +6,7 @@
         "url": "https://example.net/url_to_something#useful",
         "revision": 201409021000
     },
-    "target": "agents.os = 'linux'",
+    "target": "queueloc LIKE 'linux.%' AND environment->>'ident' ILIKE '%ubuntu%'",
     "threat": {
         "level": "alert",
         "type": "system",

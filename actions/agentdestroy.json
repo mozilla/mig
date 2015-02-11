@@ -5,7 +5,7 @@
         "email": "jvehent@mozilla.com",
         "revision": 201408261000
     },
-    "target": "agents.os = 'linux'",
+    "target": "queueloc like 'linux.%'",
     "operations": [
         {
             "module": "agentdestroy",
