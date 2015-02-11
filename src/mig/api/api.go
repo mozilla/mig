@@ -408,12 +408,17 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	if len(stats) != 1 {
+	if len(stats) > 1 {
 		panic(fmt.Sprintf("expected 1 set of agents stats, got %d", len(stats)))
 	}
-	agentsStats = stats[0]
-	sumItem, err := agentsSummaryToItem(agentsStats, ctx)
-	resource.AddItem(sumItem)
+	if len(stats) == 1 {
+		agentsStats = stats[0]
+		sumItem, err := agentsSummaryToItem(agentsStats, ctx)
+		if err != nil {
+			panic(err)
+		}
+		resource.AddItem(sumItem)
+	}
 
 	// add the last 10 actions
 	actions, err := ctx.DB.LastActions(10)
