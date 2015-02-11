@@ -12,7 +12,7 @@ CREATE TABLE actions (
     lastupdatetime  timestamp with time zone,
     status          character varying(256),
     syntaxversion   integer,
-    pgpsignature    character varying(4096) NOT NULL
+    pgpsignatures   character varying(4096) NOT NULL
 );
 ALTER TABLE public.actions OWNER TO migadmin;
 ALTER TABLE ONLY actions
