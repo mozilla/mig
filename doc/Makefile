@@ -8,9 +8,14 @@ doc:
 	for doc in $$(ls *.rst); do \
 		$(RST2HTML) --stylesheet=docstyle.css "$$doc" > "$$doc.html"; \
 	done
-	for modname in $(ls ../src/mig/modules/); do \
-		if [ -r "../src/mig/modules/${modname}/doc.rst" ]; then \
-			$(RST2HTML) --stylesheet=docstyle.css "../src/mig/modules/${modname}/doc.rst" > "module_${modname}.html"; \
+	for name in `ls ../src/mig/modules/`; do \
+		if [ -r "../src/mig/modules/$$name/doc.rst" ]; then \
+			$(RST2HTML) --stylesheet=docstyle.css "../src/mig/modules/$$name/doc.rst" > "module_$$name.html"; \
+		fi; \
+	done
+	for name in `ls ../src/mig/workers/`; do \
+		if [ -r "../src/mig/workers/$$name/doc.rst" ]; then \
+			$(RST2HTML) --stylesheet=docstyle.css "../src/mig/workers/$$name/doc.rst" > "worker_$$name.html"; \
 		fi; \
 	done
 	dot -Tsvg -o .files/action_command_flow.svg .files/action_command_flow.dot

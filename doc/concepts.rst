@@ -48,6 +48,8 @@ Terminology:
 * **API**: a REST api that exposes the MIG platform to clients
 * **Client**: a program used by an investigator to interface with MIG (like the
   MIG Console, or the action generator)
+* **Worker**: a worker is a small extension to the scheduler and api that
+  performs very specific tasks based on events received via the relay.
 
 An investigator uses a client (such as the MIG Console) to communicate with
 the API. The API interfaces with the Database and the Scheduler.
@@ -343,41 +345,6 @@ The ACL is currently applied to modules. In the future, ACL will have finer
 control to authorize access to specific functions of modules. For example, an
 investigator could be authorized to call the `regex` function of filechecker
 module, but only in `/etc`. This functionality is not implemented yet.
-
-Extracting PGP fingerprints from public keys
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-On Linux, the `gpg` command can easily display the fingerprint of a key using
-`gpg --fingerprint <key id>`. For example:
-
-.. code:: bash
-
-	$ gpg --fingerprint jvehent@mozilla.com
-	pub   2048R/3B763E8F 2013-04-30
-		  Key fingerprint = E608 92BB 9BD8 9A69 F759  A1A0 A3D6 5217 3B76 3E8F
-	uid                  Julien Vehent (personal) <julien@linuxwall.info>
-	uid                  Julien Vehent (ulfr) <jvehent@mozilla.com>
-	sub   2048R/8026F39F 2013-04-30
-
-
-You should always verify the trustworthiness of a key before using it:
-
-.. code:: bash
-
-	$ gpg --list-sigs jvehent@mozilla.com
-	pub   2048R/3B763E8F 2013-04-30
-	uid                  Julien Vehent (personal) <julien@linuxwall.info>
-	sig 3        3B763E8F 2013-06-23  Julien Vehent (personal) <julien@linuxwall.info>
-	sig 3        28A860CE 2013-10-04  Curtis Koenig <ckoenig@mozilla.com>
-	.....
-
-We want to extract the fingerprint, and obtain a 40 characters hexadecimal
-string that can used in permissions.
-
-.. code:: bash
-
-	$gpg --fingerprint --with-colons jvehent@mozilla.com |grep '^fpr'|cut -f 10 -d ':'
-	E60892BB9BD89A69F759A1A0A3D652173B763E8F
 
 Agent initialization process
 ----------------------------

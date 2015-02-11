@@ -570,12 +570,12 @@ Then, make sure than `pam_limits.so` is included in `/etc/pam.d/common-session`:
 
 	session    required     pam_limits.so
 
-1. On the rabbitmq server, create three users:
+1. On the rabbitmq server, create users:
 
 	* **admin**, with the tag 'administrator'
-	* **scheduler** and **agent**, with no tag
+	* **scheduler** , **agent**, **api** and **worker** with no tag
 
-All three should have strong passwords. The scheduler password goes into the
+All users should have strong passwords. The scheduler password goes into the
 configuration file `conf/mig-scheduler.cfg`, in `[mq] password`. The agent
 password goes into `conf/mig-agent-conf.go`, in the agent `AMQPBROKER` dial
 string. The admin password is, of course, for yourself.
@@ -588,6 +588,10 @@ string. The admin password is, of course, for yourself.
    sudo rabbitmqctl add_user scheduler SomeRandomPassword
 
    sudo rabbitmqctl add_user agent SomeRandomPassword
+
+   sudo rabbitmqctl add_user api SomeRandomPassword
+
+   sudo rabbitmqctl add_user worker SomeRandomPassword
 
 You can list the users with the following command:
 
@@ -609,37 +613,79 @@ On fresh installation, rabbitmq comes with a `guest` user that as password
    sudo rabbitmqctl add_vhost mig
    sudo rabbitmqctl list_vhosts
 
-3. Create permissions for the scheduler user. The scheduler is allowed to
-   publish message (write) to the mig exchange. It can also configure and read
-   from the heartbeat and sched queues. The command below sets those permissions.
+3. Create permissions for the scheduler user. The scheduler is allowed to:
+	- CONFIGURE:
+		- create the exchanges `mig` and `migevent`
+		- create and delete any queues under `migevent.*` and `mig.agt.*`
+	- WRITE:
+		- publish into the exchanges `mig` and `migevent`
+		- bind to the queues `mig.agt.heartbeats` and `mig.agt.results`
+		- bind to any queue under `migevent.*`
+	- READ:
+		- bind to the `mig` and `migevent` exchanges
+		- read from the queues `mig.agt.heartbeats`, `mig.agt.results`
+		- read from any queue under `migevent.*`
 
 .. code:: bash
 
 	sudo rabbitmqctl set_permissions -p mig scheduler \
-	'^mig(|\.(heartbeat|sched\..*))' \
-	'^mig.*' \
-	'^mig(|\.(heartbeat|sched\..*))'
+		'^mig(|(event|\.agt)(|\..*))$' \
+		'^mig(|event(|\..*)|\.(agt\.(heartbeats|results)))$' \
+		'^mig(|event(|\..*)|\.(agt\.(heartbeats|results)))$'
 
-4. Same thing for the agent. The agent is allowed to configure and read on the
-   'mig.agt.*' resource, and write to the 'mig' exchange.
+4. Create permissions for the agent use. The agent is allowed to:
+	- CONFIGURE:
+		- create any queue under `mig.agt.(linux|windows|darwin).*`
+	- WRITE:
+		- publish to the `mig` exchange
+		- bind to any queue under `mig.agt.(linux|windows|darwin).*`
+	- READ:
+		- bind to the `mig` exchange
+		- read from any queue under `mig.agt.(linux|windows|darwin).*`
 
 .. code:: bash
 
 	sudo rabbitmqctl set_permissions -p mig agent \
-	"^mig\.agt\.*" \
-	"^mig*" \
-	"^mig(|\.agt\..*)"
+		'^mig\.agt\.(linux|windows|darwin)\..*$' \
+		'^mig(|\.agt\.(linux|windows|darwin)\..*)$' \
+		'^mig(|\.agt\.(linux|windows|darwin)\..*)$'
 
-5. Start the scheduler, it shouldn't return any ACCESS error. You can also list
+5. Create permissions for the event workers and api users. The workers and api are allowed to:
+	- CONFIGURE:
+		- create any queue under `migevent.*`
+	- WRITE:
+		- write into the exchange `migevent`
+		- bind to any queue under `migevent.*`
+	- READ:
+		- bind to the `migevent` exchange
+		- read from any queue under `migevent.*`
+
+.. code:: bash
+
+	sudo rabbitmqctl set_permissions -p mig worker \
+	'^migevent\..*$' \
+	'^migevent(|\..*)$' \
+	'^migevent(|\..*)$'
+
+	sudo rabbitmqctl set_permissions -p mig api \
+	'^migevent\..*$' \
+	'^migevent(|\..*)$' \
+	'^migevent(|\..*)$'
+
+
+6. Start the scheduler, it shouldn't return any ACCESS error. You can also list
    the permissions with the command:
 
 .. code:: bash
 
-   sudo rabbitmqctl list_permissions -p mig
-                CONFIGURE                           WRITE       READ
-   agent        ^mig\\.agt\\.*                      ^mig*       ^mig(|\\.agt\\..*)
-   scheduler    ^mig(|\\.(heartbeat|sched\\..*))    ^mig.*      ^mig(|\\.(heartbeat|sched\\..*))
-
+	$ sudo rabbitmqctl list_permissions -p mig | column -t
+	Listing permissions in vhost "mig" ...
+	USER------+CONFIGURE---------------------------------+WRITE-------------------------------------------------+READ-------------------------------------------------+
+	admin      .*                                         .*                                                     .*
+	scheduler  ^mig(|(event|\\.agt)(|\\..*))$             ^mig(|event(|\\..*)|\\.(agt\\.(heartbeats|results)))$  ^mig(|event(|\\..*)|\\.(agt\\.(heartbeats|results)))$
+	agent      ^mig\\.agt\\.(linux|windows|darwin)\\..*$  ^mig(|\\.agt\\.(linux|windows|darwin)\\..*)$           ^mig(|\\.agt\\.(linux|windows|darwin)\\..*)$
+	api        ^migevent\\..*$                            ^migevent(|\\..*)$                                     ^migevent(|\\..*)$
+	worker     ^migevent\\..*$                            ^migevent(|\\..*)$                                     ^migevent(|\\..*)$
 
 RabbitMQ TLS configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
