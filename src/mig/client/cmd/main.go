@@ -31,9 +31,9 @@ usage: %s <module> <global options> <module parameters>
 		* all: 		print all results
 -t <target>	target to launch the action on. Defaults to all active agents.
 		examples:
-		* linux agents:          -t "os='linux'"
+		* linux agents:          -t "queueloc LIKE 'linux.%%'"
 		* agents named *mysql*:  -t "name like '%%mysql%%'"
-		* proxied linux agents:  -t "os='linux' AND environment->>'isproxied' = 'true'"
+		* proxied linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
 		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
 
 --- Modules documentation ---
