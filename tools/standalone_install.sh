@@ -8,11 +8,11 @@ echo Standalone MIG demo deployment script
 which sudo 2>&1 1>/dev/null || (echo Install sudo and try again && exit 1)
 
 echo -e "\n---- Shutting down existing Scheduler and API tmux sessions\n"
-sudo tmux -S /tmp/tmux-$(id -u mig)/default kill-session -t mig
+sudo tmux -S /tmp/tmux-$(id -u mig)/default kill-session -t mig || echo "OK - No running MIG session found"
 
 echo -e "\n---- Destroying existing investigator conf & key\n"
-rm -rf -- ~/.migrc ~/.mig
-sudo killall /sbin/mig-agent
+rm -rf -- ~/.migrc ~/.mig || echo "OK"
+sudo /sbin/mig-agent -q=shutdown || echo "OK"
 
 # packages dependencies
 pkglist=""
@@ -42,6 +42,7 @@ which make 2>&1 1>/dev/null || pkglist="$pkglist make"
 which gcc  2>&1 1>/dev/null || pkglist="$pkglist gcc"
 which tmux 2>&1 1>/dev/null || pkglist="$pkglist tmux"
 which curl 2>&1 1>/dev/null || pkglist="$pkglist curl"
+which rngd 2>&1 1>/dev/null || pkglist="$pkglist rng-tools"
 
 if [ "$pkglist" != "" ]; then
     echo "missing packages: $pkglist"
@@ -92,21 +93,27 @@ sudo cp bin/linux/amd64/mig-api /usr/local/bin/ || fail
 sudo chown mig /usr/local/bin/mig-api || fail
 sudo chmod 550 /usr/local/bin/mig-api || fail
 
-echo -e "\n---- Building MIG Console\n"
+echo -e "\n---- Building MIG Clients\n"
 make mig-console || fail
 sudo cp bin/linux/amd64/mig-console /usr/local/bin/ || fail
 sudo chown mig /usr/local/bin/mig-console || fail
 sudo chmod 555 /usr/local/bin/mig-console || fail
 
+make mig-cmd || fail
+sudo cp bin/linux/amd64/mig /usr/local/bin/ || fail
+sudo chown mig /usr/local/bin/mig || fail
+sudo chmod 555 /usr/local/bin/mig || fail
+
 echo -e "\n---- Building Database\n"
-cd doc/.files
+cd src/mig/database/
 dbpass=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
 sudo su - postgres -c "psql -c 'drop database mig'"
 sudo su - postgres -c "psql -c 'drop role migadmin'"
 sudo su - postgres -c "psql -c 'drop role migapi'"
 sudo su - postgres -c "psql -c 'drop role migscheduler'"
 sudo su - postgres -c "psql -c 'drop role migreadonly'"
-bash createdb.sh $dbpass || fail
+bash createlocaldb.sh $dbpass || fail
+cd ../../..
 
 echo -e "\n---- Creating system user and folders\n"
 sudo mkdir -p /var/cache/mig/{action/new,action/done,action/inflight,action/invalid,command/done,command/inflight,command/ready,command/returned} || fail
@@ -139,80 +146,37 @@ sudo rabbitmqctl set_permissions -p mig agent \
     "^mig(|\.agt\..*)" || fail
 
 echo -e "\n---- Creating Scheduler configuration\n"
-cat > /tmp/mig-scheduler.cfg << EOF
-[agent]
-    timeout = "12h"
-    heartbeatfreq = "30s"
-    whitelist = "/var/cache/mig/agents_whitelist.txt"
-    detectmultiagents = true
-[collector]
-    freq = "7s"
-    deleteafter = "168h"
-[directories]
-    spool = "/var/cache/mig/"
-    tmp = "/var/tmp/"
-[postgres]
-    host = "127.0.0.1"
-    port = 5432
-    dbname = "mig"
-    user = "migscheduler"
-    password = "$dbpass"
-    sslmode = "disable"
-    maxconn = 10
-[mq]
-    host = "127.0.0.1"
-    port = 5672
-    user = "scheduler"
-    pass = "$mqpass"
-    vhost = "mig"
-; TLS options
-    usetls  = false
-; AMQP options
-    timeout = "600s"
-[logging]
-    mode = "file"
-    level = "info"
-    file = "/var/cache/mig/mig-scheduler.log"
-EOF
-sudo mv /tmp/mig-scheduler.cfg /etc/mig/scheduler.cfg || fail
+cp conf/scheduler.cfg.inc /tmp/scheduler.cfg
+sed -i "s|whitelist = \"/var/cache/mig/agents_whitelist.txt\"|whitelist = \"\"|" /tmp/scheduler.cfg || fail
+sed -i "s/freq = \"87s\"/freq = \"3s\"/" /tmp/scheduler.cfg || fail
+sed -i "s/password = \"123456\"/password = \"$dbpass\"/" /tmp/scheduler.cfg || fail
+sed -i "s/user  = \"guest\"/user = \"scheduler\"/" /tmp/scheduler.cfg || fail
+sed -i "s/pass  = \"guest\"/pass = \"$mqpass\"/" /tmp/scheduler.cfg || fail
+sed -i "s|vhost = \"/\"|vhost = \"mig\"|" /tmp/scheduler.cfg || fail
+sudo mv /tmp/scheduler.cfg /etc/mig/scheduler.cfg || fail
 sudo chown mig /etc/mig/scheduler.cfg || fail
 sudo chmod 750 /etc/mig/scheduler.cfg || fail
+echo OK
 
 echo -e "\n---- Creating API configuration\n"
-cat > /tmp/mig-api.cfg << EOF
-[authentication]
-    enabled = off
-    tokenduration = 10m
-[server]
-    ip = "127.0.0.1"
-    port = 12345
-    host = "http://localhost:12345"
-    baseroute = "/api/v1"
-[postgres]
-    host = "127.0.0.1"
-    port = 5432
-    dbname = "mig"
-    user = "migapi"
-    password = "$dbpass"
-    sslmode = "disable"
-[logging]
-    mode = "file" ; stdout | file | syslog
-    level = "debug"
-    file = "/var/cache/mig/mig-api.log"
-EOF
-sudo mv /tmp/mig-api.cfg /etc/mig/api.cfg || fail
+cp conf/api.cfg.inc /tmp/api.cfg
+sed -i "s/password = \"123456\"/password = \"$dbpass\"/" /tmp/api.cfg || fail
+sudo mv /tmp/api.cfg /etc/mig/api.cfg || fail
 sudo chown mig /etc/mig/api.cfg || fail
 sudo chmod 750 /etc/mig/api.cfg || fail
+echo OK
 
 echo -e "\n---- Starting Scheduler and API in TMUX under mig user\n"
 sudo su mig -c "/usr/bin/tmux new-session -s 'mig' -d"
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-scheduler'"
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-api'"
+echo OK
 
 echo -e "\n---- Testing API status\n"
 sleep 2
-ret=$(curl -s http://localhost:12345/api/v1/heartbeat)
-[ "$ret" != "gatorz say hi" ] && fail
+ret=$(curl -s http://localhost:12345/api/v1/heartbeat | grep "gatorz say hi")
+[ "$?" -gt 0 ] && fail
+echo OK - API is running
 
 echo -e "\n---- Creating GnuPG key pair for new investigator in ~/.mig/\n"
 [ ! -d ~/.mig ] && mkdir ~/.mig
@@ -254,19 +218,17 @@ package main
 import(
     "mig"
     "time"
-    _ "mig/modules/filechecker"
-    _ "mig/modules/netstat"
-    _ "mig/modules/upgrade"
-    _ "mig/modules/agentdestroy"
 )
 var TAGS = struct {
     Operator string \`json:"operator"\`
 }{
     "MIGDemo",
 }
-var ISIMMORTAL bool = true
+var ISIMMORTAL bool = false
 var MUSTINSTALLSERVICE bool = true
-var DISCOVERPUBLICIP = false
+var DISCOVERPUBLICIP bool = false
+var CHECKIN bool = false
+var APIURL string = "http://localhost:1664/api/v1/"
 var LOGGINGCONF = mig.Logging{
     Mode:   "file",
     Level:  "debug",
@@ -274,7 +236,7 @@ var LOGGINGCONF = mig.Logging{
 }
 var AMQPBROKER string = "amqp://agent:$mqpass@localhost:5672/mig"
 var PROXIES = [...]string{``}
-var SOCKET = "127.0.0.1:51664"
+var SOCKET string = "127.0.0.1:51664"
 var HEARTBEATFREQ time.Duration = 30 * time.Second
 var MODULETIMEOUT time.Duration = 300 * time.Second
 var AGENTACL = [...]string{
@@ -305,8 +267,8 @@ sudo chown root /sbin/mig-agent || fail
 sudo chmod 500 /sbin/mig-agent || fail
 sudo /sbin/mig-agent
 
-sleep 3
-echo -e "create action\nload examples/actions/integration_tests.json\nlaunch\ny\nresults\n" | /usr/local/bin/mig-console
+sleep 5
+/usr/local/bin/mig -i actions/integration_tests.json
 
 cat << EOF
 
@@ -331,5 +293,5 @@ To make it secure, do the following:
   5. Change database password of users 'migapi' and 'migscheduler'. Change rabbitmq
      passwords of users 'scheduler' and 'agent';
 
-Now to get started, launch /usr/local/bin/mig-console
+Now to get started, launch /usr/local/bin/mig-console or /usr/local/bin/mig
 EOF
