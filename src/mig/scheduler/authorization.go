@@ -27,8 +27,9 @@ func isAgentAuthorized(agentQueueLoc string, ctx Context) (ok bool, err error) {
 	// bypass mode if there's no whitelist in the conf
 	if ctx.Agent.Whitelist == "" {
 		if ctx.Debug.Heartbeats {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "Agent authorization checking is disabled"}.Debug()
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "Agent authorization checking is disabled, all agents are authorized"}.Debug()
 		}
+		ok = true
 		return
 	}
 
