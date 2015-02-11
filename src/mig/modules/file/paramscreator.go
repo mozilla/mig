@@ -23,20 +23,30 @@ func printHelp(isCmd bool) {
 -----------------
 %spath <string>	- search path
 		  ex: path /etc
+		  note that the file module will follow symlinks, but only if the linked
+		  path is located within the base path search
+		  ex: if path is set to /sys/bus/usb/devices/, it will not follow symlinks
+		  located in /sys/devices.
+
 %sname <regex>	- regex to match against the name of a file
 		  ex: name \.sql$
+
 %ssize <size>	- match files with a size smaller or greater that <size>
 		  prefix with '<' for lower than, and '>' for greater than
 		  suffix with k, m, g or t for kilo, mega, giga and terabytes
 		  ex: size <10m (match files larger than 10 megabytes)
+
 %smode <regex>	- filter on the filemode, provided as a regex on the mode string
 		  ex: mode -r(w|-)xr-x---
+
 %smtime <period>  - match files modified before or since <period>
 		  prefix with '<' for modified since, and '>' for modified before
 		  suffix with d, h, m for days, hours and minutes
 		  ex: mtime <90d (match files modified since last 90 days)
+
 %scontent <regex> - regex to match against the content of a file
 		  ex: content ^root:\$1\$10CXRS19\$/h
+
 %smd5 <hash>      .
 %ssha1 <hash>     .
 %ssha256 <hash>   .

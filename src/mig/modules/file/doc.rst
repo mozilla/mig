@@ -70,6 +70,12 @@ A path can indicate a directory or a file. In the case of a directory, FM will
 enter the directory structure recursively until its end is reached, or until
 `maxdepth` is exceeded.
 
+While browsing a path, the module will follow symlinks if they are located
+within the base search path. For example, if the base path is set to
+'/sys/bus/usb/devices/' and a symlink is found pointing to '/sys/devices', the
+symlink will **not** be followed because it points to a location outside of the
+base search path.
+
 For each path defined in a search, all search filters will be evaluated.
 
 Search Filters
