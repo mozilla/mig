@@ -1,17 +1,16 @@
 language: go
 go:
     - tip
+addons:
+    postgresql: "9.3"
 notifications:
     irc:
         channels:
             - "irc.mozilla.org#mig"
-before_install:
-    - sudo apt-get install libreadline-dev
-install:
-    - make go_get_deps
+    email:
+        recipients:
+            - ulfr@mozilla.com
+        on_success: never
+        on_failure: always
 script:
-    - make mig-scheduler
-    - make mig-api
-    - make mig-cmd
-    - make mig-console
-    - make test AGTCONF=conf/mig-agent-conf.go.inc
+    - yes | bash tools/standalone_install.sh
