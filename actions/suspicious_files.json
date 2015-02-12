@@ -1,0 +1,106 @@
+{
+    "name": "Suspicious files, potential linux backdoors",
+    "target": "queueloc LIKE 'linux.%'",
+    "description": {
+        "author": "Julien Vehent",
+        "email": "julien@linuxwall.info",
+        "revision": 201502120000,
+        "url": "http://labs.inguardians.com/ssh_attack.html"
+    },
+    "threat": {
+        "level": "medium",
+        "type": "system",
+        "family": "backdoor"
+    },
+    "operations": [
+        {
+            "module": "file",
+            "parameters": {
+                "searches": {
+                    "badfilessearch": {
+                        "paths": [
+                            "/etc",
+                            "/tmp",
+                            "/home",
+                            "/root",
+                            "/bin",
+                            "/sbin",
+                            "/usr",
+                            "/lib",
+                            "/opt"
+                        ],
+                        "names": [
+                            "^008$",
+                            "^3$",
+                            "^aabb$",
+                            "^g3$",
+                            "^imap-login$",
+                            "^\\.IptabLes$",
+                            "^\\.IptabLex$",
+                            "^jibateng$",
+                            "^joudckfr$",
+                            "^kiilp$",
+                            "^kkpklp$",
+                            "^log$",
+                            "^m64$",
+                            "^\\.mimeo$",
+                            "^\\.mimeop$",
+                            "^minerd$",
+                            "^\\.Mm2$",
+                            "^mrdos32.b00$",
+                            "^mrdos64.b00$",
+                            "^pm$",
+                            "^\\./QQ$",
+                            "^qweasd$",
+                            "^sshpa$",
+                            "^syn$",
+                            "^syscore.sh$",
+                            "^tangtang$",
+                            "^\\.task1$",
+                            "^txma$",
+                            "^www$",
+                            "^xin1$",
+                            "^xudp$",
+                            "^atdd\\..*$",
+                            "^atddd\\..*$",
+                            "^cupsdd\\..*$",
+                            "^cupsddd\\..*$",
+                            "^dsgregd$",
+                            "^dsgregd\\..*$",
+                            "^fake\\.cfg$",
+                            "^fdsfsfvff$",
+                            "^fdsfsfvff\\..*$",
+                            "^jdhe$",
+                            "^jdhe\\..*$",
+                            "^ksapd\\..*$",
+                            "^ksapdd\\..*$",
+                            "^kysapd\\..*$",
+                            "^kysapdd\\..*$",
+                            "^nhgbhhj\\..*$",
+                            "^nohup.out$",
+                            "^rewgtf3er4t$",
+                            "^rewgtf3er4t\\..*$",
+                            "^sjfedjr$",
+                            "^sjfedjr\\..*$",
+                            "^sksapd\\..*$",
+                            "^sksapdd\\..*$",
+                            "^skysapd\\..*$",
+                            "^skysapdd\\..*$",
+                            "^smarvtd$",
+                            "^smarvtd\\..*$",
+                            "^vrgshth$",
+                            "^vrgshth\\..*$",
+                            "^xfsdx\\..*$",
+                            "^xfsdxd\\..*$"
+                        ],
+                        "options": {
+                            "matchall": false
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "syntaxversion": 2
+}
+
