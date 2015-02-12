@@ -126,6 +126,10 @@ sudo chown mig /var/cache/mig -R || fail
 sudo chown mig /etc/mig || fail
 
 echo -e "\n---- Configuring RabbitMQ\n"
+(ps faux|grep "/var/lib/rabbitmq"|grep -v grep) 2>&1 1> /dev/null
+if [ $? -gt 0 ]; then
+    sudo service rabbitmq-server restart || fail
+fi
 mqpass=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
 sudo rabbitmqctl delete_user admin
 sudo rabbitmqctl add_user admin $mqpass || fail
@@ -212,7 +216,6 @@ echo -e "create investigator\n$(whoami)\n$HOME/.mig/$(whoami)-pubkey.asc\ny\n" |
     /usr/local/bin/mig-console -q || fail
 
 echo -e "\n---- Creating agent configuration\n"
-cd; cd mig
 cat > conf/mig-agent-conf.go << EOF
 package main
 import(
