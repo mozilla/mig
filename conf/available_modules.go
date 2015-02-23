@@ -11,4 +11,5 @@ import (
 	//_ "mig/modules/filechecker"
 	_ "mig/modules/netstat"
 	//_ "mig/modules/upgrade"
+	_ "mig/modules/ping"
 )
