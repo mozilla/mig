@@ -181,6 +181,15 @@ sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-sch
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-api'"
 echo OK
 
+# Unset proxy related environment variables from this point on, since we want to ensure we are
+# directly accessing MIG resources locally.
+if [ ! -z "$http_proxy" ]; then
+    unset http_proxy
+fi
+if [ ! -z "$https_proxy" ]; then
+    unset https_proxy
+fi
+
 echo -e "\n---- Testing API status\n"
 sleep 2
 ret=$(curl -s http://localhost:12345/api/v1/heartbeat | grep "gatorz say hi")
