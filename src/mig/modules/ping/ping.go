@@ -35,22 +35,16 @@ type Runner struct {
 }
 
 type params struct {
-	// ipv4, ipv6 or fqdn.
-	Destination string `json:"destination"`
-	// 16 bits integer. Throws an error when used with icmp. Defaults to 80 otherwise.
-	DestinationPort float64 `json:"destinationport,omitempty"`
-	// icmp, tcp, udp
-	Protocol string `json:"protocol"`
-	// Number of tests
-	Count float64 `json:"count,omitempty"`
-	// Timeout for individual test. defaults to 5s.
-	Timeout float64 `json:"timeout,omitempty"`
+	Destination     string  `json:"destination"`               // ipv4, ipv6 or fqdn.
+	DestinationPort float64 `json:"destinationport,omitempty"` // 16 bits integer. Throws an error when used with icmp. Defaults to 80 otherwise.
+	Protocol        string  `json:"protocol"`                  // icmp, tcp, udp
+	Count           float64 `json:"count,omitempty"`           // Number of tests
+	Timeout         float64 `json:"timeout,omitempty"`         // Timeout for individual test. defaults to 5s.
 }
 
 type elements struct {
-	// Collect latency information (in ms).
-	Latency   []string `json:"latency"`
-	Reachable bool     `json:"reachable"`
+	MsLatencies []float64 `json:"ms_latencies"` // response latency in milliseconds: 9999999 indicates timeout, -1 indicates unreachable, 0 general error.
+	Reachable   bool      `json:"reachable"`
 }
 
 // Global variable latencies.
@@ -243,27 +237,31 @@ func (r Runner) Run(Args []byte) string {
 			err = r.udpPing()
 		}
 
-		latency := fmt.Sprintf("%dms", int((time.Since(startTime)).Seconds()*1000))
+		latency := time.Since(startTime).Seconds() * 1000
 
 		if err != nil {
 			if err.Error() == "Timeout" {
-				latency = "Timeout"
+				latency = 9999999
 			} else if strings.Contains(err.Error(), "connection refused") {
-				latency = ""
+				latency = -1
 			} else {
 				r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Fail on test#%d (%v)", i+1, err))
-				latency = ""
+				latency = 0
 			}
 		}
 
-		// For udp, a timeout indicates that the port *maybe* open.
-		if latency == "Timeout" && r.Parameters.Protocol == "udp" {
+		switch latency {
+		case -1, 0:
+			latencies.Reachable = false
+		case 9999999:
+			// For udp, a timeout indicates that the port *maybe* open.
+			if r.Parameters.Protocol == "udp" {
+				latencies.Reachable = true
+			}
+		default:
 			latencies.Reachable = true
-			latencies.Latency = append(latencies.Latency, latency)
-		} else if latency != "" && latency != "Timeout" {
-			latencies.Reachable = true
-			latencies.Latency = append(latencies.Latency, latency)
 		}
+		latencies.MsLatencies = append(latencies.MsLatencies, latency)
 	}
 
 	r.Results.Success = true
@@ -274,7 +272,7 @@ func (r Runner) buildResults() string {
 	r.Results.FoundAnything = false
 	r.Results.Elements = latencies
 
-	if len(latencies.Latency) > 0 {
+	if len(latencies.MsLatencies) > 0 {
 		r.Results.FoundAnything = true
 	}
 
