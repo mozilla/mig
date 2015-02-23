@@ -252,7 +252,7 @@ func (r Runner) Run(Args []byte) string {
 
 		switch latency {
 		case -1, 0:
-			latencies.Reachable = false
+			// do nothing
 		case 9999999:
 			// For udp, a timeout indicates that the port *maybe* open.
 			if r.Parameters.Protocol == "udp" {
@@ -269,13 +269,8 @@ func (r Runner) Run(Args []byte) string {
 }
 
 func (r Runner) buildResults() string {
-	r.Results.FoundAnything = false
+	r.Results.FoundAnything = latencies.Reachable
 	r.Results.Elements = latencies
-
-	if len(latencies.MsLatencies) > 0 {
-		r.Results.FoundAnything = true
-	}
-
 	jsonOutput, err := json.Marshal(r.Results)
 	if err != nil {
 		panic(err)
