@@ -4,6 +4,11 @@ fail() {
     exit 1
 }
 
+if [ -z "$BASH_SOURCE" ]; then
+    echo "This script *must* run under bash. Please rerun with '$ bash $0'"
+    fail
+fi
+
 echo Standalone MIG demo deployment script
 which sudo 2>&1 1>/dev/null || (echo Install sudo and try again && exit 1)
 
