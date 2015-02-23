@@ -1,0 +1,286 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// Contributor: Sushant Dinesh sushant.dinesh94@gmail.com [:sushant94]
+
+// ping module is used to check the connection between an endpoint
+// and a destination host.
+
+package ping
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
+	"mig"
+	"net"
+	"os"
+	"strings"
+	"time"
+)
+
+func init() {
+	mig.RegisterModule("ping", func() interface{} {
+		return new(Runner)
+	})
+}
+
+type Runner struct {
+	Parameters params
+	Results    mig.ModuleResult
+}
+
+type params struct {
+	// ipv4, ipv6 or fqdn.
+	Destination string `json:"destination"`
+	// 16 bits integer. Throws an error when used with icmp. Defaults to 80 otherwise.
+	DestinationPort float64 `json:"destinationport,omitempty"`
+	// icmp, tcp, udp
+	Protocol string `json:"protocol"`
+	// Number of tests
+	Count float64 `json:"count,omitempty"`
+	// Timeout for individual test. defaults to 5s.
+	Timeout float64 `json:"timeout,omitempty"`
+}
+
+type elements struct {
+	// Collect latency information (in ms).
+	Latency   []string `json:"latency"`
+	Reachable bool     `json:"reachable"`
+}
+
+// Global variable latencies.
+var latencies elements
+
+func (r *Runner) ValidateParameters() (err error) {
+	// Check if Protocol is a valid one that we support with this module
+	if r.Parameters.Protocol != "icmp" &&
+		r.Parameters.Protocol != "udp" &&
+		r.Parameters.Protocol != "tcp" {
+		return fmt.Errorf("Unsupported protocol requested")
+	}
+
+	// Check if protocol is icmp and a destinationport is specified
+	if r.Parameters.Protocol == "icmp" && r.Parameters.DestinationPort != 0 {
+		return fmt.Errorf("icmp does not take a destinationport parameter")
+	} else if r.Parameters.Protocol != "icmp" && r.Parameters.DestinationPort == 0 {
+		r.Parameters.DestinationPort = 80
+	}
+
+	// Check if port number is in valid range
+	if !(r.Parameters.DestinationPort >= 0 && r.Parameters.DestinationPort <= 65535) {
+		return fmt.Errorf("Invalid DestinationPort: %v", r.Parameters.DestinationPort)
+	}
+
+	ips, err := net.LookupHost(r.Parameters.Destination)
+	ip := ""
+	// Get ip based on destination.
+	// if ip == nil, destination may not be a hostname.
+	if err != nil {
+		ip = r.Parameters.Destination
+	} else {
+		if len(ips) == 0 {
+			return fmt.Errorf("FQDN does not resolve to any known ip")
+		}
+		ip = ips[0]
+	}
+
+	ip_parsed := net.ParseIP(ip)
+	// If ParseIP failed, then ip is not a valid IP.
+	if ip_parsed == nil {
+		return fmt.Errorf("Invalid Destination: %v", ip)
+	}
+
+	if r.Parameters.Timeout == 0.0 {
+		r.Parameters.Timeout = 5.0
+	}
+
+	r.Parameters.Destination = ip
+	return
+}
+
+func (r Runner) Ping() (err error) {
+	var (
+		icmpType icmp.Type
+		network  string
+	)
+
+	if strings.Contains(r.Parameters.Destination, ":") {
+		network = "ip6:ipv6-icmp"
+		icmpType = ipv6.ICMPTypeEchoRequest
+	} else {
+		network = "ip4:icmp"
+		icmpType = ipv4.ICMPTypeEcho
+	}
+
+	c, err := net.Dial(network, r.Parameters.Destination)
+	if err != nil {
+		return fmt.Errorf("Dial failed: %v", err)
+	}
+	c.SetDeadline(time.Now().Add(time.Duration(r.Parameters.Timeout) * time.Second))
+	defer c.Close()
+
+	// xid is the process ID.
+	// Get process ID and make sure it fits in 16bits.
+	xid := os.Getpid() & 0xffff
+	// Sequence number of the packet.
+	xseq := 0
+	packet := icmp.Message{
+		Type: icmpType, // Type of icmp message
+		Code: 0,        // icmp query messages use code 0
+		Body: &icmp.Echo{
+			ID:   xid,  // Packet id
+			Seq:  xseq, // Sequence number of the packet
+			Data: bytes.Repeat([]byte("Ping!Ping!Ping!"), 3),
+		},
+	}
+
+	wb, err := packet.Marshal(nil)
+
+	if err != nil {
+		return fmt.Errorf("Connection failed: %v", err)
+	}
+
+	if _, err := c.Write(wb); err != nil {
+		return fmt.Errorf("Conn.Write Error: %v", err)
+	}
+
+	rb := make([]byte, 1500)
+
+	if _, err := c.Read(rb); err != nil {
+		// If Timeout, we return "Timeout"
+		if e := err.(*net.OpError).Timeout(); e {
+			return fmt.Errorf("Timeout")
+		}
+		return fmt.Errorf("Conn.Read failed: %v", err)
+	}
+
+	_, err = icmp.ParseMessage(icmpType.Protocol(), rb)
+	if err != nil {
+		return fmt.Errorf("ParseICMPMessage failed: %v", err)
+	}
+
+	return
+}
+
+func (r Runner) tcpPing() (err error) {
+	// Make it ip:port format
+	destination := r.Parameters.Destination + ":" + fmt.Sprintf("%d", int(r.Parameters.DestinationPort))
+
+	// If dial Timeout it means that the handshake could not be completed and the port may not be open.
+	if _, err := net.DialTimeout("tcp", destination, time.Duration(r.Parameters.Timeout)*time.Second); err != nil {
+		// If Timeout, we return "Timeout"
+		if e := err.(*net.OpError).Timeout(); e {
+			return fmt.Errorf("Timeout")
+		}
+		return fmt.Errorf("Dial Error: %v", err)
+	}
+	return
+}
+
+// Open UDP ports are hard to determine.
+// If there is a Timeout on Read it means that the port *maybe* open,
+// however a connection refused either means that the port is filtered or closed.
+func (r Runner) udpPing() (err error) {
+	// Make it ip:port format
+	destination := r.Parameters.Destination + ":" + fmt.Sprintf("%d", int(r.Parameters.DestinationPort))
+
+	c, err := net.Dial("udp", destination)
+
+	if err != nil {
+		return fmt.Errorf("Dial Error: %v", err)
+	}
+
+	c.Write([]byte("Ping!Ping!Ping!"))
+	c.SetReadDeadline(time.Now().Add(time.Duration(r.Parameters.Timeout) * time.Second))
+	defer c.Close()
+
+	rb := make([]byte, 1500)
+
+	if _, err := c.Read(rb); err != nil {
+		// If Timeout, we return "Timeout"
+		if e := err.(*net.OpError).Timeout(); e {
+			return fmt.Errorf("Timeout")
+		}
+
+		return fmt.Errorf("Read Error: %v", err.Error())
+	}
+
+	return nil
+}
+
+func (r Runner) Run(Args []byte) string {
+
+	err := json.Unmarshal(Args, &r.Parameters)
+	if err != nil {
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
+	}
+
+	err = r.ValidateParameters()
+	if err != nil {
+		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		return r.buildResults()
+	}
+
+	latencies.Reachable = false
+
+	for i := 0; i < int(r.Parameters.Count); i += 1 {
+		var err error
+		// startTime for calculating the latency/RTT
+		startTime := time.Now()
+
+		switch r.Parameters.Protocol {
+		case "icmp":
+			err = r.Ping()
+		case "tcp":
+			err = r.tcpPing()
+		case "udp":
+			err = r.udpPing()
+		}
+
+		latency := fmt.Sprintf("%dms", int((time.Since(startTime)).Seconds()*1000))
+
+		if err != nil {
+			if err.Error() == "Timeout" {
+				latency = "Timeout"
+			} else if strings.Contains(err.Error(), "connection refused") {
+				latency = ""
+			} else {
+				r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Fail on test#%d (%v)", i+1, err))
+				latency = ""
+			}
+		}
+
+		// For udp, a timeout indicates that the port *maybe* open.
+		if latency == "Timeout" && r.Parameters.Protocol == "udp" {
+			latencies.Reachable = true
+			latencies.Latency = append(latencies.Latency, latency)
+		} else if latency != "" && latency != "Timeout" {
+			latencies.Reachable = true
+			latencies.Latency = append(latencies.Latency, latency)
+		}
+	}
+
+	r.Results.Success = true
+	return r.buildResults()
+}
+
+func (r Runner) buildResults() string {
+	r.Results.FoundAnything = false
+	r.Results.Elements = latencies
+
+	if len(latencies.Latency) > 0 {
+		r.Results.FoundAnything = true
+	}
+
+	jsonOutput, err := json.Marshal(r.Results)
+	if err != nil {
+		panic(err)
+	}
+	return string(jsonOutput[:])
+}

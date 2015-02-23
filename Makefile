@@ -98,7 +98,7 @@ go_get_common_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
 	$(GOGETTER) code.google.com/p/gcfg
 
-go_get_agent_deps: go_get_common_deps
+go_get_agent_deps: go_get_common_deps go_get_ping_deps
 	$(GOGETTER) code.google.com/p/go.crypto/sha3
 	$(GOGETTER) github.com/streadway/amqp
 	$(GOGETTER) github.com/kardianos/osext
@@ -107,6 +107,11 @@ go_get_agent_deps: go_get_common_deps
 ifeq ($(OS),windows)
 	$(GOGETTER) code.google.com/p/winsvc/eventlog
 endif
+
+go_get_ping_deps:
+	$(GOGETTER) golang.org/x/net/icmp
+	$(GOGETTER) golang.org/x/net/ipv4
+	$(GOGETTER) golang.org/x/net/ipv6
 
 go_get_platform_deps: go_get_common_deps
 	$(GOGETTER) github.com/streadway/amqp
