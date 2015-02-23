@@ -86,6 +86,14 @@
                     "^[0-9a-f]"
                 ]
             }
+        },
+        {
+            "module": "ping",
+            "parameters": {
+                "destination": "localhost",
+                "protocol": "icmp",
+                "count": 5
+            }
         }
     ],
     "syntaxversion": 2
