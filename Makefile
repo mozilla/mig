@@ -101,7 +101,7 @@ go_get_common_deps:
 go_get_agent_deps: go_get_common_deps
 	$(GOGETTER) code.google.com/p/go.crypto/sha3
 	$(GOGETTER) github.com/streadway/amqp
-	$(GOGETTER) bitbucket.org/kardianos/osext
+	$(GOGETTER) github.com/kardianos/osext
 	$(GOGETTER) github.com/jvehent/service-go
 	$(GOGETTER) github.com/ccding/go-stun/stun
 ifeq ($(OS),windows)

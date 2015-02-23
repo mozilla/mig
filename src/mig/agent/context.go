@@ -7,7 +7,6 @@
 package main
 
 import (
-	"bitbucket.org/kardianos/osext"
 	"bufio"
 	"crypto/rand"
 	"crypto/tls"
@@ -15,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jvehent/service-go"
+	"github.com/kardianos/osext"
 	"github.com/streadway/amqp"
 	"io/ioutil"
 	"mig"

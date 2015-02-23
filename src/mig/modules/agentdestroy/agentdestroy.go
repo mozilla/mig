@@ -10,9 +10,9 @@
 package agentdestroy
 
 import (
-	"bitbucket.org/kardianos/osext"
 	"encoding/json"
 	"fmt"
+	"github.com/kardianos/osext"
 	"mig"
 	"os"
 	"os/exec"

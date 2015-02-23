@@ -19,6 +19,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/kardianos/osext"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -29,8 +30,6 @@ import (
 	"regexp"
 	"runtime"
 	"time"
-
-	"bitbucket.org/kardianos/osext"
 )
 
 func init() {
