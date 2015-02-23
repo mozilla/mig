@@ -59,6 +59,16 @@ itself while searching for the command line.
 
     mig file -t "queueloc LIKE 'linux.%'" -path /proc/ -name cmdline -content "^/sbin/auditd"
 
+Find which machines have a specific USB device connected
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In this example, we'll look for the CryptoStick USB device (vendor:product 20a0:4107).
+You can find more device id's with the command `lsusb`.
+
+.. code:: bash
+
+	mig file -matchany -path /sys/devices/ -name "^uevent$" -content "PRODUCT=20a0/4107"
+
 Netstat module
 --------------
 
@@ -97,22 +107,12 @@ CIDR (the netstat module doesn't have an `exclude` option).
 
 .. code:: bash
 
-	mig netstat -e 60s -ci 1.0.0.0/8 -ci 2.0.0.0/7 -ci 4.0.0.0/6 -ci 8.0.0.0/7 \
-	-ci 11.0.0.0/8 -ci 12.0.0.0/6 -ci 16.0.0.0/4 -ci 32.0.0.0/3 -ci 64.0.0.0/3 \
-	-ci 96.0.0.0/4 -ci 112.0.0.0/5 -ci 120.0.0.0/6 -ci 124.0.0.0/7 -ci 126.0.0.0/8 \
-	 -ci 128.0.0.0/3 -ci 160.0.0.0/5 -ci 168.0.0.0/6 -ci 172.0.0.0/12 \
-	-ci 172.32.0.0/11 -ci 172.64.0.0/10 -ci 172.128.0.0/9 -ci 173.0.0.0/8 \
-	-ci 174.0.0.0/7 -ci 176.0.0.0/4 -ci 192.0.0.0/9 -ci 192.128.0.0/11 \
-	-ci 192.160.0.0/13 -ci 192.169.0.0/16 -ci 192.170.0.0/15 -ci 192.172.0.0/14 \
-	-ci 192.176.0.0/12 -ci 192.192.0.0/10 -ci 193.0.0.0/8 -ci 194.0.0.0/7 \
-	-ci 196.0.0.0/6 -ci 200.0.0.0/5 -ci 208.0.0.0/4
-
-Find which machines have a specific USB device connected
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In this example, we'll look for the CryptoStick USB device (vendor:product 20a0:4107).
-You can find more device id's with the command `lsusb`.
-
-.. code:: bash
-
-        mig file -matchany -path /sys/devices/ -name "^uevent$" -content "PRODUCT=20a0/4107"
+	mig netstat -e 60s	-ci 1.0.0.0/8		-ci 2.0.0.0/7		-ci 4.0.0.0/6	-ci 8.0.0.0/7 \
+	-ci 11.0.0.0/8		-ci 12.0.0.0/6		-ci 16.0.0.0/4		-ci 32.0.0.0/3	-ci 64.0.0.0/3 \
+	-ci 96.0.0.0/4		-ci 112.0.0.0/5		-ci 120.0.0.0/6		-ci 124.0.0.0/7	-ci 126.0.0.0/8 \
+	-ci 128.0.0.0/3		-ci 160.0.0.0/5		-ci 168.0.0.0/6		-ci 172.0.0.0/12 \
+	-ci 172.32.0.0/11	-ci 172.64.0.0/10	-ci 172.128.0.0/9	-ci 173.0.0.0/8 \
+	-ci 174.0.0.0/7		-ci 176.0.0.0/4		-ci 192.0.0.0/9		-ci 192.128.0.0/11 \
+	-ci 192.160.0.0/13	-ci 192.169.0.0/16	-ci 192.170.0.0/15	-ci 192.172.0.0/14 \
+	-ci 192.176.0.0/12	-ci 192.192.0.0/10	-ci 193.0.0.0/8		-ci 194.0.0.0/7 \
+	-ci 196.0.0.0/6		-ci 200.0.0.0/5		-ci 208.0.0.0/4
