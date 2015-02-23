@@ -11,8 +11,8 @@ performed through a REST API. The API exposes functions to create actions,
 retrieve results, and generally monitor the activity of the agents.
 
 The API follows the core principles of REST, and provides discoverable
-endpoints. The document format follows the `Collection+JSON - Hypermedia Type
-<http://amundsen.com/media-types/collection/>`_.
+endpoints. API responses follows the **cljs** format defined in
+`Collection+JSON - Hypermedia Type <http://amundsen.com/media-types/collection/>`_.
 
 Authentication with X-PGPAUTHORIZATION version 1
 ------------------------------------------------
@@ -195,117 +195,742 @@ Generating a token in Python
 API endpoints
 -------------
 
-The API root is at `/api/v1`. All the endpoints described below are reachable
-behind the root.
+The API root is at `/api/v1` by defualt. All the endpoints described below are
+reachable behind the root. If you change the location of the API root, update
+the query paths accordingly.
 
-GET <root>/heartbeat
-~~~~~~~~~~~~~~~~~~~~
+GET /api/v1/heartbeat
+~~~~~~~~~~~~~~~~~~~~~
 * Description: basic endpoint that returns a HTTP 200
 * Parameters: none
-* Example:
+* Authentication: none
+* Response Code: 200 OK
+* Reponse: Collection+JSON
 
-.. code:: bash
+.. code:: json
 
-	# curl localhost:1664/api/v1/heartbeat
-	gatorz say hi
+	{
+		"collection": {
+			"error": {},
+			"href": "https://api.mig.mozilla.org/api/v1/heartbeat",
+			"items": [
+				{
+					"data": [
+						{
+							"name": "heartbeat",
+							"value": "gatorz say hi"
+						}
+					],
+					"href": "/api/v1/heartbeat"
+				}
+			],
+			"template": {},
+			"version": "1.0"
+		}
+	}
 
-GET <root>/dashboard
-~~~~~~~~~~~~~~~~~~~~
-* Description: display a status dashboard of the MIG platform and agents
+GET /api/v1/ip
+~~~~~~~~~~~~~~
+* Description: basic endpoint that returns the public IP of the caller. If the
+  API is behind a load balancer, it returns the value of X-Forwarded-For.
 * Parameters: none
-* Example:
+* Authentication: none
+* Response Code: 200 OK
+* Response: Text
 
 .. code:: bash
 
-	/api/v1/dashboard
+	$ curl https://api.mig.mozilla.org/api/v1/ip
+	108.36.248.44
 
-GET <root>/action
-~~~~~~~~~~~~~~~~~
+GET /api/v1/dashboard
+~~~~~~~~~~~~~~~~~~~~~
+* Description: returns a status dashboard with counters of active and idle
+  agents, and a list of the last 10 actions ran.
+* Parameters: none
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 200 OK
+* Response: Collection+JSON
+
+.. code:: json
+
+	{
+	  "collection": {
+		"error": {},
+		"href": "https://api.mig.mozilla.org/api/v1/dashboard",
+		"items": [
+		{
+		  "data": [
+		  {
+			"name": "online agents",
+			"value": 1367
+		  },
+		  {
+			"name": "online agents by version",
+			"value": [
+			{
+			  "count": 1366,
+			  "version": "20150122+ad43a11.prod"
+			},
+			{
+			  "count": 1,
+			  "version": "20150124+79ecbbb.prod"
+			}
+			]
+		  },
+		  {
+			"name": "online endpoints",
+			"value": 1367
+		  },
+		  {
+			"name": "idle agents",
+			"value": 23770
+		  },
+		  {
+			"name": "idle agents by version",
+			"value": [
+			{
+			  "count": 23770,
+			  "version": "20150122+ad43a11.prod"
+			}
+			]
+		  },
+		  {
+			"name": "idle endpoints",
+			"value": 5218
+		  },
+		  {
+			"name": "new endpoints",
+			"value": 7889
+		  },
+		  {
+			"name": "endpoints running 2 or more agents",
+			"value": 0
+		  },
+		  {
+			"name": "disappeared endpoints",
+			"value": 48811
+		  },
+		  {
+			"name": "flapping endpoints",
+			"value": 4478
+		  }
+		  ],
+		  "href": "https://api.mig.mozilla.org/api/v1/dashboard"
+		},
+		{
+		  "data": [
+		  {
+			"name": "action",
+			"value": {
+			"counters": {
+			  "done": 1119,
+			  "inflight": 2,
+			  "sent": 1121,
+			  "success": 1119
+			},
+			"description": {
+			  "author": "Spongebob SquarepantsJeff Bryner",
+			  "email": "bob@example.net",
+			  "revision": 201412311300.0
+			},
+			"expireafter": "2015-02-24T14:03:00Z",
+			"finishtime": "9998-01-11T11:11:11Z",
+			"id": 6.115472790658567e+18,
+			"investigators": [
+			  {
+			  "createdat": "2014-11-01T19:35:38.11369Z",
+			  "id": 1,
+			  "lastmodified": "2014-11-01T19:35:42.474417Z",
+			  "name": "Sher Lock",
+			  "pgpfingerprint": "E60892BB9BD89A69F759A1A0A3D652173B763E8F",
+			  "status": "active"
+			  }
+			],
+			"lastupdatetime": "2015-02-23T14:03:11.561547Z",
+			"name": "Verify system sends syslog to syslog servers instead of local",
+			"operations": [
+			  {
+			  "module": "file",
+			  "parameters": {
+				"searches": {
+				"authprivtoremotesyslog": {
+				  "contents": [
+				  "^authpriv\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
+				  ],
+				  "names": [
+				  "^r?syslog.conf$"
+				  ],
+				  "options": {
+				  "matchall": true,
+				  "maxdepth": 1
+				  },
+				  "paths": [
+				  "/etc"
+				  ]
+				},
+				"daemontoremotesyslog": {
+				  "contents": [
+				  "^daemon\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}."
+				  ],
+				  "names": [
+				  "^r?syslog.conf$"
+				  ],
+				  "options": {
+				  "matchall": true,
+				  "maxdepth": 1
+				  },
+				  "paths": [
+				  "/etc"
+				  ]
+				},
+				"kerntoremotesyslog": {
+				  "contents": [
+				  "^kern\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
+				  ],
+				  "names": [
+				  "^r?syslog.conf$"
+				  ],
+				  "options": {
+				  "matchall": true,
+				  "maxdepth": 1
+				  },
+				  "paths": [
+				  "/etc"
+				  ]
+				}
+				}
+			  }
+			  }
+			],
+			"pgpsignatures": [
+			  "wsBc....."
+			],
+			"starttime": "2015-02-23T14:03:00.751008Z",
+			"status": "inflight",
+			"syntaxversion": 2,
+			"target": "agents.queueloc like 'linux.%' AND tags->>'operator'='IT'",
+			"threat": {
+			  "family": "compliance",
+			  "level": "medium",
+			  "ref": "sysmediumlogs1",
+			  "type": "system"
+			},
+			"validfrom": "2015-02-23T14:03:00Z"
+			}
+		  }
+		  ],
+		  "href": "https://api.mig.example.net/api/v1/action?actionid=6115472790658567168"
+		}
+		],
+		"template": {},
+		"version": "1.0"
+	  }
+	}
+
+GET /api/v1/action
+~~~~~~~~~~~~~~~~~~
 * Description: retrieve an action by its ID. Include links to related commands.
+* Authentication: X-PGPAUTHORIZATION
 * Parameters:
 	- `actionid`: a uint64 that identifies an action by its ID
-* Example:
+* Response Code: 200 OK
+* Response: Collection+JSON
 
-.. code:: bash
+.. code:: json
 
-	/api/v1/action?actionid=6019232215298562584
+	{
+	  "collection": {
+		"error": {},
+		"href": "https://api.mig.example.net/api/v1/action?actionid=6115472790658567168",
+		"items": [
+		  {
+			"data": [
+			  {
+				"name": "action",
+				"value": {
+				  "counters": {
+					"done": 1119,
+					"inflight": 2,
+					"sent": 1121,
+					"success": 1119
+				  },
+				  "description": {
+					"author": "Sponge Bob",
+					"email": "bob@example.net",
+					"revision": 201412311300.0
+				  },
+				  "expireafter": "2015-02-24T14:03:00Z",
+				  "finishtime": "9998-01-11T11:11:11Z",
+				  "id": 6.115472790658567e+18,
+				  "investigators": [
+					{
+					  "createdat": "2014-11-01T19:35:38.11369Z",
+					  "id": 1,
+					  "lastmodified": "2014-11-01T19:35:42.474417Z",
+					  "name": "Sher Lock",
+					  "pgpfingerprint": "E60892BB9BD89A69F759A1A0A3D652173B763E8F",
+					  "status": "active"
+					}
+				  ],
+				  "lastupdatetime": "2015-02-23T14:03:11.561547Z",
+				  "name": "Verify system sends syslog to syslog servers instead of local",
+				  "operations": [
+					{
+					  "module": "file",
+					  "parameters": {
+						"searches": {
+						  "authprivtoremotesyslog": {
+							"contents": [
+							  "^authpriv\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
+							],
+							"names": [
+							  "^r?syslog.conf$"
+							],
+							"options": {
+							  "matchall": true,
+							  "maxdepth": 1
+							},
+							"paths": [
+							  "/etc"
+							]
+						  },
+						  "daemontoremotesyslog": {
+							"contents": [
+							  "^daemon\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}."
+							],
+							"names": [
+							  "^r?syslog.conf$"
+							],
+							"options": {
+							  "matchall": true,
+							  "maxdepth": 1
+							},
+							"paths": [
+							  "/etc"
+							]
+						  },
+						  "kerntoremotesyslog": {
+							"contents": [
+							  "^kern\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
+							],
+							"names": [
+							  "^r?syslog.conf$"
+							],
+							"options": {
+							  "matchall": true,
+							  "maxdepth": 1
+							},
+							"paths": [
+							  "/etc"
+							]
+						  }
+						}
+					  }
+					}
+				  ],
+				  "pgpsignatures": [
+					"wsBc....."
+				  ],
+				  "starttime": "2015-02-23T14:03:00.751008Z",
+				  "status": "inflight",
+				  "syntaxversion": 2,
+				  "target": "agents.queueloc like 'linux.%' AND tags->>'operator'='IT'",
+				  "threat": {
+					"family": "compliance",
+					"level": "medium",
+					"ref": "sysmediumlogs1",
+					"type": "system"
+				  },
+				  "validfrom": "2015-02-23T14:03:00Z"
+				}
+			  }
+			],
+			"href": "https://api.mig.example.net/api/v1/action?actionid=6115472790658567168"
+		  }
+		],
+		"template": {},
+		"version": "1.0"
+	  }
+	}
 
-POST <root>/action/create/
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+POST /api/v1/action/create/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: send a signed action to the API for submission to the scheduler.
+* Authentication: X-PGPAUTHORIZATION
 * Parameters: (POST body)
 	- `action`: a signed action in JSON format
+* Response Code: 202 Accepted
+* Response: Collection+JSON
 
-* Example: (posting using mig-action-generator)
-
-.. code:: bash
-
-	./bin/linux/amd64/mig-action-generator -i examples/actions/linux-backdoor.json -k jvehent@mozilla.com -posturl=http://localhost:1664/api/v1/action/create/
-
-GET <root>/agent
-~~~~~~~~~~~~~~~~
+GET /api/v1/agent
+~~~~~~~~~~~~~~~~~
 * Description: retrieve an agent by its ID
+* Authentication: X-PGPAUTHORIZATION
 * Parameters:
 	- `agentid`: a uint64 that identifies an agent by its ID
-* Example:
+* Response Code: 200 OK
+* Response: Collection+JSON
 
-.. code:: bash
+.. code:: json
 
-	/api/v1/agent?agentid=6074883012002259968
+	{
+	  "collection": {
+		"error": {},
+		"href": "https://api.mig.example.net/api/v1/agent?agentid=1423779015943326976",
+		"items": [
+		  {
+			"data": [
+			  {
+				"name": "agent",
+				"value": {
+				  "destructiontime": "0001-01-01T00:00:00Z",
+				  "environment": {
+					"addresses": [
+					  "10.150.75.13/26",
+					  "fe80::813:6bff:fef8:31df/64"
+					],
+					"arch": "amd64",
+					"ident": "RedHatEnterpriseServer 6.5 Santiago",
+					"init": "upstart",
+					"isproxied": false
+				  },
+				  "heartbeatts": "2015-02-23T15:00:42.656265Z",
+				  "id": 1.423779015943327e+18,
+				  "mode": "",
+				  "name": "syslog1.private.mydomain.example.net",
+				  "pid": 24666,
+				  "queueloc": "linux.syslog1.private.mydomain.example.net.598f3suaf33ta",
+				  "starttime": "2015-02-12T22:10:15.897514Z",
+				  "status": "online",
+				  "tags": {
+					"operator": "IT"
+				  },
+				  "version": "20150122+ad43a11.prod"
+				}
+			  }
+			],
+			"href": "https://api.mig.example.net/api/v1/agent?agentid=1423779015943326976"
+		  }
+		],
+		"template": {},
+		"version": "1.0"
+	  }
+	}
 
-GET <root>/command
-~~~~~~~~~~~~~~~~~~
+GET /api/v1/command
+~~~~~~~~~~~~~~~~~~~
 * Description: retrieve a command by its ID. Include link to related action.
+* Authentication: X-PGPAUTHORIZATION
 * Parameters:
 	- `commandid`: a uint64 that identifies a command by its ID
-* Example:
+* Response Code: 200 OK
+* Response: Collection+JSON
 
 .. code:: bash
 
-	/api/v1/command?commandid=6019232259520546404
+	{
+	  "collection": {
+		"error": {},
+		"href": "https://api.mig.example.net/api/v1/command?commandid=1424700180901330688",
+		"items": [
+		  {
+			"data": [
+			  {
+				"name": "command",
+				"value": {
+				  "action": {
+					"counters": {},
+					"description": {
+					  "author": "Spongebob Squarepants",
+					  "email": "bob@example.net",
+					  "revision": 201412311300.0
+					},
+					"expireafter": "2015-02-24T14:03:00Z",
+					"finishtime": "0001-01-01T00:00:00Z",
+					"id": 6.115472790658567e+18,
+					"lastupdatetime": "0001-01-01T00:00:00Z",
+					"name": "Verify system sends syslog to syslog servers instead of local",
+					"operations": [
+					  {
+						"module": "file",
+						"parameters": {
+						  "searches": {
+							"authprivtoremotesyslog": {
+							  "contents": [
+								"^authpriv\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
+							  ],
+							  "names": [
+								"^r?syslog.conf$"
+							  ],
+							  "options": {
+								"matchall": true,
+								"maxdepth": 1
+							  },
+							  "paths": [
+								"/etc"
+							  ]
+							},
+							"daemontoremotesyslog": {
+							  "contents": [
+								"^daemon\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}."
+							  ],
+							  "names": [
+								"^r?syslog.conf$"
+							  ],
+							  "options": {
+								"matchall": true,
+								"maxdepth": 1
+							  },
+							  "paths": [
+								"/etc"
+							  ]
+							},
+							"kerntoremotesyslog": {
+							  "contents": [
+								"^kern\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
+							  ],
+							  "names": [
+								"^r?syslog.conf$"
+							  ],
+							  "options": {
+								"matchall": true,
+								"maxdepth": 1
+							  },
+							  "paths": [
+								"/etc"
+							  ]
+							}
+						  }
+						}
+					  }
+					],
+					"pgpsignatures": [
+					  "ws...."
+					],
+					"starttime": "0001-01-01T00:00:00Z",
+					"syntaxversion": 2,
+					"target": "agents.queueloc like 'linux.%' AND tags->>'operator'='IT'",
+					"threat": {
+					  "family": "compliance",
+					  "level": "medium",
+					  "ref": "sysmediumlogs1",
+					  "type": "system"
+					},
+					"validfrom": "2015-02-23T14:03:00Z"
+				  },
+				  "agent": {
+					"destructiontime": "0001-01-01T00:00:00Z",
+					"environment": {
+					  "isproxied": false
+					},
+					"heartbeatts": "0001-01-01T00:00:00Z",
+					"id": 1.423779015943327e+18,
+					"mode": "",
+					"name": "syslog1.private.mydomain.example.net",
+					"queueloc": "linux.syslog1.private.mydomain.example.net.e98r198dhq",
+					"starttime": "0001-01-01T00:00:00Z",
+					"version": "20150122+ad43a11.prod"
+				  },
+				  "finishtime": "2015-02-23T14:03:10.402108Z",
+				  "id": 1.4247001809013307e+18,
+				  "results": [
+					{
+					  "elements": {
+						"authprivtoremotesyslog": [
+						  {
+							"file": "",
+							"fileinfo": {
+							  "lastmodified": "",
+							  "mode": "",
+							  "size": 0
+							},
+							"search": {
+							  "contents": [
+								"^authpriv\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
+							  ],
+							  "names": [
+								"^r?syslog.conf$"
+							  ],
+							  "options": {
+								"matchall": true,
+								"matchlimit": 0,
+								"maxdepth": 0
+							  },
+							  "paths": [
+								"/etc"
+							  ]
+							}
+						  }
+						],
+						"daemontoremotesyslog": [
+						  {
+							"file": "",
+							"fileinfo": {
+							  "lastmodified": "",
+							  "mode": "",
+							  "size": 0
+							},
+							"search": {
+							  "contents": [
+								"^daemon\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}."
+							  ],
+							  "names": [
+								"^r?syslog.conf$"
+							  ],
+							  "options": {
+								"matchall": true,
+								"matchlimit": 0,
+								"maxdepth": 0
+							  },
+							  "paths": [
+								"/etc"
+							  ]
+							}
+						  }
+						],
+						"kerntoremotesyslog": [
+						  {
+							"file": "",
+							"fileinfo": {
+							  "lastmodified": "",
+							  "mode": "",
+							  "size": 0
+							},
+							"search": {
+							  "contents": [
+								"^kern\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
+							  ],
+							  "names": [
+								"^r?syslog.conf$"
+							  ],
+							  "options": {
+								"matchall": true,
+								"matchlimit": 0,
+								"maxdepth": 0
+							  },
+							  "paths": [
+								"/etc"
+							  ]
+							}
+						  }
+						]
+					  },
+					  "errors": null,
+					  "foundanything": false,
+					  "statistics": {
+						"exectime": "20.968752ms",
+						"filescount": 140,
+						"openfailed": 0,
+						"totalhits": 0
+					  },
+					  "success": true
+					}
+				  ],
+				  "starttime": "2015-02-23T14:03:00.901331Z",
+				  "status": "success"
+				}
+			  }
+			],
+			"href": "https://api.mig.example.net/api/v1/command?commandid=1424700180901330688",
+			"links": [
+			  {
+				"href": "https://api.mig.example.net/api/v1/action?actionid=6115472790658567168",
+				"rel": "action"
+			  }
+			]
+		  }
+		],
+		"template": {},
+		"version": "1.0"
+	  }
+	}
 
-GET <root>/investigator
-~~~~~~~~~~~~~~~~~~~~~~~
+GET /api/v1/investigator
+~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: retrieve an investigator by its ID. Include link to the
   investigator's action history.
+* Authentication: X-PGPAUTHORIZATION
 * Parameters:
 	- `investigatorid`: a uint64 that identifies a command by its ID
-* Example:
+* Response Code: 200 OK
+* Response: Collection+JSON
 
-.. code:: bash
+.. code:: json
 
-	/api/v1/investigator?investigatorid=1
+	{
+	  "collection": {
+		"error": {},
+		"href": "https://api.mig.example.net/api/v1/investigator?investigatorid=1",
+		"items": [
+		  {
+			"data": [
+			  {
+				"name": "investigator",
+				"value": {
+				  "createdat": "2014-11-01T19:35:38.11369Z",
+				  "id": 1,
+				  "lastmodified": "2014-11-01T19:35:42.474417Z",
+				  "name": "Julien Vehent",
+				  "pgpfingerprint": "E60892BB9BD89A69F759A1A0A3D652173B763E8F",
+				  "publickey": "LS0tLS1CRUdJTiBQR1AgUFVCTElDIEtFWS.........",
+				  "status": "active"
+				}
+			  }
+			],
+			"href": "https://api.mig.example.net/api/v1/investigator?investigatorid=1",
+			"links": [
+			  {
+				"href": "https://api.mig.example.net/api/v1/search?type=action&investigatorid=1&limit=100",
+				"rel": "investigator history"
+			  }
+			]
+		  }
+		],
+		"template": {},
+		"version": "1.0"
+	  }
+	}
 
-POST <root>/investigator/create/
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+POST /api/v1/investigator/create/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: create a new investigator in the database
+* Authentication: X-PGPAUTHORIZATION
 * Parameters: (POST body)
 	- `name`: string that represents the full name
 	- `publickey`: armored GPG public key
-* Example:
+* Response Code: 201 Created
+* Response: Collection+JSON
+* Example: (without authentication)
 
 .. code:: bash
 
 	$ gpg --export -a --export-options export-minimal bob_kelso@example.net > /tmp/bobpubkey
+	$ curl -iv -F "name=Bob Kelso" -F publickey=@/tmp/pubkey https://api.mig.example.net/api/v1/investigator/create/
 
-	$ curl -iv -F "name=Bob Kelso" -F publickey=@/tmp/pubkey
-	http://localhost:1664/api/v1/investigator/create/
-
-POST <root>/investigator/update/
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+POST /api/v1/investigator/update/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: update an existing investigator in the database
-* Parameters: (PUT body)
+* Authentication: X-PGPAUTHORIZATION
+* Parameters: (POST body)
 	- `id`: investigator id, to identify the target investigator
 	- `status`: new status of the investigator, to be updated
-* Example:
+* Response Code: 201 Created
+* Response: Collection+JSON
+* Example: (without authentication)
 
 .. code:: bash
 
-	$ curl -iv -X POST -d id=1234 -d status=disabled http://localhost:1664/api/v1/investigator/update/
+	$ curl -iv -X POST -d id=1234 -d status=disabled https://api.mig.example.net/api/v1/investigator/update/
 
-GET <root>/search
-~~~~~~~~~~~~~~~~~
+GET /api/v1/search
+~~~~~~~~~~~~~~~~~~
 * Description: search for actions, commands, agents or investigators.
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 200 OK
+* Response: Collection+JSON
 * Parameters:
 	- `type`: define the type of item returned by the search.
 	  Valid types are: `action`, `command`, `agent` or `investigator`.
@@ -433,27 +1058,31 @@ commands could, in turn, generate thousands of compliance items.
 
 The format for compliance items is simple, to be easily graphed and aggregated.
 
-.. code:: javascript
+.. code:: json
 
 	{
-		"target": "agents.name='server1.prod.example.net'",
-		"policy": {
-			"level": "medium",
-			"name": "system",
-			"url": "https://link.to.compliance.reference/index.html"
+	  "target": "server1.mydomain.example.net",
+	  "utctimestamp": "2015-02-19T02:59:30.203004Z",
+	  "tags": {
+		"operator": "IT"
+	  },
+	  "compliance": true,
+	  "link": "https://api.mig.example.net/api/v1/command?commandid=1424314751392165120",
+	  "policy": {
+		"url": "https://wiki.example.net/ComplianceDoc/IT+System+security+guidelines",
+		"name": "system",
+		"level": "low"
+	  },
+	  "check": {
+		"test": {
+		"type": "file",
+		"value": "content='^-w /var/spool/cron/root -p wa'"
 		},
-		"check": {
-			"description": "compliance check for openssh",
-			"location": "/etc/ssh/sshd_config",
-			"name": "check for verbose logging (logs fingerprints)",
-			"test": {
-				"type": "regex",
-				"value": "(?i)^loglevel verbose$"
-			}
-		},
-		"compliance": true,
-		"link": "http://localhost:1664/api/v1/command?commandid=6019232265601776819",
-		"timestamp": "2014-05-30T14:55:41.907745Z"
+		"location": "/etc/audit/audit.rules",
+		"ref": "syslowaudit1",
+		"description": "compliance check for auditd",
+		"name": "attemptstoaltercrontab_user_config"
+	  }
 	}
 
 When using the parameter `&report=complianceitems`, the `search` endpoint of the API
