@@ -181,15 +181,15 @@ func startRoutines(ctx Context) {
 		for delivery := range agtResultsChan {
 			ctx.OpID = mig.GenID()
 			// validate the size of the data received, and make sure its first and
-			// last bytes are valid json enclosures
+			// last bytes are valid json enclosures. if not, discard the message.
 			if len(delivery.Body) < 10 || delivery.Body[0] != '{' || delivery.Body[len(delivery.Body)-1] != '}' {
 				ctx.Channels.Log <- mig.Log{
 					OpID: ctx.OpID,
 					Desc: fmt.Sprintf("discarding invalid message received in results channel"),
 				}.Err()
-				break
+				continue
 			}
-			// write to disk in Returned directory
+			// write to disk in Returned directory, discard and continue on failure
 			dest := fmt.Sprintf("%s/%.0f", ctx.Directories.Command.Returned, ctx.OpID)
 			err = safeWrite(ctx, dest, delivery.Body)
 			if err != nil {
@@ -197,7 +197,7 @@ func startRoutines(ctx Context) {
 					OpID: ctx.OpID,
 					Desc: fmt.Sprintf("failed to write agent results to disk: %v", err),
 				}.Err()
-				break
+				continue
 			}
 		}
 	}()

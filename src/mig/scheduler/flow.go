@@ -193,12 +193,6 @@ func landAction(ctx Context, a mig.Action) (err error) {
 // 2) the temp file is moved into the target folder
 // this prevents the dir watcher from waking up before the file is fully written
 func safeWrite(ctx Context, destination string, data []byte) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("safeWrite() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving safeWrite()"}.Debug()
-	}()
 	if len(data) == 0 {
 		return fmt.Errorf("data slice is empty. file not written")
 	}
@@ -206,12 +200,12 @@ func safeWrite(ctx Context, destination string, data []byte) (err error) {
 	tmp := fmt.Sprintf("%s/%.0f", ctx.Directories.Tmp, mig.GenID())
 	err = ioutil.WriteFile(tmp, data, 0640)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("safeWrite: %v", err)
 	}
 	// move to destination
 	err = os.Rename(tmp, destination)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("safeWrite: %v", err)
 	}
 	return
 }
