@@ -252,7 +252,7 @@ func returnCommands(cmdFiles []string, ctx Context) (err error) {
 		go func() {
 			err = ctx.DB.FinishCommand(cmd)
 			if err != nil {
-				desc := fmt.Sprintf("failed to finish command in database: '%v'", err)
+				desc := fmt.Sprintf("command results insertion in database failed with error: %v", err)
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: desc}.Err()
 			} else {
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command updated in database"}.Debug()

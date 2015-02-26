@@ -207,9 +207,12 @@ func (db *DB) FinishCommand(cmd mig.Command) (err error) {
 	if err != nil {
 		return fmt.Errorf("Failed to marshal results: '%v'", err)
 	}
-	res, err := db.c.Exec(`UPDATE commands SET status=$1, results=$2,
-		finishtime=$3 WHERE id=$4 AND status!=$5`, cmd.Status, jResults,
-		cmd.FinishTime, cmd.ID, mig.StatusSuccess)
+	res, err := db.c.Exec(`UPDATE commands SET status=$1, results=$2, finishtime=$3
+		WHERE id=$4 AND status!=$5 AND agentid IN (
+			SELECT id FROM agents
+			WHERE agents.queueloc=$6 AND agents.pid=$7 AND status IN ('online','idle')
+		)`, cmd.Status, jResults, cmd.FinishTime, cmd.ID, mig.StatusSuccess,
+		cmd.Agent.QueueLoc, cmd.Agent.PID)
 	if err != nil {
 		return fmt.Errorf("Error while updating command: '%v'", err)
 	}
