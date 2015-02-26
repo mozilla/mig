@@ -217,8 +217,7 @@ func waitForFileOrDelete(filepath string, tries int) error {
 	for i := 0; i < tries; i++ {
 		fi, err := os.Stat(filepath)
 		if err != nil {
-			os.Remove(filepath)
-			return fmt.Errorf("stat failed. file was deleted. error: %v", err)
+			return fmt.Errorf("stat failed. error: %v", err)
 		}
 		if fi.Size() != 0 {
 			return nil

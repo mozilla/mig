@@ -36,7 +36,6 @@ func startRoutines(ctx Context) {
 	if err != nil {
 		panic(err)
 	}
-
 	go watchDirectories(watcher, ctx)
 	go func() {
 		err = initWatchers(watcher, ctx)

@@ -174,6 +174,12 @@ func expireCommands(ctx Context) (err error) {
 			continue
 		}
 		filename := ctx.Directories.Command.InFlight + "/" + DirEntry.Name()
+		_, err = os.Stat(filename)
+		if err != nil {
+			// file is already gone, probably consumed by a concurrent returning command
+			// ignore and continue
+			continue
+		}
 		err := waitForFileOrDelete(filename, 3)
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("error while reading '%s': %v", filename, err)}.Err()
@@ -182,7 +188,7 @@ func expireCommands(ctx Context) (err error) {
 		cmd, err := mig.CmdFromFile(filename)
 		if err != nil {
 			// failing to load this file, log and skip it
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("failed to inflight command file %s", filename)}.Err()
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("failed to load inflight command file %s", filename)}.Err()
 			continue
 		}
 
