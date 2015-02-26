@@ -57,7 +57,11 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving getHeartbeats()"}.Debug()
 		}
 	}()
-
+	// a normal heartbeat should be between 500 and 5000 characters, some may be larger if
+	// large environments are collected, so we fix the upper limit to 100kB
+	if len(msg.Body) > 102400 {
+		panic("discarded heartbeat larger than 100kB")
+	}
 	var agt mig.Agent
 	err = json.Unmarshal(msg.Body, &agt)
 	if err != nil {
@@ -77,6 +81,15 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 		desc := fmt.Sprintf("Expired heartbeat received from Agent '%s'", agt.Name)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Notice()
 		return
+	}
+	if agt.Mode != "" && agt.Mode != "daemon" && agt.Mode != "checkin" {
+		panic(fmt.Sprintf("invalid mode '%s' received from agent '%s'", agt.Mode, agt.QueueLoc))
+	}
+	if len(agt.Name) > 1024 {
+		panic(fmt.Sprintf("agent name longer than 1024 characters: name '%s' from '%s'", agt.Name, agt.QueueLoc))
+	}
+	if len(agt.Version) > 128 {
+		panic(fmt.Sprintf("agent version longer than 128 characters: version '%s' from '%s'", agt.Version, agt.QueueLoc))
 	}
 	// if agent is not authorized, ack the message and skip the registration
 	// nothing is returned to the agent. it's simply ignored.
