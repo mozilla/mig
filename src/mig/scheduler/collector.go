@@ -134,6 +134,12 @@ func loadReturnedCommands(ctx Context) (err error) {
 			continue
 		}
 		filename := ctx.Directories.Command.Returned + "/" + DirEntry.Name()
+		_, err = os.Stat(filename)
+		if err != nil {
+			// file is already gone, probably consumed by the file notifier
+			// ignore and continue
+			continue
+		}
 		err := waitForFileOrDelete(filename, 3)
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("error while reading '%s': %v", filename, err)}.Err()
