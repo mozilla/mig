@@ -43,8 +43,9 @@ type params struct {
 }
 
 type elements struct {
-	MsLatencies []float64 `json:"ms_latencies"` // response latency in milliseconds: 9999999 indicates timeout, -1 indicates unreachable, 0 general error.
-	Reachable   bool      `json:"reachable"`
+	MsLatencies  []float64 `json:"ms_latencies"` // response latency in milliseconds: 9999999 indicates timeout, -1 indicates unreachable, 0 general error.
+	Reachable    bool      `json:"reachable"`
+	ResolvedHost string    `json:"resolvedhost"` // Information about the ip:port being pinged
 }
 
 // Global variable latencies.
@@ -91,6 +92,11 @@ func (r *Runner) ValidateParameters() (err error) {
 
 	if r.Parameters.Timeout == 0.0 {
 		r.Parameters.Timeout = 5.0
+	}
+
+	// Default count to 3 if it is 0
+	if r.Parameters.Count == 0.0 {
+		r.Parameters.Count = 3
 	}
 
 	r.Parameters.Destination = ip
@@ -222,6 +228,7 @@ func (r Runner) Run(Args []byte) string {
 	}
 
 	latencies.Reachable = false
+	latencies.ResolvedHost = fmt.Sprintf("%s:%v", r.Parameters.Destination, r.Parameters.DestinationPort)
 
 	for i := 0; i < int(r.Parameters.Count); i += 1 {
 		var err error
@@ -276,4 +283,47 @@ func (r Runner) buildResults() string {
 		panic(err)
 	}
 	return string(jsonOutput[:])
+}
+
+func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("Print Error: %v", e)
+		}
+	}()
+
+	var modres mig.ModuleResult
+	err = json.Unmarshal(rawResults, modres)
+	if err != nil {
+		panic(err)
+	}
+	buf, err := json.Marshal(modres)
+	if err != nil {
+		panic(err)
+	}
+
+	var elms elements
+	err = json.Unmarshal(buf, elms)
+	if err != nil {
+		panic(err)
+	}
+
+	resStr := fmt.Sprintf("Pinged host %s\nResults:\n", elms.ResolvedHost)
+
+	if elms.Reachable == false {
+		resStr = resStr + "  Host Unreachable\n"
+		prints = append(prints, resStr)
+		return
+	}
+
+	resStr = " Latencies: "
+	for i := range elms.MsLatencies {
+		resStr += fmt.Sprintf("%v ", elms.MsLatencies[i])
+	}
+	resStr += "\n"
+
+	resStr = resStr + "  Host Reachable\n"
+	prints = append(prints, resStr)
+
+	return
 }
