@@ -98,7 +98,7 @@ go_get_common_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
 	$(GOGETTER) code.google.com/p/gcfg
 
-go_get_agent_deps: go_get_common_deps go_get_ping_deps
+go_get_agent_deps: go_get_common_deps go_get_ping_deps go_get_memory_deps
 	$(GOGETTER) code.google.com/p/go.crypto/sha3
 	$(GOGETTER) github.com/streadway/amqp
 	$(GOGETTER) github.com/kardianos/osext
