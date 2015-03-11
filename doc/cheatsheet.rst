@@ -116,3 +116,35 @@ CIDR (the netstat module doesn't have an `exclude` option).
 	-ci 192.160.0.0/13	-ci 192.169.0.0/16	-ci 192.170.0.0/15	-ci 192.172.0.0/14 \
 	-ci 192.176.0.0/12	-ci 192.192.0.0/10	-ci 193.0.0.0/8		-ci 194.0.0.0/7 \
 	-ci 196.0.0.0/6		-ci 200.0.0.0/5		-ci 208.0.0.0/4
+
+Advanced targetting
+-------------------
+
+MIG can use complex queries to target specific agents. The following examples
+outline some of the capabilities. At the core, the `target` parameter is just a
+WHERE condition executed against the agent table of the MIG database, so if you
+know the DB schema, you can craft any targetting you want.
+
+Target agents that found results in a previous action
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Useful to run a second action on the agents that returned positive results in a
+first one. The query is a bit complex because it uses Postgres JSON array
+processing.
+
+Given an action with ID 12345 that was run and returned results, we want to run
+a new action on the agents that matched action 12345. To do so, use the target
+that follows:
+
+.. code:: bash
+
+	mig file -t "id IN ( \
+		SELECT agentid FROM commands, json_array_elements(commands.results) AS r \
+		WHERE commands.actionid = 12345 AND r#>>'{foundanything}' = 'true')" \
+	-path /etc/passwd -content "^spongebob"
+
+The subquery select command results for action 12345 and return the ID of
+agents that have at least one `foundanything` set to true. Since command
+results are an array, and each entry of the array contains a foundanything
+value, the query iterates through each entry of the array using postgres's
+`json_array_elements` function.
