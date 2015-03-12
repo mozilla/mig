@@ -178,6 +178,6 @@ func publishHintToMozdef(hint hint, mozdefChan *amqp.Channel) (err error) {
 		Expiration:   "6000000", // events expire after 100 minutes if not consumed
 		Body:         data,
 	}
-	err = mozdefChan.Publish("mozdef", "event", false, false, msg)
+	err = mozdefChan.Publish("eventtask", "eventtask", false, false, msg)
 	return
 }
