@@ -8,7 +8,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/howeyc/fsnotify"
 	"mig"
 	"os"
 	"time"
@@ -30,19 +29,6 @@ func startRoutines(ctx Context) {
 		}
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "mig.ProcessLog() routine started"}
-
-	// Watch the data directories for new files
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		panic(err)
-	}
-	go watchDirectories(watcher, ctx)
-	go func() {
-		err = initWatchers(watcher, ctx)
-		if err != nil {
-			panic(err)
-		}
-	}()
 
 	// Goroutine that loads actions dropped into ctx.Directories.Action.New
 	go func() {
