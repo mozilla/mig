@@ -67,9 +67,8 @@ type Context struct {
 		UseTLS                  bool
 		TLScert, TLSkey, CAcert string
 		Timeout                 string
-		// internal
-		conn *amqp.Connection
-		Chan *amqp.Channel
+		conn                    *amqp.Connection
+		Chan                    *amqp.Channel
 	}
 	PGP struct {
 		Pubring, Secring   io.ReadSeeker
@@ -288,12 +287,16 @@ func initRelay(orig_ctx Context) (ctx Context, err error) {
 	if err != nil {
 		panic(err)
 	}
-	// declare the "mig" exchange used for all publications
+	// declare the "mig" exchange used for communication with the agents
 	err = ctx.MQ.Chan.ExchangeDeclare("mig", "topic", true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
-
+	// declare the "migevent" exchange used for communication between the platform components
+	err = ctx.MQ.Chan.ExchangeDeclare("migevent", "topic", true, false, false, false, nil)
+	if err != nil {
+		panic(err)
+	}
 	ctx.Channels.Log <- mig.Log{Desc: "AMQP connection opened"}
 	return
 }
