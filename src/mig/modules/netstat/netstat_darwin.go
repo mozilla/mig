@@ -40,7 +40,7 @@ func HasSeenMac(val string) (found bool, elements []element, err error) {
 	for {
 		lineBytes, _, err := reader.ReadLine()
 		if err != nil {
-			continue
+			break
 		}
 		line := fmt.Sprintf("%s", lineBytes)
 		fields := strings.Fields(line)

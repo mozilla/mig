@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"mig"
 	"os/exec"
-	"runtime"
 	"strings"
 )
 
