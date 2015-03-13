@@ -8,4 +8,5 @@ package event
 const (
 	Q_Agt_Auth_Fail = "agent.authentication.failure"
 	Q_Agt_New       = "agent.new"
+	Q_Cmd_Res       = "command.results"
 )

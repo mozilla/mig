@@ -174,6 +174,7 @@ func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agent
 // ActiveAgentsByTarget runs a search for all agents that match a given target string.
 // For safety, it does so in a transaction that runs as a readonly user.
 func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error) {
+	var jTags, jEnv []byte
 	// save current user
 	var dbuser string
 	err = db.c.QueryRow("SELECT CURRENT_USER").Scan(&dbuser)
@@ -189,8 +190,8 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 		_ = txn.Rollback()
 		return
 	}
-	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc, version, pid, status
-		FROM agents WHERE agents.status IN ('%s', '%s') AND (%s)
+	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc, version, pid, status,
+		environment, tags, mode FROM agents WHERE agents.status IN ('%s', '%s') AND (%s)
 		ORDER BY agents.queueloc, agents.heartbeattime DESC`, mig.AgtStatusOnline, mig.AgtStatusIdle, target))
 	if err != nil {
 		_ = txn.Rollback()
@@ -199,10 +200,21 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 	}
 	for rows.Next() {
 		var agent mig.Agent
-		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Version, &agent.PID, &agent.Status)
+		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Version, &agent.PID, &agent.Status,
+			&jEnv, &jTags, &agent.Mode)
 		if err != nil {
 			rows.Close()
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jTags, &agent.Tags)
+		if err != nil {
+			err = fmt.Errorf("failed to unmarshal agent tags")
+			return
+		}
+		err = json.Unmarshal(jEnv, &agent.Env)
+		if err != nil {
+			err = fmt.Errorf("failed to unmarshal agent environment")
 			return
 		}
 		agents = append(agents, agent)

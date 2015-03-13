@@ -110,6 +110,7 @@ endif
 
 go_get_platform_deps: go_get_common_deps
 	$(GOGETTER) github.com/streadway/amqp
+	$(GOGETTER) github.com/jvehent/gozdef
 	$(GOGETTER) github.com/lib/pq
 	$(GOGETTER) github.com/howeyc/fsnotify
 	$(GOGETTER) github.com/gorilla/mux
@@ -247,6 +248,10 @@ worker-agent-verif:
 worker-mozdef-asset:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_mozdef_asset_worker $(GOLDFLAGS) mig/workers/mozdef_asset
+
+worker-compliance-item:
+	$(MKDIR) -p $(BINDIR)
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_compliance_item_worker $(GOLDFLAGS) mig/workers/compliance_item
 
 doc:
 	make -C doc doc

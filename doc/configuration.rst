@@ -26,7 +26,7 @@ A complete environment should be configured in the following order:
 6. build the clients and create an investigator
 7. configure and deploy agents
 
-1. Prepare a build environment
+Prepare a build environment
 ------------------------------
 
 Install Go from your package manager or `from source`_.

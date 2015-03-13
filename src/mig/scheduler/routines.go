@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"mig"
+	"mig/event"
 	"os"
 	"time"
 )
@@ -183,6 +184,11 @@ func startRoutines(ctx Context) {
 					Desc: fmt.Sprintf("failed to write agent results to disk: %v", err),
 				}.Err()
 				continue
+			}
+			// publish an event in the command results queue
+			err = sendEvent(event.Q_Cmd_Res, delivery.Body, ctx)
+			if err != nil {
+				panic(err)
 			}
 		}
 	}()
