@@ -9,9 +9,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"net"
 	"os/exec"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -62,8 +64,104 @@ func HasSeenMac(val string) (found bool, elements []element, err error) {
 	return
 }
 
+func parseEndpointString(str string) (ip net.IP, port int) {
+	re, err := regexp.Compile("^(.*?)(%[a-z0-9]+)?\\.(\\*|[0-9]+)$")
+	if err != nil {
+		panic(err)
+	}
+
+	// Note that 'netstat' will sometimes truncate a long IPv6 address, in
+	// which case this function may return an incorrect address or (if the
+	// result ends with ':') nil.
+
+	matches := re.FindStringSubmatch(str)
+	if matches != nil {
+		if matches[1] == "*" {
+			return nil, -1
+		}
+		ip = net.ParseIP(matches[1])
+		if matches[3] == "*" {
+			port = -1
+		} else {
+			p, err := strconv.Atoi(matches[3])
+			if err != nil {
+				panic(err)
+			}
+			port = int(p)
+		}
+		return
+	}
+	return nil, -1
+}
+
 func HasIPConnected(val string) (found bool, elements []element, err error) {
-	err = fmt.Errorf("HasIPConnected() is not implemented on %s", runtime.GOOS)
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("HasIPConnected(): %v", e)
+		}
+	}()
+	found = false
+	var ipnet *net.IPNet
+
+	// if val contains a /, treat it as a cidr
+	if strings.IndexAny(val, "/") > 0 {
+		_, ipnet, err = net.ParseCIDR(val)
+		if err != nil {
+			panic(err)
+		}
+		// otherwise assume it's a single address (v4 /32 or v6 /128)
+	} else {
+		ip := net.ParseIP(val)
+		if ip == nil {
+			panic("Invalid IP")
+		}
+		ipnet = new(net.IPNet)
+		ipnet.IP = ip
+		ipnet.Mask = net.CIDRMask(len(ip), len(ip))
+	}
+
+	var fam string
+	if len(ipnet.IP) == 4 {
+		fam = "inet"
+	} else {
+		fam = "inet6"
+	}
+
+	out, err := exec.Command("netstat", "-naW", "-f", fam).Output()
+	if err != nil {
+		panic(err)
+	}
+	buf := bytes.NewReader(out)
+	reader := bufio.NewReader(buf)
+	for {
+		lineBytes, _, err := reader.ReadLine()
+		if err != nil {
+			break
+		}
+		line := fmt.Sprintf("%s", lineBytes)
+		fields := strings.Fields(line)
+		if len(fields) <= 4 {
+			continue
+		}
+		localIP, localPort := parseEndpointString(fields[3])
+		remoteIP, remotePort := parseEndpointString(fields[4])
+		if remoteIP != nil && ipnet.Contains(remoteIP) {
+			var el element
+			el.RemoteAddr = remoteIP.String()
+			if remotePort != -1 {
+				el.RemotePort = float64(remotePort)
+			}
+			if localIP != nil {
+				el.LocalAddr = localIP.String()
+			}
+			if localPort != -1 {
+				el.LocalPort = float64(localPort)
+			}
+			elements = append(elements, el)
+			found = true
+		}
+		stats.Examined++
+	}
 	return
 }
 
