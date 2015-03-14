@@ -19,12 +19,7 @@
                     <li><a href="#action-commands-workflow">1.3   Action/Commands workflow</a></li>
                 </ul>
             </li>
-            <li>
-                <p><a href="#access-control-lists">2   Access Control Lists</a></p>
-                <ul class="auto-toc">
-                    <li><a href="#extracting-pgp-fingerprints-from-public-keys">2.1   Extracting PGP fingerprints from public keys</a></li>
-                </ul>
-            </li>
+            <li><a href="#access-control-lists">2   Access Control Lists</a></li>
             <li>
                 <p><a href="#agent-initialization-process">3   Agent initialization process</a></p>
                 <ul class="auto-toc">
@@ -67,6 +62,7 @@
         <li><strong>Database</strong>: a storage backend used by the scheduler and the api</li>
         <li><strong>API</strong>: a REST api that exposes the MIG platform to clients</li>
         <li><strong>Client</strong>: a program used by an investigator to interface with MIG (like the MIG Console, or the action generator)</li>
+        <li><strong>Worker</strong>: a worker is a small extension to the scheduler and api that performs very specific tasks based on events received via the relay.</li>
     </ul>
     <p>An investigator uses a client (such as the MIG Console) to communicate with the API. The API interfaces with the Database and the Scheduler. When an action is created by an investigator, the API receives it and writes it into the spool of the scheduler (they share it via NFS). The scheduler picks it up, creates one command per target agent, and sends those commands to the relays (running RabbitMQ). Each agent is listening on its own queue on the relay. The agents execute their commands, and return the results through the same relays (same exchange, different queues). The scheduler writes the results into the database, where the investigator can access them through the API. The agents also use the relays to send heartbeat at regular intervals, such that the scheduler always knows how many agents are alive at a given time.</p>
     <p>The end-to-end workflow is:</p>
@@ -251,26 +247,6 @@ investigator                                  +--------&gt;|  data  |
 <span class="p">}</span></code></pre>
         <p>The <cite>default</cite> permission is overridden by module specific permissions.</p>
         <p>The ACL is currently applied to modules. In the future, ACL will have finer control to authorize access to specific functions of modules. For example, an investigator could be authorized to call the <cite>regex</cite> function of filechecker module, but only in <cite>/etc</cite>. This functionality is not implemented yet.</p>
-        <section id="extracting-pgp-fingerprints-from-public-keys">
-            <h3>2.1   Extracting PGP fingerprints from public keys</h3>
-            <p>On Linux, the <cite>gpg</cite> command can easily display the fingerprint of a key using <cite>gpg --fingerprint &lt;key id&gt;</cite>. For example:</p>
-            <pre><code class="bash"><span class="nv">$ </span>gpg --fingerprint jvehent@mozilla.com
-pub   2048R/3B763E8F 2013-04-30
-      Key <span class="nv">fingerprint</span> <span class="o">=</span> E608 92BB 9BD8 9A69 F759  A1A0 A3D6 5217 3B76 3E8F
-uid                  Julien Vehent <span class="o">(</span>personal<span class="o">)</span> &lt;julien@linuxwall.info&gt;
-uid                  Julien Vehent <span class="o">(</span>ulfr<span class="o">)</span> &lt;jvehent@mozilla.com&gt;
-sub   2048R/8026F39F 2013-04-30</code></pre>
-            <p>You should always verify the trustworthiness of a key before using it:</p>
-            <pre><code class="bash"><span class="nv">$ </span>gpg --list-sigs jvehent@mozilla.com
-pub   2048R/3B763E8F 2013-04-30
-uid                  Julien Vehent <span class="o">(</span>personal<span class="o">)</span> &lt;julien@linuxwall.info&gt;
-sig 3        3B763E8F 2013-06-23  Julien Vehent <span class="o">(</span>personal<span class="o">)</span> &lt;julien@linuxwall.info&gt;
-sig 3        28A860CE 2013-10-04  Curtis Koenig &lt;ckoenig@mozilla.com&gt;
-.....</code></pre>
-            <p>We want to extract the fingerprint, and obtain a 40 characters hexadecimal string that can used in permissions.</p>
-            <pre><code class="bash"><span class="nv">$gpg</span> --fingerprint --with-colons jvehent@mozilla.com |grep <span class="s1">'^fpr'</span>|cut -f 10 -d <span class="s1">':'</span>
-E60892BB9BD89A69F759A1A0A3D652173B763E8F</code></pre>
-        </section>
     </section>
     <section id="agent-initialization-process">
         <h2>3   Agent initialization process</h2>
