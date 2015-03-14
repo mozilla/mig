@@ -8,8 +8,8 @@ package main
 import (
 	_ "mig/modules/agentdestroy"
 	_ "mig/modules/file"
-	//_ "mig/modules/filechecker"
 	_ "mig/modules/netstat"
+	_ "mig/modules/timedrift"
 	//_ "mig/modules/upgrade"
 	_ "mig/modules/ping"
 )
