@@ -24,15 +24,17 @@ rabbitmq endpoint when MozDef will retrieve them.
 
 	; mozdef rabbitmq endpoint
 	[mozdef]
-		host = "hostname.mozdef.rabbitmq.example.net"
+		host = "mozdef.rabbitmq.example.net"
 		port = 5671
-		user = "mig"
-		pass = "somepassphrase"
+		user = "migassetworker"
+		pass = "secretpassphrase"
 		vhost = "mozdef"
-		usetls  = false
-		cacert  = "/path/to/ca.crt"
-		tlscert = "/path/to/client.crt"
-		tlskey  = "/path/to/client.key"
+		exchange = "eventtask"
+		routingkey = "eventtask"
+		usetls  = true
+		cacertpath  = "/etc/certs/ca.crt"
+		clientcertpath = "/etc/certs/migassetworker.crt"
+		clientkeypath  = "/etc/certs/migassetworker.key"
 		timeout = "10s"
 
 	; mig rabbitmq endpoint

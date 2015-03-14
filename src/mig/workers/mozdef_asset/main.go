@@ -10,20 +10,19 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/streadway/amqp"
+	"github.com/jvehent/gozdef"
 	"mig"
 	"mig/event"
 	"mig/workers"
 	"os"
 	"regexp"
-	"time"
 )
 
 const workerName = "mozdef_asset"
 
 type Config struct {
 	Mq      workers.MqConf
-	MozDef  workers.MqConf
+	MozDef  gozdef.MqConf
 	Logging mig.Logging
 }
 
@@ -31,7 +30,7 @@ func main() {
 	var (
 		err  error
 		conf Config
-		hint hint
+		hint gozdef.HostAssetHint
 	)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s - a worker that listens to new endpoints and sends them as assets to mozdef\n", os.Args[0])
@@ -57,7 +56,7 @@ func main() {
 	}
 
 	// bind to the mozdef relay exchange
-	mozdefChan, err := workers.InitMQ(conf.MozDef)
+	gp, err := gozdef.InitAmqp(conf.MozDef)
 	if err != nil {
 		panic(err)
 	}
@@ -73,111 +72,49 @@ func main() {
 		if err != nil {
 			mig.ProcessLog(logctx, mig.Log{Desc: fmt.Sprintf("failed to build asset hint: %v", err)}.Err())
 		}
-		err = publishHintToMozdef(hint, mozdefChan)
+		err = publishHintToMozdef(hint, gp)
 		if err != nil {
 			mig.ProcessLog(logctx, mig.Log{Desc: fmt.Sprintf("failed to publish to mozdef: %v", err)}.Err())
 		}
-		mig.ProcessLog(logctx, mig.Log{Desc: "published asset hint for agent '" + hint.Details.Name + "' to mozdef"}.Debug())
+		mig.ProcessLog(logctx, mig.Log{Desc: "published asset hint for agent '" + hint.Name + "' to mozdef"}.Info())
 	}
 	return
 }
 
-// A hint describes informations about an endpoint as gathered by MIG
-// The format uses Mozdef's standard event format described in
-// http://mozdef.readthedocs.org/en/latest/usage.html#json-format
-// {
-//   "timestamp": "2014-02-14T11:48:19.035762739-05:00",
-//   "summary": "mig discovered host server1.net.example.com",
-//   "hostname": "mig-worker1.use1.opsec.mozilla.com",
-//   "severity": "INFO",
-//   "category": "asset_hint",
-//   "tags": [
-//     "MIG",
-//     "Asset"
-//   ],
-//   "details": {
-//     "type": "host",
-//     "name": "opsec1.private.phx1.mozilla.com",
-//     "ipv4": [
-//           "10.8.75.110/24"
-//     ],
-//     "ipv6": [
-//       "fe80::250:56ff:febd:6850/64"
-//     ],
-//     "arch": "amd64",
-//     "ident": "Red Hat Enterprise Linux Server release 6.6 (Santiago)",
-//     "init": "upstart",
-//     "isproxied": false,
-//       "operator": "IT"
-//   }
-// }
-type hint struct {
-	Timestamp time.Time   `json:"timestamp"`
-	Summary   string      `json:"summary"`
-	Hostname  string      `json:"hostname"`
-	Severity  string      `json:"severity"`
-	Category  string      `json:"category"`
-	Tags      []string    `json:"tags"`
-	Details   hintDetails `json:"details"`
-}
-
-type hintDetails struct {
-	Type      string   `json:"type"`
-	Name      string   `json:"name"`
-	IPv4      []string `json:"ipv4"`
-	IPv6      []string `json:"ipv6"`
-	OS        string   `json:"os"`
-	Arch      string   `json:"arch"`
-	Ident     string   `json:"ident"`
-	Init      string   `json:"init"`
-	IsProxied bool     `json:"isproxied"`
-	Operator  string   `json:"operator"`
-}
-
-func makeHintFromAgent(agt mig.Agent) (hint hint, err error) {
-	hint.Timestamp = time.Now().UTC()
-	hint.Summary = "mig discovered host " + agt.Name
-	hint.Hostname, err = os.Hostname()
-	if err != nil {
-		return
-	}
-	hint.Severity = "INFO"
-	hint.Category = "asset_hint"
-	hint.Tags = append(hint.Tags, "mig")
-	hint.Tags = append(hint.Tags, "asset")
-	hint.Details.Type = "host"
-	hint.Details.Name = agt.Name
+func makeHintFromAgent(agt mig.Agent) (hint gozdef.HostAssetHint, err error) {
+	hint.Type = "host"
+	hint.Name = agt.Name
 	reipv4 := regexp.MustCompile(`([0-9]{1,3}\.){3}([0-9]{1,3})`)
 	for _, ip := range agt.Env.Addresses {
 		if reipv4.MatchString(ip) {
-			hint.Details.IPv4 = append(hint.Details.IPv4, ip)
+			hint.IPv4 = append(hint.IPv4, ip)
 		} else {
-			hint.Details.IPv6 = append(hint.Details.IPv6, ip)
+			hint.IPv6 = append(hint.IPv6, ip)
 		}
 	}
-	hint.Details.OS = agt.Env.OS
-	hint.Details.Arch = agt.Env.Arch
-	hint.Details.Ident = agt.Env.Ident
-	hint.Details.Init = agt.Env.Init
-	hint.Details.IsProxied = agt.Env.IsProxied
+	hint.OS = agt.Env.OS
+	hint.Arch = agt.Env.Arch
+	hint.Ident = agt.Env.Ident
+	hint.Init = agt.Env.Init
+	hint.IsProxied = agt.Env.IsProxied
 	if _, ok := agt.Tags.(map[string]interface{})["operator"]; ok {
-		hint.Details.Operator = agt.Tags.(map[string]interface{})["operator"].(string)
+		hint.Operator = agt.Tags.(map[string]interface{})["operator"].(string)
 	}
 	return
 }
 
-func publishHintToMozdef(hint hint, mozdefChan *amqp.Channel) (err error) {
-	data, err := json.Marshal(hint)
+func publishHintToMozdef(hint gozdef.HostAssetHint, gp gozdef.Publisher) error {
+	// create a new event and set values in the fields
+	ev, err := gozdef.NewEvent()
 	if err != nil {
-		return
+		return err
 	}
-	msg := amqp.Publishing{
-		DeliveryMode: amqp.Persistent,
-		Timestamp:    time.Now(),
-		ContentType:  "text/plain",
-		Expiration:   "6000000", // events expire after 100 minutes if not consumed
-		Body:         data,
-	}
-	err = mozdefChan.Publish("eventtask", "eventtask", false, false, msg)
-	return
+	ev.Category = "asset_hint"
+	ev.Source = "mig"
+	ev.Summary = fmt.Sprintf("mig discovered endpoint %s", hint.Name)
+	ev.Tags = append(ev.Tags, "mig")
+	ev.Tags = append(ev.Tags, "asset")
+	ev.Info()
+	ev.Details = hint
+	return gp.Send(ev)
 }

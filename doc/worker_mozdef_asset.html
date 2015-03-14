@@ -25,15 +25,17 @@
         <p>This worker retrieves agents hearbeats in the MIG Agent format from the MIG Relay, transforms them into Asset Hints, and publishes them to some other rabbitmq endpoint when MozDef will retrieve them.</p>
         <pre><code class="">; mozdef rabbitmq endpoint
 [mozdef]
-    host = "hostname.mozdef.rabbitmq.example.net"
+    host = "mozdef.rabbitmq.example.net"
     port = 5671
-    user = "mig"
-    pass = "somepassphrase"
+    user = "migassetworker"
+    pass = "secretpassphrase"
     vhost = "mozdef"
-    usetls  = false
-    cacert  = "/path/to/ca.crt"
-    tlscert = "/path/to/client.crt"
-    tlskey  = "/path/to/client.key"
+    exchange = "eventtask"
+    routingkey = "eventtask"
+    usetls  = true
+    cacertpath  = "/etc/certs/ca.crt"
+    clientcertpath = "/etc/certs/migassetworker.crt"
+    clientkeypath  = "/etc/certs/migassetworker.key"
     timeout = "10s"
 
 ; mig rabbitmq endpoint
