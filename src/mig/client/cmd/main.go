@@ -64,7 +64,7 @@ func main() {
 	)
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Fprintf(os.Stderr, "FATAL: %v\n", e)
+			fmt.Fprintf(os.Stderr, "%v\n", e)
 		}
 	}()
 	homedir := client.FindHomedir()
@@ -96,6 +96,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		fmt.Fprintf(os.Stderr, "[info] launching action from file, all flags are ignored")
 		goto readytolaunch
 	}
 
@@ -112,7 +113,17 @@ func main() {
 		panic("Unknown module " + op.Module)
 	}
 
+	// -- Ugly hack Warning --
+	// Parse() will fail on the first flag that is not defined, but in our case module flags
+	// are defined in the module packages and not in this program. Therefore, the flag parse error
+	// is expected. Unfortunately, Parse() writes directly to stderr and displays the error to
+	// the user, which confuses them. The right fix would be to prevent Parse() from writing to
+	// stderr, since that's really the job of the calling program, but in the meantime we work around
+	// it by redirecting stderr to null before calling Parse(), and put it back to normal afterward.
+	// for ref, issue is at https://github.com/golang/go/blob/master/src/flag/flag.go#L793
+	fs.SetOutput(os.NewFile(uintptr(87592), os.DevNull))
 	err = fs.Parse(os.Args[2:])
+	fs.SetOutput(nil)
 	if err != nil {
 		// ignore the flag not defined error, which is expected because
 		// module parameters are defined in modules and not in main
