@@ -16,10 +16,10 @@ PM supports ICMP, TCP and UDP pings. PM requires that destination is a valid ipv
 .. code:: json
 
   {
-        "count": 3, 
-        "destination": "www.google.com", 
-        "destinationport": 80, 
-        "protocol": "tcp", 
+        "count": 3,
+        "destination": "www.google.com",
+        "destinationport": 80,
+        "protocol": "tcp",
         "timeout": 5
   }
 
@@ -37,4 +37,52 @@ Note on scans
 
 * Selecting protocol as TCP performs a TCP Connect scan. This means that a full connection is established (and broken down) when a tcp ping is performed. This might leave records in the destination systems logs.
 * A timeout on udp ping indicates that the port checked for **maybe** open. Hence the module returns reachable as true (and latency as timeout). However, if the port is closed, the module returns "Connection Refused" indicating that the port is closed.
+
+Examples
+--------
+
+Basic ICMP ping
+~~~~~~~~~~~~~~~
+
+.. code::
+
+	$ mig ping -t "name='somehost.example.net'" -show all -d 8.8.8.8
+	somehost.example.net icmp ping of 8.8.8.8 (8.8.8.8) succeeded. Target is reachable.
+	somehost.example.net ping #1 succeeded in 36ms
+	somehost.example.net ping #2 succeeded in 21ms
+	somehost.example.net ping #3 succeeded in 31ms
+	somehost.example.net command success
+
+Single TCP ping of twitter.com:443
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code::
+
+	$ mig ping -t "name='somehost.example.net'" -show all -d twitter.com -dp 443 -p tcp -c 1 -t 5
+	somehost.example.net tcp ping of twitter.com:443 (199.16.156.102) succeeded. Target is reachable.
+	somehost.example.net ping #1 succeeded in 27ms
+	somehost.example.net command success
+
+UDP Ping of Google's DNS
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+UDP ping is less deterministic because no response is returned from the target
+if the ping succeeded. A lack of response is considered a success, and no
+latency is returned.
+
+.. code::
+
+	$ mig ping -t "name='somehost.example.net'" -show all -d 8.8.8.8 -dp 53 -p udp -c 10 -t 5
+	somehost.example.net udp ping of 8.8.8.8:53 (8.8.8.8) succeeded. Target is reachable.
+	somehost.example.net ping #1 may have succeeded (no udp response)
+	somehost.example.net ping #2 may have succeeded (no udp response)
+	somehost.example.net ping #3 may have succeeded (no udp response)
+	somehost.example.net ping #4 may have succeeded (no udp response)
+	somehost.example.net ping #5 may have succeeded (no udp response)
+	somehost.example.net ping #6 may have succeeded (no udp response)
+	somehost.example.net ping #7 may have succeeded (no udp response)
+	somehost.example.net ping #8 may have succeeded (no udp response)
+	somehost.example.net ping #9 may have succeeded (no udp response)
+	somehost.example.net ping #10 may have succeeded (no udp response)
+	somehost.example.net command success
 

@@ -7,81 +7,128 @@
 package ping
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 )
 
-const help string = `
-Ping module is used to check connection between an endpoint and a remote host. Currently supports for icmp, tcp and udp ping.
-Please check: https://github.com/mozilla/mig/blob/master/src/mig/modules/ping/doc.rst for a complete documentation.
+func printHelp(isCmd bool) {
+	dash := ""
+	if isCmd {
+		dash = "-"
+	}
+	fmt.Printf(`Ping module checks connectivity between an endpoint and a remote host. It supports
+icmp, tcp and udp ping. See doc at http://mig.mozilla.org/doc/module_ping.html
 
--d  <destination address>   Destination Address can be ipv4, ipv6 or FQDN of the destination host to which the connectivity has to be checked.
-                            example: -d www.mozilla.org
-							         -d 63.245.217.105
+%sd <ip/fqdn>	Destination Address can be ipv4, ipv6 or FQDN
+		example: %sd www.mozilla.org
+			 %sd 63.245.217.105
 
--dp <destination port>      Port on the destination host to which the connectivity has to be checked.
-                            Leave this parameter blank if protocol is ICMP. For UDP and TCP destination port defaults to 80.
-							example: -dp 53
+%sdp <port>	For TCP and UDP, specifies the port to test connectivity to
+		example: %sdp 53
 
--p  <protocol>              Protocol to use for the ping. This can be "icmp", "tcp" or "udp"
-							example: -p udp
+%sp <protocol>	Protocol to use for the ping. This can be "icmp", "tcp" or "udp"
+		example: %sp udp
 
--c  <count>                 Number of times to repeat the test. Default 3.
-                            example: -c 5
+%sc <count>	Number of ping/connection attempts. Defaults to 3.
+		example: %sc 5
 
--t  <timeout>               Time (in seconds) to wait for response before the module has to timeout. Defaults to 5s.
-                            example: -t 10
-`
+%st <timeout>	Connection timeout in seconds. Defaults to 5.
+		example: %st 10
+`, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash)
+
+	return
+}
 
 // ParamsParser implements a command line parameter parser for the ping module
 func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	var (
-		err            error
-		d, dp, p, c, t flagParam
-		fs             flag.FlagSet
+		err      error
+		pa       params
+		d, p     string
+		dp, c, t float64
+		fs       flag.FlagSet
 	)
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
-		fmt.Println(help)
+		printHelp(true)
 		return nil, fmt.Errorf("help printed")
 	}
-	fs.Init("file", flag.ContinueOnError)
-	fs.Var(&d, "d", "see help")
-	fs.Var(&dp, "dp", "see help")
-	fs.Var(&p, "p", "see help")
-	fs.Var(&c, "c", "see help")
-	fs.Var(&t, "t", "see help")
+	fs.Init("ping", flag.ContinueOnError)
+	fs.StringVar(&d, "d", "www.google.com", "see help")
+	fs.Float64Var(&dp, "dp", -1, "see help")
+	fs.StringVar(&p, "p", "icmp", "see help")
+	fs.Float64Var(&c, "c", 3, "see help")
+	fs.Float64Var(&t, "t", 5, "see help")
 
 	err = fs.Parse(args)
 	if err != nil {
 		return nil, err
 	}
+	pa.Destination = d
+	pa.DestinationPort = dp
+	pa.Protocol = p
+	pa.Count = c
+	pa.Timeout = t
+	r.Parameters = pa
+	return pa, r.ValidateParameters()
+}
 
-	port, err := strconv.ParseFloat(dp.String(), 64)
-	count, err := strconv.ParseFloat(c.String(), 64)
-	timeout, err := strconv.ParseFloat(t.String(), 64)
-
-	if err != nil {
-		fmt.Println(help)
-		return nil, fmt.Errorf("help printed")
+// ParamsCreator implements an interactive interface for the console
+func (r Runner) ParamsCreator() (interface{}, error) {
+	var (
+		err error
+		p   params
+	)
+	printHelp(false)
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Printf("ping> ")
+		scanner.Scan()
+		if err := scanner.Err(); err != nil {
+			fmt.Println("Invalid input. Try again")
+			continue
+		}
+		input := scanner.Text()
+		splitted := strings.SplitN(input, " ", 2)
+		if splitted[0] != "" && splitted[0] != "help" && splitted[0] != "done" && len(splitted) != 2 {
+			fmt.Println("invalid input format")
+			continue
+		}
+		switch splitted[0] {
+		case "d":
+			p.Destination = splitted[1]
+		case "dp":
+			p.DestinationPort, err = strconv.ParseFloat(splitted[1], 64)
+			if err != nil {
+				fmt.Println("invalid destination port: %v", err)
+				continue
+			}
+		case "p":
+			p.Protocol = splitted[1]
+		case "c":
+			p.Count, err = strconv.ParseFloat(splitted[1], 64)
+			if err != nil {
+				fmt.Println("invalid count: %v", err)
+				continue
+			}
+		case "t":
+			p.Timeout, err = strconv.ParseFloat(splitted[1], 64)
+			if err != nil {
+				fmt.Println("invalid timeout: %v", err)
+				continue
+			}
+		case "help":
+			printHelp(false)
+		case "done":
+			goto done
+		default:
+			fmt.Println("enter 'done' to exit")
+		}
 	}
-
-	var pa params
-	pa.Destination = d.String()
-	pa.DestinationPort = port
-	pa.Protocol = p.String()
-	pa.Count = count
-	pa.Timeout = timeout
-	return pa, nil
-}
-
-type flagParam []string
-
-func (f *flagParam) String() string {
-	return fmt.Sprint([]string(*f))
-}
-
-func (f *flagParam) Set(value string) error {
-	*f = append(*f, value)
-	return nil
+done:
+	r.Parameters = p
+	return p, r.ValidateParameters()
 }
