@@ -260,8 +260,8 @@ func printHelp(isCmd bool) {
 	if isCmd {
 		dash = "-"
 	}
-	fmt.Printf(`timedrift returns the local time of a system, and verifies if it is within
-acceptable range of NTP time if %sdrift is set.
+	fmt.Printf(`timedrift returns the local time of a system and, when %sdrift is set,
+verifies that local time is within acceptable range of network time by querying NTP servers
 
 %sdrift <duration>	allowed time drift window. a value of "5s" compares local
 			time with ntp hosts and returns a drift failure if local
@@ -307,14 +307,13 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 		err   error
 		drift string
 		fs    flag.FlagSet
-		p     params
 	)
-	if len(args) == 0 {
-		return p, nil
-	}
-	if len(args) > 1 && args[0] == "help" {
+	if len(args) >= 1 && args[0] == "help" {
 		printHelp(true)
-		return nil, nil
+		return nil, fmt.Errorf("help printed")
+	}
+	if len(args) == 0 {
+		return r.Parameters, nil
 	}
 	fs.Init("time", flag.ContinueOnError)
 	fs.StringVar(&drift, "drift", "", "see help")
@@ -326,6 +325,6 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid drift duration. try help.")
 	}
-	p.Drift = drift
-	return p, nil
+	r.Parameters.Drift = drift
+	return r.Parameters, r.ValidateParameters()
 }
