@@ -122,8 +122,10 @@ func (r Runner) Run(Args []byte) string {
 			Drift:     localtime.Sub(t).String(),
 			Reachable: true,
 		})
-		r.Results.FoundAnything = true
 		ct.HasCheckedDrift = true
+	}
+	if !ct.IsWithinDrift {
+		r.Results.FoundAnything = true
 	}
 done:
 	r.Results.Elements = ct
