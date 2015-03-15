@@ -36,29 +36,47 @@ func initSocket(orig_ctx Context) (ctx Context, err error) {
 func socketAccept(ctx Context) {
 	for {
 
-		fd, err := ctx.Socket.Listener.Accept()
+		conn, err := ctx.Socket.Listener.Accept()
 		if err != nil {
-			break
+			continue
 		}
 		// lock publication, serve, then exit
 		publication.Lock()
-		socketServe(fd, ctx)
+		socketServe(conn, ctx)
 		publication.Unlock()
+		// sleep 2 seconds between accepting connections, to prevent abuses
+		time.Sleep(2 * time.Second)
 	}
 }
 
 // serveConn processes the request and close the connection. Connections to
 // the stat socket are single-request only.
 func socketServe(fd net.Conn, ctx Context) {
-	var resp string
+	var (
+		resp string
+		n    int
+		err  error
+	)
+	gotdata := make(chan bool)
 	defer func() {
+		fd.Close()
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("socketServe() -> %v", e)}.Err()
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving socketServe()"}.Debug()
 	}()
 	buf := make([]byte, 8192)
-	n, err := fd.Read(buf)
+	go func() {
+		n, err = fd.Read(buf)
+		gotdata <- true
+	}()
+	select {
+	// don't wait for more than 1 second for data to come in
+	case <-time.After(1 * time.Second):
+		return
+	case <-gotdata:
+		break
+	}
 	if err != nil {
 		return
 	}
