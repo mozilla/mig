@@ -29,16 +29,20 @@ usage: %s <module> <global options> <module parameters>
 		* found: 	only print positive results
 		* notfound: 	only print negative results
 		* all: 		print all results
--t <target>	target to launch the action on. Defaults to all active agents.
+-t <target>	target to launch the action on. The default targets all online
+		agents (idle and offline agents are ignored).
 		examples:
 		* linux agents:          -t "queueloc LIKE 'linux.%%'"
 		* agents named *mysql*:  -t "name like '%%mysql%%'"
 		* proxied linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
 		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
 
+Progress information is sent to stderr, silence it with "2>/dev/null".
+Results are sent to stdout, redirect them with "1>/path/to/file".
+
 --- Modules documentation ---
 Each module provides its own set of parameters. Module parameters must be set *after*
-global options for the parsing to work correctly. The following modules are available:
+global options. Help is available by calling "<module> help". Available modules are:
 `, os.Args[0], os.Args[0])
 	for module, _ := range mig.AvailableModules {
 		fmt.Printf("* %s\n", module)
