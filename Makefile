@@ -28,7 +28,7 @@ endif
 PREFIX		:= /usr/local/
 DESTDIR		:= /
 BINDIR		:= bin/$(OS)/$(ARCH)
-AGTCONF		:= conf/mig-agent-conf.go
+AGTCONF		:= conf/mig-agent-conf.go.inc
 AVAILMODS	:= conf/available_modules.go
 MSICONF		:= mig-agent-installer.wxs
 
