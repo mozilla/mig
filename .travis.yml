@@ -13,5 +13,5 @@ notifications:
         on_success: never
         on_failure: always
 script:
-    - make all
+    - make all AGTCONF=conf/mig-agent-conf.go.inc
     - yes | bash tools/standalone_install.sh
