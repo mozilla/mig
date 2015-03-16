@@ -125,7 +125,8 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 			continue
 		}
 	}
-	return p, nil
+	r.Parameters = p
+	return p, r.ValidateParameters()
 }
 
 const cmd_help string = `
@@ -186,7 +187,9 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	p.NeighborIP = ni
 	p.ConnectedIP = ci
 	p.ListeningPort = lp
-	return p, nil
+
+	r.Parameters = p
+	return p, r.ValidateParameters()
 }
 
 type flagParam []string
