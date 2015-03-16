@@ -263,7 +263,8 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 		fmt.Println("Stored search", label)
 	}
 exit:
-	return p, nil
+	r.Parameters = *p
+	return r.Parameters, r.ValidateParameters()
 }
 
 // ParamsParser implements a command line parameters parser that takes a string
@@ -331,11 +332,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	p := newParameters()
 	p.Searches["s1"] = s
 	r.Parameters = *p
-	err = r.ValidateParameters()
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
+	return r.Parameters, r.ValidateParameters()
 }
 
 type flagParam []string
