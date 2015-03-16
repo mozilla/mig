@@ -18,6 +18,9 @@ import (
 	"strings"
 )
 
+// build version
+var version string
+
 var ctx Context
 
 func main() {
@@ -27,7 +30,13 @@ func main() {
 
 	// command line options
 	var config = flag.String("c", "/etc/mig/api.cfg", "Load configuration from file")
+	var showversion = flag.Bool("V", false, "Show build version and exit")
 	flag.Parse()
+
+	if *showversion {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	// The context initialization takes care of parsing the configuration,
 	// and creating connections to database, syslog, ...
@@ -215,9 +224,9 @@ func respond(code int, response interface{}, respWriter http.ResponseWriter, r *
 
 	ctx.Channels.Log <- mig.Log{
 		OpID: getOpID(r),
-		Desc: fmt.Sprintf("src=%s auth=[%s %.0f] %s %s %s resp_code=%d resp_size=%d",
+		Desc: fmt.Sprintf("src=%s auth=[%s %.0f] %s %s %s resp_code=%d resp_size=%d user-agent=%s",
 			remoteAddresses(r), getInvName(r), getInvID(r), r.Method, r.Proto,
-			r.URL.String(), code, len(body)),
+			r.URL.String(), code, len(body), r.UserAgent()),
 	}
 	return
 }

@@ -19,7 +19,8 @@ import (
 	"strings"
 )
 
-var useShortNames bool
+// build version
+var version string
 
 func main() {
 	var err error
@@ -32,7 +33,13 @@ func main() {
 	// command line options
 	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
 	var quiet = flag.Bool("q", false, "don't display banners and prompts")
+	var showversion = flag.Bool("V", false, "show build version and exit")
 	flag.Parse()
+
+	if *showversion {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	// silence extra output
 	out := os.Stdout
@@ -63,7 +70,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli := client.NewClient(conf)
+	cli := client.NewClient(conf, "console-"+version)
 	// print platform status
 	err = printStatus(cli)
 	if err != nil {
