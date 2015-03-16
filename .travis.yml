@@ -13,4 +13,5 @@ notifications:
         on_success: never
         on_failure: always
 script:
+    - make all
     - yes | bash tools/standalone_install.sh
