@@ -17,6 +17,9 @@ import (
 	"time"
 )
 
+// build version
+var version string
+
 func main() {
 	var err error
 	defer func() {
@@ -45,7 +48,13 @@ func main() {
 	var validfrom = flag.String("validfrom", "now", "(optional) set an ISO8601 date the action will be valid from. If unset, use 'now'.")
 	var expireafter = flag.String("expireafter", "30m", "(optional) set a validity duration for the action. If unset, use '30m'.")
 	var nolaunch = flag.Bool("nolaunch", false, "Don't launch the action. Print it and exit. (implies '-p')")
+	var showversion = flag.Bool("V", false, "Show build version and exit")
 	flag.Parse()
+
+	if *showversion {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	if *nolaunch {
 		*pretty = true
@@ -56,7 +65,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli := client.NewClient(conf)
+	cli := client.NewClient(conf, "generator-"+version)
 
 	// We need a file to load the action from
 	if *file == "/path/to/file" {

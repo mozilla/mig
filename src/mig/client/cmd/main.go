@@ -15,6 +15,9 @@ import (
 	"time"
 )
 
+// build version
+var version string
+
 func usage() {
 	fmt.Printf(`%s - Mozilla InvestiGator command line client
 usage: %s <module> <global options> <module parameters>
@@ -85,6 +88,11 @@ func main() {
 	// this client is agnostic to module parameters
 	if len(os.Args) < 2 || os.Args[1] == "help" || os.Args[1] == "-h" || os.Args[1] == "--help" {
 		usage()
+	}
+
+	if len(os.Args) < 2 || os.Args[1] == "-V" {
+		fmt.Println(version)
+		os.Exit(0)
 	}
 
 	// when reading the action from a file, go directly to launch
@@ -162,7 +170,7 @@ readytolaunch:
 	if err != nil {
 		panic(err)
 	}
-	cli = client.NewClient(conf)
+	cli = client.NewClient(conf, "cmd-"+version)
 
 	// set the validity 60 second in the past to deal with clock skew
 	a.ValidFrom = time.Now().Add(-60 * time.Second).UTC()

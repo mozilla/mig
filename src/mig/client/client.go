@@ -31,16 +31,17 @@ var version string
 // A Client provides all the needed functionalities to interact with the MIG API.
 // It should be initialized with a proper configuration file.
 type Client struct {
-	API   *http.Client
-	Token string
-	Conf  Configuration
+	API     *http.Client
+	Token   string
+	Conf    Configuration
+	Version string
 }
 
 // Configuration stores the live configuration and global parameters of a client
 type Configuration struct {
-	API     ApiConf
-	Homedir string
-	GPG     GpgConf
+	API     ApiConf // location of the MIG API
+	Homedir string  // location of the user's home directory
+	GPG     GpgConf // location of the user's secring
 }
 
 type ApiConf struct {
@@ -54,8 +55,9 @@ type GpgConf struct {
 }
 
 // NewClient initiates a new instance of a Client
-func NewClient(conf Configuration) Client {
+func NewClient(conf Configuration, version string) Client {
 	var cli Client
+	cli.Version = version
 	cli.Conf = conf
 	tr := &http.Transport{
 		DisableCompression: false,
@@ -140,7 +142,7 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 			err = fmt.Errorf("Do() -> %v", e)
 		}
 	}()
-	r.Header.Set("User-Agent", "MIG Client v"+version)
+	r.Header.Set("User-Agent", "MIG Client "+cli.Version)
 	if cli.Token == "" {
 		cli.Token, err = cli.MakeSignedToken()
 		if err != nil {
