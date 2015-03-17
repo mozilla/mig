@@ -141,13 +141,13 @@ func HasIPConnected(val string) (found bool, elements []element, err error) {
 			continue
 		}
 		localIP, localPort, err := parseEndpointString(fields[3])
-        if err != nil {
-            break
-        }
+		if err != nil {
+			break
+		}
 		remoteIP, remotePort, err := parseEndpointString(fields[4])
-        if err != nil {
-            break
-        }
+		if err != nil {
+			break
+		}
 		if remoteIP != nil && ipnet.Contains(remoteIP) {
 			var el element
 			el.RemoteAddr = remoteIP.String()
