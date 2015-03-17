@@ -64,17 +64,14 @@ func HasSeenMac(val string) (found bool, elements []element, err error) {
 	return
 }
 
-func parseEndpointString(str string) (ip net.IP, port int) {
-	re, err := regexp.Compile("^(.*?)(%[a-z0-9]+)?\\.(\\*|[0-9]+)$")
-	if err != nil {
-		panic(err)
-	}
+var endpoint_re = regexp.MustCompile("^(.*?)(%[a-z0-9]+)?\\.(\\*|[0-9]+)$")
 
+func parseEndpointString(str string) (ip net.IP, port int) {
 	// Note that 'netstat' will sometimes truncate a long IPv6 address, in
 	// which case this function may return an incorrect address or (if the
 	// result ends with ':') nil.
 
-	matches := re.FindStringSubmatch(str)
+	matches := endpoint_re.FindStringSubmatch(str)
 	if matches != nil {
 		if matches[1] == "*" {
 			return nil, -1
