@@ -66,7 +66,7 @@ func HasSeenMac(val string) (found bool, elements []element, err error) {
 
 var endpoint_re = regexp.MustCompile("^(.*?)(%[a-z0-9]+)?\\.(\\*|[0-9]+)$")
 
-func parseEndpointString(str string) (ip net.IP, port int) {
+func parseEndpointString(str string) (ip net.IP, port int, err error) {
 	// Note that 'netstat' will sometimes truncate a long IPv6 address, in
 	// which case this function may return an incorrect address or (if the
 	// result ends with ':') nil.
@@ -74,7 +74,7 @@ func parseEndpointString(str string) (ip net.IP, port int) {
 	matches := endpoint_re.FindStringSubmatch(str)
 	if matches != nil {
 		if matches[1] == "*" {
-			return nil, -1
+			return nil, -1, nil
 		}
 		ip = net.ParseIP(matches[1])
 		if matches[3] == "*" {
@@ -82,13 +82,13 @@ func parseEndpointString(str string) (ip net.IP, port int) {
 		} else {
 			p, err := strconv.Atoi(matches[3])
 			if err != nil {
-				panic(err)
+				return nil, -1, err
 			}
 			port = int(p)
 		}
 		return
 	}
-	return nil, -1
+	return nil, -1, nil
 }
 
 func HasIPConnected(val string) (found bool, elements []element, err error) {
@@ -140,8 +140,14 @@ func HasIPConnected(val string) (found bool, elements []element, err error) {
 		if len(fields) <= 4 {
 			continue
 		}
-		localIP, localPort := parseEndpointString(fields[3])
-		remoteIP, remotePort := parseEndpointString(fields[4])
+		localIP, localPort, err := parseEndpointString(fields[3])
+        if err != nil {
+            break
+        }
+		remoteIP, remotePort, err := parseEndpointString(fields[4])
+        if err != nil {
+            break
+        }
 		if remoteIP != nil && ipnet.Contains(remoteIP) {
 			var el element
 			el.RemoteAddr = remoteIP.String()
