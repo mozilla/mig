@@ -67,45 +67,14 @@ The end-to-end workflow is:
 
  ::
 
-    {investigator} -https-> {API} -nfs-> {Scheduler} -amqps-> {Relays} -amqps-> {Agents}
+    {investigator} -https-> {API}        {Scheduler} -amqps-> {Relays} -amqps-> {Agents}
                                 \           /
                               sql\         /sql
                                  {DATABASE}
 
-Below is a high-level view of the different components:
+Below is a high-level view of the architecture:
 
- ::
-
-    ( )               signed actions
-    \|/  +------+  -----------------------> +-------+
-     |   |client|    responses              | A P I |
-    / \  +------+ <-----------------------  +-----+-+       +--------+
-    investigator                                  +-------->|  data  |
-                                                            |        |
-                                              action/command|--------|
-                                                            |        |
-                                                  +-------->|  base  |
-                                                  |         |        |
-                      signed commands     +-------+---+     +--------+
-                                          |           |
-                      +++++--------------+| SCHEDULER |
-                      |||||               |           |
-                      vvvvv               +-----------+
-                    +-------+                  ^^^^^
-                    |       |                  |||||
-                    |message|+-----------------+++++
-                    |-------|     command responses
-                    |broker |
-                    |       |
-                    +-------+
-                    ^^    ^ ^
-                    ||    | |
-       +------------+|    | +-----------------+
-       |           +-+    +--+                |
-       |           |         |                |
-    +--+--+     +--+--+    +-+---+          +-+---+
-    |agent|     |agent|    |agent|  .....   |agent|
-    +-----+     +-----+    +-----+          +-----+
+.. image:: .files/MIG-Arch-Diagram.png
 
 Actions and Commands
 --------------------
