@@ -119,6 +119,9 @@ func (r Runner) Run(Args []byte) string {
 			r.Results.FoundAnything = true
 		}
 		pr.Latencies = append(pr.Latencies, latency)
+
+		// sleep 100 milliseconds between pings to prevent floods
+		time.Sleep(100 * time.Millisecond)
 	}
 	r.Results.Elements = pr
 	return r.buildResults()
