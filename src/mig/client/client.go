@@ -619,7 +619,7 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 			status = a.Status
 		}
 		if status != a.Status {
-			fmt.Fprintf(os.Stderr, "status=%s\n", a.Status)
+			fmt.Fprintf(os.Stderr, "\nstatus=%s", a.Status)
 			status = a.Status
 		}
 		// exit follower mode if status isn't one we follow,
@@ -653,7 +653,13 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 		dotter++
 	}
 finish:
-	fmt.Fprintf(os.Stderr, "\n%2.1f%% done in %s\n", completion, time.Now().Sub(a.StartTime).String())
+	a, _, err = cli.GetAction(a.ID)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[error] failed to retrieve action counters\n")
+	} else {
+		completion = (float64(a.Counters.Done) / float64(a.Counters.Sent)) * 100
+		fmt.Fprintf(os.Stderr, "- %2.1f%% done in %s\n", completion, time.Now().Sub(a.StartTime).String())
+	}
 	a.PrintCounters()
 	return
 }
