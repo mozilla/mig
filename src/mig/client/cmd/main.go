@@ -108,7 +108,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(os.Stderr, "[info] launching action from file, all flags are ignored")
+		fmt.Fprintf(os.Stderr, "[info] launching action from file, all flags are ignored\n")
 		goto readytolaunch
 	}
 

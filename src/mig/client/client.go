@@ -653,7 +653,7 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 		dotter++
 	}
 finish:
-	fmt.Fprintf(os.Stderr, "%2.1f%% done in %s\n", completion, time.Now().Sub(a.StartTime).String())
+	fmt.Fprintf(os.Stderr, "\n%2.1f%% done in %s\n", completion, time.Now().Sub(a.StartTime).String())
 	a.PrintCounters()
 	return
 }
