@@ -230,6 +230,47 @@ else
 	cp tmp/mig-agent-installer.msi mig-agent-$(BUILDREV).msi
 endif
 
+rpm-clients: mig-cmd mig-console mig-action-generator
+# --rpm-sign requires installing package `rpm-sign` and configuring this macros in ~/.rpmmacros
+#  %_signature gpg
+#  %_gpg_name  Julien Vehent
+	rm -fr tmp
+	mkdir 'tmp'
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig tmp/usr/local/bin/mig
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-console tmp/usr/local/bin/mig-console
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-action-generator tmp/usr/local/bin/mig-action-generator
+	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		--rpm-digest sha512 --rpm-sign \
+		-s dir -t rpm .
+
+deb-clients: mig-cmd mig-console mig-action-generator
+	rm -fr tmp
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig tmp/usr/local/bin/mig
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-console tmp/usr/local/bin/mig-console
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-action-generator tmp/usr/local/bin/mig-action-generator
+	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		-s dir -t deb .
+# require dpkg-sig, it's a perl script, take it from any debian box and copy it in your PATH
+	dpkg-sig -k E60892BB9BD89A69F759A1A0A3D652173B763E8F --sign jvehent -m "Julien Vehent" mig-clients_$(BUILDREV)_$(ARCH).deb
+
+dmg-clients: mig-cmd mig-console mig-action-generator
+ifneq ($(OS),darwin)
+	echo 'you must be on MacOS and set OS=darwin on the make command line to build an OSX package'
+else
+	rm -fr tmp tmpdmg
+	mkdir -p tmp/usr/local/bin tmpdmg
+	$(INSTALL) -m 0755 $(BINDIR)/mig tmp/usr/local/bin/mig
+	$(INSTALL) -m 0755 $(BINDIR)/mig-console tmp/usr/local/bin/mig-console
+	$(INSTALL) -m 0755 $(BINDIR)/mig-action-generator tmp/usr/local/bin/mig-action-generator
+	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		-s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig -p tmpdmg/mig-clients-$(BUILDREV)-$(FPMARCH).pkg .
+	hdiutil makehybrid -hfs -hfs-volume-name "Mozilla InvestiGator Clients" \
+		-o ./mig-clients-$(BUILDREV)-$(FPMARCH).dmg tmpdmg
+endif
+
 rpm-scheduler: mig-scheduler
 	rm -rf tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/usr/bin/mig-scheduler
