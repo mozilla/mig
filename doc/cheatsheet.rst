@@ -59,6 +59,13 @@ itself while searching for the command line.
 
     mig file -t "queueloc LIKE 'linux.%'" -path /proc/ -name cmdline -content "^/sbin/auditd"
 
+Another option, if using '^' is not possible, is to enclose one of the letter
+of the process name into brackets:
+
+.. code:: bash
+
+	$ mig file -t "tags->>'operator'='IT'" -path /proc -name "^cmdline$" -maxdepth 2 -content "[a]rcsight"
+
 Find which machines have a specific USB device connected
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

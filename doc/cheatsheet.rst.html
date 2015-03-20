@@ -61,6 +61,8 @@
             <h3>1.4   Find endpoints running process "/sbin/auditd"</h3>
             <p>Here, the '^' in the content regex is important to prevent mig from listing itself while searching for the command line.</p>
             <pre><code class="bash">mig file -t <span class="s2">"queueloc LIKE 'linux.%'"</span> -path /proc/ -name cmdline -content <span class="s2">"^/sbin/auditd"</span></code></pre>
+            <p>Another option, if using '^' is not possible, is to enclose one of the letter of the process name into brackets:</p>
+            <pre><code class="bash"><span class="nv">$ </span>mig file -t <span class="s2">"tags-&gt;&gt;'operator'='IT'"</span> -path /proc -name <span class="s2">"^cmdline$"</span> -maxdepth 2 -content <span class="s2">"[a]rcsight"</span></code></pre>
         </section>
         <section id="find-which-machines-have-a-specific-usb-device-connected">
             <h3>1.5   Find which machines have a specific USB device connected</h3>
