@@ -32,6 +32,9 @@ usage: %s <module> <global options> <module parameters>
 		* found: 	only print positive results
 		* notfound: 	only print negative results
 		* all: 		print all results
+-render <mode>	defines how results should be rendered:
+		* text (default):	results are printed to the console
+		* map:			results are geolocated and a google map is generated
 -t <target>	target to launch the action on. The default targets all online
 		agents (idle and offline agents are ignored).
 		examples:
@@ -60,14 +63,14 @@ func continueOnFlagError() {
 
 func main() {
 	var (
-		conf                                   client.Configuration
-		cli                                    client.Client
-		err                                    error
-		op                                     mig.Operation
-		a                                      mig.Action
-		migrc, show, target, expiration, afile string
-		modargs                                []string
-		modRunner                              interface{}
+		conf                                           client.Configuration
+		cli                                            client.Client
+		err                                            error
+		op                                             mig.Operation
+		a                                              mig.Action
+		migrc, show, render, target, expiration, afile string
+		modargs                                        []string
+		modRunner                                      interface{}
 	)
 	defer func() {
 		if e := recover(); e != nil {
@@ -79,6 +82,7 @@ func main() {
 	fs.Usage = continueOnFlagError
 	fs.StringVar(&migrc, "c", homedir+"/.migrc", "alternative configuration file")
 	fs.StringVar(&show, "show", "found", "type of results to show")
+	fs.StringVar(&render, "render", "text", "results rendering mode")
 	fs.StringVar(&target, "t", `status='online'`, "action target")
 	fs.StringVar(&expiration, "e", "300s", "expiration")
 	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
@@ -223,7 +227,7 @@ readytolaunch:
 		goto printresults
 	}
 printresults:
-	err = cli.PrintActionResults(a, show)
+	err = cli.PrintActionResults(a, show, render)
 	if err != nil {
 		panic(err)
 	}

@@ -664,30 +664,38 @@ finish:
 	return
 }
 
-func (cli Client) PrintActionResults(a mig.Action, show string) (err error) {
+func (cli Client) PrintActionResults(a mig.Action, show, render string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PrintActionResults() -> %v", e)
 		}
 	}()
-	found := false
+	var (
+		found  bool
+		report string
+		locs   []CommandLocation
+	)
+	switch render {
+	case "map":
+		report = "&report=geolocations"
+	}
 	var resource *cljs.Resource
 	switch show {
+	case "all":
+		target := fmt.Sprintf("search?type=command&limit=1000000&actionid=%.0f%s", a.ID, report)
+		resource, err = cli.GetAPIResource(target)
+		if err != nil {
+			panic(err)
+		}
 	case "found":
 		found = true
-		target := fmt.Sprintf("search?type=command&limit=1000000&foundanything=true&actionid=%.0f", a.ID)
+		target := fmt.Sprintf("search?type=command&limit=1000000&foundanything=true&actionid=%.0f%s", a.ID, report)
 		resource, err = cli.GetAPIResource(target)
 		if err != nil {
 			panic(err)
 		}
 	case "notfound":
-		target := fmt.Sprintf("search?type=command&limit=1000000&foundanything=false&actionid=%.0f", a.ID)
-		resource, err = cli.GetAPIResource(target)
-		if err != nil {
-			panic(err)
-		}
-	case "all":
-		target := fmt.Sprintf("search?type=command&limit=1000000&actionid=%.0f", a.ID)
+		target := fmt.Sprintf("search?type=command&limit=1000000&foundanything=false&actionid=%.0f%s", a.ID, report)
 		resource, err = cli.GetAPIResource(target)
 		if err != nil {
 			panic(err)
@@ -698,21 +706,42 @@ func (cli Client) PrintActionResults(a mig.Action, show string) (err error) {
 	count := 0
 	for _, item := range resource.Collection.Items {
 		for _, data := range item.Data {
-			if data.Name != "command" {
-				continue
+			switch render {
+			case "map":
+				if data.Name != "geolocation" {
+					continue
+				}
+				loc, err := ValueToLocation(data.Value)
+				if err != nil {
+					panic(err)
+				}
+				locs = append(locs, loc)
+			default:
+				if data.Name != "command" {
+					continue
+				}
+				cmd, err := ValueToCommand(data.Value)
+				if err != nil {
+					panic(err)
+				}
+				err = PrintCommandResults(cmd, found, true)
+				if err != nil {
+					panic(err)
+				}
+				count++
 			}
-			cmd, err := ValueToCommand(data.Value)
-			if err != nil {
-				panic(err)
-			}
-			err = PrintCommandResults(cmd, found, true)
-			if err != nil {
-				panic(err)
-			}
-			count++
 		}
 	}
-	fmt.Fprintf(os.Stderr, "%d agents have %s results\n", count, show)
+	switch render {
+	case "map":
+		title := fmt.Sprintf("Geolocation of %s results for action ID %.0f %s", show, a.ID, a.Name)
+		err = PrintMap(locs, title)
+		if err != nil {
+			panic(err)
+		}
+	default:
+		fmt.Fprintf(os.Stderr, "%d agents have %s results\n", count, show)
+	}
 	return
 }
 

@@ -116,9 +116,12 @@ ls <filter>	returns the list of commands with their status
 		'filter' is a pipe separated string of filter:
 		ex: ls | grep server1.(dom1|dom2) | grep -v example.net
 r		refresh the action (get latest version from upstream)
-results <show>  display results of all commands, <show> is set to "all" by default
-		set to "found" to only display positive results
-		set to "notfound" for negative results
+results <show> <render>	display results of all commands
+			<show>: * set to "all" to get all results (default)
+				* set to "found" to only display positive results
+				* set to "notfound" for negative results
+			<render>: * set to "text" to print results in console (default)
+				  * set to "map" to generate an open a google map
 times		show the various timestamps of the action
 `)
 		case "investigators":
@@ -147,13 +150,22 @@ times		show the various timestamps of the action
 			show := "all"
 			if len(orders) > 1 {
 				switch orders[1] {
-				case "found":
-					show = "found"
-				case "notfound":
-					show = "notfound"
+				case "all", "found", "notfound":
+					show = orders[1]
+				default:
+					panic("invalid show '" + orders[2] + "'")
 				}
 			}
-			err = cli.PrintActionResults(a, show)
+			render := "text"
+			if len(orders) > 2 {
+				switch orders[2] {
+				case "map", "text":
+					render = orders[2]
+				default:
+					panic("invalid rendering '" + orders[2] + "'")
+				}
+			}
+			err = cli.PrintActionResults(a, show, render)
 			if err != nil {
 				panic(err)
 			}
