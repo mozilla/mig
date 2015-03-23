@@ -17,25 +17,36 @@
                 "searches": {
                     "sshnotmatch": {
                         "paths": [
-                            "/home/*/.ssh/*"
+                            "/home"
                         ],
-                        "regexes": [
+                        "names": [
+                            "^authorized_keys$"
+                        ],
+                        "contents": [
                             "should not match"
-                        ]
+                        ],
+                        "options": {
+                            "matchall": true,
+                            "matchlimit": 10,
+                            "maxdepth": 4
+                        }
                     },
                     "yumshouldmatch": {
                         "paths": [
-                            "/etc/*yum*/*.repo"
+                            "/etc/yum.repos.d"
                         ],
-                        "regexes": [
+                        "names": [
+                            ".+\\.repo"
+                        ],
+                        "contents": [
                             "^gpgcheck=1$"
                         ]
                     },
                     "etcshouldmatch": {
                         "paths": [
-                            "/etc/"
+                            "/etc/passwd"
                         ],
-                        "regexes": [
+                        "contents": [
                             "^jvehent:"
                         ]
                     },
@@ -43,21 +54,21 @@
                         "paths": [
                             "/etc/shadow"
                         ],
-                        "regexes": [
+                        "contents": [
                             "^shouldnotmatch$"
                         ],
-                        "filenames": [
+                        "names": [
                             "^bob$"
                         ]
                     },
                     "shadowmatch": {
                         "paths": [
-                            "/etc/shadow"
+                            "/etc"
                         ],
-                        "regexes": [
+                        "contents": [
                             "^root:"
                         ],
-                        "filenames": [
+                        "names": [
                             "^shadow$"
                         ]
                     }
