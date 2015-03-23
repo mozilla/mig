@@ -103,7 +103,8 @@ go_get_agent_deps: go_get_common_deps go_get_ping_deps
 	$(GOGETTER) github.com/streadway/amqp
 	$(GOGETTER) github.com/kardianos/osext
 	$(GOGETTER) github.com/jvehent/service-go
-	$(GOGETTER) github.com/ccding/go-stun/stun
+	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
+	$(GOGETTER) camlistore.org/pkg/misc/pinentry
 ifeq ($(OS),windows)
 	$(GOGETTER) code.google.com/p/winsvc/eventlog
 endif
