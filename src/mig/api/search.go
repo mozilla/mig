@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/jvehent/cljs"
 	"mig"
 	migdb "mig/database"
 	"net/http"
@@ -14,17 +15,18 @@ import (
 	"regexp"
 	"strconv"
 	"time"
-
-	"github.com/jvehent/cljs"
 )
 
 // search runs searches
 func search(respWriter http.ResponseWriter, request *http.Request) {
-	var err error
+	var (
+		err         error
+		p           migdb.SearchParameters
+		filterFound bool
+	)
 	opid := getOpID(request)
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	resource := cljs.New(loc)
-	p := migdb.NewSearchParameters()
 	defer func() {
 		if e := recover(); e != nil {
 			// on panic, log and return error to client, including the search parameters
@@ -38,110 +40,70 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving search()"}.Debug()
 	}()
-	doFoundAnything := false
-	timeLayout := time.RFC3339
-	truere := regexp.MustCompile("(?i)^true$")
-	falsere := regexp.MustCompile("(?i)^false$")
-	for queryParams, _ := range request.URL.Query() {
-		switch queryParams {
-		case "actionname":
-			p.ActionName = request.URL.Query()["actionname"][0]
-		case "actionid":
-			p.ActionID = request.URL.Query()["actionid"][0]
-		case "after":
-			p.After, err = time.Parse(timeLayout, request.URL.Query()["after"][0])
-			if err != nil {
-				panic("after date not in RFC3339 format")
-			}
-		case "agentid":
-			p.AgentID = request.URL.Query()["agentid"][0]
-		case "agentname":
-			p.AgentName = request.URL.Query()["agentname"][0]
-		case "before":
-			p.Before, err = time.Parse(timeLayout, request.URL.Query()["before"][0])
-			if err != nil {
-				panic("before date not in RFC3339 format")
-			}
-		case "commandid":
-			p.CommandID = request.URL.Query()["commandid"][0]
-		case "foundanything":
-			if truere.MatchString(request.URL.Query()["foundanything"][0]) {
-				p.FoundAnything = true
-			} else if falsere.MatchString(request.URL.Query()["foundanything"][0]) {
-				p.FoundAnything = false
-			} else {
-				panic("foundanything parameter must be true or false")
-			}
-			doFoundAnything = true
-		case "investigatorid":
-			p.InvestigatorID = request.URL.Query()["investigatorid"][0]
-		case "investigatorname":
-			p.InvestigatorName = request.URL.Query()["investigatorname"][0]
-		case "limit":
-			p.Limit, err = strconv.ParseFloat(request.URL.Query()["limit"][0], 64)
-			if err != nil {
-				panic("invalid limit parameter")
-			}
-		case "report":
-			switch request.URL.Query()["report"][0] {
-			case "complianceitems":
-				p.Report = request.URL.Query()["report"][0]
-			default:
-				panic("report not implemented")
-			}
-		case "status":
-			p.Status = request.URL.Query()["status"][0]
-		case "target":
-			p.Target = request.URL.Query()["target"][0]
-		case "threatfamily":
-			p.ThreatFamily = request.URL.Query()["threatfamily"][0]
-		}
+
+	p, filterFound, err = parseSearchParameters(request.URL.Query())
+	if err != nil {
+		panic(err)
 	}
+
 	// run the search based on the type
 	var results interface{}
-	if _, ok := request.URL.Query()["type"]; ok {
-		p.Type = request.URL.Query()["type"][0]
-		switch p.Type {
-		case "action":
-			results, err = ctx.DB.SearchActions(p)
-		case "agent":
-			if p.Target != "" {
-				results, err = ctx.DB.ActiveAgentsByTarget(p.Target)
-			} else {
-				results, err = ctx.DB.SearchAgents(p)
-			}
-		case "command":
-			results, err = ctx.DB.SearchCommands(p, doFoundAnything)
-		case "investigator":
-			results, err = ctx.DB.SearchInvestigators(p)
-		default:
-			panic("search type is invalid")
+	switch p.Type {
+	case "action":
+		results, err = ctx.DB.SearchActions(p)
+	case "agent":
+		if p.Target != "" {
+			results, err = ctx.DB.ActiveAgentsByTarget(p.Target)
+		} else {
+			results, err = ctx.DB.SearchAgents(p)
 		}
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		panic("search type is missing")
+	case "command":
+		results, err = ctx.DB.SearchCommands(p, filterFound)
+	case "investigator":
+		results, err = ctx.DB.SearchInvestigators(p)
+	default:
+		panic("search type is invalid")
+	}
+	if err != nil {
+		panic(err)
 	}
 
 	// prepare the output in the requested format
 	switch p.Report {
 	case "complianceitems":
 		if p.Type != "command" {
-			panic("compliance items not available for this type")
+			panic("compliance items reporting is only available for the 'command' type")
 		}
-		beforeStr := url.QueryEscape(p.Before.Format(time.RFC3339Nano))
-		afterStr := url.QueryEscape(p.After.Format(time.RFC3339Nano))
 		items, err := commandsToComplianceItems(results.([]mig.Command))
 		if err != nil {
 			panic(err)
 		}
 		for i, item := range items {
 			err = resource.AddItem(cljs.Item{
-				Href: fmt.Sprintf("%s%s/search?type=command?agentname=%s&commandid=%s&actionid=%s&threatfamily=compliance&report=complianceitems&after=%s&before=%s",
-					ctx.Server.Host, ctx.Server.BaseRoute, item.Target,
-					p.CommandID, p.ActionID, afterStr, beforeStr),
+				Href: fmt.Sprintf("%s%s/search?type=command?agentname=%s&commandid=%s&actionid=%s&threatfamily=compliance&report=complianceitems",
+					ctx.Server.Host, ctx.Server.BaseRoute, item.Target, p.CommandID, p.ActionID),
 				Data: []cljs.Data{{Name: "compliance item", Value: item}},
+			})
+			if err != nil {
+				panic(err)
+			}
+			if float64(i) > p.Limit {
+				break
+			}
+		}
+	case "geolocations":
+		if p.Type != "command" {
+			panic("geolocations reporting is only available for the 'command' type")
+		}
+		items, err := commandsToGeolocations(results.([]mig.Command))
+		if err != nil {
+			panic(err)
+		}
+		for i, item := range items {
+			err = resource.AddItem(cljs.Item{
+				Href: fmt.Sprintf("%s%s/search?type=command?agentname=%s&commandid=%s&actionid=%s&report=geolocations",
+					ctx.Server.Host, ctx.Server.BaseRoute, item.Endpoint, p.CommandID, p.ActionID),
+				Data: []cljs.Data{{Name: "geolocation", Value: item}},
 			})
 			if err != nil {
 				panic(err)
@@ -153,8 +115,8 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 	default:
 		switch p.Type {
 		case "action":
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Action)))}
-			for _, r := range results.([]mig.Action) {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d actions", len(results.([]mig.Action)))}
+			for i, r := range results.([]mig.Action) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("%s%s/action?actionid=%.0f",
 						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
@@ -163,10 +125,13 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				if err != nil {
 					panic(err)
 				}
+				if float64(i) > p.Limit {
+					break
+				}
 			}
 		case "agent":
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Agent)))}
-			for _, r := range results.([]mig.Agent) {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d agents", len(results.([]mig.Agent)))}
+			for i, r := range results.([]mig.Agent) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("%s%s/agent?agentid=%.0f",
 						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
@@ -175,10 +140,13 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				if err != nil {
 					panic(err)
 				}
+				if float64(i) > p.Limit {
+					break
+				}
 			}
 		case "command":
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Command)))}
-			for _, r := range results.([]mig.Command) {
+			for i, r := range results.([]mig.Command) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("%s%s/command?commandid=%.0f",
 						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
@@ -187,10 +155,13 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				if err != nil {
 					panic(err)
 				}
+				if float64(i) > p.Limit {
+					break
+				}
 			}
 		case "investigator":
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d investigators", len(results.([]mig.Investigator)))}
-			for _, r := range results.([]mig.Investigator) {
+			for i, r := range results.([]mig.Investigator) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("%s%s/investigator?investigatorid=%.0f",
 						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
@@ -198,6 +169,9 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				})
 				if err != nil {
 					panic(err)
+				}
+				if float64(i) > p.Limit {
+					break
 				}
 			}
 		}
@@ -211,4 +185,80 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	respond(200, resource, respWriter, request)
+}
+
+// truere is a case insensitive regex that matches the string 'true'
+var truere = regexp.MustCompile("(?i)^true$")
+
+// false is a case insensitive regex that matches the string 'false'
+var falsere = regexp.MustCompile("(?i)^false$")
+
+// parseSearchParameters transforms a query string into search parameters in the migdb format
+func parseSearchParameters(qp url.Values) (p migdb.SearchParameters, filterFound bool, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("parseSearchParameters()-> %v", e)
+		}
+	}()
+	p = migdb.NewSearchParameters()
+	for queryParams, _ := range qp {
+		switch queryParams {
+		case "actionname":
+			p.ActionName = qp["actionname"][0]
+		case "actionid":
+			p.ActionID = qp["actionid"][0]
+		case "after":
+			p.After, err = time.Parse(time.RFC3339, qp["after"][0])
+			if err != nil {
+				panic("after date not in RFC3339 format")
+			}
+		case "agentid":
+			p.AgentID = qp["agentid"][0]
+		case "agentname":
+			p.AgentName = qp["agentname"][0]
+		case "before":
+			p.Before, err = time.Parse(time.RFC3339, qp["before"][0])
+			if err != nil {
+				panic("before date not in RFC3339 format")
+			}
+		case "commandid":
+			p.CommandID = qp["commandid"][0]
+		case "foundanything":
+			if truere.MatchString(qp["foundanything"][0]) {
+				p.FoundAnything = true
+			} else if falsere.MatchString(qp["foundanything"][0]) {
+				p.FoundAnything = false
+			} else {
+				panic("foundanything parameter must be true or false")
+			}
+			filterFound = true
+		case "investigatorid":
+			p.InvestigatorID = qp["investigatorid"][0]
+		case "investigatorname":
+			p.InvestigatorName = qp["investigatorname"][0]
+		case "limit":
+			p.Limit, err = strconv.ParseFloat(qp["limit"][0], 64)
+			if err != nil {
+				panic("invalid limit parameter")
+			}
+		case "report":
+			switch qp["report"][0] {
+			case "complianceitems":
+				p.Report = qp["report"][0]
+			case "geolocations":
+				p.Report = qp["report"][0]
+			default:
+				panic("report not implemented")
+			}
+		case "status":
+			p.Status = qp["status"][0]
+		case "target":
+			p.Target = qp["target"][0]
+		case "threatfamily":
+			p.ThreatFamily = qp["threatfamily"][0]
+		case "type":
+			p.Type = qp["type"][0]
+		}
+	}
+	return
 }

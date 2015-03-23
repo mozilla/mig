@@ -122,6 +122,7 @@ go_get_platform_deps: go_get_common_deps
 	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
 	$(GOGETTER) camlistore.org/pkg/misc/pinentry
+	$(GOGETTER) github.com/oschwald/geoip2-golang
 
 go_get_client_deps: go_get_common_deps
 	$(GOGETTER) github.com/jvehent/cljs

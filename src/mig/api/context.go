@@ -8,6 +8,7 @@ package main
 import (
 	"code.google.com/p/gcfg"
 	"fmt"
+	geo "github.com/oschwald/geoip2-golang"
 	"io"
 	"mig"
 	migdb "mig/database"
@@ -41,6 +42,10 @@ type Context struct {
 		IP                       string
 		Port                     int
 		Host, BaseRoute, BaseURL string
+	}
+	MaxMind struct {
+		Path string
+		r    *geo.Reader
 	}
 	Logging mig.Logging
 }
@@ -76,6 +81,12 @@ func Init(path string) (ctx Context, err error) {
 		panic(err)
 	}
 
+	if ctx.MaxMind.Path != "" {
+		ctx.MaxMind.r, err = geo.Open(ctx.MaxMind.Path)
+		if err != nil {
+			panic(err)
+		}
+	}
 	return
 }
 

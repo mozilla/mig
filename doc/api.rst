@@ -980,8 +980,9 @@ GET /api/v1/search
 
 	- `limit`: limit the number of results to 10,000 by default
 
-	- `report`: if set, return results in the given report format (see
-	  **compliance items** below)
+	- `report`: if set, return results in the given report format:
+		- `complianceitems` returns command results as compliance items
+		- `geolocations` returns command results as geolocation endpoints
 
 	- `status`: filter on internal status, accept `ILIKE` pattern.
 	  Status depends on the type. Below are the available statuses per type:
@@ -1087,3 +1088,35 @@ The format for compliance items is simple, to be easily graphed and aggregated.
 
 When using the parameter `&report=complianceitems`, the `search` endpoint of the API
 will generate a list of compliance items from the results of the search.
+
+Geolocations
+~~~~~~~~~~~~
+The geolocations format transforms command results into an array of geolocated
+endpoints for consumption by a map, like Google Maps. The format discards
+results details, and only stores the value of FoundAnything.
+
+This feature requires using **MaxMind's GeoIP2-City** database. The database
+must be configured in the API as follow:
+
+.. code::
+
+	[maxmind]
+		path = "/etc/mig/GeoIP2-City.mmdb"
+
+Geolocations are returned as CLJS items in this format:
+
+.. code:: json
+
+	{
+		"actionid": 1.4271242660295127e+18,
+		"city": "Absecon",
+		"commandid": 1.427124243673173e+18,
+		"country": "United States",
+		"endpoint": "somehost.example.net",
+		"foundanything": true,
+		"latitude": 39.4284,
+		"longitude": -74.4957
+	}
+
+When using the parameter `&report=geolocations`, the `search` endpoint of the
+API will generate a list of geolocations from the results of the search.
