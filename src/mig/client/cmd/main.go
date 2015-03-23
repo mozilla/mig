@@ -165,7 +165,9 @@ func main() {
 	}
 	a.Operations = append(a.Operations, op)
 
-	a.Name = op.Module + " on '" + target + "'"
+	for _, arg := range os.Args[1:] {
+		a.Name += arg + " "
+	}
 	a.Target = target
 
 readytolaunch:
