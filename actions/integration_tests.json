@@ -5,7 +5,7 @@
         "email": "ulfr@mozilla.com",
         "revision": 201409031000
     },
-    "target": "queueloc like 'linux.%'",
+    "target": "tags#>>'{operator}'='opsec'",
     "threat": {
         "level": "-",
         "family": "test"
@@ -88,12 +88,20 @@
             }
         },
         {
-            "module": "ping",
-            "parameters": {
-                "destination": "localhost",
-                "protocol": "icmp",
-                "count": 5
-            }
+          "module": "ping",
+          "parameters": {
+            "count": 5,
+            "destination": "google.com",
+            "destinationport": 80,
+            "protocol": "tcp",
+            "timeout": 5
+          }
+        },
+        {
+          "module": "timedrift",
+          "parameters": {
+            "drift": "60s"
+          }
         }
     ],
     "syntaxversion": 2
