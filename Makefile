@@ -116,6 +116,9 @@ go_get_ping_deps:
 
 go_get_memory_deps:
 	$(GOGETTER) github.com/mozilla/masche/...
+	$(GOGETTER) github.com/mozilla/masche/process
+	$(GOGETTER) github.com/mozilla/masche/listlibs
+	$(GOGETTER) github.com/mozilla/masche/memsearch
 
 go_get_platform_deps: go_get_common_deps
 	$(GOGETTER) github.com/streadway/amqp

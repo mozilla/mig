@@ -5,7 +5,6 @@
 // Contributor: Sushant Dinesh sushant.dinesh94@gmail.com [:sushant94]
 //
 // Memory scanner module.
-// To run this module run 'make go_get_memory_deps' to download and build masche.
 
 package memory
 
@@ -19,6 +18,7 @@ import (
 	"github.com/mozilla/masche/process"
 	"mig"
 	"regexp"
+	"time"
 )
 
 func init() {
@@ -43,90 +43,136 @@ func newParameters() *Parameters {
 }
 
 type Search struct {
-	Description string   `json:"description,omitempty"`
-	Processes   []string `json:"processes"`
-	Libs        []string `json:"libs,omitempty"`
-	Scans       []Scan   `json:"scans,omitempty"`
-	Options     options  `json:"options,omitempty"`
+	Description string           `json:"description,omitempty"`
+	Processes   []string         `json:"processes"`
+	Libs        []string         `json:"libs,omitempty"` // Regular expression to match against loaded libs of a process.
+	Scans       []Scan           `json:"scans,omitempty"`
+	Options     options          `json:"options,omitempty"`
+	reLibs      []*regexp.Regexp // Store compiled regular expressions for []Libs
 }
 
 type Scan struct {
-	Expression string  `json:"expression"`
-	Length     float64 `json:"length"`
-	MatchCount float64 `json:"matchcount"`
-	Active     bool
+	Bytes      string         `json:"bytes,omitempty"`      // Scan for raw bytes.
+	Regexp     string         `json:"regexp,omitempty"`     // Scan against a regular expression.
+	MatchCount float64        `json:"matchcount,omitempty"` // Maximum number of matches to look for in a processes memory before deactivating the scan.
+	compiledRe *regexp.Regexp // Compiled regexp for this scan
+	active     bool
 }
 
 type options struct {
 	MatchAll bool `json:"matchall"`
 }
 
+type ProcList map[uint]ProcSearch // procList is a map that maps pid of a process to procSearch.
+type ProcSearch struct {          // procSearch stores the labels of the searches that need to be performed on a process.
+	Proc     process.Process
+	Searches map[string]Search     // Map from search "label" to the search struct.
+	Results  map[string]ProcResult // Map from search "label" to the corrsponding result.
+}
+
 type element map[string]SearchResult
 type SearchResult []ProcResult
-
-// procList is a map that maps pid of a process to procSearch.
-// procSearch stores the labels of the searches that need to be performed on a process.
-type ProcList map[uint]ProcSearch
-
-type ProcSearch struct {
-	Proc     process.Process
-	Libs     []string
-	Searches map[string]Search
-	Results  map[string]ProcResult
+type ProcResult struct { // Per-Process result struct.
+	Name         string   `json:"name"`                 // Process Name
+	Pid          float64  `json:"pid"`                  // Process Id
+	Libs         []string `json:"libs,omitempty"`       // Libraries loaded by the process which match the given search criteria.
+	Found        bool     `json:"bytesfound,omitempty"` // Result for memory scans. Returns true if atleast one occurance is found.
+	MatchedCount float64  `json:"matchedcount"`         // MatchCount keeps a count of number of scans the process matched to.
 }
 
-// Per-Process result struct.
-type ProcResult struct {
-	// Process Name
-	Name string `json:"name"`
-	// Process Id
-	Pid float64 `json:"pid"`
-	// Libraries loaded
-	Libs []string `json:"libs,omitempty"`
-	// Result for memory scans. Returns 'n' occurances of the string from memory.
-	BytesFound []string `json:"bytesfound,omitempty"`
-	// MatchCount keeps a count of number of scans the process matched to.
-	MatchedCount float64 `json:"matchedcount"`
+type Statistics struct {
+	ExecTime float64  `json:"exectime"` // Time for which the module ran before stopping.
+	SoftErrs []string `json:"softerrs"` // softerrors which occurred during the execution of the module
+	Failures []string `json:"failures"` // Errors due to which some scans might have been abandoned.
 }
+
+// Global var to store statistics.
+var stats Statistics
 
 func (r *Runner) ValidateParameters() (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("Validate Parameters: %v", e)
-			return
-		}
-	}()
-
-	allowedLabels, _ := regexp.Compile("[a-zA-Z0-9_]+")
 	for label, currsearch := range r.Parameters.Searches {
-		if ok := allowedLabels.MatchString(label); !ok {
-			return fmt.Errorf("Illegal label. Please use only a-z A-Z 0-9 and _ characters in your label.")
+		err = validateLabel(label)
+		if err != nil {
+			return err
 		}
-		if len(currsearch.Processes) == 0 {
-			return fmt.Errorf("Each search must operate on atleast one processes.")
+		err = validateProcs(currsearch.Processes)
+		if err != nil {
+			return err
 		}
-		for i := range currsearch.Processes {
-			_ = regexp.MustCompile(currsearch.Processes[i])
+		currsearch.reLibs, err = validateLibs(currsearch.Libs)
+		if err != nil {
+			return err
 		}
-		for i := range currsearch.Libs {
-			_ = regexp.MustCompile(currsearch.Libs[i])
-		}
-		for i := range currsearch.Scans {
-			_ = regexp.MustCompile(currsearch.Scans[i].Expression)
-			if currsearch.Scans[i].MatchCount <= 0 {
-				currsearch.Scans[i].MatchCount = 1
-			}
-			if currsearch.Scans[i].Length < 0 {
-				currsearch.Scans[i].Length = 0
-			}
+		err = validateScans(currsearch.Scans)
+		if err != nil {
+			return err
 		}
 	}
 	return
 }
 
+func validateProcs(procs []string) (err error) {
+	if len(procs) == 0 {
+		return fmt.Errorf("Each search must operate on atleast one processes.")
+	}
+	for i := range procs {
+		_, err = regexp.Compile(procs[i])
+		if err != nil {
+			return err
+		}
+	}
+	return
+}
+
+// validateLibs functions validate the regular expressions used for search and returns the compiled re for the same.
+func validateLibs(libs []string) (compiledRe []*regexp.Regexp, err error) {
+	for i := range libs {
+		re, err := regexp.Compile(libs[i])
+		if err != nil {
+			return nil, err
+		}
+		compiledRe = append(compiledRe, re)
+	}
+	return
+}
+
+func validateScans(scans []Scan) (err error) {
+	for i := range scans {
+		var re *regexp.Regexp
+		// Check if the current scan is a scan for regexp or raw bytes.
+		if scans[i].Regexp != "" {
+			re, err = regexp.Compile(scans[i].Regexp)
+		} else {
+			_, err = hex.DecodeString(scans[i].Bytes)
+		}
+		if err != nil {
+			return err
+		}
+		if scans[i].MatchCount <= 0 {
+			scans[i].MatchCount = 1
+		}
+		scans[i].compiledRe = re
+	}
+	return
+}
+
+func validateLabel(label string) (err error) {
+	allowedLabels, _ := regexp.Compile("[a-zA-Z0-9_]")
+	if ok := allowedLabels.MatchString(label); !ok {
+		err = fmt.Errorf("Illegal label. Please use only a-z A-Z 0-9 and _ characters in your label.")
+	}
+	return
+}
+
+func addSoftErrors(softerr []error) {
+	for i := range softerr {
+		stats.SoftErrs = append(stats.SoftErrs, fmt.Sprintf("%v", softerr[i]))
+	}
+}
+
 // needle - regular expression against which a process should be matched
 func Pgrep(needle string) (procs []process.Process, harderr error, softerr []error) {
-	regex, _ := regexp.Compile(needle)
+	regex := regexp.MustCompile(needle)
 	procs, harderr, softerr = process.OpenByName(regex)
 	if harderr != nil {
 		return
@@ -139,7 +185,7 @@ func ActivateAllScans(p *ProcSearch) (count int) {
 	count = 0
 	for _, currSearch := range p.Searches {
 		for i := range currSearch.Scans {
-			currSearch.Scans[i].Active = true
+			currSearch.Scans[i].active = true
 			count += 1
 		}
 	}
@@ -148,58 +194,134 @@ func ActivateAllScans(p *ProcSearch) (count int) {
 
 // Search for libraries loaded by a process.
 func SearchLoadedLibs(currproc *ProcSearch) (err error) {
-	var (
-		libs    []string
-		harderr error
-	)
-
+	var libs []string
 	for label, currsearch := range currproc.Searches {
 		if len(currsearch.Libs) == 0 {
 			continue
 		}
 
-		// Compile a single RE for all libs in the same search.
-		searchstr := currsearch.Libs[0]
-		for i := 1; i < len(currsearch.Libs); i += 1 {
-			searchstr = searchstr + "|" + currsearch.Libs[i]
-		}
-		re, _ := regexp.Compile(searchstr)
-
+		// Get a list of all libs loaded by the currproc.
 		if len(libs) == 0 {
-			libs, harderr, _ = listlibs.ListLoadedLibraries(currproc.Proc)
+			libs, harderr, softerr := listlibs.ListLoadedLibraries(currproc.Proc)
 			if harderr != nil {
 				return harderr
 			}
+
+			addSoftErrors(softerr)
+			if len(libs) == 0 {
+				return
+			}
 		}
 
-		for i := range libs {
-			loc := re.FindStringIndex(libs[i])
-			if loc == nil {
-				continue
-			}
+		for j := 0; j < len(currsearch.Libs); j += 1 {
+			re := currsearch.reLibs[j]
+			for i := range libs {
+				loc := re.FindStringIndex(libs[i])
+				if loc == nil {
+					continue
+				}
 
-			var res ProcResult
-			if _, ok := currproc.Results[label]; !ok {
-				res.Name, _, _ = currproc.Proc.Name()
-				res.Pid = float64(currproc.Proc.Pid())
-				res.Libs = append(res.Libs, libs[i])
-				currproc.Results[label] = res
-			} else {
-				res = currproc.Results[label]
+				// Check if we already have a result associated with this search label in the result hash.
+				// If we don't we create a new ProcResult with the process name and pid and add the libs found to it.
+				var res ProcResult
+				res, ok := currproc.Results[label]
+
+				if !ok {
+					pname, harderr, softerr := currproc.Proc.Name()
+					if harderr != nil {
+						return harderr
+					}
+					addSoftErrors(softerr)
+					res.Name = pname
+					res.Pid = float64(currproc.Proc.Pid())
+				}
+
 				res.Libs = append(res.Libs, libs[i])
 				currproc.Results[label] = res
 			}
 		}
 	}
+	return
+}
 
+func ScanProcMemory(currproc *ProcSearch) (harderr error) {
+	scancount := ActivateAllScans(currproc)
+	buffer_size := uint(4096)
+
+	walkfn :=
+		func(address uintptr, buf []byte) (keepSearching bool) {
+			// Iterate through the searches to perform the scan
+			for label, currsearch := range currproc.Searches {
+				for i := range currsearch.Scans {
+					currscan := currsearch.Scans[i]
+					if !currscan.active {
+						continue
+					}
+					// Check if we need to scan for rawbytes or for a regexp.
+					if currscan.Bytes != "" {
+						b, _ := hex.DecodeString(currscan.Bytes)
+						if index := bytes.Index(buf, b); index == -1 {
+							continue
+						}
+					} else {
+						regex := currscan.compiledRe
+						if loc := regex.FindIndex(buf); loc == nil {
+							continue
+						}
+					}
+
+					// If we are here, it means that we have found a match.
+					var res ProcResult
+					if _, ok := currproc.Results[label]; !ok {
+						procname, harderr, softerr := currproc.Proc.Name()
+						if harderr != nil {
+							return false
+						}
+
+						addSoftErrors(softerr)
+						res.Name = procname
+						res.Pid = float64(currproc.Proc.Pid())
+						res.Found = true
+						res.MatchedCount = 1
+						currproc.Results[label] = res
+					} else {
+						res = currproc.Results[label]
+						res.MatchedCount++
+						currproc.Results[label] = res
+					}
+					// Check if 'n' matches have been found. Deactivate the scan if we've found 'n' matches.
+					if int(currproc.Results[label].MatchedCount) == int(currscan.MatchCount) {
+						currscan.active = false
+						scancount--
+					}
+					// If we have no more scans to perform on this process. Stop.
+					if scancount == 0 {
+						return false
+					}
+				}
+			}
+			return true
+		}
+
+	harderror, softerror := memaccess.SlidingWalkMemory(currproc.Proc, 0, buffer_size, walkfn)
+
+	if harderror != nil {
+		return harderror
+	}
+
+	addSoftErrors(softerror)
 	return
 }
 
 func (r Runner) Run(Args []byte) (resStr string) {
+	var startTime time.Time
+
 	defer func() {
 		if e := recover(); e != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
 			r.Results.Success = false
+			stats.ExecTime = time.Since(startTime).Seconds() * 1000
+			r.Results.Statistics = stats
 			err, _ := json.Marshal(r.Results)
 			resStr = string(err[:])
 			return
@@ -215,38 +337,36 @@ func (r Runner) Run(Args []byte) (resStr string) {
 		panic(err)
 	}
 
-	proclist := make(ProcList)
+	// Used to calculate the ExecTime for the module.
+	startTime = time.Now()
 
 	// Aggregate all the process.
-	for label, currSearch := range r.Parameters.Searches {
+	proclist := make(ProcList)
+	for label, currsearch := range r.Parameters.Searches {
+		for j := 0; j < len(currsearch.Processes); j += 1 {
+			plist, hard, soft := Pgrep(currsearch.Processes[j])
 
-		// Concatenate all search strings under a given search into a single regexp.
-		searchstr := currSearch.Processes[0]
-		for i := 1; i < len(currSearch.Processes); i += 1 {
-			searchstr = searchstr + "|" + currSearch.Processes[i]
-		}
+			if hard != nil {
+				panic(hard)
+			}
 
-		plist, hard, _ := Pgrep(searchstr)
-		if hard != nil {
-			panic(hard)
-		}
+			addSoftErrors(soft)
 
-		for i := range plist {
-			pid := plist[i].Pid()
-			_, ok := proclist[pid]
-			// Add search to an existing process in list or create a new one.
-			if !ok {
-				procsearch := ProcSearch{Searches: make(map[string]Search), Results: make(map[string]ProcResult)}
-				procsearch.Proc = plist[i]
-				procsearch.Searches[label] = currSearch
-				proclist[pid] = procsearch
-			} else {
-				proclist[pid].Searches[label] = currSearch
+			// Add currsearch to the processes returned by pgrep.
+			for i := range plist {
+				pid := plist[i].Pid()
+				_, ok := proclist[pid]
+				// Check if we have this process in the proclist already. If we don't we create a new ProcSearch and add it to the list.
+				if !ok {
+					procsearch := ProcSearch{Searches: make(map[string]Search), Results: make(map[string]ProcResult)}
+					procsearch.Proc = plist[i]
+					proclist[pid] = procsearch
+				}
+				proclist[pid].Searches[label] = currsearch
 			}
 		}
 	}
 
-	// Search Libraries
 	for _, currproc := range proclist {
 		err := SearchLoadedLibs(&currproc)
 		if err != nil {
@@ -254,77 +374,16 @@ func (r Runner) Run(Args []byte) (resStr string) {
 		}
 	}
 
-	// Memory scan.
-	for pid, currproc := range proclist {
-		scancount := ActivateAllScans(&currproc)
-
-		buffer_size := uint(4096)
-		foundAddress := uintptr(0)
-
-		harderror, _ := memaccess.SlidingWalkMemory(currproc.Proc, 0, buffer_size,
-			func(address uintptr, buf []byte) (keepSearching bool) {
-				// Iterate through the searches to perform the scan
-				for label, currsearch := range currproc.Searches {
-					for i := range currsearch.Scans {
-						// Check if the scan is still active.
-						if !currsearch.Scans[i].Active {
-							continue
-						}
-						needle := currsearch.Scans[i].Expression
-						// Check if the given search is regexp or a slice of hex bytes.
-						if b, err := hex.DecodeString(needle); err == nil {
-							index := bytes.Index(buf, b)
-							if index == -1 {
-								continue
-							}
-							foundAddress = address + uintptr(index)
-						} else {
-							regex, _ := regexp.Compile(needle)
-							loc := regex.FindIndex(buf)
-							if loc == nil {
-								continue
-							}
-							foundAddress = address + uintptr(loc[0])
-						}
-						// If we are here, it means that foundAddress has the memory location of the required search string.
-						found := make([]byte, len(needle)+int(currsearch.Scans[i].Length))
-						harderr, _ := memaccess.CopyMemory(currproc.Proc, foundAddress, found)
-						if harderr != nil {
-							r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", harderr))
-							return false
-						}
-						foundstr := hex.EncodeToString(found)
-						var res ProcResult
-						if _, ok := currproc.Results[label]; !ok {
-							res.Name, _, _ = currproc.Proc.Name()
-							res.Pid = float64(pid)
-							res.BytesFound = append(res.BytesFound, foundstr)
-							currproc.Results[label] = res
-						} else {
-							res = currproc.Results[label]
-							res.BytesFound = append(res.BytesFound, foundstr)
-							currproc.Results[label] = res
-						}
-						// Check if 'n' matches have been found. Deactivate the scan if we've found 'n' matches.
-						if len(currproc.Results[label].BytesFound) == int(currsearch.Scans[i].MatchCount) {
-							currsearch.Scans[i].Active = false
-							scancount -= 1
-						}
-						// If we have no more scans to perform on this process. Stop.
-						if scancount == 0 {
-							return false
-						}
-					}
-				}
-				return true
-			})
-
-		if harderror != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", harderror))
+	for _, currproc := range proclist {
+		err := ScanProcMemory(&currproc)
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
 	}
 
-	// Iterate through all the processes. Grab all the results. Add them to results.
+	stats.ExecTime = time.Since(startTime).Seconds() * 1000
+
+	// Iterate through all the processes. Grab all the results.
 	fres := make(element)
 	for _, currproc := range proclist {
 		res := currproc.Results
@@ -334,16 +393,21 @@ func (r Runner) Run(Args []byte) (resStr string) {
 		currproc.Proc.Close()
 	}
 
-	r.Results.Success = true
 	r.Results.Elements = fres
 	return r.buildResults()
 }
 
 func (r Runner) buildResults() string {
+	r.Results.Success = true
+	if len(r.Results.Errors) > 0 {
+		r.Results.Success = false
+	}
 
 	if len(r.Results.Elements.(element)) > 0 {
 		r.Results.FoundAnything = true
 	}
+
+	r.Results.Statistics = stats
 
 	jsonOutput, err := json.Marshal(r.Results)
 	if err != nil {
