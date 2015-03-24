@@ -124,6 +124,9 @@ func markIdleAgents(ctx Context) (err error) {
 	return
 }
 
+// save time of last hourly run
+var countNewEndpointsHourly time.Time
+
 // computeAgentsStats computes and stores statistics about agents and endpoints
 func computeAgentsStats(ctx Context) (err error) {
 	defer func() {
@@ -176,15 +179,19 @@ func computeAgentsStats(ctx Context) (err error) {
 	}()
 
 	go func() {
-		start := time.Now()
-		// detect new endpoints from last 24 hours against endpoints from last 7 days
-		stats.NewEndpoints, err = ctx.DB.CountNewEndpoints(time.Now().Add(-24*time.Hour), time.Now().Add(-7*24*time.Hour))
-		if err != nil {
-			panic(err)
+		// only run that one once every hour
+		if time.Now().Add(-time.Hour).After(countNewEndpointsHourly) {
+			start := time.Now()
+			// detect new endpoints from last 24 hours against endpoints from last 7 days
+			stats.NewEndpoints, err = ctx.DB.CountNewEndpoints(time.Now().Add(-24*time.Hour), time.Now().Add(-7*24*time.Hour))
+			if err != nil {
+				panic(err)
+			}
+			d := time.Since(start)
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("CountNewEndpoints() took %v to run", d)}.Debug()
+			countNewEndpointsHourly = time.Now()
 		}
 		done <- true
-		d := time.Since(start)
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("CountNewEndpoints() took %v to run", d)}.Debug()
 	}()
 	go func() {
 		start := time.Now()
