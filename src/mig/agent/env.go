@@ -12,6 +12,8 @@ import (
 	"mig"
 	"net"
 	"net/http"
+	"net/url"
+	"time"
 )
 
 func findLocalIPs(orig_ctx Context) (ctx Context, err error) {
@@ -35,11 +37,37 @@ func findLocalIPs(orig_ctx Context) (ctx Context, err error) {
 // public ip of the agent
 func findPublicIP(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
-	resp, err := http.Get(APIURL + "/" + "ip")
-	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to retrieve public ip from api: %v", err)}.Err()
-		return
+
+	tr := &http.Transport{
+		Dial: (&net.Dialer{Timeout: 10 * time.Second}).Dial,
 	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Get(APIURL + "/ip")
+	if err != nil {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Public IP retrieval from API failed. Trying with proxy next. Error was: %v", err)}.Info()
+	} else {
+		goto parseBody
+	}
+	for _, proxy := range PROXIES {
+		pu, err := url.Parse("http://" + proxy)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to parse proxy url http://%s - %v", proxy, err)}.Info()
+			continue
+		}
+		tr.Proxy = http.ProxyURL(pu)
+		resp, err = client.Get(APIURL + "/ip")
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Public IP retrieval failed through proxy http://%s - %v", proxy, err)}.Info()
+			continue
+		} else {
+			goto parseBody
+		}
+	}
+	// exit here if no connection succeeded
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to retrieve public ip from api: %v", err)}.Err()
+	return
+
+parseBody:
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	ip := net.ParseIP(string(body))
