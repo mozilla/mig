@@ -137,7 +137,9 @@ func computeAgentsStats(ctx Context) (err error) {
 	}()
 	var stats mig.AgentsStats
 	done := make(chan bool)
+	routines := 0
 	go func() {
+		routines++
 		start := time.Now()
 		stats.OnlineAgentsByVersion, err = ctx.DB.SumOnlineAgentsByVersion()
 		if err != nil {
@@ -148,6 +150,7 @@ func computeAgentsStats(ctx Context) (err error) {
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("SumOnlineAgentsByVersion() took %v to run", d)}.Debug()
 	}()
 	go func() {
+		routines++
 		start := time.Now()
 		stats.IdleAgentsByVersion, err = ctx.DB.SumIdleAgentsByVersion()
 		if err != nil {
@@ -158,6 +161,7 @@ func computeAgentsStats(ctx Context) (err error) {
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("SumIdleAgentsByVersion() took %v to run", d)}.Debug()
 	}()
 	go func() {
+		routines++
 		start := time.Now()
 		stats.OnlineEndpoints, err = ctx.DB.CountOnlineEndpoints()
 		if err != nil {
@@ -168,6 +172,7 @@ func computeAgentsStats(ctx Context) (err error) {
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("CountOnlineEndpoints() took %v to run", d)}.Debug()
 	}()
 	go func() {
+		routines++
 		start := time.Now()
 		stats.IdleEndpoints, err = ctx.DB.CountIdleEndpoints()
 		if err != nil {
@@ -181,6 +186,7 @@ func computeAgentsStats(ctx Context) (err error) {
 	go func() {
 		// only run that one once every hour
 		if time.Now().Add(-time.Hour).After(countNewEndpointsHourly) {
+			routines++
 			start := time.Now()
 			// detect new endpoints from last 24 hours against endpoints from last 7 days
 			stats.NewEndpoints, err = ctx.DB.CountNewEndpoints(time.Now().Add(-24*time.Hour), time.Now().Add(-7*24*time.Hour))
@@ -190,10 +196,11 @@ func computeAgentsStats(ctx Context) (err error) {
 			d := time.Since(start)
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("CountNewEndpoints() took %v to run", d)}.Debug()
 			countNewEndpointsHourly = time.Now()
+			done <- true
 		}
-		done <- true
 	}()
 	go func() {
+		routines++
 		start := time.Now()
 		stats.MultiAgentsEndpoints, err = ctx.DB.CountDoubleAgents()
 		if err != nil {
@@ -204,6 +211,7 @@ func computeAgentsStats(ctx Context) (err error) {
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("CountDoubleAgents() took %v to run", d)}.Debug()
 	}()
 	go func() {
+		routines++
 		start := time.Now()
 		stats.DisappearedEndpoints, err = ctx.DB.CountDisappearedEndpoints(time.Now().Add(-7 * 24 * time.Hour))
 		if err != nil {
@@ -214,6 +222,7 @@ func computeAgentsStats(ctx Context) (err error) {
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("CountDisappearedEndpoints() took %v to run", d)}.Debug()
 	}()
 	go func() {
+		routines++
 		start := time.Now()
 		stats.FlappingEndpoints, err = ctx.DB.CountFlappingEndpoints()
 		if err != nil {
@@ -225,10 +234,11 @@ func computeAgentsStats(ctx Context) (err error) {
 	}()
 	// each query is ran in parallel and return a boolean in the done channel
 	// so when we have received 4 messages in the channel, all queries are done
-	ctr := 0
+	time.Sleep(100 * time.Millisecond)
+	completed := 0
 	for <-done {
-		ctr++
-		if ctr == 8 {
+		completed++
+		if completed == routines {
 			break
 		}
 	}
