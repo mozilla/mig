@@ -90,27 +90,30 @@ and salted on linux systems, would use the following action:
 .. code:: json
 
 	{
-		"name": "Compliance check for Auditd",
+		"name": "verify root password storage method",
+		"target": "agents.queueloc like 'linux.%'",
+		"threat": {
+			"family": "compliance",
+			"level": "low",
+			"ref": "syslowauth3",
+			"type": "system"
+		},
 		"description": {
 			"author": "Julien Vehent",
 			"email": "ulfr@mozilla.com",
-			"url": "https://some_example_url/with_details",
-			"revision": 201402071200
-		},
-		"target": "agents.environment->>'ident' ILIKE '%ubuntu%' AND agents.name LIKE '%dc1.example.net'",
-		"threat": {
-			"level": "info",
-			"family": "compliance",
-			"ref": "syslowaudit1"
+			"revision": 201503121200
 		},
 		"operations": [
 			{
-				"module": "filechecker",
+				"module": "file",
 				"parameters": {
-					"/etc/shadow": {
-						"regex": {
-							"root password strongly hashed and salted": [
-								"root:\\$(2a|5|6)\\$"
+					"searches": {
+						"root_passwd_hashed_or_disabled": {
+							"paths": [
+								"/etc/shadow"
+							],
+							"contents": [
+								"root:(\\*|!|\\$(1|2a|5|6)\\$).+"
 							]
 						}
 					}
@@ -165,82 +168,174 @@ Upon generation, additional fields are appended to the action:
 * **validfrom** and **expireafter**: two dates that constrains the validity of the
   action to a UTC time window.
 
-Actions files are submitted to the API or the Scheduler directly. The PGP
-Signatures are always verified by the agents, and can optionally be verified by
-other components along the way.
-Additional attributes are added to the action by the scheduler. Those are
-defined in the database schema and are used to track the action status.
-
-Commands
-~~~~~~~~
-
-Upon processing of an Action, the scheduler will retrieve a list of agents to
-send the action to. One action is then derived into Commands. A command contains an
-action plus additional parameters that are specific to the target agent, such as
-command processing timestamps, name of the agent queue on the message broker,
-Action and Command unique IDs, status and results of the command. Below is an
-example of the previous action ran against the agent named
-'myserver1234.test.example.net'.
-
-.. code:: json
-
-	{
-		"action":        { ... signed copy of action ... }
-		"agentname":     "myserver1234.test.example.net",
-		"agentqueueloc": "linux.myserver1234.test.example.net.55tjippis7s4t",
-		"finishtime":    "2014-02-10T15:28:34.687949847Z",
-		"id":            5978792535962156489,
-		"results": [
-			{
-				"elements": {
-					"/etc/shadow": {
-						"regex": {
-							"root password strongly hashed and salted": {
-								"root:\\$(2a|5|6)\\$": {
-									"Filecount": 1,
-									"Files": {},
-									"Matchcount": 0
-								}
-							}
-						}
-					}
-				},
-				"extra": {
-					"statistics": {
-						"checkcount": 1,
-						"checksmatch": 0,
-						"exectime": "183.237us",
-						"filescount": 1,
-						"openfailed": 0,
-						"totalhits": 0,
-						"uniquefiles": 0
-					}
-				},
-				"foundanything": false
-			}
-		],
-		"starttime": "2014-02-10T15:28:34.118926659Z",
-		"status": "succeeded"
-	}
-
-
-The results of the command show that the file '/etc/shadow' has not matched,
-and thus "FoundAnything" returned "false.
-While the result is negative, the command itself has succeeded. Had a failure
-happened on the agent, the scheduler would have been notified and the status
-would be one of "failed", "timeout" or "cancelled".
-
 Action/Commands workflow
-~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------
 The diagram below represents the full workflow from the launch of an action by
 an investigation, to the retrieval of results from the database. The steps are
 explained in the legend of the diagram, and map to various components of MIG.
+
+Actions are submitted to the API by trusted investigators. PGPSignatures are
+verified by the API and each agent prior to running any command.
 
 View `full size diagram`_.
 
 .. _`full size diagram`: .files/action_command_flow.svg
 
 .. image:: .files/action_command_flow.svg
+
+
+Command execution flow in Agent and Modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Upon processing of an action, the scheduler will retrieve a list of agents to
+send the action to. One action is then derived into multiple commands and sent
+to agents.
+
+An agent receives a command from the scheduler on its personal AMQP queue (1).
+It parses the command (2) and extracts all of the operations to perform.
+Operations are passed to modules and executed in parallel (3). Rather than
+maintaining a state of the running command, the agent create a goroutine and a
+channel tasked with receiving the results from the modules. Each modules
+published its results inside that channel (4). The result parsing goroutine
+receives them, and when it has received all of them, populates the `results` (5)
+array of the command with the results from each module, and send the command
+back to the scheduler(6).
+
+When the agent is done running the command, both the channel and the goroutine
+are destroyed.
+
+ ::
+
+                 +-------+   [ - - - - - - A G E N T - - - - - - - - - - - - ]
+                 |command|+---->(listener)
+                 +-------+          |(2)
+                   ^                V
+                   |(1)         (parser)
+                   |               +       [ m o d u l e s ]
+    +---------+    |            (3)|----------> op1 +----------------+
+    |SCHEDULER|+---+               |------------> op2 +--------------|
+    |         |<---+               |--------------> op3 +------------|
+    +---------+    |               +----------------> op4 +----------+
+                   |                                                 V(4)
+                   |(6)                                         (receiver)
+                   |                                                 |
+                   |                                                 V(5)
+                   +                                             (publisher)
+                 +-------+                                           /
+                 |results|<-----------------------------------------'
+                 +-------+
+
+The command received by the agent is composed of a copy of the action described
+previously, but signed with the private key of a trusted investigator. It also
+contains additional parameters that are specific to the targetted agent, such as
+command processing timestamps, name of the agent queue on the message broker,
+action and command unique IDs and status and results of the command. Below is an
+command derived from the root password checking action, and ran on the host named
+'host1.example.net'.
+
+.. code:: json
+
+	{
+	  "id": 1.427392971126604e+18,
+	  "action": { ... SIGNED COPY OF THE ACTION ... },
+	  "agent": {
+		"id": 1.4271760437936648e+18,
+		"name": "host1.example.net",
+		"queueloc": "linux.host1.example.net.981alsd19aos1984",
+		"mode": "daemon",
+		"version": "20150324+0d0f88c.prod"
+	  },
+	  "status": "success",
+	  "results": [
+		{
+		  "foundanything": true,
+		  "success": true,
+		  "elements": {
+			"root_passwd_hashed_or_disabled": [
+			  {
+				"file": "/etc/shadow",
+				"fileinfo": {
+				  "lastmodified": "2015-02-07 01:51:07.17850601 +0000 UTC",
+				  "mode": "----------",
+				  "size": 1684
+				},
+				"search": {
+				  "contents": [
+					"root:(\\*|!|\\$(1|2a|5|6)\\$).+"
+				  ],
+				  "options": {
+					"matchall": false,
+					"matchlimit": 0,
+					"maxdepth": 0
+				  },
+				  "paths": [
+					"/etc"
+				  ]
+				}
+			  }
+			]
+		  },
+		  "statistics": {
+			"exectime": "2.017849ms",
+			"filescount": 1,
+			"openfailed": 0,
+			"totalhits": 1
+		  },
+		  "errors": null
+		}
+	  ],
+	  "starttime": "2015-03-26T18:02:51.126605Z",
+	  "finishtime": "2015-03-26T18:03:00.671232Z"
+	}
+
+The results of the command show that the file '/etc/shadow' has matched, and
+thus "FoundAnything" returned "True".
+
+The invocation of the file module has completed successfully, which is
+represented by **results->0->success=true**. In our example, there is only one
+operation in the **action->operations** array, so only one result is present.
+When multiple operations are performed, each has its results listed in a
+corresponding entry of the results array (operations[0] is in results[0],
+operations[1] in results[1], etc...).
+
+Finally, the agent has performed all operations in the operations array
+successfully, and returned **status=success**. Had a failure happened on the
+agent, the returned status would be one of "failed", "timeout" or "cancelled".
+
+Command expiration & timeouts
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To prevent abuse of resources, agents will kill long-running modules after a
+given period of time. That timeout is hardcoded in the agent configuration
+at compile time and defaults to 5 minutes.
+
+.. code:: go
+
+	// timeout after which a module run is killed
+	var MODULETIMEOUT time.Duration = 300 * time.Second
+
+That timeout represents the **maximum** execution time of a single operation. If
+an action contains 3 operations, each operation gets its own timeout. But because
+operations run in parallel in the agent, the maximum runtime of an action should
+be very close to the value of MODULETIMEOUT.
+
+In a typical deployment, it is safe to increase MODULETIMEOUT to allow for
+longer operations. A value of 20 minutes is usual. Make sure to fine tune this
+to your environment, and get the approval of your ops team because mig-agent
+may end up consuming resources (but never more than 50% of the cpu available on
+a system).
+
+Oftentimes, an investigator will want a timeout that is much shorter than the value
+of MODULETIMEOUT. In the MIG command line, the flag `-e` controls the
+expiration. It defaults to 5 minutes but can be set to 30 seconds for simple
+investigations. When that happens, the agent will calculate an appropriate expiration
+for the operations being run. If the expiration set on the action is set to 30 seconds,
+the agent will kill operations that run for more than 30 seconds.
+
+If the expiration is larger than the value of MODULETIMEOUT (for example, 2
+hours), then MODULETIMEOUT is used. Setting a long expiration may be useful to
+allow agents that only check in periodically to pick up actions long after they
+are launched.
 
 Access Control Lists
 --------------------
@@ -480,42 +575,6 @@ the old agent (12). When the agent returns (13), the upgrade protocol is done.
 If the PID of the old agent lingers on the system, an error is logged for the
 investigator to decide what to do next. The scheduler does not attempt to clean
 up the situation.
-
-Command execution flow in Agent and Modules
--------------------------------------------
-
-An agent receives a command from the scheduler on its personal AMQP queue (1).
-It parses the command (2) and extracts all of the operations to perform.
-Operations are passed to modules and executed asynchronously (3). Rather than
-maintaining a state of the running command, the agent create a goroutine and a
-channel tasked with receiving the results from the modules. Each modules
-published its results inside that channel (4). The result parsing goroutine
-receives them, and when it has received all of them, builds a response (5)
-that is sent back to the scheduler(6).
-
-When the agent is done running the command, both the channel and the goroutine
-are destroyed.
-
- ::
-
-             +-------+   [ - - - - - - A G E N T - - - - - - - - - - - - ]
-             |command|+---->(listener)
-             +-------+          |(2)
-               ^                V
-               |(1)         (parser)
-               |               +       [ m o d u l e s ]
-    +-----+    |            (3)|----------> op1 +----------------+
-    |SCHED|+---+               |------------> op2 +--------------|
-    | ULER|<---+               |--------------> op3 +------------|
-    +-----+    |               +----------------> op4 +----------+
-               |                                                 V(4)
-               |(6)                                         (receiver)
-               |                                                 |
-               |                                                 V(5)
-               +                                             (publisher)
-             +-------+                                           /
-             |results|<-----------------------------------------'
-             +-------+
 
 Threat Model
 ------------

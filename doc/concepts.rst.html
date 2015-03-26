@@ -15,20 +15,24 @@
                 <p><a href="#actions-and-commands">1   Actions and Commands</a></p>
                 <ul class="auto-toc">
                     <li><a href="#actions">1.1   Actions</a></li>
-                    <li><a href="#commands">1.2   Commands</a></li>
-                    <li><a href="#action-commands-workflow">1.3   Action/Commands workflow</a></li>
                 </ul>
             </li>
-            <li><a href="#access-control-lists">2   Access Control Lists</a></li>
             <li>
-                <p><a href="#agent-initialization-process">3   Agent initialization process</a></p>
+                <p><a href="#action-commands-workflow">2   Action/Commands workflow</a></p>
                 <ul class="auto-toc">
-                    <li><a href="#registration-process">3.1   Registration process</a></li>
-                    <li><a href="#check-in-mode">3.2   Check-In mode</a></li>
+                    <li><a href="#command-execution-flow-in-agent-and-modules">2.1   Command execution flow in Agent and Modules</a></li>
+                    <li><a href="#command-expiration-timeouts">2.2   Command expiration &amp; timeouts</a></li>
                 </ul>
             </li>
-            <li><a href="#agent-upgrade-process">4   Agent upgrade process</a></li>
-            <li><a href="#command-execution-flow-in-agent-and-modules">5   Command execution flow in Agent and Modules</a></li>
+            <li><a href="#access-control-lists">3   Access Control Lists</a></li>
+            <li>
+                <p><a href="#agent-initialization-process">4   Agent initialization process</a></p>
+                <ul class="auto-toc">
+                    <li><a href="#registration-process">4.1   Registration process</a></li>
+                    <li><a href="#check-in-mode">4.2   Check-In mode</a></li>
+                </ul>
+            </li>
+            <li><a href="#agent-upgrade-process">5   Agent upgrade process</a></li>
             <li>
                 <p><a href="#threat-model">6   Threat Model</a></p>
                 <ul class="auto-toc">
@@ -81,27 +85,30 @@
             <p>Actions are JSON files created by investigator to perform tasks on agents.</p>
             <p>For example, an investigator who wants to verify than root passwords are hashed and salted on linux systems, would use the following action:</p>
             <pre><code class="json"><span class="p">{</span>
-    <span class="nt">"name"</span><span class="p">:</span> <span class="s2">"Compliance check for Auditd"</span><span class="p">,</span>
+    <span class="nt">"name"</span><span class="p">:</span> <span class="s2">"verify root password storage method"</span><span class="p">,</span>
+    <span class="nt">"target"</span><span class="p">:</span> <span class="s2">"agents.queueloc like 'linux.%'"</span><span class="p">,</span>
+    <span class="nt">"threat"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">"family"</span><span class="p">:</span> <span class="s2">"compliance"</span><span class="p">,</span>
+        <span class="nt">"level"</span><span class="p">:</span> <span class="s2">"low"</span><span class="p">,</span>
+        <span class="nt">"ref"</span><span class="p">:</span> <span class="s2">"syslowauth3"</span><span class="p">,</span>
+        <span class="nt">"type"</span><span class="p">:</span> <span class="s2">"system"</span>
+    <span class="p">},</span>
     <span class="nt">"description"</span><span class="p">:</span> <span class="p">{</span>
         <span class="nt">"author"</span><span class="p">:</span> <span class="s2">"Julien Vehent"</span><span class="p">,</span>
         <span class="nt">"email"</span><span class="p">:</span> <span class="s2">"ulfr@mozilla.com"</span><span class="p">,</span>
-        <span class="nt">"url"</span><span class="p">:</span> <span class="s2">"https://some_example_url/with_details"</span><span class="p">,</span>
-        <span class="nt">"revision"</span><span class="p">:</span> <span class="mi">201402071200</span>
-    <span class="p">},</span>
-    <span class="nt">"target"</span><span class="p">:</span> <span class="s2">"agents.environment-&gt;&gt;'ident' ILIKE '%ubuntu%' AND agents.name LIKE '%dc1.example.net'"</span><span class="p">,</span>
-    <span class="nt">"threat"</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">"level"</span><span class="p">:</span> <span class="s2">"info"</span><span class="p">,</span>
-        <span class="nt">"family"</span><span class="p">:</span> <span class="s2">"compliance"</span><span class="p">,</span>
-        <span class="nt">"ref"</span><span class="p">:</span> <span class="s2">"syslowaudit1"</span>
+        <span class="nt">"revision"</span><span class="p">:</span> <span class="mi">201503121200</span>
     <span class="p">},</span>
     <span class="nt">"operations"</span><span class="p">:</span> <span class="p">[</span>
         <span class="p">{</span>
-            <span class="nt">"module"</span><span class="p">:</span> <span class="s2">"filechecker"</span><span class="p">,</span>
+            <span class="nt">"module"</span><span class="p">:</span> <span class="s2">"file"</span><span class="p">,</span>
             <span class="nt">"parameters"</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">"/etc/shadow"</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">"regex"</span><span class="p">:</span> <span class="p">{</span>
-                        <span class="nt">"root password strongly hashed and salted"</span><span class="p">:</span> <span class="p">[</span>
-                            <span class="s2">"root:\\$(2a|5|6)\\$"</span>
+                <span class="nt">"searches"</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="nt">"root_passwd_hashed_or_disabled"</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="nt">"paths"</span><span class="p">:</span> <span class="p">[</span>
+                            <span class="s2">"/etc/shadow"</span>
+                        <span class="p">],</span>
+                        <span class="nt">"contents"</span><span class="p">:</span> <span class="p">[</span>
+                            <span class="s2">"root:(\\*|!|\\$(1|2a|5|6)\\$).+"</span>
                         <span class="p">]</span>
                     <span class="p">}</span>
                 <span class="p">}</span>
@@ -131,60 +138,109 @@
                 <li><strong>pgpsignatures</strong>: all of the parameters above are concatenated into a string and signed with the investigator's private GPG key. The signature is part of the action, and used by agents to verify that an action comes from a trusted investigator. <cite>PGPSignatures</cite> is an array that contains one or more signature from authorized investigators.</li>
                 <li><strong>validfrom</strong> and <strong>expireafter</strong>: two dates that constrains the validity of the action to a UTC time window.</li>
             </ul>
-            <p>Actions files are submitted to the API or the Scheduler directly. The PGP Signatures are always verified by the agents, and can optionally be verified by other components along the way. Additional attributes are added to the action by the scheduler. Those are defined in the database schema and are used to track the action status.</p>
         </section>
-        <section id="commands">
-            <h3>1.2   Commands</h3>
-            <p>Upon processing of an Action, the scheduler will retrieve a list of agents to send the action to. One action is then derived into Commands. A command contains an action plus additional parameters that are specific to the target agent, such as command processing timestamps, name of the agent queue on the message broker, Action and Command unique IDs, status and results of the command. Below is an example of the previous action ran against the agent named 'myserver1234.test.example.net'.</p>
+    </section>
+    <section id="action-commands-workflow">
+        <h2>2   Action/Commands workflow</h2>
+        <p>The diagram below represents the full workflow from the launch of an action by an investigation, to the retrieval of results from the database. The steps are explained in the legend of the diagram, and map to various components of MIG.</p>
+        <p>Actions are submitted to the API by trusted investigators. PGPSignatures are verified by the API and each agent prior to running any command.</p>
+        <p>View <a href=".files/action_command_flow.svg">full size diagram</a>.</p>
+        <img src=".files/action_command_flow.svg" />
+        <section id="command-execution-flow-in-agent-and-modules">
+            <h3>2.1   Command execution flow in Agent and Modules</h3>
+            <p>Upon processing of an action, the scheduler will retrieve a list of agents to send the action to. One action is then derived into multiple commands and sent to agents.</p>
+            <p>An agent receives a command from the scheduler on its personal AMQP queue (1). It parses the command (2) and extracts all of the operations to perform. Operations are passed to modules and executed in parallel (3). Rather than maintaining a state of the running command, the agent create a goroutine and a channel tasked with receiving the results from the modules. Each modules published its results inside that channel (4). The result parsing goroutine receives them, and when it has received all of them, populates the <cite>results</cite> (5) array of the command with the results from each module, and send the command back to the scheduler(6).</p>
+            <p>When the agent is done running the command, both the channel and the goroutine are destroyed.</p>
+            <blockquote>
+                <pre>             +-------+   [ - - - - - - A G E N T - - - - - - - - - - - - ]
+             |command|+----&gt;(listener)
+             +-------+          |(2)
+               ^                V
+               |(1)         (parser)
+               |               +       [ m o d u l e s ]
++---------+    |            (3)|----------&gt; op1 +----------------+
+|SCHEDULER|+---+               |------------&gt; op2 +--------------|
+|         |&lt;---+               |--------------&gt; op3 +------------|
++---------+    |               +----------------&gt; op4 +----------+
+               |                                                 V(4)
+               |(6)                                         (receiver)
+               |                                                 |
+               |                                                 V(5)
+               +                                             (publisher)
+             +-------+                                           /
+             |results|&lt;-----------------------------------------'
+             +-------+</pre>
+            </blockquote>
+            <p>The command received by the agent is composed of a copy of the action described previously, but signed with the private key of a trusted investigator. It also contains additional parameters that are specific to the targetted agent, such as command processing timestamps, name of the agent queue on the message broker, action and command unique IDs and status and results of the command. Below is an command derived from the root password checking action, and ran on the host named 'host1.example.net'.</p>
             <pre><code class="json"><span class="p">{</span>
-    <span class="nt">"action"</span><span class="p">:</span>        <span class="p">{</span> <span class="err">...</span> <span class="err">signed</span> <span class="err">copy</span> <span class="err">of</span> <span class="err">action</span> <span class="err">...</span> <span class="p">}</span>
-    <span class="s2">"agentname"</span><span class="p">:</span>     <span class="s2">"myserver1234.test.example.net"</span><span class="p">,</span>
-    <span class="nt">"agentqueueloc"</span><span class="p">:</span> <span class="s2">"linux.myserver1234.test.example.net.55tjippis7s4t"</span><span class="p">,</span>
-    <span class="nt">"finishtime"</span><span class="p">:</span>    <span class="s2">"2014-02-10T15:28:34.687949847Z"</span><span class="p">,</span>
-    <span class="nt">"id"</span><span class="p">:</span>            <span class="mi">5978792535962156489</span><span class="p">,</span>
-    <span class="nt">"results"</span><span class="p">:</span> <span class="p">[</span>
-        <span class="p">{</span>
-            <span class="nt">"elements"</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">"/etc/shadow"</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">"regex"</span><span class="p">:</span> <span class="p">{</span>
-                        <span class="nt">"root password strongly hashed and salted"</span><span class="p">:</span> <span class="p">{</span>
-                            <span class="nt">"root:\\$(2a|5|6)\\$"</span><span class="p">:</span> <span class="p">{</span>
-                                <span class="nt">"Filecount"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-                                <span class="nt">"Files"</span><span class="p">:</span> <span class="p">{},</span>
-                                <span class="nt">"Matchcount"</span><span class="p">:</span> <span class="mi">0</span>
-                            <span class="p">}</span>
-                        <span class="p">}</span>
-                    <span class="p">}</span>
-                <span class="p">}</span>
+  <span class="nt">"id"</span><span class="p">:</span> <span class="mf">1.427392971126604e+18</span><span class="p">,</span>
+  <span class="nt">"action"</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="err">SIGNED</span> <span class="err">COPY</span> <span class="err">OF</span> <span class="err">THE</span> <span class="err">ACTION</span> <span class="err">...</span> <span class="p">},</span>
+  <span class="nt">"agent"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">"id"</span><span class="p">:</span> <span class="mf">1.4271760437936648e+18</span><span class="p">,</span>
+    <span class="nt">"name"</span><span class="p">:</span> <span class="s2">"host1.example.net"</span><span class="p">,</span>
+    <span class="nt">"queueloc"</span><span class="p">:</span> <span class="s2">"linux.host1.example.net.981alsd19aos1984"</span><span class="p">,</span>
+    <span class="nt">"mode"</span><span class="p">:</span> <span class="s2">"daemon"</span><span class="p">,</span>
+    <span class="nt">"version"</span><span class="p">:</span> <span class="s2">"20150324+0d0f88c.prod"</span>
+  <span class="p">},</span>
+  <span class="nt">"status"</span><span class="p">:</span> <span class="s2">"success"</span><span class="p">,</span>
+  <span class="nt">"results"</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">"foundanything"</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="nt">"success"</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="nt">"elements"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">"root_passwd_hashed_or_disabled"</span><span class="p">:</span> <span class="p">[</span>
+          <span class="p">{</span>
+            <span class="nt">"file"</span><span class="p">:</span> <span class="s2">"/etc/shadow"</span><span class="p">,</span>
+            <span class="nt">"fileinfo"</span><span class="p">:</span> <span class="p">{</span>
+              <span class="nt">"lastmodified"</span><span class="p">:</span> <span class="s2">"2015-02-07 01:51:07.17850601 +0000 UTC"</span><span class="p">,</span>
+              <span class="nt">"mode"</span><span class="p">:</span> <span class="s2">"----------"</span><span class="p">,</span>
+              <span class="nt">"size"</span><span class="p">:</span> <span class="mi">1684</span>
             <span class="p">},</span>
-            <span class="nt">"extra"</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">"statistics"</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">"checkcount"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-                    <span class="nt">"checksmatch"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                    <span class="nt">"exectime"</span><span class="p">:</span> <span class="s2">"183.237us"</span><span class="p">,</span>
-                    <span class="nt">"filescount"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-                    <span class="nt">"openfailed"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                    <span class="nt">"totalhits"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                    <span class="nt">"uniquefiles"</span><span class="p">:</span> <span class="mi">0</span>
-                <span class="p">}</span>
-            <span class="p">},</span>
-            <span class="nt">"foundanything"</span><span class="p">:</span> <span class="kc">false</span>
-        <span class="p">}</span>
-    <span class="p">],</span>
-    <span class="nt">"starttime"</span><span class="p">:</span> <span class="s2">"2014-02-10T15:28:34.118926659Z"</span><span class="p">,</span>
-    <span class="nt">"status"</span><span class="p">:</span> <span class="s2">"succeeded"</span>
+            <span class="nt">"search"</span><span class="p">:</span> <span class="p">{</span>
+              <span class="nt">"contents"</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">"root:(\\*|!|\\$(1|2a|5|6)\\$).+"</span>
+              <span class="p">],</span>
+              <span class="nt">"options"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">"matchall"</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+                <span class="nt">"matchlimit"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="nt">"maxdepth"</span><span class="p">:</span> <span class="mi">0</span>
+              <span class="p">},</span>
+              <span class="nt">"paths"</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">"/etc"</span>
+              <span class="p">]</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">]</span>
+      <span class="p">},</span>
+      <span class="nt">"statistics"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">"exectime"</span><span class="p">:</span> <span class="s2">"2.017849ms"</span><span class="p">,</span>
+        <span class="nt">"filescount"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="nt">"openfailed"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="nt">"totalhits"</span><span class="p">:</span> <span class="mi">1</span>
+      <span class="p">},</span>
+      <span class="nt">"errors"</span><span class="p">:</span> <span class="kc">null</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="nt">"starttime"</span><span class="p">:</span> <span class="s2">"2015-03-26T18:02:51.126605Z"</span><span class="p">,</span>
+  <span class="nt">"finishtime"</span><span class="p">:</span> <span class="s2">"2015-03-26T18:03:00.671232Z"</span>
 <span class="p">}</span></code></pre>
-            <p>The results of the command show that the file '/etc/shadow' has not matched, and thus "FoundAnything" returned "false. While the result is negative, the command itself has succeeded. Had a failure happened on the agent, the scheduler would have been notified and the status would be one of "failed", "timeout" or "cancelled".</p>
+            <p>The results of the command show that the file '/etc/shadow' has matched, and thus "FoundAnything" returned "True".</p>
+            <p>The invocation of the file module has completed successfully, which is represented by <strong>results-&gt;0-&gt;success=true</strong>. In our example, there is only one operation in the <strong>action-&gt;operations</strong> array, so only one result is present. When multiple operations are performed, each has its results listed in a corresponding entry of the results array (operations[0] is in results[0], operations[1] in results[1], etc...).</p>
+            <p>Finally, the agent has performed all operations in the operations array successfully, and returned <strong>status=success</strong>. Had a failure happened on the agent, the returned status would be one of "failed", "timeout" or "cancelled".</p>
         </section>
-        <section id="action-commands-workflow">
-            <h3>1.3   Action/Commands workflow</h3>
-            <p>The diagram below represents the full workflow from the launch of an action by an investigation, to the retrieval of results from the database. The steps are explained in the legend of the diagram, and map to various components of MIG.</p>
-            <p>View <a href=".files/action_command_flow.svg">full size diagram</a>.</p>
-            <img src=".files/action_command_flow.svg" />
+        <section id="command-expiration-timeouts">
+            <h3>2.2   Command expiration &amp; timeouts</h3>
+            <p>To prevent abuse of resources, agents will kill long-running modules after a given period of time. That timeout is hardcoded in the agent configuration at compile time and defaults to 5 minutes.</p>
+            <pre><code class="go"><span class="c1">// timeout after which a module run is killed
+</span><span class="kd">var</span> <span class="nx">MODULETIMEOUT</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span> <span class="p">=</span> <span class="mi">300</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span></code></pre>
+            <p>That timeout represents the <strong>maximum</strong> execution time of a single operation. If an action contains 3 operations, each operation gets its own timeout. But because operations run in parallel in the agent, the maximum runtime of an action should be very close to the value of MODULETIMEOUT.</p>
+            <p>In a typical deployment, it is safe to increase MODULETIMEOUT to allow for longer operations. A value of 20 minutes is usual. Make sure to fine tune this to your environment, and get the approval of your ops team because mig-agent may end up consuming resources (but never more than 50% of the cpu available on a system).</p>
+            <p>Oftentimes, an investigator will want a timeout that is much shorter than the value of MODULETIMEOUT. In the MIG command line, the flag <cite>-e</cite> controls the expiration. It defaults to 5 minutes but can be set to 30 seconds for simple investigations. When that happens, the agent will calculate an appropriate expiration for the operations being run. If the expiration set on the action is set to 30 seconds, the agent will kill operations that run for more than 30 seconds.</p>
+            <p>If the expiration is larger than the value of MODULETIMEOUT (for example, 2 hours), then MODULETIMEOUT is used. Setting a long expiration may be useful to allow agents that only check in periodically to pick up actions long after they are launched.</p>
         </section>
     </section>
     <section id="access-control-lists">
-        <h2>2   Access Control Lists</h2>
+        <h2>3   Access Control Lists</h2>
         <p>Not all keys can perform all actions. The scheduler, for example, sometimes need to issue specific actions to agents (such as during the upgrade protocol) but shouldn't be able to perform more dangerous actions. This is enforced by an Access Control List, or ACL, stored on the agents. An ACL describes who can access what function of which module. It can be used to require multiple signatures on specific actions, and limit the list of investigators allowed to perform an action.</p>
         <p>An ACL is composed of permissions, which are JSON documents hardwired into the agent configuration. In the future, MIG will dynamically ship permissions to agents.</p>
         <p>Below is an example of a permission for the <cite>filechecker</cite> module:</p>
@@ -218,13 +274,13 @@
         <p>The ACL is currently applied to modules. In the future, ACL will have finer control to authorize access to specific functions of modules. For example, an investigator could be authorized to call the <cite>regex</cite> function of filechecker module, but only in <cite>/etc</cite>. This functionality is not implemented yet.</p>
     </section>
     <section id="agent-initialization-process">
-        <h2>3   Agent initialization process</h2>
+        <h2>4   Agent initialization process</h2>
         <p>The agent tries to be as autonomous as possible. One of the goal is to ship agents without requiring external provisioning tools, such as Chef or Puppet. Therefore, the agent attempts to install itself as a service, and also supports a builtin upgrade protocol (described in the next section).</p>
         <p>As a portable binary, the agent needs to detect the type of operating system and init method that is used by an endpoint. Depending on the endpoint, different initialization methods are used. The diagram below explains the decision process followed by the agent.</p>
         <img src=".files/mig-agent-initialization-process.png" />
         <p>Go does not provide support for running programs in the backgroud. On endpoints that run upstart, systemd (linux) or launchd (darwin), this is not an issue because the init daemon takes care of running the agent in the background, rerouting its file descriptors and restarting on crash. On Windows and System-V, however, the agent daemonizes by forking itself into <cite>foreground</cite> mode, and re-forking itself on error (such as loss of connectivity to the relay). On Windows and System-V, if the agent is killed, it will not be restarted automatically.</p>
         <section id="registration-process">
-            <h3>3.1   Registration process</h3>
+            <h3>4.1   Registration process</h3>
             <p>The initialization process goes through several environment detection steps which are used to select the proper init method. Once started, the agent will send a heartbeat to the public relay, and also store that heartbeat in its <cite>run</cite> directory. The location of the <cite>run</cite> directory is platform specific.</p>
             <ul>
                 <li>windows: C:Windows</li>
@@ -249,12 +305,12 @@
 <span class="p">}</span></code></pre>
         </section>
         <section id="check-in-mode">
-            <h3>3.2   Check-In mode</h3>
+            <h3>4.2   Check-In mode</h3>
             <p>In infrastructure where running the agent as a permanent process is not acceptable, it is possible to run the agent as a cron job. By starting the agent with the flag <strong>-m agent-checkin</strong>, the agent will connect to the configured relay, retrieve and run outstanding commands, and exit after 10 seconds of inactivity.</p>
         </section>
     </section>
     <section id="agent-upgrade-process">
-        <h2>4   Agent upgrade process</h2>
+        <h2>5   Agent upgrade process</h2>
         <p>MIG supports upgrading agents in the wild. The upgrade protocol is designed with security in mind. The flow diagram below presents a high-level view:</p>
         <blockquote>
             <pre>Investigator          Scheduler             Agent             NewAgent           FileServer
@@ -326,31 +382,6 @@
         <p>Assuming everything checks in, the old agent executes the binary of the new agent (6). At that point, two agents are running on the same machine, and the rest of the protocol is designed to shut down the old agent, and clean up.</p>
         <p>After executing the new agent, the old agent returns a successful result to the scheduler, and includes its own PID in the results. The new agent starts by registering with the scheduler (7). This tells the scheduler that two agents are running on the same node, and one of them must terminate. The scheduler sends a kill action to both agents with the PID of the old agent (8). The kill action may be executed twice, but that doesn't matter. When the scheduler receives the kill results (9), it sends a new action to check for <cite>mig-agent</cite> processes (10). Only one should be found in the results (11), and if that is the case, the scheduler tells the agent to remove the binary of the old agent (12). When the agent returns (13), the upgrade protocol is done.</p>
         <p>If the PID of the old agent lingers on the system, an error is logged for the investigator to decide what to do next. The scheduler does not attempt to clean up the situation.</p>
-    </section>
-    <section id="command-execution-flow-in-agent-and-modules">
-        <h2>5   Command execution flow in Agent and Modules</h2>
-        <p>An agent receives a command from the scheduler on its personal AMQP queue (1). It parses the command (2) and extracts all of the operations to perform. Operations are passed to modules and executed asynchronously (3). Rather than maintaining a state of the running command, the agent create a goroutine and a channel tasked with receiving the results from the modules. Each modules published its results inside that channel (4). The result parsing goroutine receives them, and when it has received all of them, builds a response (5) that is sent back to the scheduler(6).</p>
-        <p>When the agent is done running the command, both the channel and the goroutine are destroyed.</p>
-        <blockquote>
-            <pre>         +-------+   [ - - - - - - A G E N T - - - - - - - - - - - - ]
-         |command|+----&gt;(listener)
-         +-------+          |(2)
-           ^                V
-           |(1)         (parser)
-           |               +       [ m o d u l e s ]
-+-----+    |            (3)|----------&gt; op1 +----------------+
-|SCHED|+---+               |------------&gt; op2 +--------------|
-| ULER|&lt;---+               |--------------&gt; op3 +------------|
-+-----+    |               +----------------&gt; op4 +----------+
-           |                                                 V(4)
-           |(6)                                         (receiver)
-           |                                                 |
-           |                                                 V(5)
-           +                                             (publisher)
-         +-------+                                           /
-         |results|&lt;-----------------------------------------'
-         +-------+</pre>
-        </blockquote>
     </section>
     <section id="threat-model">
         <h2>6   Threat Model</h2>
