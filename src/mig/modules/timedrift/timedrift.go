@@ -101,8 +101,23 @@ func (r Runner) Run(Args []byte) string {
 	}
 	// assume host has synched time and set to false if not true
 	ct.IsWithinDrift = true
-	for _, host := range NtpPool {
-		t, lat, err := GetTimeFromHost(host)
+	// attempt to get network time from each of the NTP servers, and exit
+	// as soon as we get a valid result from one of them
+	for i := 0; i < len(NtpPool); i++ {
+
+		// pick a server between 0 and len of ntppool, somewhat randomly
+		ntpsrv := NtpPool[time.Now().Nanosecond()%len(NtpPool)]
+		t, lat, err := GetNetworkTime(ntpsrv)
+		if err != nil {
+			// failed to get network time, log a failure and try another one
+			stats.NtpStats = append(stats.NtpStats, ntpstats{
+				Host:      ntpsrv,
+				Reachable: false,
+			})
+			continue
+		}
+
+		// compare network time to local time
 		localtime := time.Now()
 		if err != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
@@ -110,19 +125,22 @@ func (r Runner) Run(Args []byte) string {
 		}
 		if localtime.Before(t.Add(-drift)) {
 			ct.IsWithinDrift = false
-			ct.Drifts = append(ct.Drifts, fmt.Sprintf("Local time is behind ntp host %s by %s", host, t.Sub(localtime).String()))
+			ct.Drifts = append(ct.Drifts, fmt.Sprintf("Local time is behind ntp host %s by %s", ntpsrv, t.Sub(localtime).String()))
 		} else if localtime.After(t.Add(drift)) {
 			ct.IsWithinDrift = false
-			ct.Drifts = append(ct.Drifts, fmt.Sprintf("Local time is ahead of ntp host %s by %s", host, localtime.Sub(t).String()))
+			ct.Drifts = append(ct.Drifts, fmt.Sprintf("Local time is ahead of ntp host %s by %s", ntpsrv, localtime.Sub(t).String()))
 		}
 		stats.NtpStats = append(stats.NtpStats, ntpstats{
-			Host:      host,
+			Host:      ntpsrv,
 			Time:      t,
 			Latency:   lat,
 			Drift:     localtime.Sub(t).String(),
 			Reachable: true,
 		})
 		ct.HasCheckedDrift = true
+
+		// comparison succeeded, exit the loop
+		break
 	}
 	if !ct.IsWithinDrift {
 		r.Results.FoundAnything = true
@@ -134,9 +152,15 @@ done:
 	return r.buildResults()
 }
 
-var NtpPool = [...]string{`0.pool.ntp.org`, `1.pool.ntp.org`, `2.pool.ntp.org`, `3.pool.ntp.org`}
+var NtpPool = [...]string{
+	`time.nist.gov`,
+	`0.pool.ntp.org`,
+	`1.pool.ntp.org`,
+	`2.pool.ntp.org`,
+	`3.pool.ntp.org`}
 
-func GetTimeFromHost(host string) (t time.Time, lat string, err error) {
+// GetNetworkTime queries a given NTP server to obtain the network time
+func GetNetworkTime(host string) (t time.Time, latency string, err error) {
 	raddr, err := net.ResolveUDPAddr("udp", host+":123")
 	if err != nil {
 		return
@@ -167,7 +191,7 @@ func GetTimeFromHost(host string) (t time.Time, lat string, err error) {
 	if err != nil {
 		return
 	}
-	lat = time.Now().Sub(t1).String()
+	latency = time.Now().Sub(t1).String()
 	// Response format (from the RFC)
 	//  0                   1                   2                   3
 	//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -199,7 +223,10 @@ func GetTimeFromHost(host string) (t time.Time, lat string, err error) {
 	var sec, frac uint64
 	sec = uint64(data[43]) | uint64(data[42])<<8 | uint64(data[41])<<16 | uint64(data[40])<<24
 	frac = uint64(data[47]) | uint64(data[46])<<8 | uint64(data[45])<<16 | uint64(data[44])<<24
-
+	if sec == 0 || frac == 0 {
+		err = fmt.Errorf("null response received from NTP host")
+		return
+	}
 	nsec := sec * 1e9
 	nsec += (frac * 1e9) >> 32
 
