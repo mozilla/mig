@@ -240,6 +240,10 @@ func (r Runner) buildResults() string {
 	if len(r.Results.Errors) == 0 {
 		r.Results.Success = true
 	}
+	// if was supposed to check drift but hasn't, set success to false
+	if r.Parameters.Drift != "" && !r.Results.Elements.HasCheckedDrift {
+		r.Results.Success = false
+	}
 	jsonOutput, err := json.Marshal(r.Results)
 	if err != nil {
 		panic(err)
@@ -278,6 +282,11 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 		} else {
 			prints = append(prints, "stat: "+ntpstat.Host+" was unreachable")
 		}
+	}
+	if results.Success {
+		prints = append(prints, fmt.Sprintf("timedrift module has succeeded"))
+	} else {
+		prints = append(prints, fmt.Sprintf("timedrift module has failed"))
 	}
 	return
 }
