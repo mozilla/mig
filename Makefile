@@ -182,7 +182,7 @@ dmg-agent: mig-agent
 ifneq ($(OS),darwin)
 	echo 'you must be on MacOS and set OS=darwin on the make command line to build an OSX package'
 else
-	rm -fr tmp
+	rm -fr tmp tmpdmg
 	mkdir 'tmp' 'tmp/sbin' 'tmpdmg'
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p 'tmp/Library/Preferences/mig/'
