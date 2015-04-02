@@ -232,6 +232,8 @@ else
 	cp tmp/mig-agent-installer.msi mig-agent-$(BUILDREV).msi
 endif
 
+package-linux-clients: go_get_client_deps rpm-clients deb-clients
+
 rpm-clients: mig-cmd mig-console mig-action-generator
 # --rpm-sign requires installing package `rpm-sign` and configuring this macros in ~/.rpmmacros
 #  %_signature gpg
@@ -257,7 +259,7 @@ deb-clients: mig-cmd mig-console mig-action-generator
 # require dpkg-sig, it's a perl script, take it from any debian box and copy it in your PATH
 	dpkg-sig -k E60892BB9BD89A69F759A1A0A3D652173B763E8F --sign jvehent -m "Julien Vehent" mig-clients_$(BUILDREV)_$(ARCH).deb
 
-dmg-clients: mig-cmd mig-console mig-action-generator
+dmg-clients: go_get_client_deps mig-cmd mig-console mig-action-generator
 ifneq ($(OS),darwin)
 	echo 'you must be on MacOS and set OS=darwin on the make command line to build an OSX package'
 else
