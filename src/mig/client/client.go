@@ -755,6 +755,12 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 	if showAgent {
 		prefix = cmd.Agent.Name + " "
 	}
+	if cmd.Status != mig.StatusSuccess {
+		if !onlyFound {
+			fmt.Fprintf(os.Stderr, "%scommand did not succeed. status=%s\n", prefix, cmd.Status)
+		}
+		return
+	}
 	for i, result := range cmd.Results {
 		buf, err := json.Marshal(result)
 		if err != nil {
