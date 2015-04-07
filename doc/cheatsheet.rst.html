@@ -30,9 +30,17 @@
                 </ul>
             </li>
             <li>
-                <p><a href="#advanced-targetting">3   Advanced targetting</a></p>
+                <p><a href="#ping-module">3   Ping module</a></p>
                 <ul class="auto-toc">
-                    <li><a href="#target-agents-that-found-results-in-a-previous-action">3.1   Target agents that found results in a previous action</a></li>
+                    <li><a href="#test-web-connectivity-to-google">3.1   Test web connectivity to google</a></li>
+                    <li><a href="#list-endpoints-that-cannot-ping-a-destination">3.2   List endpoints that cannot ping a destination</a></li>
+                </ul>
+            </li>
+            <li><a href="#timedrift-module">4   Timedrift module</a></li>
+            <li>
+                <p><a href="#advanced-targetting">5   Advanced targetting</a></p>
+                <ul class="auto-toc">
+                    <li><a href="#target-agents-that-found-results-in-a-previous-action">5.1   Target agents that found results in a previous action</a></li>
                 </ul>
             </li>
         </ul>
@@ -44,23 +52,23 @@
         <section id="find-files-in-etc-cron-d-that-contain-mysql-on-hosts-buildbot">
             <h3>1.1   Find files in /etc/cron.d that contain "mysql://" on hosts "<em>buildbot</em>"</h3>
             <p>This is a simple file content check that looks into all the files contained in <cite>/etc/cron.d</cite> for a string that matched <cite>mysql://</cite>.</p>
-            <pre><code class="bash">mig file -t <span class="s2">"queueloc LIKE 'linux.%' AND name LIKE '%buildbot%'"</span> -path /etc/cron.d/ -content <span class="s2">"mysql://"</span></code></pre>
+            <pre><code class="bash">mig file -t <span class="s2">"environment-&gt;&gt;'os'='linux' AND name LIKE '%buildbot%'"</span> -path /etc/cron.d/ -content <span class="s2">"mysql://"</span></code></pre>
         </section>
         <section id="find-files-etc-passwd-that-have-been-modified-in-the-past-2-days">
             <h3>1.2   Find files /etc/passwd that have been modified in the past 2 days</h3>
             <p>The <cite>mtime</cite> check of the file module matches against the last modified timestamp of a file.</p>
-            <pre><code class="bash">mig file -t <span class="s2">"queueloc LIKE 'linux.%'"</span> -path /etc/passwd -mtime &lt;2d</code></pre>
+            <pre><code class="bash">mig file -t <span class="s2">"environment-&gt;&gt;'os'='linux'"</span> -path /etc/passwd -mtime &lt;2d</code></pre>
         </section>
         <section id="find-endpoints-with-high-uptime">
             <h3>1.3   Find endpoints with high uptime</h3>
             <p>On Linux and MacOS, the uptime of a host is kept in <cite>/proc/uptime</cite>. We can apply a regex on that file to list hosts with an uptime larger or lower than any amount.</p>
             <p>Note the search target that uses postgres's regex format <cite>~*</cite>.</p>
-            <pre><code class="bash">mig file -t <span class="s2">"queueloc ~* '^(linux|darwin).%'"</span> -path /proc/uptime -content <span class="s2">"^[5-9]{1}[0-9]{7,}\\."</span></code></pre>
+            <pre><code class="bash">mig file -t <span class="s2">"environment-&gt;&gt;'os' IN ('linux', 'darwin')"</span> -path /proc/uptime -content <span class="s2">"^[5-9]{1}[0-9]{7,}\\."</span></code></pre>
         </section>
         <section id="find-endpoints-running-process-sbin-auditd">
             <h3>1.4   Find endpoints running process "/sbin/auditd"</h3>
             <p>Here, the '^' in the content regex is important to prevent mig from listing itself while searching for the command line.</p>
-            <pre><code class="bash">mig file -t <span class="s2">"queueloc LIKE 'linux.%'"</span> -path /proc/ -name cmdline -content <span class="s2">"^/sbin/auditd"</span></code></pre>
+            <pre><code class="bash">mig file -path /proc/ -name cmdline -content <span class="s2">"^/sbin/auditd"</span></code></pre>
             <p>Another option, if using '^' is not possible, is to enclose one of the letter of the process name into brackets:</p>
             <pre><code class="bash"><span class="nv">$ </span>mig file -t <span class="s2">"tags-&gt;&gt;'operator'='IT'"</span> -path /proc -name <span class="s2">"^cmdline$"</span> -maxdepth 2 -content <span class="s2">"[a]rcsight"</span></code></pre>
         </section>
@@ -99,11 +107,36 @@
 </span>-ci 196.0.0.0/6     -ci 200.0.0.0/5     -ci 208.0.0.0/4</code></pre>
         </section>
     </section>
+    <section id="ping-module">
+        <h2>3   Ping module</h2>
+        <section id="test-web-connectivity-to-google">
+            <h3>3.1   Test web connectivity to google</h3>
+            <p>Testing reachability of google.com over HTTP can be done using the ping module.</p>
+            <pre><code class="bash"><span class="nv">$ </span>mig ping -t <span class="s2">"name LIKE '%phx1%'"</span> -d google.com -dp 80 -p tcp</code></pre>
+        </section>
+        <section id="list-endpoints-that-cannot-ping-a-destination">
+            <h3>3.2   List endpoints that cannot ping a destination</h3>
+            <p>Need to find which endpoints cannot connect to some destination? ICMP Ping is a pretty good way to get that data. Make sure to adapt the <cite>show</cite> parameter to list endpoints that have failed the ping.</p>
+            <pre><code class="bash"><span class="nv">$ </span>mig ping -t <span class="s2">"name LIKE '%scl3%'"</span> -show notfound -d 10.22.75.57 -p icmp</code></pre>
+        </section>
+    </section>
+    <section id="timedrift-module">
+        <h2>4   Timedrift module</h2>
+        <p>The timedrift module is fairly basic: it retrieves localtime and compares it to NTP time if asked to check for drift. As such, it only takes a single parameter to evaluate drift from network time.</p>
+        <pre><code class="bash"><span class="nv">$ </span>mig timedrift -drift 60s
+1402 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
+Following action ID 1428420741979034880.
+<span class="nv">status</span><span class="o">=</span>inflight...55% ...66% ...67% ......89% ..89% ...89% ......90% ..90% ......90% ...90% ..90% ...^Cstop following action. agents may still be running. printing available results:
+host1.dc2.example.net <span class="nb">local time </span>is 2015-04-07T15:35:00.768951216Z
+host1.dc2.example.net <span class="nb">local time </span>is out of sync from NTP servers
+host1.dc2.example.net Local <span class="nb">time </span>is ahead of ntp host time.nist.gov by 3m2.660981781s
+1 agents have found results</code></pre>
+    </section>
     <section id="advanced-targetting">
-        <h2>3   Advanced targetting</h2>
+        <h2>5   Advanced targetting</h2>
         <p>MIG can use complex queries to target specific agents. The following examples outline some of the capabilities. At the core, the <cite>target</cite> parameter is just a WHERE condition executed against the agent table of the MIG database, so if you know the DB schema, you can craft any targetting you want.</p>
         <section id="target-agents-that-found-results-in-a-previous-action">
-            <h3>3.1   Target agents that found results in a previous action</h3>
+            <h3>5.1   Target agents that found results in a previous action</h3>
             <p>Useful to run a second action on the agents that returned positive results in a first one. The query is a bit complex because it uses Postgres JSON array processing.</p>
             <p>Given an action with ID 12345 that was run and returned results, we want to run a new action on the agents that matched action 12345. To do so, use the target that follows:</p>
             <pre><code class="bash">mig file -t <span class="s2">"id IN ( \
