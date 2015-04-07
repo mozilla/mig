@@ -90,9 +90,9 @@ mig-cmd:
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-$(OS)$(ARCH) $(GOLDFLAGS) mig/client/cmd
 	ln -fs "$$(pwd)/$(BINDIR)/mig-$(OS)$(ARCH)" "$$(pwd)/$(BINDIR)/mig"
 
-mig-agentsearch:
+mig-agent-search:
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agentsearch $(GOLDFLAGS) mig/client/cmd/agentsearch
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-search $(GOLDFLAGS) mig/client/agent-search
 
 go_get_common_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
