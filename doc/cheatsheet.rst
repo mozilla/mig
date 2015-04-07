@@ -24,7 +24,7 @@ This is a simple file content check that looks into all the files contained in
 
 .. code:: bash
 
-    mig file -t "queueloc LIKE 'linux.%' AND name LIKE '%buildbot%'" -path /etc/cron.d/ -content "mysql://"
+    mig file -t "environment->>'os'='linux' AND name LIKE '%buildbot%'" -path /etc/cron.d/ -content "mysql://"
 
 Find files /etc/passwd that have been modified in the past 2 days
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -34,7 +34,7 @@ timestamp of a file.
 
 .. code:: bash
 
-    mig file -t "queueloc LIKE 'linux.%'" -path /etc/passwd -mtime <2d
+    mig file -t "environment->>'os'='linux'" -path /etc/passwd -mtime <2d
 
 Find endpoints with high uptime
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -47,7 +47,7 @@ Note the search target that uses postgres's regex format `~*`.
 
 .. code:: bash
 
-    mig file -t "queueloc ~* '^(linux|darwin).%'" -path /proc/uptime -content "^[5-9]{1}[0-9]{7,}\\."
+    mig file -t "environment->>'os' IN ('linux', 'darwin')" -path /proc/uptime -content "^[5-9]{1}[0-9]{7,}\\."
 
 Find endpoints running process "/sbin/auditd"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,7 +57,7 @@ itself while searching for the command line.
 
 .. code:: bash
 
-    mig file -t "queueloc LIKE 'linux.%'" -path /proc/ -name cmdline -content "^/sbin/auditd"
+    mig file -path /proc/ -name cmdline -content "^/sbin/auditd"
 
 Another option, if using '^' is not possible, is to enclose one of the letter
 of the process name into brackets:
@@ -123,6 +123,47 @@ CIDR (the netstat module doesn't have an `exclude` option).
 	-ci 192.160.0.0/13	-ci 192.169.0.0/16	-ci 192.170.0.0/15	-ci 192.172.0.0/14 \
 	-ci 192.176.0.0/12	-ci 192.192.0.0/10	-ci 193.0.0.0/8		-ci 194.0.0.0/7 \
 	-ci 196.0.0.0/6		-ci 200.0.0.0/5		-ci 208.0.0.0/4
+
+Ping module
+-----------
+
+Test web connectivity to google
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Testing reachability of google.com over HTTP can be done using the ping module.
+
+.. code:: bash
+
+	$ mig ping -t "name LIKE '%phx1%'" -d google.com -dp 80 -p tcp
+
+List endpoints that cannot ping a destination
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Need to find which endpoints cannot connect to some destination? ICMP Ping is a
+pretty good way to get that data. Make sure to adapt the `show` parameter to
+list endpoints that have failed the ping.
+
+.. code:: bash
+
+	$ mig ping -t "name LIKE '%scl3%'" -show notfound -d 10.22.75.57 -p icmp
+
+Timedrift module
+----------------
+
+The timedrift module is fairly basic: it retrieves localtime and compares it to
+NTP time if asked to check for drift. As such, it only takes a single parameter
+to evaluate drift from network time.
+
+.. code:: bash
+
+	$ mig timedrift -drift 60s
+	1402 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
+	Following action ID 1428420741979034880.
+	status=inflight...55% ...66% ...67% ......89% ..89% ...89% ......90% ..90% ......90% ...90% ..90% ...^Cstop following action. agents may still be running. printing available results:
+	host1.dc2.example.net local time is 2015-04-07T15:35:00.768951216Z
+	host1.dc2.example.net local time is out of sync from NTP servers
+	host1.dc2.example.net Local time is ahead of ntp host time.nist.gov by 3m2.660981781s
+	1 agents have found results
 
 Advanced targetting
 -------------------
