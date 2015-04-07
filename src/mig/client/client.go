@@ -6,9 +6,12 @@
 package client
 
 import (
+	"bufio"
 	"bytes"
 	"code.google.com/p/gcfg"
+	"code.google.com/p/go.crypto/openpgp"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/jvehent/cljs"
@@ -21,7 +24,6 @@ import (
 	"net/url"
 	"os"
 	"os/user"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -91,7 +93,11 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 	}()
 	_, err = os.Stat(file)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "no configuration file found at %s\n", file)
+		err = MakeConfiguration(file)
+		if err != nil {
+			panic(err)
+		}
 	}
 	err = gcfg.ReadFileInto(&conf, file)
 	if conf.GPG.Home == "" {
@@ -122,16 +128,94 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 }
 
 func FindHomedir() string {
-	if runtime.GOOS == "darwin" {
+	if os.Getenv("HOME") != "" {
 		return os.Getenv("HOME")
-	} else {
-		// find keyring in default location
-		u, err := user.Current()
-		if err != nil {
+	}
+	// find keyring in default location
+	u, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	return u.HomeDir
+}
+
+// MakeConfiguration generates a new configuration file for the current user
+func MakeConfiguration(file string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("MakeConfiguration() -> %v", e)
+		}
+	}()
+	var cfg Configuration
+	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Printf("would you like to generate a new configuration file at %s? Y/n> ", file)
+	scanner.Scan()
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
+	if scanner.Text() != "y" && scanner.Text() != "Y" && scanner.Text() != "" {
+		panic("abort")
+	}
+	cfg.Homedir = FindHomedir()
+	cfg.GPG.Home = cfg.Homedir + "/.gnupg/"
+	_, err = os.Stat(cfg.GPG.Home + "secring.gpg")
+	if err != nil {
+		panic("couldn't find secring at " + cfg.GPG.Home + "secring.gpg")
+	}
+	sr, err := os.Open(cfg.GPG.Home + "secring.gpg")
+	if err != nil {
+		panic(err)
+	}
+	defer sr.Close()
+	keyring, err := openpgp.ReadKeyRing(sr)
+	if err != nil {
+		panic(err)
+	}
+	for _, entity := range keyring {
+		fingerprint := strings.ToUpper(hex.EncodeToString(entity.PrivateKey.PublicKey.Fingerprint[:]))
+		// get the first name from the key identity
+		var name string
+		for _, identity := range entity.Identities {
+			name = identity.Name
+			break
+		}
+		fmt.Printf("found key '%s' with fingerprint '%s'.\nuse this key? Y/n> ", name, fingerprint)
+		scanner.Scan()
+		if err := scanner.Err(); err != nil {
 			panic(err)
 		}
-		return u.HomeDir
+		if scanner.Text() == "y" || scanner.Text() == "Y" || scanner.Text() == "" {
+			fmt.Printf("using key %s\n", fingerprint)
+			cfg.GPG.KeyID = fingerprint
+			break
+		}
 	}
+	if cfg.GPG.KeyID == "" {
+		panic("no suitable key found")
+	}
+	for {
+		fmt.Printf("what is the location of the API? (ex: https://mig.example.net/api/v1/) > ")
+		scanner.Scan()
+		if err := scanner.Err(); err != nil {
+			panic(err)
+		}
+		cfg.API.URL = scanner.Text()
+		_, err := http.Get(cfg.API.URL)
+		if err != nil {
+			fmt.Println("API connection failed. Wrong address?")
+			continue
+		}
+		break
+	}
+	fd, err := os.Create(file)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Fprintf(fd, "[api]\n\turl = \"%s\"\n", cfg.API.URL)
+	fmt.Fprintf(fd, "[gpg]\n\thome = \"%s\"\n\tkeyid = \"%s\"\n", cfg.GPG.Home, cfg.GPG.KeyID)
+	fd.Close()
+	fmt.Println("MIG client configuration generated at", file)
+	return
 }
 
 // Do is a thin wrapper around http.Client.Do() that inserts an authentication header
