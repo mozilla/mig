@@ -75,6 +75,8 @@ func main() {
 		err = publishHintToMozdef(hint, gp)
 		if err != nil {
 			mig.ProcessLog(logctx, mig.Log{Desc: fmt.Sprintf("failed to publish to mozdef: %v", err)}.Err())
+			// if publication to mozdef fails, crash the worker. systemd/upstart will restart a new one
+			panic(err)
 		}
 		mig.ProcessLog(logctx, mig.Log{Desc: "published asset hint for agent '" + hint.Name + "' to mozdef"}.Info())
 	}
