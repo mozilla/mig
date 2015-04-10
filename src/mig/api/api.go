@@ -267,7 +267,8 @@ func getIP(respWriter http.ResponseWriter, request *http.Request) {
 	if request.Header.Get("X-FORWARDED-FOR") != "" {
 		respond(200, []byte(request.Header.Get("X-FORWARDED-FOR")), respWriter, request)
 	} else {
-		respond(200, []byte(request.RemoteAddr), respWriter, request)
+		// request.RemoteAddr contains IP:Port, so strip the port and return just the IP
+		respond(200, []byte(request.RemoteAddr[:strings.LastIndex(request.RemoteAddr, ":")]), respWriter, request)
 	}
 }
 
