@@ -33,6 +33,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	}
 
 	p := newParameters()
+	p.ModePkgList = pkglist
 	r.Parameters = *p
 
 	return r.Parameters, r.ValidateParameters()

@@ -28,7 +28,7 @@ type Results struct {
 }
 
 type Parameters struct {
-	modePkgList bool `json:"pkglistmode"`
+	ModePkgList bool `json:"pkglistmode"`
 }
 
 func newParameters() *Parameters {
