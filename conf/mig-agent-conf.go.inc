@@ -25,7 +25,7 @@ var ISIMMORTAL bool = true
 var MUSTINSTALLSERVICE bool = true
 
 // attempt to discover the public IP of the endpoint by querying the api
-var DISCOVERPUBLICIP = true
+var DISCOVERPUBLICIP = false
 
 // in check-in mode, the agent connects to the relay, runs all pending commands
 // and exits. this mode is used to run the agent as a cron job, not a daemon.
@@ -47,7 +47,7 @@ var LOGGINGCONF = mig.Logging{
 var AMQPBROKER string = "amqp://guest:guest@localhost:5672/"
 
 // location of the MIG API, used for discovering the public IP
-var APIURL string = "http://localhost:1664/api/v1/"
+var APIURL string = "http://localhost:12345/api/v1/"
 
 // if the connection still fails after looking for a HTTP_PROXY, try to use the
 // proxies listed below
