@@ -59,7 +59,7 @@ if [ "$pkglist" != "" ]; then
     fi
 fi
 if [ "$installRabbitRPM" = true ]; then
-    sudo rpm -Uvh https://www.rabbitmq.com/releases/rabbitmq-server/v3.4.1/rabbitmq-server-3.4.1-1.noarch.rpm
+    sudo rpm -Uvh http://www.rabbitmq.com/releases/rabbitmq-server/v3.5.1/rabbitmq-server-3.5.1-1.noarch.rpm
 fi
 if [ "$isRPM" = true ]; then
     sudo service rabbitmq-server stop
@@ -143,8 +143,9 @@ sudo rabbitmqctl delete_user scheduler
 sudo rabbitmqctl add_user scheduler $mqpass || fail
 sudo rabbitmqctl delete_user agent
 sudo rabbitmqctl add_user agent $mqpass || fail
-sudo rabbitmqctl add_vhost mig
-sudo rabbitmqctl list_vhosts
+sudo rabbitmqctl delete_vhost mig
+sudo rabbitmqctl add_vhost mig || fail
+sudo rabbitmqctl list_vhosts || fail
 sudo rabbitmqctl set_permissions -p mig scheduler \
     '^mig(|\.(heartbeat|sched\..*))' \
     '^mig.*' \
@@ -217,7 +218,7 @@ cat > ~/.migrc << EOF
     url = "http://localhost:12345/api/v1/"
     skipverifycert = on
 [gpg]
-    home = "/home/$(whoami)/.mig/"
+    home = "$HOME/.mig/"
     keyid = "$keyid"
 EOF
 
@@ -278,7 +279,7 @@ var AGENTKEY = []byte("")
 EOF
 
 echo -e "\n---- Building and running local agent\n"
-make mig-agent || fail
+make mig-agent AGTCONF=conf/mig-agent-conf.go BUILDENV=demo || fail
 sudo cp bin/linux/amd64/mig-agent-latest /sbin/mig-agent || fail
 sudo chown root /sbin/mig-agent || fail
 sudo chmod 500 /sbin/mig-agent || fail
