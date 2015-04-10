@@ -9,6 +9,7 @@ import (
 	_ "mig/modules/agentdestroy"
 	_ "mig/modules/file"
 	_ "mig/modules/memory"
+	_ "mig/modules/migoval"
 	_ "mig/modules/netstat"
 	_ "mig/modules/ping"
 	_ "mig/modules/timedrift"
