@@ -5,7 +5,7 @@
         "email": "ulfr@mozilla.com",
         "revision": 201409031000
     },
-    "target": "tags#>>'{operator}'='opsec'",
+    "target": "environment->>'os'='linux'",
     "threat": {
         "level": "-",
         "family": "test"
