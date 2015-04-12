@@ -31,7 +31,7 @@ func (r Runner) Run(Args []byte) (resStr string) {
 			res.Errors = append(res.Errors, fmt.Sprintf("%v", e))
 			res.Success = false
 			err, _ := json.Marshal(res)
-			resStr = string(err[:])
+			resStr = string(err)
 			return
 		}
 	}()
@@ -41,18 +41,23 @@ func (r Runner) Run(Args []byte) (resStr string) {
 		panic(err)
 	}
 
-	migovalInitialize()
+	oval.Init()
+
 	e := &elements{}
+
 	if len(r.Parameters.PkgMatch.Matches) > 0 {
 		oresp := oval.PackageQuery(r.Parameters.PkgMatch.Matches)
 		for _, x := range oresp {
 			npi := &PkgInfo{PkgName: x.Name, PkgVersion: x.Version}
 			e.Matches = append(e.Matches, *npi)
 		}
+
 		res := newResults()
-		res.Elements = e
 		res.Success = true
-		res.FoundAnything = true
+		if len(e.Matches) > 0 {
+			res.FoundAnything = true
+		}
+		res.Elements = e
 		buf, err := json.Marshal(res)
 		if err != nil {
 			panic(err)
@@ -61,6 +66,7 @@ func (r Runner) Run(Args []byte) (resStr string) {
 		return
 	}
 
+	panic("no function specified")
 	return
 }
 
@@ -80,7 +86,6 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 	if err != nil {
 		panic(err)
 	}
-
 	err = json.Unmarshal(newelements, &elem)
 	if err != nil {
 		panic(err)
@@ -96,7 +101,7 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 
 type elements struct {
 	// In package match mode, the packages the agent has found that match
-	// the query parameters
+	// the query parameters.
 	Matches []PkgInfo `json:"matches"`
 }
 
@@ -121,8 +126,4 @@ func newParameters() *Parameters {
 
 func newResults() *mig.ModuleResult {
 	return &mig.ModuleResult{}
-}
-
-func migovalInitialize() {
-	oval.Init()
 }
