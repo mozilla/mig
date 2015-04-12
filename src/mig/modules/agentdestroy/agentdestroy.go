@@ -22,7 +22,7 @@ import (
 func init() {
 	mig.RegisterModule("agentdestroy", func() interface{} {
 		return new(Runner)
-	})
+	}, false)
 }
 
 type Runner struct {

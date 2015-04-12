@@ -154,7 +154,7 @@ func main() {
 	for _, arg := range fs.Args() {
 		modargs = append(modargs, arg)
 	}
-	modRunner = mig.AvailableModules[op.Module]()
+	modRunner = mig.AvailableModules[op.Module].Runner()
 	if _, ok := modRunner.(mig.HasParamsParser); !ok {
 		fmt.Fprintf(os.Stderr, "[error] module '%s' does not support command line invocation\n", op.Module)
 		os.Exit(2)

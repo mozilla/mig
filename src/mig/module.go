@@ -35,16 +35,25 @@ type ModuleResult struct {
 	Errors        []string    `json:"errors"`
 }
 
-// AvailableModules stores a list of activated module with their runner
-var AvailableModules = make(map[string]func() interface{})
+// Stores details about the registration of a module
+type ModuleRegistration struct {
+	Runner     func() interface{}
+	InputStdin bool
+}
+
+// AvailableModules stores a list of activated module with their registration
+var AvailableModules = make(map[string]ModuleRegistration)
 
 // RegisterModule adds a module to the list of available modules
-func RegisterModule(name string, runner func() interface{}) {
+func RegisterModule(name string, runner func() interface{}, useStdin bool) {
 	if _, exist := AvailableModules[name]; exist {
 		fmt.Fprintf(os.Stderr, "RegisterModule: a module named '%s' has already been registered.\nAre you trying to import the same module twice?\n", name)
 		os.Exit(1)
 	}
-	AvailableModules[name] = runner
+	newmodule := &ModuleRegistration{}
+	newmodule.Runner = runner
+	newmodule.InputStdin = useStdin
+	AvailableModules[name] = *newmodule
 }
 
 // Moduler provides the interface to a Module

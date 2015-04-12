@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
+	"io"
 	"io/ioutil"
 	"mig"
 	"os"
@@ -44,6 +45,7 @@ type moduleOp struct {
 	params      interface{}
 	resultChan  chan moduleResult
 	position    int
+	inputStdin  bool
 	expireafter time.Time
 }
 
@@ -159,7 +161,7 @@ exit:
 func runModuleDirectly(mode string, args []byte) (out string) {
 	if _, ok := mig.AvailableModules[mode]; ok {
 		// instanciate and call module
-		modRunner := mig.AvailableModules[mode]()
+		modRunner := mig.AvailableModules[mode].Runner()
 		out = modRunner.(mig.Moduler).Run(args)
 	} else {
 		out = fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
@@ -423,6 +425,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 		// check that the module is available and pass the command to the execution channel
 		if _, ok := mig.AvailableModules[operation.Module]; ok {
+			currentOp.inputStdin = mig.AvailableModules[operation.Module].InputStdin
 			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("calling module '%s'", operation.Module)}.Debug()
 			runningOps[currentOp.id] = currentOp
 			ctx.Channels.RunAgentCommand <- currentOp
@@ -487,10 +490,36 @@ func runModule(ctx Context, op moduleOp) (err error) {
 	cmdArgs := fmt.Sprintf("%s", tmpargs)
 
 	// build the command line and execute
-	cmd := exec.Command(ctx.Agent.BinPath, "-m", strings.ToLower(op.mode), cmdArgs)
+	var cmd *exec.Cmd
+	var stdinpipe io.WriteCloser
+	if op.inputStdin {
+		cmd = exec.Command(ctx.Agent.BinPath, "-m", strings.ToLower(op.mode))
+		stdinpipe, err = cmd.StdinPipe()
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		cmd = exec.Command(ctx.Agent.BinPath, "-m", strings.ToLower(op.mode), cmdArgs)
+	}
 	cmd.Stdout = &out
 	if err := cmd.Start(); err != nil {
 		panic(err)
+	}
+
+	// If the module expects input on standard in, write the argument data
+	// and close the pipe
+	//
+	// XXX Do we need some sort of nonblocking or interruptable write here
+	// if the call to Write() blocks?
+	if stdinpipe != nil {
+		_, err = stdinpipe.Write([]byte(cmdArgs))
+		if err != nil {
+			panic(err)
+		}
+		err = stdinpipe.Close()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// launch the waiter in a separate goroutine

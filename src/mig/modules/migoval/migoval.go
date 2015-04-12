@@ -6,16 +6,19 @@
 package migoval
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/ameihm0912/mozoval/go/src/oval"
+	"io"
 	"mig"
+	"os"
 )
 
 func init() {
 	mig.RegisterModule("migoval", func() interface{} {
 		return new(Runner)
-	})
+	}, true) // Register for STDIN parameter submission
 }
 
 type Runner struct {
@@ -23,7 +26,7 @@ type Runner struct {
 	Results    mig.ModuleResult
 }
 
-func (r Runner) Run(Args []byte) (resStr string) {
+func (r Runner) Run(CommandArgs []byte) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
@@ -35,6 +38,23 @@ func (r Runner) Run(Args []byte) (resStr string) {
 			return
 		}
 	}()
+
+	// This module reads parameters from STDIN; any arguments passed via
+	// the command line are ignored.
+	stdin := bufio.NewReader(os.Stdin)
+	Args := make([]byte, 0)
+	buf := make([]byte, 1024)
+	for {
+		rb, err := stdin.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				panic(err)
+			}
+		}
+		Args = append(Args, buf[:rb]...)
+	}
 
 	err := json.Unmarshal(Args, &r.Parameters)
 	if err != nil {

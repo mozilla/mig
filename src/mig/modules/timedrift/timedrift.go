@@ -22,7 +22,7 @@ import (
 func init() {
 	mig.RegisterModule("timedrift", func() interface{} {
 		return new(Runner)
-	})
+	}, false)
 }
 
 // Runner gives access to the exported functions and structs of the module
