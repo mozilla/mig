@@ -16,8 +16,8 @@ func printHelp() {
 
 func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	var (
-		fs      flag.FlagSet
-		pkglist bool
+		fs       flag.FlagSet
+		pkgMatch flagParam
 	)
 
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
@@ -26,15 +26,26 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	}
 
 	fs.Init("migoval", flag.ContinueOnError)
-	fs.BoolVar(&pkglist, "pkglist", true, "see help")
+	fs.Var(&pkgMatch, "pkgmatch", "see help")
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
 	}
 
 	p := newParameters()
-	p.ModePkgList = pkglist
+	p.PkgMatch.Matches = pkgMatch
 	r.Parameters = *p
 
 	return r.Parameters, r.ValidateParameters()
+}
+
+type flagParam []string
+
+func (f *flagParam) Set(value string) error {
+	*f = append(*f, value)
+	return nil
+}
+
+func (f *flagParam) String() string {
+	return fmt.Sprint([]string(*f))
 }
