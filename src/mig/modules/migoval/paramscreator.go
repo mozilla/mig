@@ -10,8 +10,17 @@ import (
 	"fmt"
 )
 
-func printHelp() {
-	fmt.Printf("No help is available - good luck!\n")
+func printHelp(isCmd bool) {
+	dash := ""
+	if isCmd {
+		dash = "-"
+	}
+	fmt.Printf(`Query parameters
+----------------
+%spkgmatch <string> - OS package search
+                    ex: pkgmatch linux-image
+		    query for installed OS packages containing substring
+`, dash)
 }
 
 func (r Runner) ParamsParser(args []string) (interface{}, error) {
@@ -21,7 +30,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	)
 
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
-		printHelp()
+		printHelp(true)
 		return nil, nil
 	}
 
