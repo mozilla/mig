@@ -515,7 +515,7 @@ func runModule(ctx Context, op moduleOp) (err error) {
 			argbuf := []byte(cmdArgs)
 			left := len(argbuf)
 			for left > 0 {
-				nb, err := stdinpipe.Write([]byte(cmdArgs))
+				nb, err := stdinpipe.Write(argbuf)
 				if err != nil {
 					stdinpipe.Close()
 					return
