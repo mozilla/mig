@@ -6,8 +6,13 @@
 package migoval
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"flag"
 	"fmt"
+	"io"
+	"os"
 )
 
 func printHelp(isCmd bool) {
@@ -20,12 +25,17 @@ func printHelp(isCmd bool) {
 %spkgmatch <string> - OS package search
                     ex: pkgmatch linux-image
 		    query for installed OS packages containing substring
-`, dash)
+
+%soval <path>       - OVAL processor
+		    ex: oval ./ovaldefs.xml
+		    process oval definitions on agent
+`, dash, dash)
 }
 
 func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	var (
 		fs       flag.FlagSet
+		ovalDefs string
 		pkgMatch flagParam
 	)
 
@@ -36,6 +46,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 
 	fs.Init("migoval", flag.ContinueOnError)
 	fs.Var(&pkgMatch, "pkgmatch", "see help")
+	fs.StringVar(&ovalDefs, "oval", "", "see help")
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -43,6 +54,25 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 
 	p := newParameters()
 	p.PkgMatch.Matches = pkgMatch
+
+	if ovalDefs != "" {
+		var b bytes.Buffer
+		fd, err := os.Open(ovalDefs)
+		if err != nil {
+			return nil, err
+		}
+		defer fd.Close()
+
+		encoder := base64.NewEncoder(base64.StdEncoding, &b)
+		gz := gzip.NewWriter(encoder)
+		_, err = io.Copy(gz, fd)
+		gz.Close()
+		if err != nil {
+			return nil, err
+		}
+		p.OvalDef = b.String()
+	}
+
 	r.Parameters = *p
 
 	return r.Parameters, r.ValidateParameters()

@@ -123,6 +123,10 @@ type Parameters struct {
 	// Package match mode, contains a list of strings to use as substring
 	// matches
 	PkgMatch PkgMatch `json:"pkgmatch"`
+
+	// A compressed, base64 encoded OVAL definition file for processing
+	// using OVAL library on agent.
+	OvalDef string `json:"ovaldef"`
 }
 
 type PkgMatch struct {
