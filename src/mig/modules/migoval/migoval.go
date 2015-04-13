@@ -141,6 +141,11 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 		prints = append(prints, resStr)
 	}
 
+	for _, x := range elem.OvalResults {
+		resStr := fmt.Sprintf("ovalresult id=%v title=\"%v\" outcome=%v", x.ID, x.Title, x.Status)
+		prints = append(prints, resStr)
+	}
+
 	return
 }
 
