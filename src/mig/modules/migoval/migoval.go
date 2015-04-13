@@ -6,9 +6,13 @@
 package migoval
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/ameihm0912/mozoval/go/src/oval"
+	"io"
 	"io/ioutil"
 	"mig"
 	"os"
@@ -73,6 +77,38 @@ func (r Runner) Run(CommandArgs []byte) (resStr string) {
 		}
 		resStr = string(buf)
 		return
+	} else if r.Parameters.OvalDef != "" {
+		var ovalbuf bytes.Buffer
+		b := bytes.NewBufferString(r.Parameters.OvalDef)
+		decoder := base64.NewDecoder(base64.StdEncoding, b)
+		gz, err := gzip.NewReader(decoder)
+		if err != nil {
+			panic(err)
+		}
+		_, err = io.Copy(&ovalbuf, gz)
+
+		od, err := oval.ParseBuffer(ovalbuf.String())
+		ovalresults := oval.Execute(od)
+		for _, x := range ovalresults {
+			nmor := &MOResult{}
+			nmor.Title = x.Title
+			nmor.Status = x.StatusString()
+			nmor.ID = x.ID
+			e.OvalResults = append(e.OvalResults, *nmor)
+		}
+
+		res := newResults()
+		res.Success = true
+		if len(e.OvalResults) > 0 {
+			res.FoundAnything = true
+		}
+		res.Elements = e
+		buf, err := json.Marshal(res)
+		if err != nil {
+			panic(err)
+		}
+		resStr = string(buf)
+		return
 	}
 
 	panic("no function specified")
@@ -112,6 +148,15 @@ type elements struct {
 	// In package match mode, the packages the agent has found that match
 	// the query parameters.
 	Matches []PkgInfo `json:"matches"`
+
+	// Results of OVAL definition checks in OVAL mode
+	OvalResults []MOResult `json:"ovalresults"`
+}
+
+type MOResult struct {
+	Title  string `json:"title"`
+	ID     string `json:"id"`
+	Status string `json:"status"`
 }
 
 type PkgInfo struct {
