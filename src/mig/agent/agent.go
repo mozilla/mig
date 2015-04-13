@@ -506,20 +506,25 @@ func runModule(ctx Context, op moduleOp) (err error) {
 		panic(err)
 	}
 
-	// If the module expects input on standard in, write the argument data
-	// and close the pipe
-	//
-	// XXX Do we need some sort of nonblocking or interruptable write here
-	// if the call to Write() blocks?
+	// Spawn a goroutine to write the parameter data to stdin of the module
+	// if required. Doing this in a goroutine ensures the timeout logic
+	// later in this function will fire if for some reason the module does
+	// not drain the pipe, and the agent ends up blocking on Write().
 	if stdinpipe != nil {
-		_, err = stdinpipe.Write([]byte(cmdArgs))
-		if err != nil {
-			panic(err)
-		}
-		err = stdinpipe.Close()
-		if err != nil {
-			panic(err)
-		}
+		go func() {
+			argbuf := []byte(cmdArgs)
+			left := len(argbuf)
+			for left > 0 {
+				nb, err := stdinpipe.Write([]byte(cmdArgs))
+				if err != nil {
+					stdinpipe.Close()
+					return
+				}
+				left -= nb
+				argbuf = argbuf[nb:]
+			}
+			stdinpipe.Close()
+		}()
 	}
 
 	// launch the waiter in a separate goroutine
