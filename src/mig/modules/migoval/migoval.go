@@ -6,11 +6,10 @@
 package migoval
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/ameihm0912/mozoval/go/src/oval"
-	"io"
+	"io/ioutil"
 	"mig"
 	"os"
 )
@@ -41,22 +40,12 @@ func (r Runner) Run(CommandArgs []byte) (resStr string) {
 
 	// This module reads parameters from STDIN; any arguments passed via
 	// the command line are ignored.
-	stdin := bufio.NewReader(os.Stdin)
-	Args := make([]byte, 0)
-	buf := make([]byte, 1024)
-	for {
-		rb, err := stdin.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				break
-			} else {
-				panic(err)
-			}
-		}
-		Args = append(Args, buf[:rb]...)
+	buf, err := ioutil.ReadAll(os.Stdin)
+	if err != nil {
+		panic(err)
 	}
 
-	err := json.Unmarshal(Args, &r.Parameters)
+	err = json.Unmarshal(buf, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}
