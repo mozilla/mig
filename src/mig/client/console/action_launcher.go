@@ -82,7 +82,7 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 			operation.Module = orders[1]
 			if _, ok := mig.AvailableModules[operation.Module]; ok {
 				// instanciate and call module parameters creation function
-				modRunner := mig.AvailableModules[operation.Module]()
+				modRunner := mig.AvailableModules[operation.Module].Runner()
 				if _, ok := modRunner.(mig.HasParamsCreator); !ok {
 					fmt.Println(operation.Module, "module does not provide a parameters creator.")
 					fmt.Println("You can write your action by hand and import it using 'load <file>'")

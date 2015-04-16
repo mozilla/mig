@@ -27,7 +27,7 @@ import (
 func init() {
 	mig.RegisterModule("ping", func() interface{} {
 		return new(Runner)
-	})
+	}, false)
 }
 
 type Runner struct {

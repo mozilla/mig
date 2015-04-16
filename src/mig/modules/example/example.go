@@ -43,7 +43,7 @@ import (
 func init() {
 	mig.RegisterModule("example", func() interface{} {
 		return new(Runner)
-	})
+	}, false)
 }
 
 // Runner gives access to the exported functions and structs of the module
