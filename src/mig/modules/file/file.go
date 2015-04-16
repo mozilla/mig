@@ -38,7 +38,7 @@ var debug bool = false
 func init() {
 	mig.RegisterModule("file", func() interface{} {
 		return new(Runner)
-	})
+	}, false)
 }
 
 type Runner struct {
