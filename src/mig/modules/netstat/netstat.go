@@ -23,7 +23,7 @@ import (
 func init() {
 	mig.RegisterModule("netstat", func() interface{} {
 		return new(Runner)
-	})
+	}, false)
 }
 
 type Runner struct {

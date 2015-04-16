@@ -869,7 +869,7 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 			}
 			continue
 		}
-		modRunner := mig.AvailableModules[moduleName]()
+		modRunner := mig.AvailableModules[moduleName].Runner()
 		// look for a result printer in the module
 		if _, ok := modRunner.(mig.HasResultsPrinter); ok {
 			results, err := modRunner.(mig.HasResultsPrinter).PrintResults(buf, onlyFound)
