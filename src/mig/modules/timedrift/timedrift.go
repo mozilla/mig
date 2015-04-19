@@ -308,7 +308,7 @@ If no drift is set, the module only returns local time.
 }
 
 func (r Runner) ParamsCreator() (interface{}, error) {
-	fmt.Println("initializing netstat parameters creation")
+	fmt.Println("initializing timedrift parameters creation")
 	var err error
 	var p params
 	printHelp(false)
@@ -335,7 +335,8 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 		p.Drift = input
 		break
 	}
-	return p, nil
+	r.Parameters = p
+	return r.Parameters, r.ValidateParameters()
 }
 
 func (r Runner) ParamsParser(args []string) (interface{}, error) {

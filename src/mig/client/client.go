@@ -846,24 +846,20 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 		return
 	}
 	for i, result := range cmd.Results {
-		buf, err := json.Marshal(result)
-		if err != nil {
-			panic(err)
-		}
 		if !onlyFound {
-			for _, rerr := range result.Errors {
+			for _, rerr := range cmd.Results.Errors {
 				fmt.Fprintf(os.Stderr, "%s[error] %s\n", prefix, rerr)
 			}
 		}
 		if len(cmd.Action.Operations) <= i {
 			if !onlyFound {
-				fmt.Fprintf(os.Stderr, "%s[error] no operation maps results %d\n", prefix, i)
+				fmt.Fprintf(os.Stderr, "%s[error] operation %d did not return results\n", prefix, i)
 			}
 			continue
 		}
 		// verify that we know the module
 		moduleName := cmd.Action.Operations[i].Module
-		if _, ok := mig.AvailableModules[moduleName]; !ok {
+		if _, ok := modules.Available[moduleName]; !ok {
 			if !onlyFound {
 				fmt.Fprintf(os.Stderr, "%s[error] unknown module '%s'\n", prefix, moduleName)
 			}
@@ -872,12 +868,12 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 		modRunner := mig.AvailableModules[moduleName].Runner()
 		// look for a result printer in the module
 		if _, ok := modRunner.(mig.HasResultsPrinter); ok {
-			results, err := modRunner.(mig.HasResultsPrinter).PrintResults(buf, onlyFound)
+			outRes, err := modRunner.(mig.HasResultsPrinter).PrintResults(result, onlyFound)
 			if err != nil {
 				panic(err)
 			}
-			for _, res := range results {
-				fmt.Printf("%s%s\n", prefix, res)
+			for _, resLine := range outRes {
+				fmt.Printf("%s%s\n", prefix, resLine)
 			}
 		} else {
 			if !onlyFound {
