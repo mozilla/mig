@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"mig/modules"
 	"time"
 )
 
@@ -27,9 +28,9 @@ type Command struct {
 	// timeout: module execution has timed out, and the agent returned the command to the scheduler
 	Status string `json:"status"`
 
-	Results    []ModuleResult `json:"results"`
-	StartTime  time.Time      `json:"starttime"`
-	FinishTime time.Time      `json:"finishtime"`
+	Results    []modules.Result `json:"results"`
+	StartTime  time.Time        `json:"starttime"`
+	FinishTime time.Time        `json:"finishtime"`
 }
 
 const (
