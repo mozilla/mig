@@ -15,8 +15,8 @@ import (
 
 // Message defines the input messages received by modules.
 type Message struct {
-	Class      string      // represent the type of message being passed to the module
-	Parameters interface{} // for `parameters` class, this interface contains the module parameters
+	Class      string      `json:"class"`      // represent the type of message being passed to the module
+	Parameters interface{} `json:"parameters"` // for `parameters` class, this interface contains the module parameters
 }
 
 const (
@@ -72,6 +72,12 @@ func Register(name string, runner func() interface{}) {
 type Moduler interface {
 	Run() string
 	ValidateParameters() error
+}
+
+func MakeParametersMessage(params interface{}) (ret Message) {
+	ret.Class = MsgClassParameters
+	ret.Parameters = params
+	return
 }
 
 // ReadInput reads one line of input from stdin, unmarshal it into a modules.Message

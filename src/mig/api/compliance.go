@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mig"
+	"mig/modules"
 	"mig/modules/file"
 	"time"
 )
@@ -73,12 +74,17 @@ func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, 
 			}
 			switch cmd.Action.Operations[i].Module {
 			case "file":
-				var r file.Results
+				var el file.SearchResults
+				var r modules.Result
 				err = json.Unmarshal(buf, &r)
 				if err != nil {
 					return items, err
 				}
-				for label, sr := range r.Elements {
+				err = r.GetElements(&el)
+				if err != nil {
+					return items, err
+				}
+				for label, sr := range el {
 					for _, mf := range sr {
 						bitem.Check.Location = mf.File
 						bitem.Check.Name = label

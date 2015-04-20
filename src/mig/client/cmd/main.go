@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"mig"
 	"mig/client"
+	"mig/modules"
 	"os"
 	"os/signal"
 	"time"
@@ -50,7 +51,7 @@ Results are sent to stdout, redirect them with "1>/path/to/file".
 Each module provides its own set of parameters. Module parameters must be set *after*
 global options. Help is available by calling "<module> help". Available modules are:
 `, os.Args[0], os.Args[0])
-	for module, _ := range mig.AvailableModules {
+	for module, _ := range modules.Available {
 		fmt.Printf("* %s\n", module)
 	}
 	fmt.Printf("To access a module documentation, use: %s <module> help\n", os.Args[0])
@@ -125,7 +126,7 @@ func main() {
 	// * fs.Args() with the module parameters is passed as a string to the module parser
 	//   which will return a module operation to store in the action
 	op.Module = os.Args[1]
-	if _, ok := mig.AvailableModules[op.Module]; !ok {
+	if _, ok := modules.Available[op.Module]; !ok {
 		panic("Unknown module " + op.Module)
 	}
 
@@ -154,12 +155,12 @@ func main() {
 	for _, arg := range fs.Args() {
 		modargs = append(modargs, arg)
 	}
-	modRunner = mig.AvailableModules[op.Module].Runner()
-	if _, ok := modRunner.(mig.HasParamsParser); !ok {
+	modRunner = modules.Available[op.Module].Runner()
+	if _, ok := modRunner.(modules.HasParamsParser); !ok {
 		fmt.Fprintf(os.Stderr, "[error] module '%s' does not support command line invocation\n", op.Module)
 		os.Exit(2)
 	}
-	op.Parameters, err = modRunner.(mig.HasParamsParser).ParamsParser(modargs)
+	op.Parameters, err = modRunner.(modules.HasParamsParser).ParamsParser(modargs)
 	if err != nil || op.Parameters == nil {
 		panic(err)
 	}
