@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/streadway/amqp"
 	"mig"
+	"mig/modules"
 	"mig/pgp"
 	"os"
 	"runtime"
@@ -133,7 +134,7 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: action.ID, Desc: "Action written to database"}.Debug()
 
 	// create an array of empty results to serve as default for all commands
-	emptyResults := make([]mig.ModuleResult, len(action.Operations))
+	emptyResults := make([]modules.Result, len(action.Operations))
 	created := 0
 	for _, agent := range agents {
 		err := createCommand(ctx, action, agent, emptyResults)
@@ -161,7 +162,7 @@ func processNewAction(actionPath string, ctx Context) (err error) {
 	return
 }
 
-func createCommand(ctx Context, action mig.Action, agent mig.Agent, emptyResults []mig.ModuleResult) (err error) {
+func createCommand(ctx Context, action mig.Action, agent mig.Agent, emptyResults []modules.Result) (err error) {
 	cmdid := mig.GenID()
 	defer func() {
 		if e := recover(); e != nil {

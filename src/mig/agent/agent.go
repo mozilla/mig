@@ -498,8 +498,8 @@ func runModule(ctx Context, op moduleOp) (err error) {
 		execTimeOut = op.expireafter.Sub(time.Now())
 	}
 
-	// Command arguments must be in json format
-	modParams, err := json.Marshal(op.params)
+	// Build parameters message
+	modParams, err := json.Marshal(modules.MakeParametersMessage(op.params))
 	if err != nil {
 		panic(err)
 	}

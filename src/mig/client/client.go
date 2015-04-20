@@ -18,6 +18,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mig"
+	"mig/modules"
 	"mig/pgp"
 	"mime/multipart"
 	"net/http"
@@ -847,7 +848,7 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 	}
 	for i, result := range cmd.Results {
 		if !onlyFound {
-			for _, rerr := range cmd.Results.Errors {
+			for _, rerr := range result.Errors {
 				fmt.Fprintf(os.Stderr, "%s[error] %s\n", prefix, rerr)
 			}
 		}
@@ -865,10 +866,10 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 			}
 			continue
 		}
-		modRunner := mig.AvailableModules[moduleName].Runner()
+		modRunner := modules.Available[moduleName].Runner()
 		// look for a result printer in the module
-		if _, ok := modRunner.(mig.HasResultsPrinter); ok {
-			outRes, err := modRunner.(mig.HasResultsPrinter).PrintResults(result, onlyFound)
+		if _, ok := modRunner.(modules.HasResultsPrinter); ok {
+			outRes, err := modRunner.(modules.HasResultsPrinter).PrintResults(result, onlyFound)
 			if err != nil {
 				panic(err)
 			}

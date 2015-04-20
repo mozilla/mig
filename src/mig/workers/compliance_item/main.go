@@ -13,6 +13,7 @@ import (
 	"github.com/jvehent/gozdef"
 	"mig"
 	"mig/event"
+	"mig/modules"
 	"mig/modules/file"
 	"mig/workers"
 	"os"
@@ -141,12 +142,17 @@ func makeComplianceItem(cmd mig.Command, conf Config) (items []gozdef.Compliance
 		}
 		switch cmd.Action.Operations[i].Module {
 		case "file":
-			var r file.Results
+			var r modules.Result
+			var el file.SearchResults
 			err = json.Unmarshal(buf, &r)
 			if err != nil {
 				return items, err
 			}
-			for label, sr := range r.Elements {
+			err = r.GetElements(&el)
+			if err != nil {
+				return items, err
+			}
+			for label, sr := range el {
 				for _, mf := range sr {
 					ci.Check.Location = mf.File
 					ci.Check.Name = label
