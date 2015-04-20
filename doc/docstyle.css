@@ -153,12 +153,13 @@ blockquote {
   border-left: 1px dotted #666;
 }
 
+
 pre {
   background: rgba(0, 0, 0, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.15);
   padding: 10px;
   font-size: 14px;
-  color: #b5e853;
+  //color: #b5e853;
   border-radius: 2px;
   -moz-border-radius: 2px;
   -webkit-border-radius: 2px;
@@ -166,6 +167,27 @@ pre {
   overflow: auto;
   overflow-y: hidden;
 }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+pre.code .ln { color: grey; } /* line numbers */
+//pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment, code .c1 { color: #5C6576 }
+pre.code .keyword, code .keyword, code .kd, code .kn, code .k, code .o { color: #3e9101;}
+code .nb { color: #c45918;}
+code .s {color: #0a77c4;}
+pre.code .punctuation, code .punctuation, code .p { color: white;}
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin, code .nx { color: white; }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
 
 table {
   width: 100%;
