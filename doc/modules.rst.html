@@ -58,7 +58,7 @@
     </aside>
     <p>In this document, we explain how modules are written and integrated into MIG.</p>
     <p>The reception of a command by an agent triggers the execution of modules. A module is a Go package that is imported into the agent at compilation, and that performs a very specific set of tasks. For example, the <cite>file</cite> module provides a way to scan a file system for files that contain regexes, match a checksum, ... Another module is called <cite>netstat</cite>, and looks for IP addresses currently connected to an endpoint. <cite>ping</cite> is a module to ping targets from endpoints, etc..</p>
-    <p>Module are somewhat autonomous. They can be developped outside of the MIG code base, and only imported during compilation of the agent. Go does not provide a way to load modules dynamically, so modules compiled into the agent's static binary, and not as separate files.</p>
+    <p>Module are somewhat autonomous. They can be developped outside of the MIG code base, and only imported during compilation of the agent. Go does not provide a way to load modules dynamically, so modules are compiled into the agent's static binary, and not as separate files.</p>
     <section id="module-logic">
         <h2>1   Module logic</h2>
         <section id="registration">
@@ -281,32 +281,32 @@
     <span class="nx">ParamsParser</span><span class="p">([]</span><span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span>
 <span class="p">}</span></code></pre>
                 <p>A typical implementation from the <cite>timedrift</cite> module looks as follows:</p>
-                <pre><code class="">func (r Runner) ParamsParser(args []string) (interface{}, error) {
-    var (
-        err   error
-        drift string
-        fs    flag.FlagSet
-    )
-    if len(args) &gt;= 1 &amp;&amp; args[0] == "help" {
-        printHelp(true)
-        return nil, fmt.Errorf("help printed")
-    }
-    if len(args) == 0 {
-        return r.Parameters, nil
-    }
-    fs.Init("time", flag.ContinueOnError)
-    fs.StringVar(&amp;drift, "drift", "", "see help")
-    err = fs.Parse(args)
-    if err != nil {
-        return nil, err
-    }
-    _, err = time.ParseDuration(drift)
-    if err != nil {
-        return nil, fmt.Errorf("invalid drift duration. try help.")
-    }
-    r.Parameters.Drift = drift
-    return r.Parameters, r.ValidateParameters()
-}</code></pre>
+                <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">ParamsParser</span><span class="p">(</span><span class="nx">args</span> <span class="p">[]</span><span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="p">(</span>
+        <span class="nx">err</span>   <span class="kt">error</span>
+        <span class="nx">drift</span> <span class="kt">string</span>
+        <span class="nx">fs</span>    <span class="nx">flag</span><span class="p">.</span><span class="nx">FlagSet</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">args</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="nx">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">"help"</span> <span class="p">{</span>
+        <span class="nx">printHelp</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">"help printed"</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">,</span> <span class="kc">nil</span>
+    <span class="p">}</span>
+    <span class="nx">fs</span><span class="p">.</span><span class="nx">Init</span><span class="p">(</span><span class="s">"time"</span><span class="p">,</span> <span class="nx">flag</span><span class="p">.</span><span class="nx">ContinueOnError</span><span class="p">)</span>
+    <span class="nx">fs</span><span class="p">.</span><span class="nx">StringVar</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">drift</span><span class="p">,</span> <span class="s">"drift"</span><span class="p">,</span> <span class="s">""</span><span class="p">,</span> <span class="s">"see help"</span><span class="p">)</span>
+    <span class="nx">err</span> <span class="p">=</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">Parse</span><span class="p">(</span><span class="nx">args</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+    <span class="p">}</span>
+    <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">time</span><span class="p">.</span><span class="nx">ParseDuration</span><span class="p">(</span><span class="nx">drift</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">"invalid drift duration. try help."</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">.</span><span class="nx">Drift</span> <span class="p">=</span> <span class="nx">drift</span>
+    <span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">ValidateParameters</span><span class="p">()</span>
+<span class="p">}</span></code></pre>
                 <p>It is highly recommend to call <cite>ValidateParameters</cite> to verify that the parameters supplied by the users are correct.</p>
             </section>
         </section>

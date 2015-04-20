@@ -18,7 +18,7 @@ endpoints, etc..
 
 Module are somewhat autonomous. They can be developped outside of the MIG code
 base, and only imported during compilation of the agent. Go does not provide a
-way to load modules dynamically, so modules compiled into the agent's static
+way to load modules dynamically, so modules are compiled into the agent's static
 binary, and not as separate files.
 
 Module logic
@@ -389,7 +389,7 @@ The interface is defined as:
 
 A typical implementation from the `timedrift` module looks as follows:
 
-.. code::
+.. code:: go
 
 	func (r Runner) ParamsParser(args []string) (interface{}, error) {
 		var (
