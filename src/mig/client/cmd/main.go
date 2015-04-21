@@ -83,7 +83,7 @@ func main() {
 	fs.StringVar(&migrc, "c", homedir+"/.migrc", "alternative configuration file")
 	fs.StringVar(&show, "show", "found", "type of results to show")
 	fs.StringVar(&render, "render", "text", "results rendering mode")
-	fs.StringVar(&target, "t", `status='online'`, "action target")
+	fs.StringVar(&target, "t", fmt.Sprintf("status='%s' AND mode='daemon'", mig.AgtStatusOnline), "action target")
 	fs.StringVar(&expiration, "e", "300s", "expiration")
 	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
 
@@ -199,12 +199,12 @@ readytolaunch:
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(os.Stderr, "%d agents will be targeted. ctrl+c to cancel. launching in ", len(agents))
+	fmt.Fprintf(os.Stderr, "\x1b[33m%d agents will be targeted. ctrl+c to cancel. launching in ", len(agents))
 	for i := 5; i > 0; i-- {
 		time.Sleep(1 * time.Second)
 		fmt.Fprintf(os.Stderr, "%d ", i)
 	}
-	fmt.Fprintf(os.Stderr, "GO\n")
+	fmt.Fprintf(os.Stderr, "GO\n\x1b[0m")
 
 	// launch and follow
 	a, err = cli.PostAction(a)

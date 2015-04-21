@@ -677,7 +677,7 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 			err = fmt.Errorf("followAction() -> %v", e)
 		}
 	}()
-	fmt.Fprintf(os.Stderr, "Following action ID %.0f. ", a.ID)
+	fmt.Fprintf(os.Stderr, "\x1b[34mFollowing action ID %.0f.\x1b[0m", a.ID)
 	sent := 0
 	dotter := 0
 	previousctr := 0
@@ -685,11 +685,6 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 	attempts := 0
 	var completion float64
 	for {
-		if completion > 97 {
-			// if we got 97% completion, exit following mode.
-			// there is always a couple % that are late and we don't want to block.
-			goto finish
-		}
 		a, _, err = cli.GetAction(a.ID)
 		if err != nil {
 			attempts++
@@ -703,7 +698,7 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 			status = a.Status
 		}
 		if status != a.Status {
-			fmt.Fprintf(os.Stderr, "\nstatus=%s", a.Status)
+			fmt.Fprintf(os.Stderr, "\x1b[34mstatus=%s\x1b[0m", a.Status)
 			status = a.Status
 		}
 		// exit follower mode if status isn't one we follow,
@@ -711,7 +706,7 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 		// or expiration time has passed
 		if (status != "pending" && status != "scheduled" && status != "preparing" && status != "inflight") ||
 			(a.Counters.Done > 0 && a.Counters.Done >= a.Counters.Sent) ||
-			(time.Now().After(a.ExpireAfter)) {
+			(time.Now().After(a.ExpireAfter.Add(10 * time.Second))) {
 			goto finish
 			break
 		}
@@ -726,13 +721,12 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 		}
 		if a.Counters.Done > 0 && a.Counters.Done > previousctr {
 			completion = (float64(a.Counters.Done) / float64(a.Counters.Sent)) * 100
-			if completion > 99 && a.Counters.Done != a.Counters.Sent {
-				completion = 99.9
+			if completion < 99.5 {
+				previousctr = a.Counters.Done
+				fmt.Fprintf(os.Stderr, "\x1b[34m%.0f%%\x1b[0m", completion)
 			}
-			previousctr = a.Counters.Done
-			fmt.Fprintf(os.Stderr, "%.0f%% ", completion)
 		}
-		fmt.Fprintf(os.Stderr, ".")
+		fmt.Fprintf(os.Stderr, "\x1b[34m.\x1b[0m")
 		time.Sleep(2 * time.Second)
 		dotter++
 	}
@@ -742,9 +736,11 @@ finish:
 		fmt.Fprintf(os.Stderr, "[error] failed to retrieve action counters\n")
 	} else {
 		completion = (float64(a.Counters.Done) / float64(a.Counters.Sent)) * 100
-		fmt.Fprintf(os.Stderr, "- %2.1f%% done in %s\n", completion, time.Now().Sub(a.StartTime).String())
+		fmt.Fprintf(os.Stderr, "\n\x1b[34m- %2.1f%% done in %s\x1b[0m\n", completion, time.Now().Sub(a.StartTime).String())
 	}
+	fmt.Fprintf(os.Stderr, "\x1b[34m")
 	a.PrintCounters()
+	fmt.Fprintf(os.Stderr, "\x1b[0m")
 	return
 }
 
@@ -824,7 +820,11 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 			panic(err)
 		}
 	default:
-		fmt.Fprintf(os.Stderr, "%d agents have %s results\n", count, show)
+		s := "agent has"
+		if count > 1 {
+			s = "agents have"
+		}
+		fmt.Fprintf(os.Stderr, "\x1b[31m%d %s %s results\x1b[0m\n", count, s, show)
 	}
 	return
 }
