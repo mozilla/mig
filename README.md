@@ -7,6 +7,8 @@ MIG: Mozilla InvestiGator
 
 MIG is OpSec's platform for investigative surgery of remote endpoints.
 
+![MIG command line demo](doc/.files/mig-cmd-demo.gif)
+
 MIG is composed of agents installed on all systems of an infrastructure. The
 agents can be queried in real-time using a messenging protocol implemented in
 the MIG Scheduler. MIG has an API, a database, RabbitMQ relays and a console
