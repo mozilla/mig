@@ -37,115 +37,200 @@
       <section id="main_content">
         <table><tr><td>
             <p>MIG is a platform to perform investigative surgery on remote endpoints. It enables investigators to obtain information from large numbers of systems in parallel, thus accelerating investigation of incidents and day-to-day operations security.</p>
-            <p>MIG is composed of agents installed on all systems of an infrastructure. The agents can be queried in real-time using a messenging protocol implemented in the MIG Scheduler. MIG has an API, a database, RabbitMQ relays, a terminal console and command line clients. It allows investigators to send actions to pools of agents, and check for indicator of compromision, verify the state of a configuration, block an account, create a firewall rule, update a blacklist and so on.</p> 
         </td><td>
             <p>
             <iframe width="498" height="280" src="https://www.youtube.com/embed/wJwj5YB6FFA?rel=0" frameborder="0" allowfullscreen></iframe>
             <a href="https://www.youtube.com/watch?v=wJwj5YB6FFA" target="_blank">Watch on YouTube</a>
             </p>
         </td></tr></table>
+
+        <p>MIG is composed of agents installed on all systems of an infrastructure that are
+        be queried in real-time to investigate the file-systems, network state, memory
+        or configuration of endpoints.</p>
         <p>It's an army of Sherlock Holmes, ready to interrogate your infrastructure within seconds.</p>
+
+        <table>
+        <thead>
+        <tr>
+        <th>Capability</th>
+        <th>Linux</th>
+        <th>MacOS</th>
+        <th>Windows</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+        <td>file inspection</td>
+        <td><a href="doc/.files/check_mark_green.png" target="_blank"><img src="/mozilla/mig/raw/master/doc/.files/check_mark_green.png" alt="check" style="max-width:100%;"></a></td>
+        <td><a href="doc/.files/check_mark_green.png" target="_blank"><img src="/mozilla/mig/raw/master/doc/.files/check_mark_green.png" alt="check" style="max-width:100%;"></a></td>
+        <td><a href="doc/.files/check_mark_green.png" target="_blank"><img src="/mozilla/mig/raw/master/doc/.files/check_mark_green.png" alt="check" style="max-width:100%;"></a></td>
+        </tr>
+        <tr>
+        <td>network inspection</td>
+        <td><a href="doc/.files/check_mark_green.png" target="_blank"><img src="/mozilla/mig/raw/master/doc/.files/check_mark_green.png" alt="check" style="max-width:100%;"></a></td>
+        <td><a href="doc/.files/check_mark_green.png" target="_blank"><img src="/mozilla/mig/raw/master/doc/.files/check_mark_green.png" alt="check" style="max-width:100%;"></a></td>
+        <td>(partial)</td>
+        </tr>
+        <tr>
+        <td>memory inspection</td>
+        <td><a href="doc/.files/check_mark_green.png" target="_blank"><img src="/mozilla/mig/raw/master/doc/.files/check_mark_green.png" alt="check" style="max-width:100%;"></a></td>
+        <td><a href="doc/.files/check_mark_green.png" target="_blank"><img src="/mozilla/mig/raw/master/doc/.files/check_mark_green.png" alt="check" style="max-width:100%;"></a></td>
+        <td><a href="doc/.files/check_mark_green.png" target="_blank"><img src="/mozilla/mig/raw/master/doc/.files/check_mark_green.png" alt="check" style="max-width:100%;"></a></td>
+        </tr>
+        <tr>
+        <td>vuln management</td>
+        <td><a href="doc/.files/check_mark_green.png" target="_blank"><img src="/mozilla/mig/raw/master/doc/.files/check_mark_green.png" alt="check" style="max-width:100%;"></a></td>
+        <td>(planned)</td>
+        <td>(planned)</td>
+        </tr>
+        <tr>
+        <td>system auditing</td>
+        <td>(planned)</td>
+        <td>(planned)</td>
+        <td>(planned)</td>
+        </tr>
+        </tbody>
+        </table>
+
+        <p>Imagine that it's 7am on a saturday morning, and someone just released a
+        critical vulnerability for your favorite PHP application. The vuln is already
+        exploited and security groups are releasing indicators of compromise. Your
+        weekend isn't starting great, and the thought of manually inspecting thousands
+        of systems isn't making it any better.</p>
+
+        <p>MIG can help. The signature of the vulnerable PHP app (an md5 of a file, a regex
+        on file, or just a filename) can be searches for across all your systems using
+        the <code>file</code> module. Similarly, indicators of compromise such as specific log
+        entries, backdoor files with {md5,sha{1,256,512,3-{256,512}}} hashes, IP
+        addresses from botnets or signature in processes memories can be investigated
+        using MIG. Suddenly, your weekend is looking a lot better. And with just a few
+        command lines, thousands of systems will be remotely investigated to verify that
+        you're not at risk.</p>
+
+        <p><a href="doc/.files/mig-cmd-demo.gif" target="_blank"><img src="doc/.files/mig-cmd-demo.gif" alt="MIG command line demo" style="max-width:100%;"></a></p>
+
         <h2>Concepts</h2>
-        <p>
-        <h3>Search for IOCs in real-time</h3>
-        For example: an investigator launches an action to search for an apache module
-        that matches a given md5 value. MIG will register the action, find all the
-        relevant targets and send commands to each target agent with the detail of the
-        action. Each agent then individually runs the action using built-in modules,
-        and sends the results back to the MIG platform.
-        <br /><br />
         <h3>Easy to deploy, easy to operate</h3>
-        Agents are designed to be lightweight, secure, and easy to deploy. All
-        parameters are built into the agent at compile time, include the list of
-        investigator's public keys. The agent binary is statically compiled for a target
-        platform and can be shipped without any external dependency. Deploying an agent
-        is as easy as running<br />
-        <b>wget -O /sbin/mig-agent https://fileserver/mig-agent && sudo /sbin/mig-agent</b>
-        <br /><br />
+        <p>MIG agents are designed to be lightweight, secure, and easy to deploy so you can
+        ask your favorite sysadmins to add it to a base deployment without fear of
+        breaking the entire production network. All parameters are built into the agent
+        at compile time, including the list and ACLs of authorized investigators.
+        Security is enforced using PGP keys, and even if MIG's servers are compromised,
+        as long as our keys are safe on your investigator's laptop, no one will break
+        into the agents.</p>
+
         <h3>Fast and asynchronous</h3>
-        MIG is designed to be fast, and asynchronous. It uses AMQP to distribute actions
+        <p>MIG is designed to be fast, and asynchronous. It uses AMQP to distribute actions
         to endpoints, and relies on Go channels to prevent components from blocking.
-        Running actions and commands are stored on disk cache, and don't rely on running
-        processes for reliability.
-        <br /><br />
-        Speed is a strong requirement. Most actions will only take a few hundreds
-        milliseconds to run. Larger ones, for example when looking for a hash in a large
-        directory, should run in less than a minute or two.
-        <br /><br />
+        Running actions and commands are stored in a Postgresql database and on disk cache,
+        such that the reliability of the platform doesn't depend on long-running processes.</p>
+
+        <p>Speed is a strong requirement. Most actions will only take a few hundreds
+        milliseconds to run on agents. Larger ones, for example when looking for a hash in
+        a big directory, should run in less than a minute or two. All in all, an
+        investigation usually completes in between 10 and 300 seconds.</p>
+
         <h3>Strong security primitives</h3>
-        Privacy and security are paramount. Agents never send raw data back to the
+        <p>Privacy and security are paramount. Agents never send raw data back to the
         platform, but only reply to questions instead. All actions are signed by GPG
-        keys that are not stored in the platform, thus preventing a compromision from
-        taking over the entire infrastructure.
-        </p>
-        <h2>Format</h2>
+        keys that are not stored in the platform, thus preventing a compromise from
+        taking over the entire infrastructure.</p>
+
+        <h2>MIG Action Format</h2>
         <p>
-        Mozilla InvestiGator uses signed JSON actions. An action can represent an IOC
-        (Indicator of Compromise), or a task to perform on an endpoint (update a firewall,
-        create a user account, ...).
+        Mozilla InvestiGator uses signed JSON actions that represent the investigation operation
+        performed by a pool of agents.
         The JSON format is designed to be easy to read and easy to write without the help
         of a program. The long term goal is to allow investigators to share documents easily.
         </p>
         <pre>
-        {
-            "name": "Linux backdoor, found on compromised host in 2014",
-            "description": {
-                "author": "Julien Vehent",
-                "email": "julien@linuxwall.info",
-                "revision": 201409031800
-            },
-            "target": "agents.os = 'linux'",
-            "threat": {
-                "level": "alert",
-                "type": "system",
-                "family": "backdoor"
-            },
-            "operations": [
-                {
-                    "module": "filechecker",
-                    "parameters": {
-                        "searches": {
-                            "backdoors": {
-                                "paths": [
-                                    "/usr/bin/*",
-                                    "/usr/sbin/*",
-                                    "/bin/*",
-                                    "/sbin/*",
-                                    "/opt/*",
-                                    "/tmp/*"
-                                ],
-                                "sha256": [
-                                    "adbee847c12c73605ff657e668c8096df138f824eb542027a10c0b5c07619c8d",
-                                    "7c9816b5f1b840eb8c5ecfc0fed29972877ca5bd909469d03f26d3b8f837043d",
-                                    "3efee976d6565edd1492aa1047ffa10be6025de18206f6c68f91dd218801778f",
-                                    "4735f97b31ddb8a1bbc61e8d66b4dbc08d8092142d8ae7564f9058e0a20bbbb6",
-                                    "89a400077d74d1d76103180f41f40de6bcfffc89de461f497eef2ea763a68d73",
-                                    "adbee847c12c73605ff657e668c8096df138f824eb542027a10c0b5c07619c8d",
-                                    "939cc74b5343bde1a17dfa270f8e6dc719a4bc6b3143f4581b401c81fd9a110d",
-                                    "89b68f8ea6a32d525fbf491878980180ffa395b042ea3104b11da229bade71db",
-                                    "39823089fa324ceba00d5939d2e7b308fec28ee0f16c6caa4739a53ad6ecee64",
-                                    "72a44f3e7c4d9c9b72b1bda77d687346447d8e398983965b8e690eeeadebdc76",
-                                    "dbe7fc18667cd75317d494ed3b32cfe3cd077c870d015dc18b406a4a39747f55",
-                                    "903c13171c7467271fd79244ad8281ded9f51e3cf27c3399b42a175c53806a99",
-                                    "81dac9c6dc5e4ed615d496aea74fddc85925b00a6a54ddcbb90603c1469ce04c",
-                                    "fd702be65b1d3abed4c0197854c0c777a2bb50632932e1e389129b19b14a1e69",
-                                    "72589dd25b491ed53670bc7d04f4874075fc7d16361fc295c31fc86118d84cbd",
-                                    "6114624bf5d7e29f738f939bcc2bc794de9bf377a571fe1e84ae9159794308cf",
-                                    "467f34eee9d133653467a60ab0fe938d7c26918465a2ac938d2ffc6f2525b1ff",
-                                    "1e2699ff1f9238c58390c1ada53f4f21032ca5e0946bfb54a5a144452e6efc82",
-                                    "286c39ec3d8e4f15f353dca350ca7575e0269dba808206f3ce8d1a3ea142b353",
-                                    "fc48883e129225dc8fc9e340a495fbd834c97f5ff7fa70ab6089ec216a465328",
-                                    "5cba4433237e2ff202a5b20aad00a12d25bfc5564c3620a9463767eec2150cc1"
-                                ]
-                            }
-                        }
-                    }
-                }
+{
+  "name": "Shellshock IOCs (nginx and more)",
+  "target": "queueloc like 'linux.%'",
+  "threat": {
+    "family": "malware",
+    "level": "high"
+  },
+  "operations": [
+    {
+      "module": "file",
+      "parameters": {
+        "searches": {
+          "iocs": {
+            "paths": [
+              "/usr/bin",
+              "/usr/sbin",
+              "/bin",
+              "/sbin",
+              "/tmp",
+              "/var/tmp"
             ],
-            "syntaxversion": 2
+            "sha256": [
+              "73b0d95541c84965fa42c3e257bb349957b3be626dec9d55efcc6ebcba6fa489",
+              "ae3b4f296957ee0a208003569647f04e585775be1f3992921af996b320cf520b",
+              "2d3e0be24ef668b85ed48e81ebb50dce50612fb8dce96879f80306701bc41614",
+              "2ff32fcfee5088b14ce6c96ccb47315d7172135b999767296682c368e3d5ccac",
+              "1f5f14853819800e740d43c4919cc0cbb889d182cc213b0954251ee714a70e4b",
+              "2bc9a2f7374308d9bb97b8d116177d53eaca060b562f6f66f5dd1af71c9d7a66"
+            ],
+            "contents": [
+              "/bin/busybox;echo -e '\\\\147\\\\141\\\\171\\\\146\\\\147\\\\164'",
+              "legend.rocks"
+            ],
+            "names": [
+              "legend.txt"
+            ]
+          }
         }
+      }
+    },
+    {
+      "module": "netstat",
+      "parameters": {
+        "connectedip": [
+          "108.162.197.26",
+          "162.253.66.76",
+          "89.238.150.154",
+          "198.46.135.194",
+          "166.78.61.142",
+          "23.235.43.31",
+          "54.228.25.245",
+          "23.235.43.21",
+          "23.235.43.27",
+          "198.58.106.99",
+          "23.235.43.25",
+          "23.235.43.23",
+          "23.235.43.29",
+          "108.174.50.137",
+          "201.67.234.45",
+          "128.199.216.68",
+          "75.127.84.182",
+          "82.118.242.223",
+          "24.251.197.244",
+          "166.78.61.142",
+          "119.110.98.93",
+          "2.0.1.5"
+        ]
+      }
+    }
+  ],
+  "description": {
+    "author": "Julien Vehent",
+    "email": "ulfr@mozilla.com",
+    "revision": 201410031030
+  },
+  "syntaxversion": 2
+}
         </pre>
-        <h2>Console</h2>
+        <h2>Clients</h2>
+        <h3>Command Line</h3>
+        <p>
+        The command line is the primary interface of MIG Investigators. It provides
+        the basic set of commands to create investigations, sign them, publish them to
+        the API, and parse the results.
+        </p>
+        <p><a href="doc/.files/mig-cmd-demo.gif" target="_blank"><img src="doc/.files/mig-cmd-demo.gif" alt="MIG command line demo" style="max-width:100%;"></a></p>
+        <h3>Console</h3>
         <p>
         The console is the terminal interface that allows investigators to control MIG.
         It is terminal based, and runs on Linux and MacOS.
