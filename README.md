@@ -1,5 +1,6 @@
 MIG: Mozilla InvestiGator
 =========================
+<img style="float: right" src="doc/.files/MIG-logo-CC-small.jpg" size="300px">
 
 **Note: MIG is under heavy development. The code is stable and used in production, but changes may be backward incompatible. Be warned.**
 
@@ -7,41 +8,57 @@ MIG: Mozilla InvestiGator
 
 MIG is OpSec's platform for investigative surgery of remote endpoints.
 
+MIG is composed of agents installed on all systems of an infrastructure that are
+be queried in real-time to investigate the file-systems, network state, memory
+or configuration of endpoints.
+
+| Capability        | Linux | MacOS | Windows |
+| ----------------- | ----- | ----- | ------- |
+| file inspection   | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) |
+| network inspection| ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | (partial) |
+| memory inspection | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) |
+| vuln management   | ![check](doc/.files/check_mark_green.png) | (planned) | (planned) |
+| system auditing   | (planned) | (planned) | (planned) |
+
+
+Imagine that it's 7am on a saturday morning, and someone just released a
+critical vulnerability for your favorite PHP application. The vuln is already
+exploited and security groups are releasing indicators of compromise. Your
+weekend isn't starting great, and the thought of manually inspecting thousands
+of systems isn't making it any better.
+
+MIG can help. The signature of the vulnerable PHP app (an md5 of a file, a regex
+on file, or just a filename) can be searches for across all your systems using
+the `file` module. Similarly, indicators of compromise such as specific log
+entries, backdoor files with {md5,sha{1,256,512,3-{256,512}}} hashes, IP
+addresses from botnets or signature in processes memories can be investigated
+using MIG. Suddenly, your weekend is looking a lot better. And with just a few
+command lines, thousands of systems will be remotely investigated to verify that
+you're not at risk.
+
 ![MIG command line demo](doc/.files/mig-cmd-demo.gif)
 
-MIG is composed of agents installed on all systems of an infrastructure. The
-agents can be queried in real-time using a messenging protocol implemented in
-the MIG Scheduler. MIG has an API, a database, RabbitMQ relays and a console
-client. It allows investigators to send actions to pools of agents, and check
-for indicator of compromision, verify the state of a configuration, block an
-account, create a firewall rule, update a blacklist and so on.
-
-![MIG logo](doc/.files/MIG-logo-CC-small.jpg)
-
-For example: an investigator launches an action to search for an apache module
-that matches a given md5 value. MIG will register the action, find all the
-relevant targets and send commands to each target agent with the detail of the
-action. Each agent then individually runs the action using built-in modules,
-and sends the results back to the MIG platform.
-
-Agents are designed to be lightweight, secure, and easy to deploy. All
-parameters are built into the agent at compile time, include the list of
-investigator's public keys. The agent binary is statically compiled for a target
-platform and can be shipped without any external dependency. Deploying an agent
-is as easy as `wget -O /sbin/mig-agent https://fileserver/mig-agent && /sbin/mig-agent`
+MIG agents are designed to be lightweight, secure, and easy to deploy so you can
+ask your favorite sysadmins to add it to a base deployment without fear of
+breaking the entire production network. All parameters are built into the agent
+at compile time, including the list and ACLs of authorized investigators.
+Security is enforced using PGP keys, and even if MIG's servers are compromised,
+as long as our keys are safe on your investigator's laptop, no one will break
+into the agents.
 
 MIG is designed to be fast, and asynchronous. It uses AMQP to distribute actions
 to endpoints, and relies on Go channels to prevent components from blocking.
-Running actions and commands are stored on disk cache, and don't rely on running
-processes for reliability.
+Running actions and commands are stored in a Postgresql database and on disk cache,
+such that the reliability of the platform doesn't depend on long-running processes.
 
 Speed is a strong requirement. Most actions will only take a few hundreds
-milliseconds to run. Larger ones, for example when looking for a hash in a large
-directory, should run in less than a minute or two.
+milliseconds to run on agents. Larger ones, for example when looking for a hash in
+a big directory, should run in less than a minute or two. All in all, an
+investigation usually completes in between 10 and 300 seconds.
 
 Privacy and security are paramount. Agents never send raw data back to the
 platform, but only reply to questions instead. All actions are signed by GPG
-keys that are not stored in the platform, thus preventing a compromision from
+keys that are not stored in the platform, thus preventing a compromise from
 taking over the entire infrastructure.
 
 Discussion
@@ -56,49 +73,9 @@ the console interface.
 
 [![MIG youtube video](http://img.youtube.com/vi/wJwj5YB6FFA/0.jpg)](http://www.youtube.com/watch?v=wJwj5YB6FFA)
 
-Goals
------
-
-* Query a pool of endpoints to verify the presence of a specific indicators
-  (similar to IOC, but we use a different format)
-* Provide response mechanisms to lock down compromised endpoints
-* Periodically verify endpoint's compliance with the security requirements
-
-Features
---------
-* Provide strong authentication of investigators
-    * Actions must have a valid GPG signature, each investigator has a different
-      key, for tracking.
-* Provide a way to inspect remote systems for indicators of compromise (IOC).
-  At the moment, this is limited to :
-    * file by name
-    * file content by regex
-    * file hashes: md5, sha1, sha256, sha384, sha512, sha3_224,sha3_256,
-      sha3_384, sha3_512
-    * connected IPs
-* Protect data security, investigate without intruding:
-    * Raw data must not be readily available to investigators
-
-In the work:
-* More agent modules
-    * low level devices (memory, file system blocks, network cards)
-    * firewall rules (read & write)
-    * network sniffer
-    * accounts creation & destruction
-    * lots more ...
-* Provide response mechanisms, including:
-    * dynamic firewall rules additions & removal
-    * system password changes
-    * process execution (execve) & destruction (kill)
-* Input/Output IOCs, Yara, ... through the API
-* Output results in standard format for alerting
-* Investigation console
-
-[![MIG Console demo](doc/.files/console_screenshot.png)](https://www.youtube.com/watch?v=3MeN0cN79L4)
-
 Documentation
 -------------
-All documentation is available in the 'doc' directory.
+All documentation is available in the 'doc' directory and on http://mig.mozilla.org .
 * [Concepts & Internal Components](doc/concepts.rst)
 * [Installation & Configuration](doc/configuration.rst)
 
