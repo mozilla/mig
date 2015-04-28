@@ -15,13 +15,15 @@ import (
 
 // Message defines the input messages received by modules.
 type Message struct {
-	Class      string      `json:"class"`      // represent the type of message being passed to the module
-	Parameters interface{} `json:"parameters"` // for `parameters` class, this interface contains the module parameters
+	Class      MessageClass `json:"class"`      // represent the type of message being passed to the module
+	Parameters interface{}  `json:"parameters"` // for `parameters` class, this interface contains the module parameters
 }
 
+type MessageClass string
+
 const (
-	MsgClassParameters string = "parameters"
-	MsgClassStop       string = "stop"
+	MsgClassParameters MessageClass = "parameters"
+	MsgClassStop       MessageClass = "stop"
 )
 
 // Result implement the base type for results returned by modules.
@@ -74,9 +76,16 @@ type Moduler interface {
 	ValidateParameters() error
 }
 
-func MakeParametersMessage(params interface{}) (ret Message) {
-	ret.Class = MsgClassParameters
-	ret.Parameters = params
+// MakeMessage creates a new modules.Message with a given class and parameters and
+// return the byte slice of the json marshalled message
+func MakeMessage(class MessageClass, params interface{}) (rawMsg []byte, err error) {
+	var msg Message
+	msg.Class = class
+	msg.Parameters = params
+	rawMsg, err = json.Marshal(msg)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to make modules.Message: %v", err)
+	}
 	return
 }
 

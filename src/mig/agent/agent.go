@@ -491,15 +491,15 @@ func runModule(ctx Context, op moduleOp) (err error) {
 	waiter := make(chan error, 1)
 	var out bytes.Buffer
 
-	// calculate the max exec time but taking the smallest duration between the expiration date
-	// sent with the command, and the default MODULETIMEOUT value from the configuration
+	// calculate the max exec time by taking the smallest duration between the expiration date
+	// sent with the command, and the default MODULETIMEOUT value from the agent configuration
 	execTimeOut := MODULETIMEOUT
 	if op.expireafter.Before(time.Now().Add(MODULETIMEOUT)) {
 		execTimeOut = op.expireafter.Sub(time.Now())
 	}
 
 	// Build parameters message
-	modParams, err := json.Marshal(modules.MakeParametersMessage(op.params))
+	modParams, err := modules.MakeMessage(modules.MsgClassParameters, op.params)
 	if err != nil {
 		panic(err)
 	}
