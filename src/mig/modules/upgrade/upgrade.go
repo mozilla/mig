@@ -23,7 +23,7 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
-	"mig"
+	"mig/modules"
 	"net/http"
 	"os"
 	"os/exec"
@@ -33,14 +33,14 @@ import (
 )
 
 func init() {
-	mig.RegisterModule("upgrade", func() interface{} {
+	modules.Register("upgrade", func() interface{} {
 		return new(Runner)
 	})
 }
 
 type Runner struct {
 	Parameters params
-	Results    results
+	Results    modules.Result
 }
 
 // JSON sample:
@@ -54,11 +54,8 @@ type Runner struct {
 //        }
 type params map[string]map[string]string
 
-type results struct {
-	Success    bool       `json:"success"`
-	OldPID     int        `json:"oldpid"`
-	Errors     []string   `json:"errors,omitempty"`
-	Statistics statistics `json:"statistics,omitempty"`
+type elements struct {
+	OldPID int `json:"oldpid"`
 }
 
 var stats statistics
@@ -85,50 +82,51 @@ func (r Runner) ValidateParameters() (err error) {
 	return
 }
 
-func (r Runner) Run(Args []byte) string {
-	err := json.Unmarshal(Args, &r.Parameters)
+func (r Runner) Run() (out string) {
+	defer func() {
+		if e := recover(); e != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
+			r.Results.Success = false
+			buf, _ := json.Marshal(r.Results)
+			out = string(buf[:])
+		}
+	}()
+	err := modules.ReadInputParameters(&r.Parameters)
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 
 	err = r.ValidateParameters()
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 
 	// Extract the parameters that apply to this OS and Arch
 	key := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 	el, ok := r.Parameters[key]
 	if !ok {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic("no upgrade instruction found for " + key)
 	}
 
 	// Verify that the version we're told to upgrade to isn't the current one
 	cversion, err := getCurrentVersion()
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 	if cversion == el["to_version"] {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Agent is already running version '%s'", cversion))
-		return r.buildResults()
+		panic("Agent is already running version " + cversion)
 	}
 
 	// Download new agent binary from provided location
 	binfd, err := downloadBinary(el["location"])
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 
 	// Verify checksum of the binary
 	err = verifyChecksum(binfd, el["checksum"])
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 
 	// grab the path before closing the file descriptor
@@ -136,34 +134,31 @@ func (r Runner) Run(Args []byte) string {
 
 	err = binfd.Close()
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 
 	// Dry run of the binary to verify that the version is correct
 	// but also that it can run without error
 	err = verifyVersion(binPath, el["to_version"])
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 
 	// Move the binary of the new agent from tmp, to the correct destination
 	agentBinPath, err := moveBinary(binPath, el["to_version"])
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 
 	// Launch the new agent and exit the module
 	cmd := exec.Command(agentBinPath, "-u")
 	err = cmd.Start()
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 
-	return r.buildResults()
+	out = r.buildResults()
+	return
 }
 
 // Run the agent binary to obtain the current version
@@ -315,7 +310,9 @@ func moveBinary(binPath, version string) (linkloc string, err error) {
 // buildResults transforms the ConnectedIPs map into a Results
 // map that is serialized in JSON and returned as a string
 func (r Runner) buildResults() string {
-	r.Results.OldPID = os.Getppid()
+	var el elements
+	el.OldPID = os.Getppid()
+	r.Results.Elements = el
 	if len(r.Results.Errors) == 0 {
 		r.Results.Success = true
 	}

@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"mig"
+	"mig/modules"
 	"os"
 	"path"
 	"path/filepath"
@@ -36,14 +36,14 @@ import (
 var debug bool = false
 
 func init() {
-	mig.RegisterModule("file", func() interface{} {
+	modules.Register("file", func() interface{} {
 		return new(Runner)
 	})
 }
 
 type Runner struct {
 	Parameters Parameters
-	Results    Results
+	Results    modules.Result
 }
 
 type Parameters struct {
@@ -618,7 +618,7 @@ var stats statistics
 
 var walkingErrors []string
 
-func (r Runner) Run(Args []byte) (resStr string) {
+func (r Runner) Run() (resStr string) {
 	var (
 		roots     []string
 		traversed []string
@@ -639,7 +639,7 @@ func (r Runner) Run(Args []byte) (resStr string) {
 		}
 	}()
 	t0 := time.Now()
-	err := json.Unmarshal(Args, &r.Parameters)
+	err := modules.ReadInputParameters(&r.Parameters)
 	if err != nil {
 		panic(err)
 	}
@@ -720,7 +720,9 @@ func (r Runner) Run(Args []byte) (resStr string) {
 
 	if debug {
 		fmt.Println("---- results ----")
-		printedResults, err := r.PrintResults([]byte(resStr), false)
+		var tmpres modules.Result
+		err = json.Unmarshal([]byte(resStr), &tmpres)
+		printedResults, err := r.PrintResults(tmpres, false)
 		if err != nil {
 			panic(err)
 		}
@@ -1292,15 +1294,7 @@ func getHash(file string, hashType checkType) (hexhash string, err error) {
 	return
 }
 
-type Results struct {
-	FoundAnything bool          `json:"foundanything"`
-	Success       bool          `json:"success"`
-	Elements      searchresults `json:"elements"`
-	Statistics    statistics    `json:"statistics"`
-	Errors        []string      `json:"error"`
-}
-
-type searchresults map[string]searchresult
+type SearchResults map[string]searchresult
 
 type searchresult []matchedfile
 
@@ -1317,8 +1311,8 @@ type fileinfo struct {
 }
 
 // newResults allocates a Results structure
-func newResults() *Results {
-	return &Results{Elements: make(searchresults), FoundAnything: false}
+func newResults() *modules.Result {
+	return &modules.Result{Elements: make(SearchResults), FoundAnything: false}
 }
 
 func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
@@ -1328,6 +1322,7 @@ func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
 		}
 	}()
 	res := newResults()
+	elements := res.Elements.(SearchResults)
 	for label, search := range r.Parameters.Searches {
 		var sr searchresult
 		// first pass on the results: if matchall is set, verify that all
@@ -1462,7 +1457,7 @@ func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
 			}
 		}
 	nextsearch:
-		res.Elements[label] = sr
+		elements[label] = sr
 	}
 
 	// calculate execution time
@@ -1501,13 +1496,21 @@ func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
 // only results that have at least one match are returned.
 // If foundOnly is not set, all results are returned, along with errors and
 // statistics.
-func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string, err error) {
-	var results Results
-	err = json.Unmarshal(rawResults, &results)
+func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
+	var (
+		el    SearchResults
+		stats statistics
+	)
+	err = result.GetElements(&el)
 	if err != nil {
 		panic(err)
 	}
-	for label, sr := range results.Elements {
+	err = result.GetStatistics(&stats)
+	if err != nil {
+		panic(err)
+	}
+
+	for label, sr := range el {
 		for _, mf := range sr {
 			var out string
 			if mf.File == "" {
@@ -1571,12 +1574,12 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 		}
 	}
 	if !foundOnly {
-		for _, we := range results.Errors {
+		for _, we := range result.Errors {
 			prints = append(prints, we)
 		}
 		stat := fmt.Sprintf("Statistics: %.0f files checked, %.0f failed to open, %.0f matched, ran in %s.",
-			results.Statistics.Filescount, results.Statistics.Openfailed,
-			results.Statistics.Totalhits, results.Statistics.Exectime)
+			stats.Filescount, stats.Openfailed,
+			stats.Totalhits, stats.Exectime)
 		prints = append(prints, stat)
 	}
 	return

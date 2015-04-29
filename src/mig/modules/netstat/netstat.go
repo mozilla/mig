@@ -12,7 +12,7 @@ package netstat
 import (
 	"encoding/json"
 	"fmt"
-	"mig"
+	"mig/modules"
 	"net"
 	"regexp"
 	"strconv"
@@ -21,14 +21,14 @@ import (
 )
 
 func init() {
-	mig.RegisterModule("netstat", func() interface{} {
+	modules.Register("netstat", func() interface{} {
 		return new(Runner)
 	})
 }
 
 type Runner struct {
 	Parameters params
-	Results    mig.ModuleResult
+	Results    modules.Result
 }
 
 type params struct {
@@ -147,7 +147,7 @@ func validatePort(val string) error {
 	return nil
 }
 
-func (r Runner) Run(args []byte) (resStr string) {
+func (r Runner) Run() (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
@@ -160,7 +160,8 @@ func (r Runner) Run(args []byte) (resStr string) {
 	}()
 	t0 := time.Now()
 
-	err := json.Unmarshal(args, &r.Parameters)
+	// read module parameters from stdin
+	err := modules.ReadInputParameters(&r.Parameters)
 	if err != nil {
 		panic(err)
 	}
@@ -312,28 +313,23 @@ func HasLocalIP(ipStr string) (found bool, elements []element, err error) {
 	return
 }
 
-func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string, err error) {
+func (r Runner) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
+	var (
+		el    elements
+		stats statistics
+	)
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PrintResults() -> %v", e)
 		}
 	}()
-	var modres mig.ModuleResult
-	err = json.Unmarshal(rawResults, &modres)
+	el = *newElements()
+	err = result.GetElements(&el)
 	if err != nil {
 		panic(err)
 	}
-	buf, err := json.Marshal(modres.Elements)
-	if err != nil {
-		panic(err)
-	}
-	els := *newElements()
-	err = json.Unmarshal(buf, &els)
-	if err != nil {
-		panic(err)
-	}
-	for val, res := range els.LocalMAC {
-		if foundOnly && len(res) < 1 {
+	for val, res := range el.LocalMAC {
+		if matchOnly && len(res) < 1 {
 			continue
 		}
 		for _, el := range res {
@@ -341,8 +337,8 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 			prints = append(prints, resStr)
 		}
 	}
-	for val, res := range els.NeighborMAC {
-		if foundOnly && len(res) < 1 {
+	for val, res := range el.NeighborMAC {
+		if matchOnly && len(res) < 1 {
 			continue
 		}
 		for _, el := range res {
@@ -355,8 +351,8 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 			prints = append(prints, resStr)
 		}
 	}
-	for val, res := range els.LocalIP {
-		if foundOnly && len(res) < 1 {
+	for val, res := range el.LocalIP {
+		if matchOnly && len(res) < 1 {
 			continue
 		}
 		for _, el := range res {
@@ -368,8 +364,8 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 			prints = append(prints, resStr)
 		}
 	}
-	for val, res := range els.ConnectedIP {
-		if foundOnly && len(res) < 1 {
+	for val, res := range el.ConnectedIP {
+		if matchOnly && len(res) < 1 {
 			continue
 		}
 		for _, el := range res {
@@ -382,8 +378,8 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 			prints = append(prints, resStr)
 		}
 	}
-	for val, res := range els.ListeningPort {
-		if foundOnly && len(res) < 1 {
+	for val, res := range el.ListeningPort {
+		if matchOnly && len(res) < 1 {
 			continue
 		}
 		for _, el := range res {
@@ -395,19 +391,18 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 			prints = append(prints, resStr)
 		}
 	}
-	if !foundOnly {
-		buf, err := json.Marshal(modres.Statistics)
-		if err != nil {
-			panic(err)
-		}
-		var stats statistics
-		err = json.Unmarshal(buf, &stats)
-		if err != nil {
-			panic(err)
-		}
-		resStr := fmt.Sprintf("Statistics: total hits %.0f examined %.0f items exectime %s",
-			stats.Totalhits, stats.Examined, stats.Exectime)
-		prints = append(prints, resStr)
+	if matchOnly {
+		return
 	}
+	for _, e := range result.Errors {
+		prints = append(prints, fmt.Sprintf("error: %v", e))
+	}
+	err = result.GetStatistics(&stats)
+	if err != nil {
+		panic(err)
+	}
+	resStr := fmt.Sprintf("Statistics: total hits %.0f examined %.0f items exectime %s",
+		stats.Totalhits, stats.Examined, stats.Exectime)
+	prints = append(prints, resStr)
 	return
 }

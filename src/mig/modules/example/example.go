@@ -7,31 +7,29 @@
 // This is an example module. It doesn't do anything. It only serves as
 // a template for writing modules.
 // If you run it, it will return a JSON struct with the hostname and IPs
-// of the current endpoint.
+// of the current endpoint. If you add flag `-p`, it will pretty print the
+// results.
 //
-//$ ./bin/linux/amd64/mig-agent-latest -m example '{"gethostname": true, "getaddresses": true, "lookuphost": "www.google.com"}' | python -mjson.tool
-//{
-//    "elements": {
-//        "addresses": [
-//            "172.21.0.3/20",
-//            "fe80::8e70:5aff:fec8:be50/64"
-//        ],
-//        "hostname": "fedbox2.subdomain.example.net",
-//        "lookeduphost": "www.google.com=173.194.37.115, 173.194.37.113, 173.194.37.116, 173.194.37.114, 173.194.37.112, 2607:f8b0:4008:805::1010"
-//    },
-//    "foundanything": true,
-//    "statistics": {
-//        "stufffound": 9
-//    },
-//    "success": true
-//}
+// $ ./bin/linux/amd64/mig-agent-latest -p -m example <<< '{"class":"parameters", "parameters":{"gethostname": true, "getaddresses": true, "lookuphost": ["www.google.com"]}}'
+// [info] using builtin conf
+// hostname is fedbox2.jaffa.linuxwall.info
+// address is 172.21.0.3/20
+// address is fe80::8e70:5aff:fec8:be50/64
+// lookedup host www.google.com has IP 74.125.196.106
+// lookedup host www.google.com has IP 74.125.196.99
+// lookedup host www.google.com has IP 74.125.196.104
+// lookedup host www.google.com has IP 74.125.196.103
+// lookedup host www.google.com has IP 74.125.196.105
+// lookedup host www.google.com has IP 74.125.196.147
+// lookedup host www.google.com has IP 2607:f8b0:4002:c07::69
+// stat: 3 stuff found
 
 package example
 
 import (
 	"encoding/json"
 	"fmt"
-	"mig"
+	"mig/modules"
 	"net"
 	"os"
 	"regexp"
@@ -41,7 +39,7 @@ import (
 // register the module in a global array of available modules, so the
 // agent knows we exist
 func init() {
-	mig.RegisterModule("example", func() interface{} {
+	modules.Register("example", func() interface{} {
 		return new(Runner)
 	})
 }
@@ -49,39 +47,21 @@ func init() {
 // Runner gives access to the exported functions and structs of the module
 type Runner struct {
 	Parameters params
-	Results    results
+	Results    modules.Result
 }
 
 // a simple parameters structure, the format is arbitrary
 type params struct {
-	GetHostname  bool   `json:"gethostname"`
-	GetAddresses bool   `json:"getaddresses"`
-	LookupHost   string `json:"lookuphost"`
+	GetHostname  bool     `json:"gethostname"`
+	GetAddresses bool     `json:"getaddresses"`
+	LookupHost   []string `json:"lookuphost"`
 }
 
-// results is the structure that is returned back to the agent.
-// the fields are arbitrary
-type results struct {
-	// Elements contains the information retrieved by the agent
-	Elements data `json:"elements"`
-	// when the module performs a search, it is useful to return FoundAnything=true if _something_ was found
-	FoundAnything bool `json:"foundanything"`
-	// Success=true would mean that the module ran without major errors
-	Success bool `json:"success"`
-	// a list of errors can be returned
-	Errors []string `json:"errors,omitempty"`
-	// it may be interesting to include stats on execution
-	Statistics statistics `json:"statistics,omitempty"`
+type elements struct {
+	Hostname     string              `json:"hostname,omitempty"`
+	Addresses    []string            `json:"addresses,omitempty"`
+	LookedUpHost map[string][]string `json:"lookeduphost,omitempty"`
 }
-
-type data struct {
-	Hostname     string   `json:"hostname,omitempty"`
-	Addresses    []string `json:"addresses,omitempty"`
-	LookedUpHost string   `json:"lookeduphost,omitempty"`
-}
-
-// some execution statistics
-var stats statistics
 
 type statistics struct {
 	StuffFound int64 `json:"stufffound"`
@@ -92,28 +72,66 @@ type statistics struct {
 // It must return an error if the parameters do not validate.
 func (r Runner) ValidateParameters() (err error) {
 	fqdn := regexp.MustCompilePOSIX(`^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`)
-	if !fqdn.MatchString(r.Parameters.LookupHost) {
-		return fmt.Errorf("ValidateParameters: LookupHost parameter is not a valid FQDN.")
+	for _, host := range r.Parameters.LookupHost {
+		if !fqdn.MatchString(host) {
+			return fmt.Errorf("ValidateParameters: LookupHost parameter is not a valid FQDN.")
+		}
 	}
 	return
 }
 
 // Run *must* be implemented by a module. Its the function that executes the module.
-// It must return a string, that is typically a marshalled json struct that contains
-// the results of the execution.
-func (r Runner) Run(Args []byte) string {
-	// arguments are passed as an array of bytes, the module has to unmarshal that
-	// into the proper structure of parameters, then validate it.
-	err := json.Unmarshal(Args, &r.Parameters)
+// It must return a string of marshalled json that contains the results from the module.
+// The code below provides a base module skeleton that can be reused in all modules.
+func (r Runner) Run() (out string) {
+	// a good way to handle execution failures is to catch panics and store
+	// the panicked error into modules.Results.Errors, marshal that, and output
+	// the JSON string back to the caller
+	defer func() {
+		if e := recover(); e != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
+			r.Results.Success = false
+			buf, _ := json.Marshal(r.Results)
+			out = string(buf[:])
+		}
+	}()
+
+	// read module parameters from stdin
+	err := modules.ReadInputParameters(&r.Parameters)
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
+	// verify that the parameters we received are valid
 	err = r.ValidateParameters()
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
+
+	// start a goroutine that does some work and another one that looks
+	// for an early stop signal
+	moduleDone := make(chan bool)
+	stop := make(chan bool)
+	go r.doModuleStuff(&out, &moduleDone)
+	go modules.WatchForStop(&stop)
+
+	select {
+	case <-moduleDone:
+		return out
+	case <-stop:
+		panic("stop message received, terminating early")
+	}
+}
+
+// doModuleStuff is an internal module function that does things specific to the
+// module. There is no implementation requirement. It's good practice to have it
+// return the JSON string Run() expects to return. We also make it return a boolean
+// in the `moduleDone` channel to do flow control in Run().
+func (r Runner) doModuleStuff(out *string, moduleDone *chan bool) error {
+	var (
+		el    elements
+		stats statistics
+	)
+	el.LookedUpHost = make(map[string][]string)
 
 	// ---
 	// From here on, we would normally do something useful, like:
@@ -124,10 +142,9 @@ func (r Runner) Run(Args []byte) string {
 	if r.Parameters.GetHostname {
 		hostname, err := os.Hostname()
 		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-			return r.buildResults()
+			panic(err)
 		}
-		r.Results.Elements.Hostname = hostname
+		el.Hostname = hostname
 		stats.StuffFound++
 	}
 
@@ -135,45 +152,40 @@ func (r Runner) Run(Args []byte) string {
 	if r.Parameters.GetAddresses {
 		addresses, err := net.InterfaceAddrs()
 		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-			return r.buildResults()
+			panic(err)
 		}
 		for _, addr := range addresses {
 			if addr.String() == "127.0.0.1/8" || addr.String() == "::1/128" {
 				continue
 			}
-			r.Results.Elements.Addresses = append(r.Results.Elements.Addresses, addr.String())
+			el.Addresses = append(el.Addresses, addr.String())
 			stats.StuffFound++
 		}
 	}
 
 	// look up a host
-	if r.Parameters.LookupHost != "" {
-		r.Results.Elements.LookedUpHost = r.Parameters.LookupHost + "="
-		addresses, err := net.LookupHost(r.Parameters.LookupHost)
+	for _, host := range r.Parameters.LookupHost {
+		addrs, err := net.LookupHost(host)
 		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-			return r.buildResults()
+			panic(err)
 		}
-		for ctr, addr := range addresses {
-			if ctr > 0 {
-				r.Results.Elements.LookedUpHost += ", "
-			}
-			r.Results.Elements.LookedUpHost += addr
-			stats.StuffFound++
-		}
-
+		el.LookedUpHost[host] = addrs
 	}
 
-	// return the results as a string (a marshalled json struct)
-	return r.buildResults()
+	// marshal the results into a json string
+	*out = r.buildResults(el, stats)
+	*moduleDone <- true
+	return nil
 }
 
-// buildResults marshals the results
-func (r Runner) buildResults() string {
+// buildResults takes the results found by the module, as well as statistics,
+// and puts all that into a JSON string. It also takes care of setting the
+// success and foundanything flags.
+func (r Runner) buildResults(el elements, stats statistics) string {
 	if len(r.Results.Errors) == 0 {
 		r.Results.Success = true
 	}
+	r.Results.Elements = el
 	r.Results.Statistics = stats
 	if stats.StuffFound > 0 {
 		r.Results.FoundAnything = true
@@ -188,24 +200,36 @@ func (r Runner) buildResults() string {
 // PrintResults() is an *optional* method that returns results in a human-readable format.
 // if matchOnly is set, only results that have at least one match are returned.
 // If matchOnly is not set, all results are returned, along with errors and statistics.
-func (r Runner) PrintResults(rawResults []byte, matchOnly bool) (prints []string, err error) {
-	var results results
-	err = json.Unmarshal(rawResults, &results)
+func (r Runner) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
+	var (
+		el    elements
+		stats statistics
+	)
+	err = result.GetElements(&el)
 	if err != nil {
 		panic(err)
 	}
-	if results.Elements.Hostname != "" {
-		fmt.Println("hostname", results.Elements.Hostname)
+	if el.Hostname != "" {
+		prints = append(prints, fmt.Sprintf("hostname is %s", el.Hostname))
 	}
-	for _, addr := range results.Elements.Addresses {
-		fmt.Println("address", addr)
+	for _, addr := range el.Addresses {
+		prints = append(prints, fmt.Sprintf("address is %s", addr))
 	}
-	if results.Elements.LookedUpHost != "" {
-		fmt.Println(results.Elements.LookedUpHost)
+	for host, addrs := range el.LookedUpHost {
+		for _, addr := range addrs {
+			prints = append(prints, fmt.Sprintf("lookedup host %s has IP %s", host, addr))
+		}
 	}
-	for _, e := range results.Errors {
-		fmt.Println("error:", e)
+	if matchOnly {
+		return
 	}
-	fmt.Println("stat:", results.Statistics.StuffFound, "stuff found")
+	for _, e := range result.Errors {
+		prints = append(prints, fmt.Sprintf("error: %v", e))
+	}
+	err = result.GetStatistics(&stats)
+	if err != nil {
+		panic(err)
+	}
+	prints = append(prints, fmt.Sprintf("stat: %d stuff found", stats.StuffFound))
 	return
 }

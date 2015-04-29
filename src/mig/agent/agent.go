@@ -14,6 +14,7 @@ import (
 	"github.com/streadway/amqp"
 	"io/ioutil"
 	"mig"
+	"mig/modules"
 	"os"
 	"os/exec"
 	"runtime"
@@ -33,7 +34,7 @@ type moduleResult struct {
 	id       float64
 	err      error
 	status   string
-	output   mig.ModuleResult
+	output   modules.Result
 	position int
 }
 
@@ -67,6 +68,7 @@ func main() {
 	var query = flag.String("q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
 	var foreground = flag.Bool("f", false, "Agent will fork into background by default. Except if this flag is set.")
 	var upgrading = flag.Bool("u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
+	var pretty = flag.Bool("p", false, "When running a module, pretty print the results instead of returning JSON.")
 	var showversion = flag.Bool("V", false, "Print Agent version to stdout and exit.")
 	flag.Parse()
 
@@ -104,8 +106,8 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			out := runModuleDirectly(op.Module, args)
-			var res mig.ModuleResult
+			out := runModuleDirectly(op.Module, args, *pretty)
+			var res modules.Result
 			err = json.Unmarshal([]byte(out), &res)
 			if err != nil {
 				panic(err)
@@ -150,19 +152,37 @@ func main() {
 			tmparg = tmparg + arg
 		}
 		args := []byte(tmparg)
-		fmt.Printf("%s", runModuleDirectly(*mode, args))
+		fmt.Printf("%s", runModuleDirectly(*mode, args, *pretty))
 	}
 exit:
 }
 
 // runModuleDirectly executes a module and displays the results on stdout
-func runModuleDirectly(mode string, args []byte) (out string) {
-	if _, ok := mig.AvailableModules[mode]; ok {
-		// instanciate and call module
-		modRunner := mig.AvailableModules[mode]()
-		out = modRunner.(mig.Moduler).Run(args)
-	} else {
-		out = fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
+func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
+	if _, ok := modules.Available[mode]; !ok {
+		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
+	}
+	// instanciate and call module
+	modRunner := modules.Available[mode].Runner()
+	out = modRunner.(modules.Moduler).Run()
+	if pretty {
+		var modres modules.Result
+		err := json.Unmarshal([]byte(out), &modres)
+		if err != nil {
+			panic(err)
+		}
+		out = ""
+		if _, ok := modRunner.(modules.HasResultsPrinter); ok {
+			outRes, err := modRunner.(modules.HasResultsPrinter).PrintResults(modres, false)
+			if err != nil {
+				panic(err)
+			}
+			for _, resLine := range outRes {
+				out += fmt.Sprintf("%s\n", resLine)
+			}
+		} else {
+			out = fmt.Sprintf("[error] no printer available for module '%s'\n", mode)
+		}
 	}
 	return
 }
@@ -375,9 +395,9 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 
 			// if we have a command to return, update status and send back
 			if cmd.ID > 0 {
-				results := make([]mig.ModuleResult, len(cmd.Action.Operations))
+				results := make([]modules.Result, len(cmd.Action.Operations))
 				for i, _ := range cmd.Action.Operations {
-					var mr mig.ModuleResult
+					var mr modules.Result
 					mr.Errors = append(mr.Errors, fmt.Sprintf("%v", err))
 					results[i] = mr
 				}
@@ -422,7 +442,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 		ctx.Channels.Log <- mig.Log{OpID: currentOp.id, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: desc}
 
 		// check that the module is available and pass the command to the execution channel
-		if _, ok := mig.AvailableModules[operation.Module]; ok {
+		if _, ok := modules.Available[operation.Module]; ok {
 			ctx.Channels.Log <- mig.Log{CommandID: cmd.ID, ActionID: cmd.Action.ID, Desc: fmt.Sprintf("calling module '%s'", operation.Module)}.Debug()
 			runningOps[currentOp.id] = currentOp
 			ctx.Channels.RunAgentCommand <- currentOp
@@ -470,28 +490,47 @@ func runModule(ctx Context, op moduleOp) (err error) {
 	waiter := make(chan error, 1)
 	var out bytes.Buffer
 
-	// calculate the max exec time but taking the smallest duration between the expiration date
-	// sent with the command, and the default MODULETIMEOUT value from the configuration
+	// calculate the max exec time by taking the smallest duration between the expiration date
+	// sent with the command, and the default MODULETIMEOUT value from the agent configuration
 	execTimeOut := MODULETIMEOUT
 	if op.expireafter.Before(time.Now().Add(MODULETIMEOUT)) {
 		execTimeOut = op.expireafter.Sub(time.Now())
 	}
 
-	// Command arguments must be in json format
-	tmpargs, err := json.Marshal(op.params)
+	// Build parameters message
+	modParams, err := modules.MakeMessage(modules.MsgClassParameters, op.params)
 	if err != nil {
 		panic(err)
 	}
 
-	// stringify the arguments
-	cmdArgs := fmt.Sprintf("%s", tmpargs)
-
 	// build the command line and execute
-	cmd := exec.Command(ctx.Agent.BinPath, "-m", strings.ToLower(op.mode), cmdArgs)
+	cmd := exec.Command(ctx.Agent.BinPath, "-m", strings.ToLower(op.mode))
+	stdinpipe, err := cmd.StdinPipe()
+	if err != nil {
+		panic(err)
+	}
 	cmd.Stdout = &out
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
+
+	// Spawn a goroutine to write the parameter data to stdin of the module
+	// if required. Doing this in a goroutine ensures the timeout logic
+	// later in this function will fire if for some reason the module does
+	// not drain the pipe, and the agent ends up blocking on Write().
+	go func() {
+		left := len(modParams)
+		for left > 0 {
+			nb, err := stdinpipe.Write(modParams)
+			if err != nil {
+				stdinpipe.Close()
+				return
+			}
+			left -= nb
+			modParams = modParams[nb:]
+		}
+		stdinpipe.Close()
+	}()
 
 	// launch the waiter in a separate goroutine
 	go func() {
@@ -550,7 +589,7 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 
 	// create the slice of results and insert each incoming
 	// result at the right position: operation[0] => results[0]
-	cmd.Results = make([]mig.ModuleResult, opsCounter)
+	cmd.Results = make([]modules.Result, opsCounter)
 
 	// assume everything went fine, and reset the status if errors are found
 	cmd.Status = mig.StatusSuccess

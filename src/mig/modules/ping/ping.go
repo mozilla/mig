@@ -17,7 +17,7 @@ import (
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
-	"mig"
+	"mig/modules"
 	"net"
 	"os"
 	"strings"
@@ -25,14 +25,14 @@ import (
 )
 
 func init() {
-	mig.RegisterModule("ping", func() interface{} {
+	modules.Register("ping", func() interface{} {
 		return new(Runner)
 	})
 }
 
 type Runner struct {
 	Parameters params
-	Results    mig.ModuleResult
+	Results    modules.Result
 }
 
 type params struct {
@@ -44,7 +44,7 @@ type params struct {
 	ipDest          string
 }
 
-type pingresults struct {
+type elements struct {
 	Latencies    []float64 `json:"latencies"`    // response latency in milliseconds: 9999999 indicates timeout, -1 indicates unreachable, 0 general error.
 	Protocol     string    `json:"protocol"`     // icmp, tcp, udp
 	ResolvedHost string    `json:"resolvedhost"` // Information about the ip:port being pinged
@@ -56,28 +56,34 @@ const (
 	E_Timeout     = "connection timed out"
 )
 
-func (r Runner) Run(Args []byte) string {
+func (r Runner) Run() (out string) {
 	var (
 		err error
-		pr  pingresults
+		el  elements
 	)
-	err = json.Unmarshal(Args, &r.Parameters)
+	defer func() {
+		if e := recover(); e != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
+			r.Results.Success = false
+			buf, _ := json.Marshal(r.Results)
+			out = string(buf[:])
+		}
+	}()
+	err = modules.ReadInputParameters(&r.Parameters)
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 	err = r.ValidateParameters()
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 
-	pr.ResolvedHost = r.Parameters.Destination
+	el.ResolvedHost = r.Parameters.Destination
 	if r.Parameters.Protocol == "udp" || r.Parameters.Protocol == "tcp" {
-		pr.ResolvedHost += fmt.Sprintf(":%.0f", r.Parameters.DestinationPort)
+		el.ResolvedHost += fmt.Sprintf(":%.0f", r.Parameters.DestinationPort)
 	}
-	pr.ResolvedHost += " (" + r.Parameters.ipDest + ")"
-	pr.Protocol = r.Parameters.Protocol
+	el.ResolvedHost += " (" + r.Parameters.ipDest + ")"
+	el.Protocol = r.Parameters.Protocol
 	for i := 0; i < int(r.Parameters.Count); i += 1 {
 		var err error
 		// startTime for calculating the latency/RTT
@@ -102,7 +108,7 @@ func (r Runner) Run(Args []byte) string {
 			case E_ConnRefused:
 				latency = -1
 			default:
-				pr.Failures = append(pr.Failures, fmt.Sprintf("ping #%d failed with error: %v", i+1, err))
+				el.Failures = append(el.Failures, fmt.Sprintf("ping #%d failed with error: %v", i+1, err))
 				latency = 0
 			}
 		}
@@ -118,13 +124,12 @@ func (r Runner) Run(Args []byte) string {
 		default:
 			r.Results.FoundAnything = true
 		}
-		pr.Latencies = append(pr.Latencies, latency)
+		el.Latencies = append(el.Latencies, latency)
 
 		// sleep 100 milliseconds between pings to prevent floods
 		time.Sleep(100 * time.Millisecond)
 	}
-	r.Results.Elements = pr
-	return r.buildResults()
+	return r.buildResults(el)
 }
 
 func (r *Runner) ValidateParameters() (err error) {
@@ -295,7 +300,8 @@ func (r Runner) pingUdp() (err error) {
 	return nil
 }
 
-func (r Runner) buildResults() string {
+func (r Runner) buildResults(el elements) string {
+	r.Results.Elements = el
 	if len(r.Results.Errors) == 0 {
 		r.Results.Success = true
 	}
@@ -306,32 +312,23 @@ func (r Runner) buildResults() string {
 	return string(jsonOutput[:])
 }
 
-func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string, err error) {
+func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
+	var el elements
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("Print Error: %v", e)
 		}
 	}()
 
-	var results mig.ModuleResult
-	err = json.Unmarshal(rawResults, &results)
+	err = result.GetElements(&el)
 	if err != nil {
 		panic(err)
 	}
-	buf, err := json.Marshal(results.Elements)
-	if err != nil {
-		panic(err)
-	}
-	var pr pingresults
-	err = json.Unmarshal(buf, &pr)
-	if err != nil {
-		panic(err)
-	}
-	if results.FoundAnything {
+	if result.FoundAnything {
 		prints = append(prints,
 			fmt.Sprintf("%s ping of %s succeeded. Target is reachable.",
-				pr.Protocol,
-				pr.ResolvedHost,
+				el.Protocol,
+				el.ResolvedHost,
 			),
 		)
 	}
@@ -339,22 +336,22 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 	if foundOnly {
 		return
 	}
-	if !results.FoundAnything {
+	if !result.FoundAnything {
 		prints = append(prints,
 			fmt.Sprintf("%s ping of %s failed. Target is no reachable.",
-				pr.Protocol,
-				pr.ResolvedHost,
+				el.Protocol,
+				el.ResolvedHost,
 			),
 		)
 	}
-	for i, lat := range pr.Latencies {
+	for i, lat := range el.Latencies {
 		switch lat {
 		case -1:
 			prints = append(prints, fmt.Sprintf("ping #%d failed, target was unreachable", i+1))
 		case 0:
 			prints = append(prints, fmt.Sprintf("ping #%d failed, reason unknown", i+1))
 		case 9999999:
-			if pr.Protocol == "udp" {
+			if el.Protocol == "udp" {
 				prints = append(prints, fmt.Sprintf("ping #%d may have succeeded (no udp response)", i+1))
 			} else {
 				prints = append(prints, fmt.Sprintf("ping #%d failed, connection timed out", i+1))

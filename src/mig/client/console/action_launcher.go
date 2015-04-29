@@ -12,6 +12,7 @@ import (
 	"io"
 	"mig"
 	"mig/client"
+	"mig/modules"
 	"strconv"
 	"strings"
 	"time"
@@ -80,15 +81,15 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 			// ParamsCreator takes care of retrieving using input
 			var operation mig.Operation
 			operation.Module = orders[1]
-			if _, ok := mig.AvailableModules[operation.Module]; ok {
+			if _, ok := modules.Available[operation.Module]; ok {
 				// instanciate and call module parameters creation function
-				modRunner := mig.AvailableModules[operation.Module]()
-				if _, ok := modRunner.(mig.HasParamsCreator); !ok {
+				modRunner := modules.Available[operation.Module].Runner()
+				if _, ok := modRunner.(modules.HasParamsCreator); !ok {
 					fmt.Println(operation.Module, "module does not provide a parameters creator.")
 					fmt.Println("You can write your action by hand and import it using 'load <file>'")
 					break
 				}
-				operation.Parameters, err = modRunner.(mig.HasParamsCreator).ParamsCreator()
+				operation.Parameters, err = modRunner.(modules.HasParamsCreator).ParamsCreator()
 				if err != nil {
 					fmt.Printf("Parameters creation failed with error: %v\n", err)
 					break
