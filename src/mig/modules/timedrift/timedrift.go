@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"mig"
+	"mig/modules"
 	"net"
 	"os"
 	"time"
@@ -20,23 +20,15 @@ import (
 // register the module in a global array of available modules, so the
 // agent knows we exist
 func init() {
-	mig.RegisterModule("timedrift", func() interface{} {
+	modules.Register("timedrift", func() interface{} {
 		return new(Runner)
-	}, false)
+	})
 }
 
 // Runner gives access to the exported functions and structs of the module
 type Runner struct {
 	Parameters params
-	Results    results
-}
-
-type results struct {
-	FoundAnything bool        `json:"foundanything"`
-	Success       bool        `json:"success"`
-	Elements      checkedtime `json:"elements"`
-	Statistics    statistics  `json:"statistics"`
-	Errors        []string    `json:"errors"`
+	Results    modules.Result
 }
 
 // a simple parameters structure, the format is arbitrary
@@ -44,7 +36,7 @@ type params struct {
 	Drift string `json:"drift"`
 }
 
-type checkedtime struct {
+type elements struct {
 	HasCheckedDrift bool     `json:"hascheckeddrift"`
 	IsWithinDrift   bool     `json:"iswithindrift,omitempty"`
 	Drifts          []string `json:"drifts,omitempty"`
@@ -71,23 +63,29 @@ func (r Runner) ValidateParameters() (err error) {
 	return err
 }
 
-func (r Runner) Run(Args []byte) string {
+func (r Runner) Run() (out string) {
 	var (
 		stats statistics
-		ct    checkedtime
+		el    elements
 		drift time.Duration
 	)
-	ct.LocalTime = time.Now().Format(time.RFC3339Nano)
+	defer func() {
+		if e := recover(); e != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
+			r.Results.Success = false
+			buf, _ := json.Marshal(r.Results)
+			out = string(buf[:])
+		}
+	}()
+	el.LocalTime = time.Now().Format(time.RFC3339Nano)
 	t1 := time.Now()
-	err := json.Unmarshal(Args, &r.Parameters)
+	err := modules.ReadInputParameters(&r.Parameters)
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 	err = r.ValidateParameters()
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 	// if drift is not set, skip the ntp test
 	if r.Parameters.Drift == "" {
@@ -96,11 +94,10 @@ func (r Runner) Run(Args []byte) string {
 	}
 	drift, err = time.ParseDuration(r.Parameters.Drift)
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
 	// assume host has synched time and set to false if not true
-	ct.IsWithinDrift = true
+	el.IsWithinDrift = true
 	// attempt to get network time from each of the NTP servers, and exit
 	// as soon as we get a valid result from one of them
 	for i := 0; i < len(NtpPool); i++ {
@@ -124,11 +121,11 @@ func (r Runner) Run(Args []byte) string {
 			continue
 		}
 		if localtime.Before(t.Add(-drift)) {
-			ct.IsWithinDrift = false
-			ct.Drifts = append(ct.Drifts, fmt.Sprintf("Local time is behind ntp host %s by %s", ntpsrv, t.Sub(localtime).String()))
+			el.IsWithinDrift = false
+			el.Drifts = append(el.Drifts, fmt.Sprintf("Local time is behind ntp host %s by %s", ntpsrv, t.Sub(localtime).String()))
 		} else if localtime.After(t.Add(drift)) {
-			ct.IsWithinDrift = false
-			ct.Drifts = append(ct.Drifts, fmt.Sprintf("Local time is ahead of ntp host %s by %s", ntpsrv, localtime.Sub(t).String()))
+			el.IsWithinDrift = false
+			el.Drifts = append(el.Drifts, fmt.Sprintf("Local time is ahead of ntp host %s by %s", ntpsrv, localtime.Sub(t).String()))
 		}
 		stats.NtpStats = append(stats.NtpStats, ntpstats{
 			Host:      ntpsrv,
@@ -137,19 +134,18 @@ func (r Runner) Run(Args []byte) string {
 			Drift:     localtime.Sub(t).String(),
 			Reachable: true,
 		})
-		ct.HasCheckedDrift = true
+		el.HasCheckedDrift = true
 
 		// comparison succeeded, exit the loop
 		break
 	}
-	if !ct.IsWithinDrift {
+	if !el.IsWithinDrift {
 		r.Results.FoundAnything = true
 	}
 done:
-	r.Results.Elements = ct
 	stats.ExecTime = time.Now().Sub(t1).String()
-	r.Results.Statistics = stats
-	return r.buildResults()
+	out = r.buildResults(el, stats)
+	return
 }
 
 var NtpPool = [...]string{
@@ -236,12 +232,14 @@ func GetNetworkTime(host string) (t time.Time, latency string, err error) {
 }
 
 // buildResults marshals the results
-func (r Runner) buildResults() string {
+func (r Runner) buildResults(el elements, stats statistics) string {
+	r.Results.Elements = el
+	r.Results.Statistics = stats
 	if len(r.Results.Errors) == 0 {
 		r.Results.Success = true
 	}
 	// if was supposed to check drift but hasn't, set success to false
-	if r.Parameters.Drift != "" && !r.Results.Elements.HasCheckedDrift {
+	if r.Parameters.Drift != "" && !el.HasCheckedDrift {
 		r.Results.Success = false
 	}
 	jsonOutput, err := json.Marshal(r.Results)
@@ -251,19 +249,22 @@ func (r Runner) buildResults() string {
 	return string(jsonOutput[:])
 }
 
-func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string, err error) {
-	var results results
-	err = json.Unmarshal(rawResults, &results)
+func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
+	var (
+		el    elements
+		stats statistics
+	)
+	err = result.GetElements(&el)
 	if err != nil {
 		return
 	}
-	prints = append(prints, "local time is "+results.Elements.LocalTime)
-	if results.Elements.HasCheckedDrift {
-		if results.Elements.IsWithinDrift {
+	prints = append(prints, "local time is "+el.LocalTime)
+	if el.HasCheckedDrift {
+		if el.IsWithinDrift {
 			prints = append(prints, "local time is within acceptable drift from NTP servers")
 		} else {
 			prints = append(prints, "local time is out of sync from NTP servers")
-			for _, drift := range results.Elements.Drifts {
+			for _, drift := range el.Drifts {
 				prints = append(prints, drift)
 			}
 		}
@@ -272,18 +273,22 @@ func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string
 	if foundOnly {
 		return
 	}
-	for _, e := range results.Errors {
+	for _, e := range result.Errors {
 		prints = append(prints, "error:", e)
 	}
-	fmt.Println("stat: execution time", results.Statistics.ExecTime)
-	for _, ntpstat := range results.Statistics.NtpStats {
+	err = result.GetStatistics(&stats)
+	if err != nil {
+		panic(err)
+	}
+	prints = append(prints, "stat: execution time was "+stats.ExecTime)
+	for _, ntpstat := range stats.NtpStats {
 		if ntpstat.Reachable {
 			prints = append(prints, "stat: "+ntpstat.Host+" responded in "+ntpstat.Latency+" with time "+ntpstat.Time.UTC().String()+". local time drifts by "+ntpstat.Drift)
 		} else {
 			prints = append(prints, "stat: "+ntpstat.Host+" was unreachable")
 		}
 	}
-	if results.Success {
+	if result.Success {
 		prints = append(prints, fmt.Sprintf("timedrift module has succeeded"))
 	} else {
 		prints = append(prints, fmt.Sprintf("timedrift module has failed"))
