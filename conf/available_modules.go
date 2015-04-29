@@ -10,6 +10,7 @@ import (
 	_ "mig/modules/file"
 	_ "mig/modules/netstat"
 	_ "mig/modules/timedrift"
-	//_ "mig/modules/upgrade"
 	_ "mig/modules/ping"
+	//_ "mig/modules/upgrade"
+	//_ "mig/modules/example"
 )
