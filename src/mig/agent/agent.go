@@ -159,31 +159,30 @@ exit:
 
 // runModuleDirectly executes a module and displays the results on stdout
 func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
-	if _, ok := modules.Available[mode]; ok {
-		// instanciate and call module
-		modRunner := modules.Available[mode].Runner()
-		out = modRunner.(modules.Moduler).Run()
-		if pretty {
-			var modres modules.Result
-			err := json.Unmarshal([]byte(out), &modres)
+	if _, ok := modules.Available[mode]; !ok {
+		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
+	}
+	// instanciate and call module
+	modRunner := modules.Available[mode].Runner()
+	out = modRunner.(modules.Moduler).Run()
+	if pretty {
+		var modres modules.Result
+		err := json.Unmarshal([]byte(out), &modres)
+		if err != nil {
+			panic(err)
+		}
+		out = ""
+		if _, ok := modRunner.(modules.HasResultsPrinter); ok {
+			outRes, err := modRunner.(modules.HasResultsPrinter).PrintResults(modres, false)
 			if err != nil {
 				panic(err)
 			}
-			out = ""
-			if _, ok := modRunner.(modules.HasResultsPrinter); ok {
-				outRes, err := modRunner.(modules.HasResultsPrinter).PrintResults(modres, false)
-				if err != nil {
-					panic(err)
-				}
-				for _, resLine := range outRes {
-					out += fmt.Sprintf("%s\n", resLine)
-				}
-			} else {
-				out = fmt.Sprintf("[error] no printer available for module '%s'\n", mode)
+			for _, resLine := range outRes {
+				out += fmt.Sprintf("%s\n", resLine)
 			}
+		} else {
+			out = fmt.Sprintf("[error] no printer available for module '%s'\n", mode)
 		}
-	} else {
-		out = fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	return
 }
