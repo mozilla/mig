@@ -13,21 +13,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/osext"
-	"mig"
+	"mig/modules"
 	"os"
 	"os/exec"
 	"runtime"
 )
 
 func init() {
-	mig.RegisterModule("agentdestroy", func() interface{} {
+	modules.Register("agentdestroy", func() interface{} {
 		return new(Runner)
-	}, false)
+	})
 }
 
 type Runner struct {
 	Parameters Parameters
-	Results    results
+	Results    modules.Result
 }
 
 // JSON sample:
@@ -58,18 +58,26 @@ func (r Runner) ValidateParameters() (err error) {
 	return
 }
 
-func (r Runner) Run(Args []byte) string {
-	err := json.Unmarshal(Args, &r.Parameters)
+func (r Runner) Run() (out string) {
+	defer func() {
+		if e := recover(); e != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
+			r.Results.Success = false
+			buf, _ := json.Marshal(r.Results)
+			out = string(buf[:])
+		}
+	}()
+	// read module parameters from stdin
+	err := modules.ReadInputParameters(&r.Parameters)
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
-
+	// verify that the parameters we received are valid
 	err = r.ValidateParameters()
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		return r.buildResults()
+		panic(err)
 	}
+
 	// Refuse to suicide
 	if r.Parameters.PID == os.Getppid() {
 		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("PID '%d' is mine. Refusing to suicide.", r.Parameters.PID))
