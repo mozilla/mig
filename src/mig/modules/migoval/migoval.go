@@ -11,58 +11,57 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/ameihm0912/mozoval/go/src/oval"
+	ovallib "github.com/ameihm0912/mozoval/go/src/oval"
 	"io"
-	"mig"
+	"mig/modules"
 )
 
 func init() {
-	mig.RegisterModule("migoval", func() interface{} {
+	modules.Register("oval", func() interface{} {
 		return new(Runner)
 	})
 }
 
 type Runner struct {
 	Parameters Parameters
-	Results    mig.ModuleResult
+	Results    modules.Result
 }
 
 func (r Runner) Run(Args []byte) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
-			res := newResults()
-			res.Errors = append(res.Errors, fmt.Sprintf("%v", e))
-			res.Success = false
-			err, _ := json.Marshal(res)
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
+			r.Results.Success = false
+			err, _ := json.Marshal(r.Results)
 			resStr = string(err)
 			return
 		}
 	}()
 
-	err := json.Unmarshal(Args, &r.Parameters)
+	// Read module parameters from stdin
+	err := modules.ReadInputParameters(&r.Parameters)
 	if err != nil {
 		panic(err)
 	}
 
-	oval.Init()
+	ovallib.Init()
 
 	e := &elements{}
 
 	if len(r.Parameters.PkgMatch.Matches) > 0 {
-		oresp := oval.PackageQuery(r.Parameters.PkgMatch.Matches)
+		oresp := ovallib.PackageQuery(r.Parameters.PkgMatch.Matches)
 		for _, x := range oresp {
 			npi := &PkgInfo{PkgName: x.Name, PkgVersion: x.Version}
 			e.Matches = append(e.Matches, *npi)
 		}
 
-		res := newResults()
-		res.Success = true
+		r.Results.Success = true
 		if len(e.Matches) > 0 {
-			res.FoundAnything = true
+			r.Results.FoundAnything = true
 		}
-		res.Elements = e
-		buf, err := json.Marshal(res)
+		r.Results.Elements = e
+		buf, err := json.Marshal(r.Results)
 		if err != nil {
 			panic(err)
 		}
@@ -78,8 +77,11 @@ func (r Runner) Run(Args []byte) (resStr string) {
 		}
 		_, err = io.Copy(&ovalbuf, gz)
 
-		od, err := oval.ParseBuffer(ovalbuf.String())
-		ovalresults := oval.Execute(od)
+		od, err := ovallib.ParseBuffer(ovalbuf.String())
+		ovalresults, err := ovallib.Execute(od)
+		if err != nil {
+			panic(err)
+		}
 		for _, x := range ovalresults {
 			nmor := &MOResult{}
 			nmor.Title = x.Title
@@ -88,13 +90,12 @@ func (r Runner) Run(Args []byte) (resStr string) {
 			e.OvalResults = append(e.OvalResults, *nmor)
 		}
 
-		res := newResults()
-		res.Success = true
+		r.Results.Success = true
 		if len(e.OvalResults) > 0 {
-			res.FoundAnything = true
+			r.Results.FoundAnything = true
 		}
-		res.Elements = e
-		buf, err := json.Marshal(res)
+		r.Results.Elements = e
+		buf, err := json.Marshal(r.Results)
 		if err != nil {
 			panic(err)
 		}
@@ -110,19 +111,10 @@ func (r Runner) ValidateParameters() (err error) {
 	return
 }
 
-func (r Runner) PrintResults(rawResults []byte, foundOnly bool) (prints []string, err error) {
-	var results mig.ModuleResult
+func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
 	var elem elements
 
-	err = json.Unmarshal(rawResults, &results)
-	if err != nil {
-		panic(err)
-	}
-	newelements, err := json.Marshal(results.Elements)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(newelements, &elem)
+	err = result.GetElements(&elem)
 	if err != nil {
 		panic(err)
 	}
@@ -176,8 +168,4 @@ type PkgMatch struct {
 
 func newParameters() *Parameters {
 	return &Parameters{}
-}
-
-func newResults() *mig.ModuleResult {
-	return &mig.ModuleResult{}
 }
