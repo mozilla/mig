@@ -115,7 +115,6 @@ go_get_ping_deps:
 	$(GOGETTER) golang.org/x/net/ipv6
 
 go_get_memory_deps:
-	$(GOGETTER) github.com/mozilla/masche/...
 	$(GOGETTER) github.com/mozilla/masche/process
 	$(GOGETTER) github.com/mozilla/masche/listlibs
 	$(GOGETTER) github.com/mozilla/masche/memsearch
