@@ -70,7 +70,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli := client.NewClient(conf, "console-"+version)
+	cli, err := client.NewClient(conf, "console-"+version)
+	if err != nil {
+		panic(err)
+	}
 	// print platform status
 	err = printStatus(cli)
 	if err != nil {

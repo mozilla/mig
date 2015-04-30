@@ -65,7 +65,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli := client.NewClient(conf, "generator-"+version)
+	cli, err = client.NewClient(conf, "generator-"+version)
+	if err != nil {
+		panic(err)
+	}
 
 	// We need a file to load the action from
 	if *file == "/path/to/file" {

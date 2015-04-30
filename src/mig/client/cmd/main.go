@@ -177,7 +177,10 @@ readytolaunch:
 	if err != nil {
 		panic(err)
 	}
-	cli = client.NewClient(conf, "cmd-"+version)
+	cli, err = client.NewClient(conf, "cmd-"+version)
+	if err != nil {
+		panic(err)
+	}
 
 	// set the validity 60 second in the past to deal with clock skew
 	a.ValidFrom = time.Now().Add(-60 * time.Second).UTC()

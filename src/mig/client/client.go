@@ -58,8 +58,7 @@ type GpgConf struct {
 }
 
 // NewClient initiates a new instance of a Client
-func NewClient(conf Configuration, version string) Client {
-	var cli Client
+func NewClient(conf Configuration, version string) (cli Client, err error) {
 	cli.Version = version
 	cli.Conf = conf
 	tr := &http.Transport{
@@ -81,7 +80,23 @@ func NewClient(conf Configuration, version string) Client {
 		},
 	}
 	cli.API = &http.Client{Transport: tr}
-	return cli
+	// if the env variable to the gpg agent socket isn't set, try to
+	// find the socket and set the variable
+	if os.Getenv("GPG_AGENT_INFO") == "" {
+		_, err = os.Stat(conf.GPG.Home + "/S.gpg-agent")
+		if err == nil {
+			// socket was found, set it
+			os.Setenv("GPG_AGENT_INFO", conf.GPG.Home+"/S.gpg-agent")
+		}
+	}
+	// try to make a signed token, just to check that we can access the private key
+	_, err = cli.MakeSignedToken()
+	if err != nil {
+		err = fmt.Errorf("failed to generate a security token using key %s from %s\n",
+			conf.GPG.KeyID, conf.GPG.Home+"/secring.gpg")
+		return
+	}
+	return
 }
 
 // ReadConfiguration loads a client configuration from a local configuration file
@@ -115,15 +130,6 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 	// if trailing slash is missing from API url, add it
 	if conf.API.URL[len(conf.API.URL)-1] != '/' {
 		conf.API.URL += "/"
-	}
-	// try to make a signed token, just to check that we can access the private key
-	var cli Client
-	cli.Conf = conf
-	_, err = cli.MakeSignedToken()
-	if err != nil {
-		err = fmt.Errorf("failed to generate a security token using key %s from %s\n",
-			conf.GPG.KeyID, conf.GPG.Home+"/secring.gpg")
-		return
 	}
 	return
 }

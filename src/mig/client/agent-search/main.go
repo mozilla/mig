@@ -28,7 +28,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli := client.NewClient(conf, version)
+	cli, err = client.NewClient(conf, "agent-search-"+version)
+	if err != nil {
+		panic(err)
+	}
 	agents, err := cli.EvaluateAgentTarget(strings.Join(flag.Args(), " "))
 	if err != nil {
 		panic(err)
