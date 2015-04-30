@@ -65,7 +65,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli, err = client.NewClient(conf, "generator-"+version)
+	cli, err := client.NewClient(conf, "generator-"+version)
 	if err != nil {
 		panic(err)
 	}
