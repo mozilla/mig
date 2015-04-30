@@ -27,7 +27,7 @@ type Runner struct {
 	Results    modules.Result
 }
 
-func (r Runner) Run(Args []byte) (resStr string) {
+func (r Runner) Run() (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
