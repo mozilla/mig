@@ -52,7 +52,7 @@ func (r Runner) Run() (resStr string) {
 	if len(r.Parameters.PkgMatch.Matches) > 0 {
 		oresp := ovallib.PackageQuery(r.Parameters.PkgMatch.Matches)
 		for _, x := range oresp {
-			npi := &PkgInfo{PkgName: x.Name, PkgVersion: x.Version}
+			npi := &PkgInfo{PkgName: x.Name, PkgVersion: x.Version, PkgType: x.PkgType}
 			e.Matches = append(e.Matches, *npi)
 		}
 
@@ -120,7 +120,7 @@ func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []st
 	}
 
 	for _, x := range elem.Matches {
-		resStr := fmt.Sprintf("pkgmatch name=%v version=%v", x.PkgName, x.PkgVersion)
+		resStr := fmt.Sprintf("pkgmatch name=%v version=%v type=%v", x.PkgName, x.PkgVersion, x.PkgType)
 		prints = append(prints, resStr)
 	}
 
@@ -150,6 +150,7 @@ type MOResult struct {
 type PkgInfo struct {
 	PkgName    string `json:"name"`
 	PkgVersion string `json:"version"`
+	PkgType    string `json:"type"`
 }
 
 type Parameters struct {
