@@ -28,7 +28,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli, err = client.NewClient(conf, "agent-search-"+version)
+	cli, err := client.NewClient(conf, "agent-search-"+version)
 	if err != nil {
 		panic(err)
 	}
