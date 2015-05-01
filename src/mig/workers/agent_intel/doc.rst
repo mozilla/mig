@@ -1,12 +1,12 @@
-=========================================
-Mozilla InvestiGator: MozDef Asset Worker
-=========================================
+========================================
+Mozilla InvestiGator: Agent Intel Worker
+========================================
 :Author: Julien Vehent <jvehent@mozilla.com>
 
 .. sectnum::
 .. contents:: Table of Contents
 
-The MozDef Asset Worker in a separate program that listens for event about
+The Agent Intel Worker in a separate program that listens for event about
 agents that newly joined the platform, and create asset hints that are
 published to MozDef. This worker serves a very specific purpose in the
 collection of asset data performed by Mozilla OpSec. It may not be very useful
@@ -37,6 +37,10 @@ rabbitmq endpoint when MozDef will retrieve them.
 		clientkeypath  = "/etc/certs/migassetworker.key"
 		timeout = "10s"
 
+	; https://github.com/ameihm0912/vmintgr
+	[vmintgr]
+		bin = "/opt/vmintgr/bin/grouptest"
+
 	; mig rabbitmq endpoint
 	[mq]
 		host = "hostname.mig.relay.example.net"
@@ -62,9 +66,9 @@ Upstart
 
 .. code::
 
-	# Mozilla InvestiGator MozDef Asset Worker
+	# Mozilla InvestiGator Agent Intel Worker
 
-	description     "MIG MozDef Asset Worker"
+	description     "MIG Agent Intel Worker"
 
 	start on filesystem or runlevel [2345]
 	stop on runlevel [!2345]
@@ -79,8 +83,8 @@ Upstart
 	console none
 
 	pre-start script
-		test /opt/mig_mozdef_asset_worker || { stop; exit 0; }
+		test /opt/mig_agent_intel_worker || { stop; exit 0; }
 	end script
 
 	# Start
-	exec /opt/mig_mozdef_asset_worker
+	exec /opt/mig_agent_intel_worker

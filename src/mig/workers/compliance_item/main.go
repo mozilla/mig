@@ -17,6 +17,7 @@ import (
 	"mig/modules/file"
 	"mig/workers"
 	"os"
+	"os/exec"
 	"regexp"
 	"time"
 )
@@ -29,6 +30,9 @@ type Config struct {
 	Logging mig.Logging
 	API     struct {
 		Host string
+	}
+	Vmintgr struct {
+		Bin string
 	}
 }
 
@@ -123,12 +127,17 @@ func makeComplianceItem(cmd mig.Command, conf Config) (items []gozdef.Compliance
 	ci.Check.Description = cmd.Action.Name
 	ci.Link = fmt.Sprintf("%s/command?commandid=%.0f", conf.API.Host, cmd.ID)
 	if cmd.Agent.Tags != nil {
+		operator := ""
 		if _, ok := cmd.Agent.Tags.(map[string]interface{})["operator"]; ok {
-			ci.Tags = struct {
-				Operator string `json:"operator"`
-			}{
-				Operator: cmd.Agent.Tags.(map[string]interface{})["operator"].(string),
-			}
+			operator = cmd.Agent.Tags.(map[string]interface{})["operator"].(string)
+		}
+		team := getTeam(cmd.Agent, conf)
+		ci.Tags = struct {
+			Operator string `json:"operator"`
+			Team     string `json:"team"`
+		}{
+			Operator: operator,
+			Team:     team,
 		}
 	}
 	for i, result := range cmd.Results {
@@ -259,4 +268,35 @@ func makeComplianceItem(cmd mig.Command, conf Config) (items []gozdef.Compliance
 		}
 	}
 	return
+}
+
+type VmintgrOutput struct {
+	Host string `json:"host"`
+	Ip   string `json:"ip"`
+	Team string `json:"team"`
+}
+
+func getTeam(agt mig.Agent, conf Config) string {
+	var vmout VmintgrOutput
+	if conf.Vmintgr.Bin == "" {
+		return ""
+	}
+	for i := 0; i <= len(agt.Env.Addresses); i++ {
+		query := "host:" + agt.Name
+		if i > 0 {
+			query = "ip:" + agt.Env.Addresses[i-1]
+		}
+		out, err := exec.Command(conf.Vmintgr.Bin, query).Output()
+		if err != nil {
+			return ""
+		}
+		err = json.Unmarshal(out, &vmout)
+		if err != nil {
+			return ""
+		}
+		if vmout.Team != "default" {
+			return vmout.Team
+		}
+	}
+	return "default"
 }

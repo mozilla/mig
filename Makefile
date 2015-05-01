@@ -295,9 +295,9 @@ worker-agent-verif:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_agent_verif_worker $(GOLDFLAGS) mig/workers/agent_verif
 
-worker-mozdef-asset:
+worker-agent-intel:
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_mozdef_asset_worker $(GOLDFLAGS) mig/workers/mozdef_asset
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_agent_intel_worker $(GOLDFLAGS) mig/workers/agent_intel
 
 worker-compliance-item:
 	$(MKDIR) -p $(BINDIR)
