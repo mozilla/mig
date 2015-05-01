@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>MIG Data</title>
     <meta charset="utf-8" />
     <link href="docstyle.css" rel="stylesheet" />
-    <title>MIG Data</title>
     <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
 </head>
 <body>
@@ -11,15 +11,13 @@
     <aside class="topic contents" id="table-of-contents">
         <h1>Table of Contents</h1>
         <ul class="auto-toc">
-            <li>
-                <p><a href="#postgresql">1   Postgresql</a></p>
+            <li><a href="#postgresql">1   Postgresql</a>
                 <ul class="auto-toc">
                     <li><a href="#database-creation-script">1.1   Database creation script</a></li>
                     <li><a href="#structure-tables">1.2   Structure &amp; Tables</a></li>
                 </ul>
             </li>
-            <li>
-                <p><a href="#queries">2   Queries</a></p>
+            <li><a href="#queries">2   Queries</a>
                 <ul class="auto-toc">
                     <li><a href="#adding-investigators">2.1   Adding Investigators</a></li>
                     <li><a href="#finding-offline-agents">2.2   Finding offline agents</a></li>
@@ -58,28 +56,28 @@
             <h3>2.1   Adding Investigators</h3>
             <p>In the future, this will probably be automated via the API. But for now, and until we have a strong authentication mechanism for API calls, it must be done manually in the database.</p>
             <p>Adapt the query below to add a new investigator.</p>
-            <pre><code class="sql"><span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">investigators</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">pgpfingerprint</span><span class="p">)</span>
-<span class="k">VALUES</span> <span class="p">(</span><span class="s1">'Bob Kelso'</span><span class="p">,</span> <span class="s1">'E608......'</span><span class="p">);</span></code></pre>
+            <pre class="code sql"><span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">investigators</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">pgpfingerprint</span><span class="p">)</span>
+<span class="k">VALUES</span> <span class="p">(</span><span class="s1">'Bob Kelso'</span><span class="p">,</span> <span class="s1">'E608......'</span><span class="p">);</span></pre>
         </section>
         <section id="finding-offline-agents">
             <h3>2.2   Finding offline agents</h3>
             <p>The following query retrieves a list of agents that have been online over the last 30 days, but have not sent a heartbeat in the last 5 minutes.</p>
-            <pre><code class="sql"><span class="k">SELECT</span> <span class="k">DISTINCT</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">agents</span>
+            <pre class="code sql"><span class="k">SELECT</span> <span class="k">DISTINCT</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">agents</span>
 <span class="k">WHERE</span> <span class="n">name</span> <span class="k">IN</span> <span class="p">(</span>
     <span class="k">SELECT</span> <span class="k">DISTINCT</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">agents</span>
     <span class="k">WHERE</span> <span class="n">heartbeattime</span> <span class="o">&gt;=</span> <span class="n">NOW</span><span class="p">()</span> <span class="o">-</span> <span class="nb">interval</span> <span class="s1">'30 days'</span>
 <span class="p">)</span> <span class="k">AND</span> <span class="n">name</span> <span class="k">NOT</span> <span class="k">IN</span> <span class="p">(</span>
     <span class="k">SELECT</span> <span class="k">DISTINCT</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">agents</span>
     <span class="k">WHERE</span> <span class="n">heartbeattime</span> <span class="o">&gt;=</span> <span class="n">NOW</span><span class="p">()</span> <span class="o">-</span> <span class="nb">interval</span> <span class="s1">'5 minutes'</span>
-<span class="p">)</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">name</span><span class="p">;</span></code></pre>
+<span class="p">)</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">name</span><span class="p">;</span></pre>
         </section>
         <section id="finding-double-agents">
             <h3>2.3   Finding double agents</h3>
             <p>Sometimes during upgrades the older agent isn't shut down. You can find these endpoints with double agents in the database because each agent sends separate heartbeats for the same endpoint:</p>
-            <pre><code class="sql"><span class="k">SELECT</span> <span class="k">COUNT</span><span class="p">(</span><span class="n">queueloc</span><span class="p">),</span> <span class="n">queueloc</span> <span class="k">FROM</span> <span class="n">agents</span>
+            <pre class="code sql"><span class="k">SELECT</span> <span class="k">COUNT</span><span class="p">(</span><span class="n">queueloc</span><span class="p">),</span> <span class="n">queueloc</span> <span class="k">FROM</span> <span class="n">agents</span>
 <span class="k">WHERE</span> <span class="n">heartbeattime</span> <span class="o">&gt;=</span> <span class="n">NOW</span><span class="p">()</span> <span class="o">-</span> <span class="nb">INTERVAL</span> <span class="s1">'10 minutes'</span>
 <span class="k">GROUP</span> <span class="k">BY</span> <span class="n">queueloc</span> <span class="k">HAVING</span> <span class="k">COUNT</span><span class="p">(</span><span class="n">queueloc</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
-<span class="k">ORDER</span> <span class="k">BY</span> <span class="k">count</span><span class="p">(</span><span class="n">queueloc</span><span class="p">)</span> <span class="k">DESC</span><span class="p">;</span></code></pre>
+<span class="k">ORDER</span> <span class="k">BY</span> <span class="k">count</span><span class="p">(</span><span class="n">queueloc</span><span class="p">)</span> <span class="k">DESC</span><span class="p">;</span></pre>
             <p>This query will list all the agents sorted by the count of agents heartbeatting on each endpoint:</p>
             <pre>| count  |             name
 |--------+--------------------------------------
@@ -93,7 +91,7 @@
     <section id="scheduler-spool">
         <h2>3   Scheduler Spool</h2>
         <p>MIG data is stored both on the file system of the scheduler, and in the database. On the scheduler, each action and command are stored individually in a text file in /var/cache/mig (by default).</p>
-        <pre><code class="bash">   <span class="nv">$ </span>tree -d /var/cache/mig/
+        <pre class="code bash">   <span class="nv">$ </span>tree -d /var/cache/mig/
    /var/cache/mig/
    ├── action
    │   ├── <span class="k">done</span>
@@ -106,9 +104,9 @@
        ├── ready
        └── returned
 
-   10 directories
+   <span class="m">10</span> directories
 
-2      | command.private.corp.dc1.example.net</code></pre>
+<span class="m">2</span>      <span class="p">|</span> command.private.corp.dc1.example.net</pre>
     </section>
 </body>
 </html>

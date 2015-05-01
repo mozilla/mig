@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Mozilla InvestiGator Concepts &amp; Internal Components</title>
     <meta charset="utf-8" />
     <link href="docstyle.css" rel="stylesheet" />
-    <title>Mozilla InvestiGator Concepts &amp; Internal Components</title>
     <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
 </head>
 <body>
@@ -11,30 +11,26 @@
     <aside class="topic contents" id="table-of-contents">
         <h1>Table of Contents</h1>
         <ul class="auto-toc">
-            <li>
-                <p><a href="#actions-and-commands">1   Actions and Commands</a></p>
+            <li><a href="#actions-and-commands">1   Actions and Commands</a>
                 <ul class="auto-toc">
                     <li><a href="#actions">1.1   Actions</a></li>
                 </ul>
             </li>
-            <li>
-                <p><a href="#action-commands-workflow">2   Action/Commands workflow</a></p>
+            <li><a href="#action-commands-workflow">2   Action/Commands workflow</a>
                 <ul class="auto-toc">
                     <li><a href="#command-execution-flow-in-agent-and-modules">2.1   Command execution flow in Agent and Modules</a></li>
                     <li><a href="#command-expiration-timeouts">2.2   Command expiration &amp; timeouts</a></li>
                 </ul>
             </li>
             <li><a href="#access-control-lists">3   Access Control Lists</a></li>
-            <li>
-                <p><a href="#agent-initialization-process">4   Agent initialization process</a></p>
+            <li><a href="#agent-initialization-process">4   Agent initialization process</a>
                 <ul class="auto-toc">
                     <li><a href="#registration-process">4.1   Registration process</a></li>
                     <li><a href="#check-in-mode">4.2   Check-In mode</a></li>
                 </ul>
             </li>
             <li><a href="#agent-upgrade-process">5   Agent upgrade process</a></li>
-            <li>
-                <p><a href="#threat-model">6   Threat Model</a></p>
+            <li><a href="#threat-model">6   Threat Model</a>
                 <ul class="auto-toc">
                     <li><a href="#strong-gpg-security-model">6.1   Strong GPG security model</a></li>
                     <li><a href="#infrastructure-resiliency">6.2   Infrastructure resiliency</a></li>
@@ -84,7 +80,7 @@
             <h3>1.1   Actions</h3>
             <p>Actions are JSON files created by investigator to perform tasks on agents.</p>
             <p>For example, an investigator who wants to verify than root passwords are hashed and salted on linux systems, would use the following action:</p>
-            <pre><code class="json"><span class="p">{</span>
+            <pre class="code json"><span class="p">{</span>
     <span class="nt">"name"</span><span class="p">:</span> <span class="s2">"verify root password storage method"</span><span class="p">,</span>
     <span class="nt">"target"</span><span class="p">:</span> <span class="s2">"agents.queueloc like 'linux.%'"</span><span class="p">,</span>
     <span class="nt">"threat"</span><span class="p">:</span> <span class="p">{</span>
@@ -116,18 +112,17 @@
         <span class="p">}</span>
     <span class="p">],</span>
     <span class="nt">"syntaxversion"</span><span class="p">:</span> <span class="mi">2</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <p>The parameters are:</p>
             <ul>
                 <li><strong>name</strong>: a string that represents the action.</li>
-                <li>
-                    <p><strong>target</strong>: a search string used by the scheduler to find agents to run the action on. The target format uses Postgresql's WHERE condition format against the <a href="data.rst.html#entity-relationship-diagram">agents</a> table of the database. This method allows for complex target queries, like running an action against a specific operating system, or against an endpoint that has a given public IP, etc...</p>
+                <li><strong>target</strong>: a search string used by the scheduler to find agents to run the action on. The target format uses Postgresql's WHERE condition format against the <a href="data.rst.html#entity-relationship-diagram">agents</a> table of the database. This method allows for complex target queries, like running an action against a specific operating system, or against an endpoint that has a given public IP, etc...
                     <p>The most simple query that targets all agents is <cite>name like '%'</cite> (the <cite>%</cite> character is a wildcard in SQL pattern matching). Targetting by OS family can be done on the <cite>os</cite> parameters such as <cite>os='linux'</cite> or <cite>os='darwin'</cite>.</p>
                     <p>Combining conditions is also trivial: <cite>version='201409171023+c4d6f50.prod' and heartbeattime &gt; NOW() - interval '1 minute'</cite> will only target agents that run a specific version and have sent a heartbeat during the last minute.</p>
                     <p>Complex queries are also possible. For example: imagine an action with ID 1 launched against 10,000 endpoints, which returned 300 endpoints with positive results. We want to launch action 2 on those 300 endpoints only. It can be accomplished with the following <cite>target</cite> condition. (note: you can reuse this condition by simply changing the value of <cite>actionid</cite>)</p>
                 </li>
             </ul>
-            <pre><code class="sql"><span class="n">id</span> <span class="k">IN</span> <span class="p">(</span><span class="k">select</span> <span class="n">agentid</span> <span class="k">from</span> <span class="n">commands</span><span class="p">,</span> <span class="n">json_array_elements</span><span class="p">(</span><span class="n">commands</span><span class="p">.</span><span class="n">results</span><span class="p">)</span> <span class="k">as</span> <span class="n">r</span> <span class="k">where</span> <span class="n">actionid</span><span class="o">=</span><span class="mi">1</span> <span class="k">and</span> <span class="n">r</span><span class="o">#&gt;&gt;</span><span class="s1">'{foundanything}'</span> <span class="o">=</span> <span class="s1">'true'</span><span class="p">)</span></code></pre>
+            <pre class="code sql"><span class="n">id</span> <span class="k">IN</span> <span class="p">(</span><span class="k">select</span> <span class="n">agentid</span> <span class="k">from</span> <span class="n">commands</span><span class="p">,</span> <span class="n">json_array_elements</span><span class="p">(</span><span class="n">commands</span><span class="p">.</span><span class="n">results</span><span class="p">)</span> <span class="k">as</span> <span class="n">r</span> <span class="k">where</span> <span class="n">actionid</span><span class="o">=</span><span class="mi">1</span> <span class="k">and</span> <span class="n">r</span><span class="o">#&gt;&gt;</span><span class="s1">'{foundanything}'</span> <span class="o">=</span> <span class="s1">'true'</span><span class="p">)</span></pre>
             <ul>
                 <li><strong>description</strong> and <strong>threat</strong>: additional fields to describe the action</li>
                 <li><strong>operations</strong>: an array of operations, each operation calls a module with a set of parameters. The parameters syntax are specific to the module.</li>
@@ -172,7 +167,7 @@
              +-------+</pre>
             </blockquote>
             <p>The command received by the agent is composed of a copy of the action described previously, but signed with the private key of a trusted investigator. It also contains additional parameters that are specific to the targetted agent, such as command processing timestamps, name of the agent queue on the message broker, action and command unique IDs and status and results of the command. Below is an command derived from the root password checking action, and ran on the host named 'host1.example.net'.</p>
-            <pre><code class="json"><span class="p">{</span>
+            <pre class="code json"><span class="p">{</span>
   <span class="nt">"id"</span><span class="p">:</span> <span class="mf">1.427392971126604e+18</span><span class="p">,</span>
   <span class="nt">"action"</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="err">SIGNED</span> <span class="err">COPY</span> <span class="err">OF</span> <span class="err">THE</span> <span class="err">ACTION</span> <span class="err">...</span> <span class="p">},</span>
   <span class="nt">"agent"</span><span class="p">:</span> <span class="p">{</span>
@@ -223,7 +218,7 @@
   <span class="p">],</span>
   <span class="nt">"starttime"</span><span class="p">:</span> <span class="s2">"2015-03-26T18:02:51.126605Z"</span><span class="p">,</span>
   <span class="nt">"finishtime"</span><span class="p">:</span> <span class="s2">"2015-03-26T18:03:00.671232Z"</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <p>The results of the command show that the file '/etc/shadow' has matched, and thus "FoundAnything" returned "True".</p>
             <p>The invocation of the file module has completed successfully, which is represented by <strong>results-&gt;0-&gt;success=true</strong>. In our example, there is only one operation in the <strong>action-&gt;operations</strong> array, so only one result is present. When multiple operations are performed, each has its results listed in a corresponding entry of the results array (operations[0] is in results[0], operations[1] in results[1], etc...).</p>
             <p>Finally, the agent has performed all operations in the operations array successfully, and returned <strong>status=success</strong>. Had a failure happened on the agent, the returned status would be one of "failed", "timeout" or "cancelled".</p>
@@ -231,8 +226,8 @@
         <section id="command-expiration-timeouts">
             <h3>2.2   Command expiration &amp; timeouts</h3>
             <p>To prevent abuse of resources, agents will kill long-running modules after a given period of time. That timeout is hardcoded in the agent configuration at compile time and defaults to 5 minutes.</p>
-            <pre><code class="go"><span class="c1">// timeout after which a module run is killed
-</span><span class="kd">var</span> <span class="nx">MODULETIMEOUT</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span> <span class="p">=</span> <span class="mi">300</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span></code></pre>
+            <pre class="code go"><span class="c1">// timeout after which a module run is killed
+</span><span class="kd">var</span> <span class="nx">MODULETIMEOUT</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span> <span class="p">=</span> <span class="mi">300</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span></pre>
             <p>That timeout represents the <strong>maximum</strong> execution time of a single operation. If an action contains 3 operations, each operation gets its own timeout. But because operations run in parallel in the agent, the maximum runtime of an action should be very close to the value of MODULETIMEOUT.</p>
             <p>In a typical deployment, it is safe to increase MODULETIMEOUT to allow for longer operations. A value of 20 minutes is usual. Make sure to fine tune this to your environment, and get the approval of your ops team because mig-agent may end up consuming resources (but never more than 50% of the cpu available on a system).</p>
             <p>Oftentimes, an investigator will want a timeout that is much shorter than the value of MODULETIMEOUT. In the MIG command line, the flag <cite>-e</cite> controls the expiration. It defaults to 5 minutes but can be set to 30 seconds for simple investigations. When that happens, the agent will calculate an appropriate expiration for the operations being run. If the expiration set on the action is set to 30 seconds, the agent will kill operations that run for more than 30 seconds.</p>
@@ -244,7 +239,7 @@
         <p>Not all keys can perform all actions. The scheduler, for example, sometimes need to issue specific actions to agents (such as during the upgrade protocol) but shouldn't be able to perform more dangerous actions. This is enforced by an Access Control List, or ACL, stored on the agents. An ACL describes who can access what function of which module. It can be used to require multiple signatures on specific actions, and limit the list of investigators allowed to perform an action.</p>
         <p>An ACL is composed of permissions, which are JSON documents hardwired into the agent configuration. In the future, MIG will dynamically ship permissions to agents.</p>
         <p>Below is an example of a permission for the <cite>filechecker</cite> module:</p>
-        <pre><code class="json"><span class="p">{</span>
+        <pre class="code json"><span class="p">{</span>
     <span class="nt">"filechecker"</span><span class="p">:</span> <span class="p">{</span>
         <span class="nt">"minimumweight"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
         <span class="nt">"investigators"</span><span class="p">:</span> <span class="p">{</span>
@@ -258,18 +253,18 @@
             <span class="p">}</span>
         <span class="p">}</span>
     <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         <p><cite>investigators</cite> contains a list of users with their PGP fingerprints, and their weight, an integer that represents their access level. When an agent receives an action that calls the filechecker module, it will first verify the signatures of the action, and then validates that the signers are authorized to perform the action. This is done by summing up the weights of the signatures, and verifying that they equal or exceed the minimum required weight.</p>
         <p>Thus, in the example above, investigator John Smith cannot issue a filechecker action alone. His weight of 1 doesn't satisfy the minimum weight of 2 required by the filechecker permission. Therefore, John will need to ask investigator Bob Kelso to sign his action as well. The weight of both investigators are then added, giving a total of 3, which satisfies the minimum weight of 2.</p>
         <p>This method gives ample flexibility to require multiple signatures on modules, and ensure that one investigator cannot perform sensitive actions on remote endpoints without the permissions of others.</p>
         <p>The default permission <cite>default</cite> can be used as a default for all modules. It has the following syntax:</p>
-        <pre><code class="json"><span class="p">{</span>
+        <pre class="code json"><span class="p">{</span>
     <span class="nt">"default"</span><span class="p">:</span> <span class="p">{</span>
         <span class="nt">"minimumweight"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
         <span class="nt">"investigators"</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">}</span>
         <span class="err">]</span>
     <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         <p>The <cite>default</cite> permission is overridden by module specific permissions.</p>
         <p>The ACL is currently applied to modules. In the future, ACL will have finer control to authorize access to specific functions of modules. For example, an investigator could be authorized to call the <cite>regex</cite> function of filechecker module, but only in <cite>/etc</cite>. This functionality is not implemented yet.</p>
     </section>
@@ -288,7 +283,7 @@
                 <li>linux: /var/run/mig/</li>
             </ul>
             <p>Below is a sample heartbeat message from a linux agent stored in <cite>/var/run/mig/mig-agent.ok</cite>.</p>
-            <pre><code class="json"><span class="p">{</span>
+            <pre class="code json"><span class="p">{</span>
     <span class="nt">"destructiontime"</span><span class="p">:</span> <span class="s2">"0001-01-01T00:00:00Z"</span><span class="p">,</span>
     <span class="nt">"environment"</span><span class="p">:</span> <span class="p">{</span>
         <span class="nt">"arch"</span><span class="p">:</span> <span class="s2">"amd64"</span><span class="p">,</span>
@@ -302,7 +297,7 @@
     <span class="nt">"queueloc"</span><span class="p">:</span> <span class="s2">"linux.someserver.example.net.5hsa811oda"</span><span class="p">,</span>
     <span class="nt">"starttime"</span><span class="p">:</span> <span class="s2">"2014-07-30T21:34:48.525449401-07:00"</span><span class="p">,</span>
     <span class="nt">"version"</span><span class="p">:</span> <span class="s2">"201407310027+bcbdd94.prod"</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         </section>
         <section id="check-in-mode">
             <h3>4.2   Check-In mode</h3>
@@ -359,7 +354,7 @@
       |                   |&lt;--------------------------------------|                   |</pre>
         </blockquote>
         <p>All upgrade operations are initiated by an investigator (1). The upgrade is triggered by an action to the upgrade module with the following parameters:</p>
-        <pre><code class="json"><span class="s2">"Operations"</span><span class="err">:</span> <span class="p">[</span>
+        <pre class="code json"><span class="s2">"Operations"</span><span class="err">:</span> <span class="p">[</span>
     <span class="p">{</span>
         <span class="nt">"Module"</span><span class="p">:</span> <span class="s2">"upgrade"</span><span class="p">,</span>
         <span class="nt">"Parameters"</span><span class="p">:</span> <span class="p">{</span>
@@ -370,7 +365,7 @@
             <span class="p">}</span>
         <span class="p">}</span>
     <span class="p">}</span>
-<span class="p">]</span><span class="err">,</span></code></pre>
+<span class="p">]</span><span class="err">,</span></pre>
         <ul>
             <li>Each OS family and architecture have their own parameters (ex: "linux/amd64", "darwin/amd64", "windows/386", ...). Then, in each OS/Arch group, we have:</li>
             <li>to_version is the version an agent should upgrade to</li>

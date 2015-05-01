@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Mozilla InvestiGator: File module</title>
     <meta charset="utf-8" />
     <link href="docstyle.css" rel="stylesheet" />
-    <title>Mozilla InvestiGator: File module</title>
     <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
 </head>
 <body>
@@ -11,16 +11,14 @@
     <aside class="topic contents" id="table-of-contents">
         <h1>Table of Contents</h1>
         <ul class="auto-toc">
-            <li>
-                <p><a href="#usage">1   Usage</a></p>
+            <li><a href="#usage">1   Usage</a>
                 <ul class="auto-toc">
                     <li><a href="#search-paths">1.1   Search Paths</a></li>
                     <li><a href="#search-filters">1.2   Search Filters</a></li>
                     <li><a href="#search-options">1.3   Search Options</a></li>
                 </ul>
             </li>
-            <li>
-                <p><a href="#search-algorithm">2   Search algorithm</a></p>
+            <li><a href="#search-algorithm">2   Search algorithm</a>
                 <ul class="auto-toc">
                     <li><a href="#search-activation-deactivation">2.1   Search activation &amp; deactivation</a></li>
                 </ul>
@@ -34,7 +32,7 @@
         <p>In JSON format, searches are defined as a json object where each search has a label (key) and search parameters (value).</p>
         <p>A search label is a string between 1 and 64 characters, composed of letter [a-zA-z], numbers [0-9], underscore [_] or dashes [-].</p>
         <p>A search must have at least one search path.</p>
-        <pre><code class="json"><span class="p">{</span>
+        <pre class="code json"><span class="p">{</span>
     <span class="nt">"searches"</span><span class="p">:</span> <span class="p">{</span>
         <span class="nt">"somesearchlabel"</span><span class="p">:</span> <span class="p">{</span>
             <span class="nt">"paths"</span><span class="p">:</span> <span class="p">[</span>
@@ -63,7 +61,7 @@
             <span class="p">}</span>
         <span class="p">}</span>
     <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         <section id="search-paths">
             <h3>1.1   Search Paths</h3>
             <p>A search can have an unlimited number of search paths. Each path is treated as a string. No path expansion or regular expression is permitted in a path string.</p>

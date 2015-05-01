@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Mozilla InvestiGator: TimeDrift module</title>
     <meta charset="utf-8" />
     <link href="docstyle.css" rel="stylesheet" />
-    <title>Mozilla InvestiGator: TimeDrift module</title>
     <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
 </head>
 <body>
@@ -12,8 +12,7 @@
         <h1>Table of Contents</h1>
         <ul class="auto-toc">
             <li><a href="#usage">1   Usage</a></li>
-            <li>
-                <p><a href="#examples">2   Examples</a></p>
+            <li><a href="#examples">2   Examples</a>
                 <ul class="auto-toc">
                     <li><a href="#endpoint-non-compliant-with-a-10-millisecond-drift">2.1   Endpoint non-compliant with a 10 millisecond drift</a></li>
                     <li><a href="#endpoint-compliant-with-a-5-seconds-drift">2.2   Endpoint compliant with a 5 seconds drift</a></li>
@@ -27,19 +26,19 @@
     <section id="usage">
         <h2>1   Usage</h2>
         <p>timedrift can be called with empty parameters, and then only returns the local time of the target endpoint. When called with a drift parameter, NTP connections are established to evaluated the local time against network time.</p>
-        <pre><code class="json"><span class="p">{</span>
+        <pre class="code json"><span class="p">{</span>
   <span class="nt">"module"</span><span class="p">:</span> <span class="s2">"timedrift"</span><span class="p">,</span>
   <span class="nt">"parameters"</span><span class="p">:</span> <span class="p">{</span>
     <span class="nt">"drift"</span><span class="p">:</span> <span class="s2">"5s"</span>
   <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
     </section>
     <section id="examples">
         <h2>2   Examples</h2>
         <section id="endpoint-non-compliant-with-a-10-millisecond-drift">
             <h3>2.1   Endpoint non-compliant with a 10 millisecond drift</h3>
             <p>Evaluating a 10ms drift is not useful, because the latency between the endpoint and the NTP servers is most likely greater than 10ms, and endpoint would always fail that test. But it illustrates the output from an endpoint that has drifted beyond the acceptable value.</p>
-            <pre><code class="">$ mig timedrift -t "name='somehost.example.net'" -show all -drift 10ms 2&gt;/dev/null
+            <pre class="code">$ mig timedrift -t "name='somehost.example.net'" -show all -drift 10ms 2&gt;/dev/null
 stat: execution time 252.902127ms
 somehost.example.net local time is 2015-03-14T13:26:27.441740604-04:00
 somehost.example.net local time is out of sync from NTP servers
@@ -51,11 +50,11 @@ somehost.example.net stat: 0.pool.ntp.org responded in 44.26132ms with time 2015
 somehost.example.net stat: 1.pool.ntp.org responded in 38.263502ms with time 2015-03-14 17:26:27.520487097 +0000 UTC. local time drifts by 16.542859ms
 somehost.example.net stat: 2.pool.ntp.org responded in 46.682002ms with time 2015-03-14 17:26:27.576307275 +0000 UTC. local time drifts by 20.853337ms
 somehost.example.net stat: 3.pool.ntp.org responded in 83.492232ms with time 2015-03-14 17:26:27.660943187 +0000 UTC. local time drifts by 33.743419ms
-somehost.example.net command success</code></pre>
+somehost.example.net command success</pre>
         </section>
         <section id="endpoint-compliant-with-a-5-seconds-drift">
             <h3>2.2   Endpoint compliant with a 5 seconds drift</h3>
-            <pre><code class="">$ mig timedrift -t "name='somehost.example.net'" -show all -drift 5s 2&gt;/dev/null
+            <pre class="code">$ mig timedrift -t "name='somehost.example.net'" -show all -drift 5s 2&gt;/dev/null
 stat: execution time 1.76047894s
 somehost.example.net local time is 2015-03-14T13:26:10.764244879-04:00
 somehost.example.net local time is within acceptable drift from NTP servers
@@ -63,12 +62,12 @@ somehost.example.net stat: 0.pool.ntp.org responded in 44.574857ms with time 201
 somehost.example.net stat: 1.pool.ntp.org responded in 38.52106ms with time 2015-03-14 17:26:12.139883892 +0000 UTC. local time drifts by 16.917595ms
 somehost.example.net stat: 2.pool.ntp.org responded in 46.79544ms with time 2015-03-14 17:26:12.38555022 +0000 UTC. local time drifts by 20.839501ms
 somehost.example.net stat: 3.pool.ntp.org responded in 82.798078ms with time 2015-03-14 17:26:12.490975185 +0000 UTC. local time drifts by 33.808416ms
-somehost.example.net command success</code></pre>
+somehost.example.net command success</pre>
         </section>
         <section id="get-localtime-from-endpoint">
             <h3>2.3   Get localtime from endpoint</h3>
-            <pre><code class="">$ mig timedrift -t "name='somehost.example.net'" 2&gt;/dev/null
-somehost.example.net local time is 2015-03-14T13:32:24.226318523-04:00</code></pre>
+            <pre class="code">$ mig timedrift -t "name='somehost.example.net'" 2&gt;/dev/null
+somehost.example.net local time is 2015-03-14T13:32:24.226318523-04:00</pre>
         </section>
     </section>
 </body>

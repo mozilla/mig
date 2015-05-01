@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>MIG API</title>
     <meta charset="utf-8" />
     <link href="docstyle.css" rel="stylesheet" />
-    <title>MIG API</title>
     <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
 </head>
 <body>
@@ -11,8 +11,7 @@
     <aside class="topic contents" id="table-of-contents">
         <h1>Table of Contents</h1>
         <ul class="auto-toc">
-            <li>
-                <p><a href="#authentication-with-x-pgpauthorization-version-1">1   Authentication with X-PGPAUTHORIZATION version 1</a></p>
+            <li><a href="#authentication-with-x-pgpauthorization-version-1">1   Authentication with X-PGPAUTHORIZATION version 1</a>
                 <ul class="auto-toc">
                     <li><a href="#security-implications">1.1   Security implications</a></li>
                     <li><a href="#example-1-invalid-timestamp">1.2   Example 1: invalid timestamp</a></li>
@@ -21,8 +20,7 @@
                     <li><a href="#generating-a-token-in-python">1.5   Generating a token in Python</a></li>
                 </ul>
             </li>
-            <li>
-                <p><a href="#api-endpoints">2   API endpoints</a></p>
+            <li><a href="#api-endpoints">2   API endpoints</a>
                 <ul class="auto-toc">
                     <li><a href="#get-api-v1-heartbeat">2.1   GET /api/v1/heartbeat</a></li>
                     <li><a href="#get-api-v1-ip">2.2   GET /api/v1/ip</a></li>
@@ -37,8 +35,7 @@
                     <li><a href="#get-api-v1-search">2.11   GET /api/v1/search</a></li>
                 </ul>
             </li>
-            <li>
-                <p><a href="#data-transformation">3   Data transformation</a></p>
+            <li><a href="#data-transformation">3   Data transformation</a>
                 <ul class="auto-toc">
                     <li><a href="#compliance-items">3.1   Compliance Items</a></li>
                     <li><a href="#geolocations">3.2   Geolocations</a></li>
@@ -52,22 +49,20 @@
         <h2>1   Authentication with X-PGPAUTHORIZATION version 1</h2>
         <p>Authenticating against the MIG API requires sending a PGP signed token in the request header named <cite>X-PGPAUTHORIZATION</cite>. The key that signs the token must belong to an active investigator. Construction of the token works as follows:</p>
         <ol type="1">
-            <li>
-                <p>make a string named <strong>str</strong> composed of a version, a UTC timestamp in RFC3339 format and a random nonce, each separated by semicolons. The current version is <strong>1</strong> and may be upgraded in the future. The nonce value must be a positive integer.</p>
+            <li>make a string named <strong>str</strong> composed of a version, a UTC timestamp in RFC3339 format and a random nonce, each separated by semicolons. The current version is <strong>1</strong> and may be upgraded in the future. The nonce value must be a positive integer.
                 <p><strong>str=&lt;VERSION&gt;;&lt;UTC TIMESTAMP RFC3339&gt;;&lt;NONCE&gt;</strong></p>
                 <p>UTC is a hard requirement. The timestamp must end with the suffix <strong>Z</strong> which indicates the UTC timezone. In bash, a correct timestamp can be generated with the command <cite>$ date -u +%Y-%m-%dT%H:%M:%SZ</cite>.</p>
                 <p>An example string would look like: <cite>1;2006-01-02T15:04:05Z;1825922807490630059</cite></p>
                 <p>The string must be terminated by a newline character, hexadecimal code <cite>0x0a</cite>.</p>
             </li>
         </ol>
-        <pre><code class="bash"><span class="nv">$ </span>hexdump -C <span class="o">&lt;&lt;&lt;</span> <span class="s1">'1;2006-01-02T15:04:05Z;1825922807490630059'</span>
-00000000  31 3b 32 30 30 36 2d 30  31 2d 30 32 54 31 35 3a  |1;2006-01-02T15:|
-00000010  30 34 3a 30 35 5a 3b 31  38 32 35 39 32 32 38 30  |04:05Z;182592280|
-00000020  37 34 39 30 36 33 30 30  35 39 0a                 |7490630059.|
-0000002b</code></pre>
+        <pre class="code bash"><span class="nv">$ </span>hexdump -C <span class="o">&lt;&lt;&lt;</span> <span class="s1">'1;2006-01-02T15:04:05Z;1825922807490630059'</span>
+<span class="m">00000000</span>  <span class="m">31</span> 3b <span class="m">32</span> <span class="m">30</span> <span class="m">30</span> <span class="m">36</span> 2d <span class="m">30</span>  <span class="m">31</span> 2d <span class="m">30</span> <span class="m">32</span> <span class="m">54</span> <span class="m">31</span> <span class="m">35</span> 3a  <span class="p">|</span>1<span class="p">;</span>2006-01-02T15:<span class="p">|</span>
+<span class="m">00000010</span>  <span class="m">30</span> <span class="m">34</span> 3a <span class="m">30</span> <span class="m">35</span> 5a 3b <span class="m">31</span>  <span class="m">38</span> <span class="m">32</span> <span class="m">35</span> <span class="m">39</span> <span class="m">32</span> <span class="m">32</span> <span class="m">38</span> <span class="m">30</span>  <span class="p">|</span>04:05Z<span class="p">;</span>182592280<span class="p">|</span>
+<span class="m">00000020</span>  <span class="m">37</span> <span class="m">34</span> <span class="m">39</span> <span class="m">30</span> <span class="m">36</span> <span class="m">33</span> <span class="m">30</span> <span class="m">30</span>  <span class="m">35</span> <span class="m">39</span> 0a                 <span class="p">|</span>7490630059.<span class="p">|</span>
+0000002b</pre>
         <ol start="2" type="1">
-            <li>
-                <p>PGP sign <strong>str</strong> with the private key of the investigator. Armor and detach the signature into <strong>armoredSig</strong>:</p>
+            <li>PGP sign <strong>str</strong> with the private key of the investigator. Armor and detach the signature into <strong>armoredSig</strong>:
                 <pre>$ gpg -a --detach-sig &lt;&lt;&lt; '1;2006-01-02T15:04:05Z;1825922807490630059'
 
 -----BEGIN PGP SIGNATURE-----
@@ -82,15 +77,11 @@ MhnoKfgBnegQnP+BPQZlWcjaBsquenC/joYRhq20nAEwSjZ1Nm7+qHo/DW0bYOA=
 =4nrR
 -----END PGP SIGNATURE-----</pre>
             </li>
-            <li>
-                <p>Create <strong>sig</strong> by taking <strong>armoredSig</strong> and removing the PGP headers, footers, empty lines and newlines.</p>
-                <blockquote>
-                    <p>example: <cite>iQEcBAABCAAGBQJUWPDpAAoJEKPWUhc7dj6PQdgH/0TRMOEAL4SL6v+JvixWtEGJzXBCqBpRBsygHAKT+m4AxwniVa9vr8vfWm14eFpZTGdlDx39Ko+tdFoHn5Z1yKEeQWEQYXqhneAnv0pYR1aIjXM8MY63TNePWBZxUerlRkjv2IH16/W5aBrbOctOxEs1BKuN2pd4Hgubr+2f43gcRcWW+Ww/5Fyg1lKzH8jP84uqiIT8wQOdBrwUkgRdSdfMQbYFjsgY57G+ZsMobNhhlFedgKuZShJCd+G1GlwsfZPsZOSLmVZahI7wjR3vckCJ66eff3e/xX7Gt0zGGa5i1dgH5Q6TSjRGRBE37FwD4C6fycUEuy9yKI7iFziw33Y==k6gT</cite></p>
-                </blockquote>
+            <li>Create <strong>sig</strong> by taking <strong>armoredSig</strong> and removing the PGP headers, footers, empty lines and newlines.
+                <p>example: <cite>iQEcBAABCAAGBQJUWPDpAAoJEKPWUhc7dj6PQdgH/0TRMOEAL4SL6v+JvixWtEGJzXBCqBpRBsygHAKT+m4AxwniVa9vr8vfWm14eFpZTGdlDx39Ko+tdFoHn5Z1yKEeQWEQYXqhneAnv0pYR1aIjXM8MY63TNePWBZxUerlRkjv2IH16/W5aBrbOctOxEs1BKuN2pd4Hgubr+2f43gcRcWW+Ww/5Fyg1lKzH8jP84uqiIT8wQOdBrwUkgRdSdfMQbYFjsgY57G+ZsMobNhhlFedgKuZShJCd+G1GlwsfZPsZOSLmVZahI7wjR3vckCJ66eff3e/xX7Gt0zGGa5i1dgH5Q6TSjRGRBE37FwD4C6fycUEuy9yKI7iFziw33Y==k6gT</cite></p>
             </li>
             <li>Create <strong>token</strong> by concatenating <strong>str</strong>, a semicolon, and <strong>sig</strong>. <strong>token=&lt;str&gt;;&lt;sig&gt;</strong> example: <cite>1;2006-01-02T15:04:05Z;1825922807490630059;owEBYQGe/pANAwAIAaPWUhc7dj6...&lt;truncated&gt;</cite></li>
-            <li>
-                <p>Send <strong>token</strong> in the header named <strong>X-PGPAUTHORIZATION</strong> with the request:</p>
+            <li>Send <strong>token</strong> in the header named <strong>X-PGPAUTHORIZATION</strong> with the request:
                 <pre>$ curl -H 'X-PGPAUTHORIZATION: 1;2006-01-02T15:04:05Z;1825922807490630059;owEBYQGe/pANAwAIAaP...&lt;truncated&gt;' localhost:12345/api/v1/</pre>
             </li>
             <li>The API verifies the version and validity period of the timestamp. By default, a token will be rejected if its timestamp deviates from the server time by more than 10 minutes. Administrators can configure this value. In effect, this means a timestamp is valid for twice the duration of the window. By default, that's 10 minutes before current server time, and 10 minutes after current server time.</li>
@@ -107,7 +98,7 @@ MhnoKfgBnegQnP+BPQZlWcjaBsquenC/joYRhq20nAEwSjZ1Nm7+qHo/DW0bYOA=
         <section id="example-1-invalid-timestamp">
             <h3>1.2   Example 1: invalid timestamp</h3>
             <p>The signature is valid but the timestamp is beyond the acceptable time window.</p>
-            <pre><code class="bash"><span class="nv">$ </span>curl -H <span class="s1">'X-PGPAUTHORIZATION: 1;2006-01-02T15:04:05Z;1825922807490630059;iQEcB...&lt;truncated&gt;'</span> http://localhost:12345/api/v1/
+            <pre class="code bash"><span class="nv">$ </span>curl -H <span class="s1">'X-PGPAUTHORIZATION: 1;2006-01-02T15:04:05Z;1825922807490630059;iQEcB...&lt;truncated&gt;'</span> http://localhost:12345/api/v1/
 
 <span class="o">{</span>
     <span class="s2">"collection"</span>: <span class="o">{</span>
@@ -119,12 +110,12 @@ MhnoKfgBnegQnP+BPQZlWcjaBsquenC/joYRhq20nAEwSjZ1Nm7+qHo/DW0bYOA=
         <span class="s2">"template"</span>: <span class="o">{}</span>,
         <span class="s2">"version"</span>: <span class="s2">"1.0"</span>
     <span class="o">}</span>
-<span class="o">}</span></code></pre>
+<span class="o">}</span></pre>
         </section>
         <section id="example-2-invalid-signature">
             <h3>1.3   Example 2: invalid signature</h3>
             <p>The signature is not valid, or is signed by a key that the API does not recognize.</p>
-            <pre><code class="bash"><span class="nv">$ </span>curl -H <span class="s1">'X-PGPAUTHORIZATION: 1;2014-11-04T15:36:05Z;1825922807490630059;iQEcBA...&lt;truncated&gt;'</span> http://localhost:12345/api/v1/
+            <pre class="code bash"><span class="nv">$ </span>curl -H <span class="s1">'X-PGPAUTHORIZATION: 1;2014-11-04T15:36:05Z;1825922807490630059;iQEcBA...&lt;truncated&gt;'</span> http://localhost:12345/api/v1/
 
 <span class="o">{</span>
     <span class="s2">"collection"</span>: <span class="o">{</span>
@@ -136,19 +127,19 @@ MhnoKfgBnegQnP+BPQZlWcjaBsquenC/joYRhq20nAEwSjZ1Nm7+qHo/DW0bYOA=
         <span class="s2">"template"</span>: <span class="o">{}</span>,
         <span class="s2">"version"</span>: <span class="s2">"1.0"</span>
     <span class="o">}</span>
-<span class="o">}</span></code></pre>
+<span class="o">}</span></pre>
         </section>
         <section id="generating-a-token-in-bash">
             <h3>1.4   Generating a token in Bash</h3>
-            <pre><code class="">$ token="1;$(date -u +%Y-%m-%dT%H:%M:%SZ);$RANDOM$RANDOM$RANDOM$RANDOM"; \
+            <pre class="code">$ token="1;$(date -u +%Y-%m-%dT%H:%M:%SZ);$RANDOM$RANDOM$RANDOM$RANDOM"; \
 sig=$(gpg -a --detach-sig &lt;&lt;&lt; $token |tail -8 |head -7 \
 | sed ':a;N;$!ba;s/\n//g'); echo "X-PGPAUTHORIZATION: $token;$sig"
 
-X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</code></pre>
+X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</pre>
         </section>
         <section id="generating-a-token-in-python">
             <h3>1.5   Generating a token in Python</h3>
-            <pre><code class="python"><span class="c">#!/usr/bin/env python</span>
+            <pre class="code python"><span class="c">#!/usr/bin/env python</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">gnupg</span>
 <span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">gmtime</span><span class="p">,</span> <span class="n">strftime</span>
@@ -180,7 +171,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
     <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">"http://localhost:12345/api/v1/dashboard"</span><span class="p">,</span>
         <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s">'X-PGPAUTHORIZATION'</span><span class="p">:</span> <span class="n">token</span><span class="p">})</span>
     <span class="k">print</span> <span class="n">token</span>
-    <span class="k">print</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span></code></pre>
+    <span class="k">print</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span></pre>
         </section>
     </section>
     <section id="api-endpoints">
@@ -195,7 +186,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                 <li>Response Code: 200 OK</li>
                 <li>Reponse: Collection+JSON</li>
             </ul>
-            <pre><code class="json"><span class="p">{</span>
+            <pre class="code json"><span class="p">{</span>
     <span class="nt">"collection"</span><span class="p">:</span> <span class="p">{</span>
         <span class="nt">"error"</span><span class="p">:</span> <span class="p">{},</span>
         <span class="nt">"href"</span><span class="p">:</span> <span class="s2">"https://api.mig.mozilla.org/api/v1/heartbeat"</span><span class="p">,</span>
@@ -213,7 +204,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
         <span class="nt">"template"</span><span class="p">:</span> <span class="p">{},</span>
         <span class="nt">"version"</span><span class="p">:</span> <span class="s2">"1.0"</span>
     <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         </section>
         <section id="get-api-v1-ip">
             <h3>2.2   GET /api/v1/ip</h3>
@@ -224,8 +215,8 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                 <li>Response Code: 200 OK</li>
                 <li>Response: Text</li>
             </ul>
-            <pre><code class="bash"><span class="nv">$ </span>curl https://api.mig.mozilla.org/api/v1/ip
-108.36.248.44</code></pre>
+            <pre class="code bash"><span class="nv">$ </span>curl https://api.mig.mozilla.org/api/v1/ip
+108.36.248.44</pre>
         </section>
         <section id="get-api-v1-dashboard">
             <h3>2.3   GET /api/v1/dashboard</h3>
@@ -236,7 +227,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                 <li>Response Code: 200 OK</li>
                 <li>Response: Collection+JSON</li>
             </ul>
-            <pre><code class="json"><span class="p">{</span>
+            <pre class="code json"><span class="p">{</span>
   <span class="nt">"collection"</span><span class="p">:</span> <span class="p">{</span>
     <span class="nt">"error"</span><span class="p">:</span> <span class="p">{},</span>
     <span class="nt">"href"</span><span class="p">:</span> <span class="s2">"https://api.mig.mozilla.org/api/v1/dashboard"</span><span class="p">,</span>
@@ -408,7 +399,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
     <span class="nt">"template"</span><span class="p">:</span> <span class="p">{},</span>
     <span class="nt">"version"</span><span class="p">:</span> <span class="s2">"1.0"</span>
   <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         </section>
         <section id="get-api-v1-action">
             <h3>2.4   GET /api/v1/action</h3>
@@ -428,7 +419,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                 <li>Response Code: 200 OK</li>
                 <li>Response: Collection+JSON</li>
             </ul>
-            <pre><code class="json"><span class="p">{</span>
+            <pre class="code json"><span class="p">{</span>
   <span class="nt">"collection"</span><span class="p">:</span> <span class="p">{</span>
     <span class="nt">"error"</span><span class="p">:</span> <span class="p">{},</span>
     <span class="nt">"href"</span><span class="p">:</span> <span class="s2">"https://api.mig.example.net/api/v1/action?actionid=6115472790658567168"</span><span class="p">,</span>
@@ -541,7 +532,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
     <span class="nt">"template"</span><span class="p">:</span> <span class="p">{},</span>
     <span class="nt">"version"</span><span class="p">:</span> <span class="s2">"1.0"</span>
   <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         </section>
         <section id="post-api-v1-action-create">
             <h3>2.5   POST /api/v1/action/create/</h3>
@@ -580,7 +571,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                 <li>Response Code: 200 OK</li>
                 <li>Response: Collection+JSON</li>
             </ul>
-            <pre><code class="json"><span class="p">{</span>
+            <pre class="code json"><span class="p">{</span>
   <span class="nt">"collection"</span><span class="p">:</span> <span class="p">{</span>
     <span class="nt">"error"</span><span class="p">:</span> <span class="p">{},</span>
     <span class="nt">"href"</span><span class="p">:</span> <span class="s2">"https://api.mig.example.net/api/v1/agent?agentid=1423779015943326976"</span><span class="p">,</span>
@@ -622,7 +613,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
     <span class="nt">"template"</span><span class="p">:</span> <span class="p">{},</span>
     <span class="nt">"version"</span><span class="p">:</span> <span class="s2">"1.0"</span>
   <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         </section>
         <section id="get-api-v1-command">
             <h3>2.7   GET /api/v1/command</h3>
@@ -642,7 +633,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                 <li>Response Code: 200 OK</li>
                 <li>Response: Collection+JSON</li>
             </ul>
-            <pre><code class="bash"><span class="o">{</span>
+            <pre class="code bash"><span class="o">{</span>
   <span class="s2">"collection"</span>: <span class="o">{</span>
     <span class="s2">"error"</span>: <span class="o">{}</span>,
     <span class="s2">"href"</span>: <span class="s2">"https://api.mig.example.net/api/v1/command?commandid=1424700180901330688"</span>,
@@ -674,190 +665,190 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                             <span class="s2">"^authpriv\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"</span>
                           <span class="o">]</span>,
                           <span class="s2">"names"</span>: <span class="o">[</span>
-                            <span class="s2">"^r?syslog.conf$"</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"options"</span>: <span class="o">{</span>
-                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
-                            <span class="s2">"maxdepth"</span>: 1
-                          <span class="o">}</span>,
-                          <span class="s2">"paths"</span>: <span class="o">[</span>
-                            <span class="s2">"/etc"</span>
-                          <span class="o">]</span>
-                        <span class="o">}</span>,
-                        <span class="s2">"daemontoremotesyslog"</span>: <span class="o">{</span>
-                          <span class="s2">"contents"</span>: <span class="o">[</span>
-                            <span class="s2">"^daemon\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}."</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"names"</span>: <span class="o">[</span>
-                            <span class="s2">"^r?syslog.conf$"</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"options"</span>: <span class="o">{</span>
-                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
-                            <span class="s2">"maxdepth"</span>: 1
-                          <span class="o">}</span>,
-                          <span class="s2">"paths"</span>: <span class="o">[</span>
-                            <span class="s2">"/etc"</span>
-                          <span class="o">]</span>
-                        <span class="o">}</span>,
-                        <span class="s2">"kerntoremotesyslog"</span>: <span class="o">{</span>
-                          <span class="s2">"contents"</span>: <span class="o">[</span>
-                            <span class="s2">"^kern\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"names"</span>: <span class="o">[</span>
-                            <span class="s2">"^r?syslog.conf$"</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"options"</span>: <span class="o">{</span>
-                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
-                            <span class="s2">"maxdepth"</span>: 1
-                          <span class="o">}</span>,
-                          <span class="s2">"paths"</span>: <span class="o">[</span>
-                            <span class="s2">"/etc"</span>
-                          <span class="o">]</span>
-                        <span class="o">}</span>
-                      <span class="o">}</span>
-                    <span class="o">}</span>
-                  <span class="o">}</span>
-                <span class="o">]</span>,
-                <span class="s2">"pgpsignatures"</span>: <span class="o">[</span>
-                  <span class="s2">"ws...."</span>
-                <span class="o">]</span>,
-                <span class="s2">"starttime"</span>: <span class="s2">"0001-01-01T00:00:00Z"</span>,
-                <span class="s2">"syntaxversion"</span>: 2,
-                <span class="s2">"target"</span>: <span class="s2">"agents.queueloc like 'linux.%' AND tags-&gt;&gt;'operator'='IT'"</span>,
-                <span class="s2">"threat"</span>: <span class="o">{</span>
-                  <span class="s2">"family"</span>: <span class="s2">"compliance"</span>,
-                  <span class="s2">"level"</span>: <span class="s2">"medium"</span>,
-                  <span class="s2">"ref"</span>: <span class="s2">"sysmediumlogs1"</span>,
-                  <span class="s2">"type"</span>: <span class="s2">"system"</span>
-                <span class="o">}</span>,
-                <span class="s2">"validfrom"</span>: <span class="s2">"2015-02-23T14:03:00Z"</span>
-              <span class="o">}</span>,
-              <span class="s2">"agent"</span>: <span class="o">{</span>
-                <span class="s2">"destructiontime"</span>: <span class="s2">"0001-01-01T00:00:00Z"</span>,
-                <span class="s2">"environment"</span>: <span class="o">{</span>
-                  <span class="s2">"isproxied"</span>: <span class="nb">false</span>
-                <span class="o">}</span>,
-                <span class="s2">"heartbeatts"</span>: <span class="s2">"0001-01-01T00:00:00Z"</span>,
-                <span class="s2">"id"</span>: 1.423779015943327e+18,
-                <span class="s2">"mode"</span>: <span class="s2">""</span>,
-                <span class="s2">"name"</span>: <span class="s2">"syslog1.private.mydomain.example.net"</span>,
-                <span class="s2">"queueloc"</span>: <span class="s2">"linux.syslog1.private.mydomain.example.net.e98r198dhq"</span>,
-                <span class="s2">"starttime"</span>: <span class="s2">"0001-01-01T00:00:00Z"</span>,
-                <span class="s2">"version"</span>: <span class="s2">"20150122+ad43a11.prod"</span>
-              <span class="o">}</span>,
-              <span class="s2">"finishtime"</span>: <span class="s2">"2015-02-23T14:03:10.402108Z"</span>,
-              <span class="s2">"id"</span>: 1.4247001809013307e+18,
-              <span class="s2">"results"</span>: <span class="o">[</span>
-                <span class="o">{</span>
-                  <span class="s2">"elements"</span>: <span class="o">{</span>
-                    <span class="s2">"authprivtoremotesyslog"</span>: <span class="o">[</span>
-                      <span class="o">{</span>
-                        <span class="s2">"file"</span>: <span class="s2">""</span>,
-                        <span class="s2">"fileinfo"</span>: <span class="o">{</span>
-                          <span class="s2">"lastmodified"</span>: <span class="s2">""</span>,
-                          <span class="s2">"mode"</span>: <span class="s2">""</span>,
-                          <span class="s2">"size"</span>: 0
-                        <span class="o">}</span>,
-                        <span class="s2">"search"</span>: <span class="o">{</span>
-                          <span class="s2">"contents"</span>: <span class="o">[</span>
-                            <span class="s2">"^authpriv\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"names"</span>: <span class="o">[</span>
-                            <span class="s2">"^r?syslog.conf$"</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"options"</span>: <span class="o">{</span>
-                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
-                            <span class="s2">"matchlimit"</span>: 0,
-                            <span class="s2">"maxdepth"</span>: 0
-                          <span class="o">}</span>,
-                          <span class="s2">"paths"</span>: <span class="o">[</span>
-                            <span class="s2">"/etc"</span>
-                          <span class="o">]</span>
-                        <span class="o">}</span>
-                      <span class="o">}</span>
-                    <span class="o">]</span>,
-                    <span class="s2">"daemontoremotesyslog"</span>: <span class="o">[</span>
-                      <span class="o">{</span>
-                        <span class="s2">"file"</span>: <span class="s2">""</span>,
-                        <span class="s2">"fileinfo"</span>: <span class="o">{</span>
-                          <span class="s2">"lastmodified"</span>: <span class="s2">""</span>,
-                          <span class="s2">"mode"</span>: <span class="s2">""</span>,
-                          <span class="s2">"size"</span>: 0
-                        <span class="o">}</span>,
-                        <span class="s2">"search"</span>: <span class="o">{</span>
-                          <span class="s2">"contents"</span>: <span class="o">[</span>
-                            <span class="s2">"^daemon\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}."</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"names"</span>: <span class="o">[</span>
-                            <span class="s2">"^r?syslog.conf$"</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"options"</span>: <span class="o">{</span>
-                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
-                            <span class="s2">"matchlimit"</span>: 0,
-                            <span class="s2">"maxdepth"</span>: 0
-                          <span class="o">}</span>,
-                          <span class="s2">"paths"</span>: <span class="o">[</span>
-                            <span class="s2">"/etc"</span>
-                          <span class="o">]</span>
-                        <span class="o">}</span>
-                      <span class="o">}</span>
-                    <span class="o">]</span>,
-                    <span class="s2">"kerntoremotesyslog"</span>: <span class="o">[</span>
-                      <span class="o">{</span>
-                        <span class="s2">"file"</span>: <span class="s2">""</span>,
-                        <span class="s2">"fileinfo"</span>: <span class="o">{</span>
-                          <span class="s2">"lastmodified"</span>: <span class="s2">""</span>,
-                          <span class="s2">"mode"</span>: <span class="s2">""</span>,
-                          <span class="s2">"size"</span>: 0
-                        <span class="o">}</span>,
-                        <span class="s2">"search"</span>: <span class="o">{</span>
-                          <span class="s2">"contents"</span>: <span class="o">[</span>
-                            <span class="s2">"^kern\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"names"</span>: <span class="o">[</span>
-                            <span class="s2">"^r?syslog.conf$"</span>
-                          <span class="o">]</span>,
-                          <span class="s2">"options"</span>: <span class="o">{</span>
-                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
-                            <span class="s2">"matchlimit"</span>: 0,
-                            <span class="s2">"maxdepth"</span>: 0
-                          <span class="o">}</span>,
-                          <span class="s2">"paths"</span>: <span class="o">[</span>
-                            <span class="s2">"/etc"</span>
-                          <span class="o">]</span>
-                        <span class="o">}</span>
-                      <span class="o">}</span>
-                    <span class="o">]</span>
-                  <span class="o">}</span>,
-                  <span class="s2">"errors"</span>: null,
-                  <span class="s2">"foundanything"</span>: <span class="nb">false</span>,
-                  <span class="s2">"statistics"</span>: <span class="o">{</span>
-                    <span class="s2">"exectime"</span>: <span class="s2">"20.968752ms"</span>,
-                    <span class="s2">"filescount"</span>: 140,
-                    <span class="s2">"openfailed"</span>: 0,
-                    <span class="s2">"totalhits"</span>: 0
-                  <span class="o">}</span>,
-                  <span class="s2">"success"</span>: <span class="nb">true</span>
-                <span class="o">}</span>
-              <span class="o">]</span>,
-              <span class="s2">"starttime"</span>: <span class="s2">"2015-02-23T14:03:00.901331Z"</span>,
-              <span class="s2">"status"</span>: <span class="s2">"success"</span>
-            <span class="o">}</span>
-          <span class="o">}</span>
-        <span class="o">]</span>,
-        <span class="s2">"href"</span>: <span class="s2">"https://api.mig.example.net/api/v1/command?commandid=1424700180901330688"</span>,
-        <span class="s2">"links"</span>: <span class="o">[</span>
-          <span class="o">{</span>
-            <span class="s2">"href"</span>: <span class="s2">"https://api.mig.example.net/api/v1/action?actionid=6115472790658567168"</span>,
-            <span class="s2">"rel"</span>: <span class="s2">"action"</span>
-          <span class="o">}</span>
-        <span class="o">]</span>
-      <span class="o">}</span>
-    <span class="o">]</span>,
-    <span class="s2">"template"</span>: <span class="o">{}</span>,
-    <span class="s2">"version"</span>: <span class="s2">"1.0"</span>
-  <span class="o">}</span>
-<span class="o">}</span></code></pre>
+                            <span class="s2">"^r?syslog.conf</span><span class="nv">$"</span><span class="s2">
+                          ],
+                          "</span>options<span class="s2">": {
+                            "</span>matchall<span class="s2">": true,
+                            "</span>maxdepth<span class="s2">": 1
+                          },
+                          "</span>paths<span class="s2">": [
+                            "</span>/etc<span class="s2">"
+                          ]
+                        },
+                        "</span>daemontoremotesyslog<span class="s2">": {
+                          "</span>contents<span class="s2">": [
+                            "</span>^daemon<span class="se">\\</span>.<span class="se">\\</span>*.*@<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span>.<span class="s2">"
+                          ],
+                          "</span>names<span class="s2">": [
+                            "</span>^r?syslog.conf<span class="s2">$"
+                          ],
+                          "</span>options<span class="s2">": {
+                            "</span>matchall<span class="s2">": true,
+                            "</span>maxdepth<span class="s2">": 1
+                          },
+                          "</span>paths<span class="s2">": [
+                            "</span>/etc<span class="s2">"
+                          ]
+                        },
+                        "</span>kerntoremotesyslog<span class="s2">": {
+                          "</span>contents<span class="s2">": [
+                            "</span>^kern<span class="se">\\</span>.<span class="se">\\</span>*.*@<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="s2">"
+                          ],
+                          "</span>names<span class="s2">": [
+                            "</span>^r?syslog.conf<span class="s2">$"
+                          ],
+                          "</span>options<span class="s2">": {
+                            "</span>matchall<span class="s2">": true,
+                            "</span>maxdepth<span class="s2">": 1
+                          },
+                          "</span>paths<span class="s2">": [
+                            "</span>/etc<span class="s2">"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ],
+                "</span>pgpsignatures<span class="s2">": [
+                  "</span>ws....<span class="s2">"
+                ],
+                "</span>starttime<span class="s2">": "</span>0001-01-01T00:00:00Z<span class="s2">",
+                "</span>syntaxversion<span class="s2">": 2,
+                "</span>target<span class="s2">": "</span>agents.queueloc like <span class="s1">'linux.%'</span> AND tags-&gt;&gt;<span class="s1">'operator'</span><span class="o">=</span><span class="s1">'IT'</span><span class="s2">",
+                "</span>threat<span class="s2">": {
+                  "</span>family<span class="s2">": "</span>compliance<span class="s2">",
+                  "</span>level<span class="s2">": "</span>medium<span class="s2">",
+                  "</span>ref<span class="s2">": "</span>sysmediumlogs1<span class="s2">",
+                  "</span><span class="nb">type</span><span class="s2">": "</span>system<span class="s2">"
+                },
+                "</span>validfrom<span class="s2">": "</span>2015-02-23T14:03:00Z<span class="s2">"
+              },
+              "</span>agent<span class="s2">": {
+                "</span>destructiontime<span class="s2">": "</span>0001-01-01T00:00:00Z<span class="s2">",
+                "</span>environment<span class="s2">": {
+                  "</span>isproxied<span class="s2">": false
+                },
+                "</span>heartbeatts<span class="s2">": "</span>0001-01-01T00:00:00Z<span class="s2">",
+                "</span>id<span class="s2">": 1.423779015943327e+18,
+                "</span>mode<span class="s2">": "",
+                "</span>name<span class="s2">": "</span>syslog1.private.mydomain.example.net<span class="s2">",
+                "</span>queueloc<span class="s2">": "</span>linux.syslog1.private.mydomain.example.net.e98r198dhq<span class="s2">",
+                "</span>starttime<span class="s2">": "</span>0001-01-01T00:00:00Z<span class="s2">",
+                "</span>version<span class="s2">": "</span>20150122+ad43a11.prod<span class="s2">"
+              },
+              "</span>finishtime<span class="s2">": "</span>2015-02-23T14:03:10.402108Z<span class="s2">",
+              "</span>id<span class="s2">": 1.4247001809013307e+18,
+              "</span>results<span class="s2">": [
+                {
+                  "</span>elements<span class="s2">": {
+                    "</span>authprivtoremotesyslog<span class="s2">": [
+                      {
+                        "</span>file<span class="s2">": "",
+                        "</span>fileinfo<span class="s2">": {
+                          "</span>lastmodified<span class="s2">": "",
+                          "</span>mode<span class="s2">": "",
+                          "</span>size<span class="s2">": 0
+                        },
+                        "</span>search<span class="s2">": {
+                          "</span>contents<span class="s2">": [
+                            "</span>^authpriv<span class="se">\\</span>.<span class="se">\\</span>*.*@<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="s2">"
+                          ],
+                          "</span>names<span class="s2">": [
+                            "</span>^r?syslog.conf<span class="s2">$"
+                          ],
+                          "</span>options<span class="s2">": {
+                            "</span>matchall<span class="s2">": true,
+                            "</span>matchlimit<span class="s2">": 0,
+                            "</span>maxdepth<span class="s2">": 0
+                          },
+                          "</span>paths<span class="s2">": [
+                            "</span>/etc<span class="s2">"
+                          ]
+                        }
+                      }
+                    ],
+                    "</span>daemontoremotesyslog<span class="s2">": [
+                      {
+                        "</span>file<span class="s2">": "",
+                        "</span>fileinfo<span class="s2">": {
+                          "</span>lastmodified<span class="s2">": "",
+                          "</span>mode<span class="s2">": "",
+                          "</span>size<span class="s2">": 0
+                        },
+                        "</span>search<span class="s2">": {
+                          "</span>contents<span class="s2">": [
+                            "</span>^daemon<span class="se">\\</span>.<span class="se">\\</span>*.*@<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span>.<span class="s2">"
+                          ],
+                          "</span>names<span class="s2">": [
+                            "</span>^r?syslog.conf<span class="s2">$"
+                          ],
+                          "</span>options<span class="s2">": {
+                            "</span>matchall<span class="s2">": true,
+                            "</span>matchlimit<span class="s2">": 0,
+                            "</span>maxdepth<span class="s2">": 0
+                          },
+                          "</span>paths<span class="s2">": [
+                            "</span>/etc<span class="s2">"
+                          ]
+                        }
+                      }
+                    ],
+                    "</span>kerntoremotesyslog<span class="s2">": [
+                      {
+                        "</span>file<span class="s2">": "",
+                        "</span>fileinfo<span class="s2">": {
+                          "</span>lastmodified<span class="s2">": "",
+                          "</span>mode<span class="s2">": "",
+                          "</span>size<span class="s2">": 0
+                        },
+                        "</span>search<span class="s2">": {
+                          "</span>contents<span class="s2">": [
+                            "</span>^kern<span class="se">\\</span>.<span class="se">\\</span>*.*@<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="s2">"
+                          ],
+                          "</span>names<span class="s2">": [
+                            "</span>^r?syslog.conf<span class="s2">$"
+                          ],
+                          "</span>options<span class="s2">": {
+                            "</span>matchall<span class="s2">": true,
+                            "</span>matchlimit<span class="s2">": 0,
+                            "</span>maxdepth<span class="s2">": 0
+                          },
+                          "</span>paths<span class="s2">": [
+                            "</span>/etc<span class="s2">"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "</span>errors<span class="s2">": null,
+                  "</span>foundanything<span class="s2">": false,
+                  "</span>statistics<span class="s2">": {
+                    "</span>exectime<span class="s2">": "</span>20.968752ms<span class="s2">",
+                    "</span>filescount<span class="s2">": 140,
+                    "</span>openfailed<span class="s2">": 0,
+                    "</span>totalhits<span class="s2">": 0
+                  },
+                  "</span>success<span class="s2">": true
+                }
+              ],
+              "</span>starttime<span class="s2">": "</span>2015-02-23T14:03:00.901331Z<span class="s2">",
+              "</span>status<span class="s2">": "</span>success<span class="s2">"
+            }
+          }
+        ],
+        "</span>href<span class="s2">": "</span>https://api.mig.example.net/api/v1/command?commandid<span class="o">=</span>1424700180901330688<span class="s2">",
+        "</span>links<span class="s2">": [
+          {
+            "</span>href<span class="s2">": "</span>https://api.mig.example.net/api/v1/action?actionid<span class="o">=</span>6115472790658567168<span class="s2">",
+            "</span>rel<span class="s2">": "</span>action<span class="s2">"
+          }
+        ]
+      }
+    ],
+    "</span>template<span class="s2">": {},
+    "</span>version<span class="s2">": "</span>1.0<span class="s2">"
+  }
+}</span></pre>
         </section>
         <section id="get-api-v1-investigator">
             <h3>2.8   GET /api/v1/investigator</h3>
@@ -877,7 +868,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                 <li>Response Code: 200 OK</li>
                 <li>Response: Collection+JSON</li>
             </ul>
-            <pre><code class="json"><span class="p">{</span>
+            <pre class="code json"><span class="p">{</span>
   <span class="nt">"collection"</span><span class="p">:</span> <span class="p">{</span>
     <span class="nt">"error"</span><span class="p">:</span> <span class="p">{},</span>
     <span class="nt">"href"</span><span class="p">:</span> <span class="s2">"https://api.mig.example.net/api/v1/investigator?investigatorid=1"</span><span class="p">,</span>
@@ -909,7 +900,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
     <span class="nt">"template"</span><span class="p">:</span> <span class="p">{},</span>
     <span class="nt">"version"</span><span class="p">:</span> <span class="s2">"1.0"</span>
   <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         </section>
         <section id="post-api-v1-investigator-create">
             <h3>2.9   POST /api/v1/investigator/create/</h3>
@@ -931,8 +922,8 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                 <li>Response: Collection+JSON</li>
                 <li>Example: (without authentication)</li>
             </ul>
-            <pre><code class="bash"><span class="nv">$ </span>gpg --export -a --export-options <span class="nb">export</span>-minimal bob_kelso@example.net &gt; /tmp/bobpubkey
-<span class="nv">$ </span>curl -iv -F <span class="s2">"name=Bob Kelso"</span> -F <span class="nv">publickey</span><span class="o">=</span>@/tmp/pubkey https://api.mig.example.net/api/v1/investigator/create/</code></pre>
+            <pre class="code bash"><span class="nv">$ </span>gpg --export -a --export-options <span class="nb">export</span>-minimal bob_kelso@example.net &gt; /tmp/bobpubkey
+<span class="nv">$ </span>curl -iv -F <span class="s2">"name=Bob Kelso"</span> -F <span class="nv">publickey</span><span class="o">=</span>@/tmp/pubkey https://api.mig.example.net/api/v1/investigator/create/</pre>
         </section>
         <section id="post-api-v1-investigator-update">
             <h3>2.10   POST /api/v1/investigator/update/</h3>
@@ -954,7 +945,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                 <li>Response: Collection+JSON</li>
                 <li>Example: (without authentication)</li>
             </ul>
-            <pre><code class="bash"><span class="nv">$ </span>curl -iv -X POST -d <span class="nv">id</span><span class="o">=</span>1234 -d <span class="nv">status</span><span class="o">=</span>disabled https://api.mig.example.net/api/v1/investigator/update/</code></pre>
+            <pre class="code bash"><span class="nv">$ </span>curl -iv -X POST -d <span class="nv">id</span><span class="o">=</span><span class="m">1234</span> -d <span class="nv">status</span><span class="o">=</span>disabled https://api.mig.example.net/api/v1/investigator/update/</pre>
         </section>
         <section id="get-api-v1-search">
             <h3>2.11   GET /api/v1/search</h3>
@@ -968,42 +959,33 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                         <dt>Parameters:</dt>
                         <dd>
                             <ul>
-                                <li>
-                                    <p><cite>type</cite>: define the type of item returned by the search. Valid types are: <cite>action</cite>, <cite>command</cite>, <cite>agent</cite> or <cite>investigator</cite>.</p>
-                                    <blockquote>
-                                        <ul>
-                                            <li><cite>action</cite>: (default) return a list of actions</li>
-                                            <li><cite>command</cite>: return a list of commands</li>
-                                            <li><cite>agent</cite>: return a list of agents that have shown activity</li>
-                                            <li><cite>investigator</cite>: return a list of investigators that have show activity</li>
-                                        </ul>
-                                    </blockquote>
+                                <li><cite>type</cite>: define the type of item returned by the search. Valid types are: <cite>action</cite>, <cite>command</cite>, <cite>agent</cite> or <cite>investigator</cite>.
+                                    <ul>
+                                        <li><cite>action</cite>: (default) return a list of actions</li>
+                                        <li><cite>command</cite>: return a list of commands</li>
+                                        <li><cite>agent</cite>: return a list of agents that have shown activity</li>
+                                        <li><cite>investigator</cite>: return a list of investigators that have show activity</li>
+                                    </ul>
                                 </li>
                                 <li><cite>actionid</cite>: filter results on numeric action ID</li>
                                 <li><cite>actionname</cite>: filter results on string action name, accept <cite>ILIKE</cite> pattern</li>
-                                <li>
-                                    <p><cite>after</cite>: return results recorded after this RFC3339 date, depends on type:</p>
-                                    <blockquote>
-                                        <ul>
-                                            <li><cite>action</cite>: select actions with a <cite>validfrom</cite> date greater than <cite>after</cite>. Default is last 7 days.</li>
-                                            <li><cite>agent</cite>: select agents that have sent a heartbeat since <cite>after</cite>. Default is last 7 days.</li>
-                                            <li><cite>command</cite>: select commands with a <cite>starttime</cite> date greated than <cite>after</cite>. Default is last 7 days.</li>
-                                            <li><cite>investigator</cite>: select investigators with a <cite>createdat</cite> date greater than <cite>after</cite>. Default is last 1,000 years.</li>
-                                        </ul>
-                                    </blockquote>
+                                <li><cite>after</cite>: return results recorded after this RFC3339 date, depends on type:
+                                    <ul>
+                                        <li><cite>action</cite>: select actions with a <cite>validfrom</cite> date greater than <cite>after</cite>. Default is last 7 days.</li>
+                                        <li><cite>agent</cite>: select agents that have sent a heartbeat since <cite>after</cite>. Default is last 7 days.</li>
+                                        <li><cite>command</cite>: select commands with a <cite>starttime</cite> date greated than <cite>after</cite>. Default is last 7 days.</li>
+                                        <li><cite>investigator</cite>: select investigators with a <cite>createdat</cite> date greater than <cite>after</cite>. Default is last 1,000 years.</li>
+                                    </ul>
                                 </li>
                                 <li><cite>agentid</cite>: filter results on the agent ID</li>
                                 <li><cite>agentname</cite>: filter results on string agent name, accept <cite>ILIKE</cite> pattern</li>
-                                <li>
-                                    <p><cite>before</cite>: return results recorded before this RFC3339 date. If not defined, default is to retrieve results until now.</p>
-                                    <blockquote>
-                                        <ul>
-                                            <li><cite>action</cite>: select actions with a <cite>expireafter</cite> date lower than <cite>before</cite></li>
-                                            <li><cite>agent</cite>: select agents that have sent a heartbeat priot to <cite>before</cite></li>
-                                            <li><cite>command</cite>: select commands with a <cite>starttime</cite> date lower than <cite>before</cite></li>
-                                            <li><cite>investigator</cite>: select investigators with a <cite>lastmodified</cite> date lower than <cite>before</cite></li>
-                                        </ul>
-                                    </blockquote>
+                                <li><cite>before</cite>: return results recorded before this RFC3339 date. If not defined, default is to retrieve results until now.
+                                    <ul>
+                                        <li><cite>action</cite>: select actions with a <cite>expireafter</cite> date lower than <cite>before</cite></li>
+                                        <li><cite>agent</cite>: select agents that have sent a heartbeat priot to <cite>before</cite></li>
+                                        <li><cite>command</cite>: select commands with a <cite>starttime</cite> date lower than <cite>before</cite></li>
+                                        <li><cite>investigator</cite>: select investigators with a <cite>lastmodified</cite> date lower than <cite>before</cite></li>
+                                    </ul>
                                 </li>
                                 <li><cite>commandid</cite>: filter results on the command ID</li>
                                 <li><cite>foundanything</cite>: filter commands on the <cite>foundanything</cite> boolean of their results (only for type <cite>command</cite>, as it requires looking into results)</li>
@@ -1021,16 +1003,13 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                                         </dd>
                                     </dl>
                                 </li>
-                                <li>
-                                    <p><cite>status</cite>: filter on internal status, accept <cite>ILIKE</cite> pattern. Status depends on the type. Below are the available statuses per type:</p>
-                                    <blockquote>
-                                        <ul>
-                                            <li><cite>action</cite>: pending, scheduled, preparing, invalid, inflight, completed</li>
-                                            <li><cite>agent</cite>: online, upgraded, destroyed, offline, idle</li>
-                                            <li><cite>command</cite>: prepared, sent, success, timeout, cancelled, expired, failed</li>
-                                            <li><cite>investigator</cite>: active, disabled</li>
-                                        </ul>
-                                    </blockquote>
+                                <li><cite>status</cite>: filter on internal status, accept <cite>ILIKE</cite> pattern. Status depends on the type. Below are the available statuses per type:
+                                    <ul>
+                                        <li><cite>action</cite>: pending, scheduled, preparing, invalid, inflight, completed</li>
+                                        <li><cite>agent</cite>: online, upgraded, destroyed, offline, idle</li>
+                                        <li><cite>command</cite>: prepared, sent, success, timeout, cancelled, expired, failed</li>
+                                        <li><cite>investigator</cite>: active, disabled</li>
+                                    </ul>
                                 </li>
                                 <li><cite>target</cite>: returns agents that match a target query (only for <cite>agent</cite> type)</li>
                                 <li><cite>threatfamily</cite>: filter results of the threat family of the action, accept <cite>ILIKE</cite> pattern (only for types <cite>command</cite> and <cite>action</cite>)</li>
@@ -1046,16 +1025,16 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
                 <li>Examples:</li>
             </ul>
             <p>Generate a compliance report from <cite>compliance</cite> action ran over the last 24 hours. For more information on the <cite>compliance</cite> format, see section 2.</p>
-            <pre><code class="bash">/api/v1/search?type<span class="o">=</span><span class="nb">command</span>&amp;threatfamily<span class="o">=</span>compliance&amp;status<span class="o">=</span><span class="k">done</span>
-&amp;report<span class="o">=</span>complianceitems&amp;limit<span class="o">=</span>100000
-&amp;after<span class="o">=</span>2014-05-30T00:00:00-04:00&amp;before<span class="o">=</span>2014-05-30T23:59:59-04:00</code></pre>
+            <pre class="code bash">/api/v1/search?type<span class="o">=</span><span class="nb">command</span><span class="p">&amp;</span><span class="nv">threatfamily</span><span class="o">=</span>compliance<span class="p">&amp;</span><span class="nv">status</span><span class="o">=</span><span class="k">done</span>
+<span class="p">&amp;</span><span class="nv">report</span><span class="o">=</span>complianceitems<span class="p">&amp;</span><span class="nv">limit</span><span class="o">=</span>100000
+<span class="p">&amp;</span><span class="nv">after</span><span class="o">=</span>2014-05-30T00:00:00-04:00<span class="p">&amp;</span><span class="nv">before</span><span class="o">=</span>2014-05-30T23:59:59-04:00</pre>
             <p>List the agents that have sent a heartbeat in the last hour.</p>
-            <pre><code class="bash">/api/v1/search?type<span class="o">=</span>agent&amp;after<span class="o">=</span>2014-05-30T15:00:00-04:00&amp;limit<span class="o">=</span>200</code></pre>
+            <pre class="code bash">/api/v1/search?type<span class="o">=</span>agent<span class="p">&amp;</span><span class="nv">after</span><span class="o">=</span>2014-05-30T15:00:00-04:00<span class="p">&amp;</span><span class="nv">limit</span><span class="o">=</span>200</pre>
             <p>Find actions ran between two dates (limited to 10 results as is the default).</p>
-            <pre><code class="bash">/api/v1/search?type<span class="o">=</span>action&amp;status<span class="o">=</span>sent
-&amp;after<span class="o">=</span>2014-05-01T00:00:00-00:00&amp;before<span class="o">=</span>2014-05-30T00:00:00-00:00</code></pre>
+            <pre class="code bash">/api/v1/search?type<span class="o">=</span>action<span class="p">&amp;</span><span class="nv">status</span><span class="o">=</span>sent
+<span class="p">&amp;</span><span class="nv">after</span><span class="o">=</span>2014-05-01T00:00:00-00:00<span class="p">&amp;</span><span class="nv">before</span><span class="o">=</span>2014-05-30T00:00:00-00:00</pre>
             <p>Find the last 10 commands signed by an investigator identified by name.</p>
-            <pre><code class="bash">/api/v1/search?investigatorname<span class="o">=</span>%25bob%25smith%25&amp;limit<span class="o">=</span>10&amp;type<span class="o">=</span><span class="nb">command</span></code></pre>
+            <pre class="code bash">/api/v1/search?investigatorname<span class="o">=</span>%25bob%25smith%25<span class="p">&amp;</span><span class="nv">limit</span><span class="o">=</span>10<span class="p">&amp;</span><span class="nb">type</span><span class="o">=</span><span class="nb">command</span></pre>
         </section>
     </section>
     <section id="data-transformation">
@@ -1067,7 +1046,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
             <p>In MIG, an <cite>action</cite> can contain compliance checks. An <cite>action</cite> creates one <cite>command</cite> per <cite>agent</cite>. Upon completion, the agent stores the results in the <cite>command.results</cite>. To visualize the results of an action, an investigator must look at the results of each command generated by that action.</p>
             <p>To generate compliance items, the API takes the results from commands, and creates one item per result. Therefore, a single action that creates hundreds of commands could, in turn, generate thousands of compliance items.</p>
             <p>The format for compliance items is simple, to be easily graphed and aggregated.</p>
-            <pre><code class="json"><span class="p">{</span>
+            <pre class="code json"><span class="p">{</span>
   <span class="nt">"target"</span><span class="p">:</span> <span class="s2">"server1.mydomain.example.net"</span><span class="p">,</span>
   <span class="nt">"utctimestamp"</span><span class="p">:</span> <span class="s2">"2015-02-19T02:59:30.203004Z"</span><span class="p">,</span>
   <span class="nt">"tags"</span><span class="p">:</span> <span class="p">{</span>
@@ -1090,17 +1069,17 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
     <span class="nt">"description"</span><span class="p">:</span> <span class="s2">"compliance check for auditd"</span><span class="p">,</span>
     <span class="nt">"name"</span><span class="p">:</span> <span class="s2">"attemptstoaltercrontab_user_config"</span>
   <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <p>When using the parameter <cite>&amp;report=complianceitems</cite>, the <cite>search</cite> endpoint of the API will generate a list of compliance items from the results of the search.</p>
         </section>
         <section id="geolocations">
             <h3>3.2   Geolocations</h3>
             <p>The geolocations format transforms command results into an array of geolocated endpoints for consumption by a map, like Google Maps. The format discards results details, and only stores the value of FoundAnything.</p>
             <p>This feature requires using <strong>MaxMind's GeoIP2-City</strong> database. The database must be configured in the API as follow:</p>
-            <pre><code class="">[maxmind]
-    path = "/etc/mig/GeoIP2-City.mmdb"</code></pre>
+            <pre class="code">[maxmind]
+    path = "/etc/mig/GeoIP2-City.mmdb"</pre>
             <p>Geolocations are returned as CLJS items in this format:</p>
-            <pre><code class="json"><span class="p">{</span>
+            <pre class="code json"><span class="p">{</span>
     <span class="nt">"actionid"</span><span class="p">:</span> <span class="mf">1.4271242660295127e+18</span><span class="p">,</span>
     <span class="nt">"city"</span><span class="p">:</span> <span class="s2">"Absecon"</span><span class="p">,</span>
     <span class="nt">"commandid"</span><span class="p">:</span> <span class="mf">1.427124243673173e+18</span><span class="p">,</span>
@@ -1109,7 +1088,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</co
     <span class="nt">"foundanything"</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
     <span class="nt">"latitude"</span><span class="p">:</span> <span class="mf">39.4284</span><span class="p">,</span>
     <span class="nt">"longitude"</span><span class="p">:</span> <span class="mf">-74.4957</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <p>When using the parameter <cite>&amp;report=geolocations</cite>, the <cite>search</cite> endpoint of the API will generate a list of geolocations from the results of the search.</p>
         </section>
     </section>

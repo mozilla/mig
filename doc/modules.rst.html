@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>MIG Modules</title>
     <meta charset="utf-8" />
     <link href="docstyle.css" rel="stylesheet" />
-    <title>MIG Modules</title>
     <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
 </head>
 <body>
@@ -11,20 +11,17 @@
     <aside class="topic contents" id="table-of-contents">
         <h1>Table of Contents</h1>
         <ul class="auto-toc">
-            <li>
-                <p><a href="#module-logic">1   Module logic</a></p>
+            <li><a href="#module-logic">1   Module logic</a>
                 <ul class="auto-toc">
                     <li><a href="#registration">1.1   Registration</a></li>
-                    <li>
-                        <p><a href="#execution">1.2   Execution</a></p>
+                    <li><a href="#execution">1.2   Execution</a>
                         <ul class="auto-toc">
                             <li><a href="#parameters">1.2.1   Parameters</a></li>
                             <li><a href="#run">1.2.2   Run</a></li>
                             <li><a href="#validate-parameters">1.2.3   Validate Parameters</a></li>
                         </ul>
                     </li>
-                    <li>
-                        <p><a href="#results">1.3   Results</a></p>
+                    <li><a href="#results">1.3   Results</a>
                         <ul class="auto-toc">
                             <li><a href="#success">1.3.1   Success</a></li>
                             <li><a href="#foundanything">1.3.2   FoundAnything</a></li>
@@ -33,8 +30,7 @@
                             <li><a href="#errors">1.3.5   Errors</a></li>
                         </ul>
                     </li>
-                    <li>
-                        <p><a href="#additional-interfaces">1.4   Additional interfaces</a></p>
+                    <li><a href="#additional-interfaces">1.4   Additional interfaces</a>
                         <ul class="auto-toc">
                             <li><a href="#hasresultsprinter">1.4.1   HasResultsPrinter</a></li>
                             <li><a href="#hasparamscreator">1.4.2   HasParamsCreator</a></li>
@@ -43,8 +39,7 @@
                     </li>
                 </ul>
             </li>
-            <li>
-                <p><a href="#the-example-module">2   The <cite>Example</cite> module</a></p>
+            <li><a href="#the-example-module">2   The <cite>Example</cite> module</a>
                 <ul class="auto-toc">
                     <li><a href="#headers-and-structs">2.1   Headers and structs</a></li>
                     <li><a href="#id1">2.2   Validate Parameters</a></li>
@@ -66,13 +61,13 @@
             <p>A module must import <cite>mig/modules</cite>.</p>
             <p>A module registers itself at runtime via its init() function which must call <cite>modules.Register</cite> with a module name and an instance of the <cite>Runner</cite> struct.</p>
             <p>The <cite>Runner</cite> struct must contain two fields: module parameters and module results. The former can use any format the module choses to use, the latter must implement the <cite>modules.Result</cite> struct.</p>
-            <pre><code class="go"><span class="c1">// Runner gives access to the exported functions and structs of the module
+            <pre class="code go"><span class="c1">// Runner gives access to the exported functions and structs of the module
 </span><span class="kd">type</span> <span class="nx">Runner</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">Parameters</span> <span class="nx">myModuleParams</span>
     <span class="nx">Results</span>    <span class="nx">modules</span><span class="p">.</span><span class="nx">Result</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <p>A module must have a unique name. A good practice is to use the same name for the module name as for the Go package name. The code sample below shows how the <cite>example</cite> module uses package name <cite>example</cite> and registers with name <cite>example</cite>.</p>
-            <pre><code class="go"><span class="kn">package</span> <span class="nx">example</span>
+            <pre class="code go"><span class="kn">package</span> <span class="nx">example</span>
 
 <span class="kn">import</span> <span class="p">(</span>
     <span class="s">"mig/modules"</span>
@@ -85,11 +80,11 @@
     <span class="nx">modules</span><span class="p">.</span><span class="nx">Register</span><span class="p">(</span><span class="s">"example"</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
         <span class="k">return</span> <span class="nb">new</span><span class="p">(</span><span class="nx">Runner</span><span class="p">)</span>
     <span class="p">})</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <p><cite>init()</cite> is a go builtin function that is executed automatically in all imported packages when a program starts. In the agents, modules are imported anonymously, which means that their <cite>init()</cite> function will be executed even if the modules are unused in the agent. Therefore, when MIG Agent starts, all modules execute their <cite>init()</cite> function, add their names and runner function to the global list of available module, and stop there.</p>
             <p>Later on, when the agent receives a command to execute, it looks up modules in the global list <cite>modules.Available</cite>, and if a module is registered to execute the command, calls it via its runner function.</p>
             <p>The list of modules imported in the agent is maintained in <cite>conf/available_modules.go</cite>. You should use this file to add or remove modules.</p>
-            <pre><code class="go"><span class="kn">import</span> <span class="p">(</span>
+            <pre class="code go"><span class="kn">import</span> <span class="p">(</span>
     <span class="c1">//_ "mig/modules/example"
 </span>    <span class="nx">_</span> <span class="s">"mig/modules/agentdestroy"</span>
     <span class="nx">_</span> <span class="s">"mig/modules/file"</span>
@@ -97,25 +92,25 @@
     <span class="nx">_</span> <span class="s">"mig/modules/timedrift"</span>
     <span class="c1">//_ "mig/modules/upgrade"
 </span>    <span class="nx">_</span> <span class="s">"mig/modules/ping"</span>
-<span class="p">)</span></code></pre>
+<span class="p">)</span></pre>
         </section>
         <section id="execution">
             <h3>1.2   Execution</h3>
             <p>A module must implement a <cite>modules.Moduler</cite> interface, which contains two mandatory functions: <cite>Run()</cite> and <cite>ValidateParameters()</cite>.</p>
-            <pre><code class="go"><span class="c1">// Moduler provides the interface to a Module
+            <pre class="code go"><span class="c1">// Moduler provides the interface to a Module
 </span><span class="kd">type</span> <span class="nx">Moduler</span> <span class="kd">interface</span> <span class="p">{</span>
     <span class="nx">Run</span><span class="p">()</span> <span class="kt">string</span>
     <span class="nx">ValidateParameters</span><span class="p">()</span> <span class="kt">error</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <section id="parameters">
                 <h4>1.2.1   Parameters</h4>
                 <p>When a module is available to run an operation, the agent passes the operation parameters to the standard input of module. This is done by calling the agent binary with the flag <strong>-m</strong>, followed by the name of the module.</p>
                 <p>This can easily be done on the command line directly:</p>
-                <pre><code class="bash"><span class="nv">$ </span>mig-agent -m example <span class="o">&lt;&lt;&lt;</span> <span class="s1">'{"class":"parameters", "parameters":{"gethostname": true, "getaddresses": true, "lookuphost": ["www.google.com"]}}'</span>
+                <pre class="code bash"><span class="nv">$ </span>mig-agent -m example <span class="o">&lt;&lt;&lt;</span> <span class="s1">'{"class":"parameters", "parameters":{"gethostname": true, "getaddresses": true, "lookuphost": ["www.google.com"]}}'</span>
 <span class="o">[</span>info<span class="o">]</span> using <span class="nb">builtin </span>conf
-<span class="o">{</span><span class="s2">"foundanything"</span>:true,<span class="s2">"success"</span>:true,<span class="s2">"elements"</span>:<span class="o">{</span><span class="s2">"hostname"</span>:<span class="s2">"fedbox2.jaffa.linuxwall.info"</span>,<span class="s2">"addresses"</span>:<span class="o">[</span><span class="s2">"172.21.0.3/20"</span>,<span class="s2">"fe80::8e70:5aff:fec8:be50/64"</span><span class="o">]</span>,<span class="s2">"lookeduphost"</span>:<span class="o">{</span><span class="s2">"www.google.com"</span>:<span class="o">[</span><span class="s2">"74.125.196.105"</span>,<span class="s2">"74.125.196.147"</span>,<span class="s2">"74.125.196.106"</span>,<span class="s2">"74.125.196.104"</span>,<span class="s2">"74.125.196.103"</span>,<span class="s2">"74.125.196.99"</span>,<span class="s2">"2607:f8b0:4002:c07::6a"</span><span class="o">]}}</span>,<span class="s2">"statistics"</span>:<span class="o">{</span><span class="s2">"stufffound"</span>:3<span class="o">}</span>,<span class="s2">"errors"</span>:null<span class="o">}</span></code></pre>
+<span class="o">{</span><span class="s2">"foundanything"</span>:true,<span class="s2">"success"</span>:true,<span class="s2">"elements"</span>:<span class="o">{</span><span class="s2">"hostname"</span>:<span class="s2">"fedbox2.jaffa.linuxwall.info"</span>,<span class="s2">"addresses"</span>:<span class="o">[</span><span class="s2">"172.21.0.3/20"</span>,<span class="s2">"fe80::8e70:5aff:fec8:be50/64"</span><span class="o">]</span>,<span class="s2">"lookeduphost"</span>:<span class="o">{</span><span class="s2">"www.google.com"</span>:<span class="o">[</span><span class="s2">"74.125.196.105"</span>,<span class="s2">"74.125.196.147"</span>,<span class="s2">"74.125.196.106"</span>,<span class="s2">"74.125.196.104"</span>,<span class="s2">"74.125.196.103"</span>,<span class="s2">"74.125.196.99"</span>,<span class="s2">"2607:f8b0:4002:c07::6a"</span><span class="o">]}}</span>,<span class="s2">"statistics"</span>:<span class="o">{</span><span class="s2">"stufffound"</span>:3<span class="o">}</span>,<span class="s2">"errors"</span>:null<span class="o">}</span></pre>
                 <p>Modules accept different type of inputs on stdin. The most basic one is the <cite>parameters</cite> input, but a module could also receive a <cite>stop</cite> input that indicates that the module should stop its execution immediately. The format of module input messages is defined by <cite>modules.Message</cite>.</p>
-                <pre><code class="go"><span class="c1">// Message defines the input messages received by modules.
+                <pre class="code go"><span class="c1">// Message defines the input messages received by modules.
 </span><span class="kd">type</span> <span class="nx">Message</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">Class</span>      <span class="kt">string</span>      <span class="c1">// represent the type of message being passed to the module
 </span>    <span class="nx">Parameters</span> <span class="kd">interface</span><span class="p">{}</span> <span class="c1">// for `parameters` class, this interface contains the module parameters
@@ -124,13 +119,13 @@
 <span class="kd">const</span> <span class="p">(</span>
     <span class="nx">MsgClassParameters</span> <span class="kt">string</span> <span class="p">=</span> <span class="s">"parameters"</span>
     <span class="nx">MsgClassStop</span>       <span class="kt">string</span> <span class="p">=</span> <span class="s">"stop"</span>
-<span class="p">)</span></code></pre>
+<span class="p">)</span></pre>
                 <p>When the agent receives a command to pass to a module for execution, it extracts the operation parameters from <cite>Command.Action.Operations[N].Parameters</cite> and copies them into <cite>Message.Parameters</cite>. It then sets <cite>Message.Class</cite> to <cite>modules.MsgClassParameters</cite>, marshals the struct into JSON, and pass the resulting <cite>[]byte</cite> to the module's standard input.</p>
             </section>
             <section id="run">
                 <h4>1.2.2   Run</h4>
                 <p>On the receiving side, the module is invoked via its <cite>Run()</cite> function. It starts by trying to read parameters from stdin, then validates the parameters against its own formatting rules, performs work and returns results in a JSON string.</p>
-                <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">Run</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
+                <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">Run</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
     <span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
         <span class="k">if</span> <span class="nx">e</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">e</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
             <span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">"%v"</span><span class="p">,</span> <span class="nx">e</span><span class="p">))</span>
@@ -151,7 +146,7 @@
     <span class="p">}</span>
 
     <span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">doModuleStuff</span><span class="p">()</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
                 <p>The <cite>defer</cite> block in the sample above is used to catch potential panics and return a nicely formatted JSON error to the agent. This is a clean way to indicate to the MIG platform that the module has failed to run on this agent.</p>
             </section>
             <section id="validate-parameters">
@@ -165,13 +160,13 @@
         <section id="results">
             <h3>1.3   Results</h3>
             <p>Results must follow a specific format defined in <cite>modules.Result</cite>. Some rules apply to the way fields in this struct must be set.</p>
-            <pre><code class="go"><span class="kd">type</span> <span class="nx">Result</span> <span class="kd">struct</span> <span class="p">{</span>
+            <pre class="code go"><span class="kd">type</span> <span class="nx">Result</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">Success</span>       <span class="kt">bool</span>        <span class="s">`json:"success"`</span>
     <span class="nx">FoundAnything</span> <span class="kt">bool</span>        <span class="s">`json:"foundanything"`</span>
     <span class="nx">Elements</span>      <span class="kd">interface</span><span class="p">{}</span> <span class="s">`json:"elements"`</span>
     <span class="nx">Statistics</span>    <span class="kd">interface</span><span class="p">{}</span> <span class="s">`json:"statistics"`</span>
     <span class="nx">Errors</span>        <span class="p">[]</span><span class="kt">string</span>    <span class="s">`json:"errors"`</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <section id="success">
                 <h4>1.3.1   Success</h4>
                 <p><cite>Success</cite> must inform the investigator if the module has failed to complete its execution. It must be set to <cite>true</cite> only if the module has ran successfully. It does not indicate anything about the results returned by the module, just that it ran and finished.</p>
@@ -199,13 +194,13 @@
                 <h4>1.4.1   HasResultsPrinter</h4>
                 <p><cite>HasResultsPrinter</cite> is an interface used to allow a module <cite>Runner</cite> to implement the <strong>PrintResults()</strong> function. <cite>PrintResults()</cite> is a pretty-printer used to display the results of a module as an array of string. It is defined as a module-specific interface because only the module knows how to parse its <cite>Elements</cite> and <cite>Statistics</cite> interfaces in <cite>modules.Result</cite>.</p>
                 <p>The interface is defined as:</p>
-                <pre><code class="go"><span class="c1">// HasResultsPrinter implements functions used by module to print information
+                <pre class="code go"><span class="c1">// HasResultsPrinter implements functions used by module to print information
 </span><span class="kd">type</span> <span class="nx">HasResultsPrinter</span> <span class="kd">interface</span> <span class="p">{</span>
     <span class="nx">PrintResults</span><span class="p">(</span><span class="nx">Result</span><span class="p">,</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">([]</span><span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
                 <p>A typical implementation of <cite>PrintResults</cite> takes a <cite>modules.Result</cite> struct and a boolean that indicates whether the printer should display errors and statistics or only found results. When that boolean is set to <cite>true</cite>, errors, stats and empty results are <strong>not</strong> displayed.</p>
                 <p>The function returns results into an array of strings.</p>
-                <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">PrintResults</span><span class="p">(</span><span class="nx">result</span> <span class="nx">modules</span><span class="p">.</span><span class="nx">Result</span><span class="p">,</span> <span class="nx">matchOnly</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">(</span><span class="nx">prints</span> <span class="p">[]</span><span class="kt">string</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+                <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">PrintResults</span><span class="p">(</span><span class="nx">result</span> <span class="nx">modules</span><span class="p">.</span><span class="nx">Result</span><span class="p">,</span> <span class="nx">matchOnly</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">(</span><span class="nx">prints</span> <span class="p">[]</span><span class="kt">string</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="p">(</span>
         <span class="nx">el</span>    <span class="nx">elements</span>
         <span class="nx">stats</span> <span class="nx">statistics</span>
@@ -229,18 +224,18 @@
     <span class="p">}</span>
     <span class="p">[</span><span class="o">...</span> <span class="nx">add</span> <span class="nx">stats</span> <span class="nx">into</span> <span class="nx">the</span> <span class="nx">prints</span> <span class="nx">array</span> <span class="o">...</span><span class="p">]</span>
     <span class="k">return</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             </section>
             <section id="hasparamscreator">
                 <h4>1.4.2   HasParamsCreator</h4>
                 <p><cite>HasParamsCreator</cite> implements the <cite>ParamsCreator()</cite> function used to provide interactive parameters creation in the MIG Console. The function does not take any input value, but implements a terminal prompt for the investigator to fill up the module parameters. The function returns a Parameters structure that the MIG Console will add into an Action.</p>
                 <p>It can be implemented in various ways, as long as it prompt the user in the terminal using something like <cite>fmt.Scanln()</cite>.</p>
                 <p>The interface is defined as:</p>
-                <pre><code class="go"><span class="kd">type</span> <span class="nx">HasParamsCreator</span> <span class="kd">interface</span> <span class="p">{</span>
+                <pre class="code go"><span class="kd">type</span> <span class="nx">HasParamsCreator</span> <span class="kd">interface</span> <span class="p">{</span>
     <span class="nx">ParamsCreator</span><span class="p">()</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
                 <p>A module implementation would have the function:</p>
-                <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">ParamsCreator</span><span class="p">()</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+                <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">ParamsCreator</span><span class="p">()</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">"initializing netstat parameters creation"</span><span class="p">)</span>
     <span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
     <span class="kd">var</span> <span class="nx">p</span> <span class="nx">params</span>
@@ -270,18 +265,18 @@
     <span class="p">}</span>
     <span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span> <span class="p">=</span> <span class="nx">p</span>
     <span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">ValidateParameters</span><span class="p">()</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
                 <p>It is highly recommend to call <cite>ValidateParameters</cite> to verify that the parameters supplied by the users are correct.</p>
             </section>
             <section id="hasparamsparser">
                 <h4>1.4.3   HasParamsParser</h4>
                 <p><cite>HasParamsParser</cite> is similar to <cite>HasParamsCreator</cite>, but implements a command line parameters parser instead of an interactive prompt. It is used by the MIG command line to parse module-specific flags into module Parameters. Each module must implement <cite>ParamsParser()</cite> to transform an array of string into a parameters interface. The recommended way to implement it is to use <cite>FlagSet</cite> from the <cite>flag</cite> Go package. The interface is defined as:</p>
-                <pre><code class="go"><span class="c1">// HasParamsParser implements a function that parses command line parameters
+                <pre class="code go"><span class="c1">// HasParamsParser implements a function that parses command line parameters
 </span><span class="kd">type</span> <span class="nx">HasParamsParser</span> <span class="kd">interface</span> <span class="p">{</span>
     <span class="nx">ParamsParser</span><span class="p">([]</span><span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
                 <p>A typical implementation from the <cite>timedrift</cite> module looks as follows:</p>
-                <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">ParamsParser</span><span class="p">(</span><span class="nx">args</span> <span class="p">[]</span><span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+                <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">ParamsParser</span><span class="p">(</span><span class="nx">args</span> <span class="p">[]</span><span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="p">(</span>
         <span class="nx">err</span>   <span class="kt">error</span>
         <span class="nx">drift</span> <span class="kt">string</span>
@@ -306,7 +301,7 @@
     <span class="p">}</span>
     <span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">.</span><span class="nx">Drift</span> <span class="p">=</span> <span class="nx">drift</span>
     <span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">ValidateParameters</span><span class="p">()</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
                 <p>It is highly recommend to call <cite>ValidateParameters</cite> to verify that the parameters supplied by the users are correct.</p>
             </section>
         </section>
@@ -317,7 +312,7 @@
         <section id="headers-and-structs">
             <h3>2.1   Headers and structs</h3>
             <p>The first part of the module takes care of the registration and declaration of needed structs.</p>
-            <pre><code class="go"><span class="kn">package</span> <span class="nx">example</span>
+            <pre class="code go"><span class="kn">package</span> <span class="nx">example</span>
 
 <span class="kn">import</span> <span class="p">(</span>
     <span class="s">"encoding/json"</span>
@@ -358,7 +353,7 @@
 
 <span class="kd">type</span> <span class="nx">statistics</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">StuffFound</span> <span class="kt">int64</span> <span class="s">`json:"stufffound"`</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <p>Three custom structs are defined: <cite>params</cite>, <cite>elements</cite> and <cite>statistics</cite>.</p>
             <p><cite>params</cite> implements custom module parameters. In this instance, the module will access two booleans (<cite>GetHostname</cite> and <cite>GetAddresses</cite>), and one array of strings (<cite>LookupHost</cite>). We have decided that this module will return its hostname if <cite>GetHostname</cite> is set to true. It will return its IP addresses if <cite>GetAddresses</cite> is set to true, and it will perform DNS lookups and return the IP addresses of each FQDN listed in the <cite>LookupHost</cite> array.</p>
             <p><cite>elements</cite> will contain the results found by the module. The hostname will go into <cite>elements.Hostname</cite>. The local addresses will be appended into <cite>elements.Addresses</cite>. And each host that was looked up will be added into the <cite>elements.LookedUpHost</cite> map with their own arrays of IP addresses.</p>
@@ -367,7 +362,7 @@
         <section id="id1">
             <h3>2.2   Validate Parameters</h3>
             <p>Next we'll implement a parameters validation function.</p>
-            <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">ValidateParameters</span><span class="p">()</span> <span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+            <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">ValidateParameters</span><span class="p">()</span> <span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">fqdn</span> <span class="o">:=</span> <span class="nx">regexp</span><span class="p">.</span><span class="nx">MustCompilePOSIX</span><span class="p">(</span><span class="s">`^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`</span><span class="p">)</span>
     <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">host</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">.</span><span class="nx">LookupHost</span> <span class="p">{</span>
         <span class="k">if</span> <span class="p">!</span><span class="nx">fqdn</span><span class="p">.</span><span class="nx">MatchString</span><span class="p">(</span><span class="nx">host</span><span class="p">)</span> <span class="p">{</span>
@@ -375,14 +370,14 @@
         <span class="p">}</span>
     <span class="p">}</span>
     <span class="k">return</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <p>Since our parameters struct is very basic, there is little verification to do. The two booleans don't need verification, because Go is strongly typed. But we attempt to validate the FQDN of hosts that need to be looked up with a regular expression. If the validation fails, <cite>ValidateParameters</cite> returns an error.</p>
         </section>
         <section id="id2">
             <h3>2.3   Run</h3>
             <p>Run is what the agent will call when the module is executed. It starts by defining a panic handling routine that will transform panics into <cite>modules.Result.Errors</cite> and return the JSON.</p>
             <p>Then, <cite>Run()</cite> reads parameters from stdin. The call to <cite>modules.ReadInputParameters</cite> will block until one line of input is received. If what was received isn't valid parameters, it panics.</p>
-            <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">Run</span><span class="p">()</span> <span class="p">(</span><span class="nx">out</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+            <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">Run</span><span class="p">()</span> <span class="p">(</span><span class="nx">out</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
         <span class="k">if</span> <span class="nx">e</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">e</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
             <span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">"%v"</span><span class="p">,</span> <span class="nx">e</span><span class="p">))</span>
@@ -412,7 +407,7 @@
     <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">stop</span><span class="p">:</span>
         <span class="nb">panic</span><span class="p">(</span><span class="s">"stop message received, terminating early"</span><span class="p">)</span>
     <span class="p">}</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
             <p>What happens after is a little tricky to follow. We want the module to do work, but we also want to allow the investigator to kill the module early if needed. So we first send the module to perform the work by calling <cite>go r.doModuleStuff(&amp;out, &amp;moduleDone)</cite> where <cite>&amp;out</cite> is a pointer to the string that <cite>Run()</cite> will return, and <cite>&amp;moduleDone</cite> is a channel that will receive a boolean when the module is done doing stuff.</p>
             <p>Meanwhile, we start another goroutine <cite>go modules.WatchForStop(&amp;stop)</cite> that will continously read the standard input of the module. If a <cite>stop</cite> message is received on the standard input, the goroutine inserts a boolean in the <cite>stop</cite> channel. This method is typically used by the agent to ask a module to shutdown.</p>
             <p>Both routines are running in parallel, and we use a <cite>select {case}</cite> to detect the first one that has activity. If the module is done, <cite>Run()</cite> exits normally by returning the value of <cite>out</cite>. But if a stop message is received, then <cite>Run()</cite> panics, which will generate a nicely formatter error in the defer block.</p>
@@ -422,7 +417,7 @@
             <p><cite>doModuleStuff</cite> and <cite>buildResults</cite> are two module specific functions that perform the core of the module work. Their implementation is completely arbitrary. The only requirement is that the data returned is a JSON marshalled string of the struct <cite>modules.Result</cite>.</p>
             <p>In the sample below, the variables <cite>el</cite> and <cite>stats</cite> implement the <cite>elements</cite> and <cite>statistics</cite> types defined previously. Results are stored in these two variables, then copied into results alongside potential errors.</p>
             <p>Note in <cite>buildResults</cite> the way <cite>FoundAnything</cite> and <cite>Success</cite> are set to implement the rules defined earlier in this page.</p>
-            <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">doModuleStuff</span><span class="p">(</span><span class="nx">out</span> <span class="o">*</span><span class="kt">string</span><span class="p">,</span> <span class="nx">moduleDone</span> <span class="o">*</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+            <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">doModuleStuff</span><span class="p">(</span><span class="nx">out</span> <span class="o">*</span><span class="kt">string</span><span class="p">,</span> <span class="nx">moduleDone</span> <span class="o">*</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="p">(</span>
         <span class="nx">el</span>    <span class="nx">elements</span>
         <span class="nx">stats</span> <span class="nx">statistics</span>
@@ -485,14 +480,14 @@
         <span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
     <span class="p">}</span>
     <span class="k">return</span> <span class="nb">string</span><span class="p">(</span><span class="nx">jsonOutput</span><span class="p">[:])</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         </section>
         <section id="printing-results">
             <h3>2.5   Printing results</h3>
             <p>Printing results is needed to visualize module results efficiently. Nobody wants to read raw json, especially when querying thousands of agents at once.</p>
             <p>The function below receives a <cite>modules.Result</cite> struct that need to be further analyzed to access the <cite>elements</cite> and <cite>statistics</cite> types. Because these types are specific to the module, and not known to MIG, they need to be accessed using <cite>result.GetElements</cite> and <cite>result.GetStatistics</cite>.</p>
             <p>The rest of the code simply goes through the values and pretty-prints them into the <cite>prints</cite> array of strings.</p>
-            <pre><code class="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">PrintResults</span><span class="p">(</span><span class="nx">result</span> <span class="nx">modules</span><span class="p">.</span><span class="nx">Result</span><span class="p">,</span> <span class="nx">matchOnly</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">(</span><span class="nx">prints</span> <span class="p">[]</span><span class="kt">string</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+            <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">PrintResults</span><span class="p">(</span><span class="nx">result</span> <span class="nx">modules</span><span class="p">.</span><span class="nx">Result</span><span class="p">,</span> <span class="nx">matchOnly</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">(</span><span class="nx">prints</span> <span class="p">[]</span><span class="kt">string</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="p">(</span>
         <span class="nx">el</span>    <span class="nx">elements</span>
         <span class="nx">stats</span> <span class="nx">statistics</span>
@@ -524,7 +519,7 @@
     <span class="p">}</span>
     <span class="nx">prints</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">prints</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">"stat: %d stuff found"</span><span class="p">,</span> <span class="nx">stats</span><span class="p">.</span><span class="nx">StuffFound</span><span class="p">))</span>
     <span class="k">return</span>
-<span class="p">}</span></code></pre>
+<span class="p">}</span></pre>
         </section>
         <section id="creating-parameters">
             <h3>2.6   Creating parameters</h3>
