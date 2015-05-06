@@ -14,7 +14,24 @@ import (
 	ovallib "github.com/ameihm0912/mozoval/go/src/oval"
 	"io/ioutil"
 	"mig/modules"
+	"time"
 )
+
+var stats Statistics
+
+// Various counters used to populate module statistics at the end of the
+// run.
+var counters struct {
+	startTime time.Time
+}
+
+func startCounters() {
+	counters.startTime = time.Now()
+}
+
+func endCounters() {
+	stats.OvalRuntime = time.Now().Sub(counters.startTime)
+}
 
 func init() {
 	modules.Register("oval", func() interface{} {
@@ -33,11 +50,15 @@ func (r Runner) Run() (resStr string) {
 			// return error in json
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
 			r.Results.Success = false
+			endCounters()
+			r.Results.Statistics = stats
 			err, _ := json.Marshal(r.Results)
 			resStr = string(err)
 			return
 		}
 	}()
+
+	startCounters()
 
 	// Read module parameters from stdin
 	err := modules.ReadInputParameters(&r.Parameters)
@@ -67,6 +88,8 @@ func (r Runner) Run() (resStr string) {
 			r.Results.FoundAnything = true
 		}
 		r.Results.Elements = e
+		endCounters()
+		r.Results.Statistics = stats
 		buf, err := json.Marshal(r.Results)
 		if err != nil {
 			panic(err)
@@ -106,6 +129,8 @@ func (r Runner) Run() (resStr string) {
 			r.Results.FoundAnything = true
 		}
 		r.Results.Elements = e
+		endCounters()
+		r.Results.Statistics = stats
 		buf, err := json.Marshal(r.Results)
 		if err != nil {
 			panic(err)
@@ -165,6 +190,10 @@ type PkgInfo struct {
 	PkgName    string `json:"name"`
 	PkgVersion string `json:"version"`
 	PkgType    string `json:"type"`
+}
+
+type Statistics struct {
+	OvalRuntime time.Duration `json:"ovalruntime"`
 }
 
 type Parameters struct {
