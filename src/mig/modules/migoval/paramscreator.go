@@ -29,7 +29,11 @@ func printHelp(isCmd bool) {
 %soval <path>       - OVAL processor
 		    ex: oval ./ovaldefs.xml
 		    process oval definitions on agent
-`, dash, dash)
+
+%snum <int>         - Concurrent OVAL checks (default: 5)
+                    ex: num 5
+		    Specify concurrent OVAL definitions to evaluate at once
+`, dash, dash, dash)
 }
 
 func (r Runner) ParamsParser(args []string) (interface{}, error) {
@@ -37,6 +41,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 		fs       flag.FlagSet
 		ovalDefs string
 		pkgMatch flagParam
+		maxEval  int
 	)
 
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
@@ -47,6 +52,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	fs.Init("migoval", flag.ContinueOnError)
 	fs.Var(&pkgMatch, "pkgmatch", "see help")
 	fs.StringVar(&ovalDefs, "oval", "", "see help")
+	fs.IntVar(&maxEval, "num", 5, "see help")
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -54,6 +60,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 
 	p := newParameters()
 	p.PkgMatch.Matches = pkgMatch
+	p.MaxConcurrentEval = maxEval
 
 	if ovalDefs != "" {
 		var b bytes.Buffer

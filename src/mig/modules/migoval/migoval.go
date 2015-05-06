@@ -45,7 +45,13 @@ func (r Runner) Run() (resStr string) {
 		panic(err)
 	}
 
+	err = r.ValidateParameters()
+	if err != nil {
+		panic(err)
+	}
+
 	ovallib.Init()
+	ovallib.SetMaxChecks(r.Parameters.MaxConcurrentEval)
 
 	e := &elements{}
 
@@ -113,6 +119,9 @@ func (r Runner) Run() (resStr string) {
 }
 
 func (r Runner) ValidateParameters() (err error) {
+	if r.Parameters.MaxConcurrentEval <= 0 || r.Parameters.MaxConcurrentEval > 10 {
+		return fmt.Errorf("concurrent evaluation must be between > 0 and <= 10")
+	}
 	return
 }
 
@@ -166,6 +175,9 @@ type Parameters struct {
 	// A compressed, base64 encoded OVAL definition file for processing
 	// using OVAL library on agent.
 	OvalDef string `json:"ovaldef"`
+
+	// Concurrent checks to run on agent
+	MaxConcurrentEval int `json:"maxconneval"`
 }
 
 type PkgMatch struct {
