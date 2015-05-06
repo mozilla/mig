@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	ovallib "github.com/ameihm0912/mozoval/go/src/oval"
-	"io"
+	"io/ioutil"
 	"mig/modules"
 )
 
@@ -68,16 +68,21 @@ func (r Runner) Run() (resStr string) {
 		resStr = string(buf)
 		return
 	} else if r.Parameters.OvalDef != "" {
-		var ovalbuf bytes.Buffer
 		b := bytes.NewBufferString(r.Parameters.OvalDef)
 		decoder := base64.NewDecoder(base64.StdEncoding, b)
 		gz, err := gzip.NewReader(decoder)
 		if err != nil {
 			panic(err)
 		}
-		_, err = io.Copy(&ovalbuf, gz)
+		ovalbuf, err := ioutil.ReadAll(gz)
+		if err != nil {
+			panic(err)
+		}
 
-		od, err := ovallib.ParseBuffer(ovalbuf.String())
+		od, err := ovallib.ParseBuffer(string(ovalbuf))
+		if err != nil {
+			panic(err)
+		}
 		ovalresults, err := ovallib.Execute(od)
 		if err != nil {
 			panic(err)

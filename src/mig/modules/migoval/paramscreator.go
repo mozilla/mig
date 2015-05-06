@@ -67,6 +67,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 		gz := gzip.NewWriter(encoder)
 		_, err = io.Copy(gz, fd)
 		gz.Close()
+		encoder.Close()
 		if err != nil {
 			return nil, err
 		}
