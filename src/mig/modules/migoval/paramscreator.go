@@ -30,7 +30,7 @@ func printHelp(isCmd bool) {
 		    ex: oval ./ovaldefs.xml
 		    process oval definitions on agent
 
-%snum <int>         - Concurrent OVAL checks (default: 5)
+%snum <int>         - Concurrent OVAL checks (default: 1)
                     ex: num 5
 		    Specify concurrent OVAL definitions to evaluate at once
 `, dash, dash, dash)
@@ -52,7 +52,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	fs.Init("migoval", flag.ContinueOnError)
 	fs.Var(&pkgMatch, "pkgmatch", "see help")
 	fs.StringVar(&ovalDefs, "oval", "", "see help")
-	fs.IntVar(&maxEval, "num", 5, "see help")
+	fs.IntVar(&maxEval, "num", 1, "see help")
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
