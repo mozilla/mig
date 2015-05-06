@@ -619,6 +619,12 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 			cmd.Status = result.status
 		}
 		cmd.Results[result.position] = result.output
+		// if the result includes an error condition that occurred during runModule(), include
+		// that.
+		if result.err != nil {
+			errstr := result.err.Error()
+			cmd.Results[result.position].Errors = append(cmd.Results[result.position].Errors, errstr)
+		}
 		resultReceived++
 		if resultReceived >= opsCounter {
 			break
