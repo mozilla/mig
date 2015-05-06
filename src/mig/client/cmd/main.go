@@ -203,12 +203,12 @@ readytolaunch:
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(os.Stderr, "\x1b[33m%d agents will be targeted. ctrl+c to cancel. launching in ", len(agents))
+	fmt.Fprintf(os.Stderr, "\x1b[33m%d agents will be targeted. ctrl+c to cancel. launching in \x1b[0m", len(agents))
 	for i := 5; i > 0; i-- {
 		time.Sleep(1 * time.Second)
-		fmt.Fprintf(os.Stderr, "%d ", i)
+		fmt.Fprintf(os.Stderr, "\x1b[33m%d\x1b[0m ", i)
 	}
-	fmt.Fprintf(os.Stderr, "GO\n\x1b[0m")
+	fmt.Fprintf(os.Stderr, "\x1b[33mGO\n\x1b[0m")
 
 	// launch and follow
 	a, err = cli.PostAction(a)
