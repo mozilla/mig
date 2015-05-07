@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"mig/modules"
 	"net"
 	"os"
@@ -63,7 +64,7 @@ func (r Runner) ValidateParameters() (err error) {
 	return err
 }
 
-func (r Runner) Run() (out string) {
+func (r Runner) Run(in io.Reader) (out string) {
 	var (
 		stats statistics
 		el    elements
@@ -79,7 +80,7 @@ func (r Runner) Run() (out string) {
 	}()
 	el.LocalTime = time.Now().Format(time.RFC3339Nano)
 	t1 := time.Now()
-	err := modules.ReadInputParameters(&r.Parameters)
+	err := modules.ReadInputParameters(in, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}

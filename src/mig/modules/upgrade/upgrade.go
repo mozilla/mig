@@ -82,7 +82,7 @@ func (r Runner) ValidateParameters() (err error) {
 	return
 }
 
-func (r Runner) Run() (out string) {
+func (r Runner) Run(in io.Reader) (out string) {
 	defer func() {
 		if e := recover(); e != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
@@ -91,7 +91,7 @@ func (r Runner) Run() (out string) {
 			out = string(buf[:])
 		}
 	}()
-	err := modules.ReadInputParameters(&r.Parameters)
+	err := modules.ReadInputParameters(in, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}

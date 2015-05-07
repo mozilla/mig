@@ -70,7 +70,7 @@ func Register(name string, runner func() interface{}) {
 
 // Moduler provides the interface to a Module
 type Moduler interface {
-	Run() string
+	Run(io.Reader) string
 	ValidateParameters() error
 }
 
@@ -126,7 +126,7 @@ func ReadInput(r io.Reader) (msg Message, err error) {
 // ReadInputParameters reads the first line from stdin and expects to find a
 // modules.Message of class `parameters`. This function uses ReadInput and will
 // block waiting for data on stdin
-func ReadInputParameters(p interface{}, r io.Reader) (err error) {
+func ReadInputParameters(r io.Reader, p interface{}) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("ReadInputParameters() -> %v", e)
@@ -152,7 +152,7 @@ func ReadInputParameters(p interface{}, r io.Reader) (err error) {
 
 // WatchForStop continuously reads stdin for a stop message. When one is received,
 // `true` is sent into the stop channel.
-func WatchForStop(stopChan *chan bool, r io.Reader) error {
+func WatchForStop(r io.Reader, stopChan *chan bool) error {
 	for {
 		msg, err := ReadInput(r)
 		if err != nil {
