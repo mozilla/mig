@@ -35,7 +35,7 @@ MSICONF		:= mig-agent-installer.wxs
 GCC			:= gcc
 CFLAGS		:=
 LDFLAGS		:=
-GOOPTS		:=
+GOOPTS		:= -race
 GO 			:= GOPATH=$(shell pwd):$(shell go env GOROOT)/bin GOOS=$(OS) GOARCH=$(ARCH) go
 GOGETTER	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go get -u
 GOLDFLAGS	:= -ldflags "-X main.version $(BUILDREV)"
@@ -313,6 +313,9 @@ clean-agent:
 	find bin/ -name mig-agent* -exec rm {} \;
 	rm -rf packages
 	rm -rf tmp
+
+vet:
+	$(GO) vet mig/...
 
 clean: clean-agent
 	rm -rf bin
