@@ -101,7 +101,7 @@ mandatory functions: `Run()` and `ValidateParameters()`.
 
 	// Moduler provides the interface to a Module
 	type Moduler interface {
-		Run() string
+		Run(io.Reader) string
 		ValidateParameters() error
 	}
 
@@ -147,13 +147,13 @@ Run
 ~~~
 
 On the receiving side, the module is invoked via its `Run()` function. It
-starts by trying to read parameters from stdin, then validates the parameters
-against its own formatting rules, performs work and returns results in a JSON
-string.
+starts by trying to read parameters from stdin, via the `in io.Reader`. It 
+then validates the parameters against its own formatting rules, performs work
+and returns results in a JSON string.
 
 .. code:: go
 
-	func (r Runner) Run() string {
+	func (r Runner) Run(in io.Reader) string {
 		defer func() {
 			if e := recover(); e != nil {
 				r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
@@ -163,7 +163,7 @@ string.
 			}
 		}()
 
-		err := modules.ReadInputParameters(&r.Parameters)
+		err := modules.ReadInputParameters(in, &r.Parameters)
 		if err != nil {
 			panic(err)
 		}
@@ -533,7 +533,7 @@ valid parameters, it panics.
 
 .. code:: go
 
-	func (r Runner) Run() (out string) {
+	func (r Runner) Run(in io.Reader) (out string) {
 		defer func() {
 			if e := recover(); e != nil {
 				r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
@@ -543,7 +543,7 @@ valid parameters, it panics.
 			}
 		}()
 
-		err := modules.ReadInputParameters(&r.Parameters)
+		err := modules.ReadInputParameters(in, &r.Parameters)
 		if err != nil {
 			panic(err)
 		}
@@ -555,7 +555,7 @@ valid parameters, it panics.
 		moduleDone := make(chan bool)
 		stop := make(chan bool)
 		go r.doModuleStuff(&out, &moduleDone)
-		go modules.WatchForStop(&stop)
+		go modules.WatchForStop(in, &stop)
 
 		select {
 		case <-moduleDone:
