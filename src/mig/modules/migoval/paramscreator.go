@@ -33,15 +33,20 @@ func printHelp(isCmd bool) {
 %snum <int>         - Concurrent OVAL checks (default: 1)
                     ex: num 5
 		    Specify concurrent OVAL definitions to evaluate at once
-`, dash, dash, dash)
+
+%sincludefalse      - Include false evaluations
+                    ex: includefalse
+		    Also includes definitions in results that evaluated to false
+`, dash, dash, dash, dash)
 }
 
 func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	var (
-		fs       flag.FlagSet
-		ovalDefs string
-		pkgMatch flagParam
-		maxEval  int
+		fs           flag.FlagSet
+		ovalDefs     string
+		pkgMatch     flagParam
+		maxEval      int
+		includeFalse bool
 	)
 
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
@@ -53,6 +58,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	fs.Var(&pkgMatch, "pkgmatch", "see help")
 	fs.StringVar(&ovalDefs, "oval", "", "see help")
 	fs.IntVar(&maxEval, "num", 1, "see help")
+	fs.BoolVar(&includeFalse, "includefalse", false, "see help")
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -61,6 +67,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	p := newParameters()
 	p.PkgMatch.Matches = pkgMatch
 	p.MaxConcurrentEval = maxEval
+	p.IncludeFalse = includeFalse
 
 	if ovalDefs != "" {
 		var b bytes.Buffer

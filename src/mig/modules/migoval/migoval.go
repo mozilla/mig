@@ -117,6 +117,11 @@ func (r Runner) Run() (resStr string) {
 			panic(err)
 		}
 		for _, x := range ovalresults {
+			if !r.Parameters.IncludeFalse {
+				if x.Status == ovallib.RESULT_FALSE {
+					continue
+				}
+			}
 			nmor := &MOResult{}
 			nmor.Title = x.Title
 			nmor.Status = x.StatusString()
@@ -207,6 +212,9 @@ type Parameters struct {
 
 	// Concurrent checks to run on agent
 	MaxConcurrentEval int `json:"maxconneval"`
+
+	// Include false results for checks
+	IncludeFalse bool `json:"includefalse"`
 }
 
 type PkgMatch struct {
