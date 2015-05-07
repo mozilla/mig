@@ -6,7 +6,7 @@
 package modules
 
 import (
-	"bytes"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -116,15 +116,17 @@ func TestReadInputParameters(t *testing.T) {
 	if p.SomeParam != "foo" {
 		t.Errorf("failed to read input parameters from stdin")
 	}
-	// test delayed write
-	w2 := bytes.NewBufferString("")
+	// test delayed write. use a pipe so that reader doesn't reach EOF on the first
+	// read of the empty buffer.
+	r2, w2, err := os.Pipe()
 	block := make(chan bool)
 	go func() {
-		err = ReadInputParameters(&p, w2)
+		err = ReadInputParameters(&p, r2)
 		block <- true
 	}()
-	time.Sleep(time.Second)
+	time.Sleep(100 * time.Millisecond)
 	w2.WriteString(`{"class":"parameters","parameters":{"someparam":"bar"}}`)
+	w2.Close() // close the pipe to trigger EOF on the reader
 	select {
 	case <-block:
 	case <-time.After(2 * time.Second):

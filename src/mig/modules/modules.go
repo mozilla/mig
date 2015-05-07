@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"time"
 )
 
 // Message defines the input messages received by modules.
@@ -88,6 +87,22 @@ func MakeMessage(class MessageClass, params interface{}) (rawMsg []byte, err err
 	return
 }
 
+// Keep reading until we get a full line or an error, and return
+func readInputLine(rdr *bufio.Reader) ([]byte, error) {
+	var ret []byte
+	for {
+		lb, isPrefix, err := rdr.ReadLine()
+		if err != nil {
+			return ret, err
+		}
+		ret = append(ret, lb...)
+		if !isPrefix {
+			break
+		}
+	}
+	return ret, nil
+}
+
 // ReadInput reads one line of input from stdin, unmarshal it into a modules.Message
 // and returns the message to the caller
 func ReadInput(r io.Reader) (msg Message, err error) {
@@ -96,19 +111,12 @@ func ReadInput(r io.Reader) (msg Message, err error) {
 			err = fmt.Errorf("ReadInput() -> %v", e)
 		}
 	}()
-	scanner := bufio.NewScanner(r)
-	for {
-		// read stdin every second and break the loop if there's data
-		scanner.Scan()
-		if err = scanner.Err(); err != nil {
-			return
-		}
-		if len(scanner.Bytes()) != 0 || scanner.Err() == io.EOF {
-			break
-		}
-		time.Sleep(time.Second)
+	reader := bufio.NewReader(r)
+	linebuffer, err := readInputLine(reader)
+	if err != nil {
+		panic(err)
 	}
-	err = json.Unmarshal(scanner.Bytes(), &msg)
+	err = json.Unmarshal(linebuffer, &msg)
 	if err != nil {
 		panic(err)
 	}
