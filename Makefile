@@ -309,6 +309,9 @@ doc:
 test: mig-agent
 	$(BINDIR)/mig-agent-latest -m=file '{"searches": {"shouldmatch": {"names": ["^root"],"sizes": ["<10m"],"options": {"matchall": true},"paths": ["/etc/passwd"]},"shouldnotmatch": {"options": {"maxdepth": 1},"paths": ["/tmp"],"contents": ["should not match"]}}}'
 
+test-modules:
+	$(GO) test mig/modules
+
 clean-agent:
 	find bin/ -name mig-agent* -exec rm {} \;
 	rm -rf packages
