@@ -9,6 +9,7 @@ package memory
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/mozilla/masche/listlibs"
@@ -78,6 +79,7 @@ type check struct {
 	matched   uint64
 	matchedPs []process.Process
 	value     string
+	bytes     []byte
 	regex     *regexp.Regexp
 }
 
@@ -162,6 +164,10 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkByte
 		c.value = v
+		c.bytes, err = hex.DecodeString(v)
+		if err != nil {
+			return
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 		if debug {
@@ -238,6 +244,15 @@ func (r Runner) ValidateParameters() (err error) {
 				return
 			}
 		}
+		for _, r := range s.Bytes {
+			if debug {
+				fmt.Printf("validating bytes '%s'\n", r)
+			}
+			err = validateBytes(r)
+			if err != nil {
+				return
+			}
+		}
 	}
 	return
 }
@@ -261,6 +276,17 @@ func validateRegex(regex string) error {
 	_, err := regexp.Compile(regex)
 	if err != nil {
 		return fmt.Errorf("Invalid regexp '%s'. Must be a regexp. Compilation failed with '%v'", regex, err)
+	}
+	return nil
+}
+
+func validateBytes(bytes string) error {
+	if len(bytes) < 1 {
+		return fmt.Errorf("Empty values are not permitted")
+	}
+	_, err := hex.DecodeString(bytes)
+	if err != nil {
+		return fmt.Errorf("Invalid bytes '%s'. Must be an hexadecimal byte string without leading 0x. ex: 'ff00d1ab'", bytes)
 	}
 	return nil
 }
@@ -500,8 +526,8 @@ func (r Runner) walkProcMemory(proc process.Process, procname string) (err error
 		// find the largest bufsize needed
 		for _, c := range search.checks {
 			if c.code&checkByte != 0 {
-				if uint(len(c.value)) > bufsize {
-					bufsize = uint(len(c.value))
+				if uint(len(c.bytes)) > (bufsize / 2) {
+					bufsize = 2 * uint(len(c.bytes))
 					// pad to always have an even bufsize
 					if bufsize%2 != 0 {
 						bufsize++
@@ -557,7 +583,7 @@ func (r Runner) walkProcMemory(proc process.Process, procname string) (err error
 					c.storeMatch(proc)
 					search.checks[i] = c
 				case checkByte:
-					if bytes.Index(buf, []byte(c.value)) < 0 {
+					if bytes.Index(buf, c.bytes) < 0 {
 						// not found
 						matchedall = false
 						continue

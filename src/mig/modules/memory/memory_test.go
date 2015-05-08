@@ -36,7 +36,8 @@ func TestParameters(t *testing.T) {
 		{false, `{"searches":{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":{"names":["foo"]}}}`},
 		{true, `{"searches":{"s1":{"libraries":["^[a-z]{10,50}$"]}}}`},
 		{false, `{"searches":{"s1":{"libraries":["["]}}}`},
-		{true, `{"searches":{"s1":{"bytes":["abc","def","ghij"]}}}`},
+		{true, `{"searches":{"s1":{"bytes":["dead","beef"]}}}`},
+		{false, `{"searches":{"s1":{"bytes":["zzzzzzzz"]}}}`},
 		{true, `{"searches":{"s1":{"contents":["^(.+)[a-zA-Z0-9]{10.50}$"]}}}`},
 		{false, `{"searches":{"s1":{"contents":["^$", "["]}}}`},
 	}
@@ -62,10 +63,8 @@ func TestFindGoTestProcess(t *testing.T) {
 	)
 	r.Parameters = *newParameters()
 	s.Names = append(s.Names, "go-build")
-	marker := "test search looking for self"
-	s.Bytes = append(s.Bytes, marker)
-	s.Contents = append(s.Contents, marker)
-	s.Description = marker
+	s.Bytes = append(s.Bytes, "7465737420736561726368206c6f6f6b696e6720666f722073656c66")
+	s.Contents = append(s.Contents, "test search looking for self")
 	s.Options.MatchAll = true
 	s.Options.Offset = 0.0
 	s.Options.MaxLength = 10000000
@@ -111,7 +110,7 @@ func TestSearches(t *testing.T) {
 		{true, `{"searches":{"s1":{"names":["go"]}}}`},
 		{false, `{"searches":{"s1":{"libraries":["^caribou.so$"]}}}`},
 		{true, `{"searches":{"s1":{"contents":["memory_test"]}}}`},
-		{false, `{"searches":{"s1":{"names":["1983yrotewdshhhoiufhes7fd29"],"bytes":["qiuwhd191h8eoiqhfa8a9ds10woadhfr872iyeaf78dy28qafwi1094898wydihsf"],"options":{"matchall": true}}}}`},
+		{false, `{"searches":{"s1":{"names":["1983yrotewdshhhoiufhes7fd29"],"bytes":["ffffffffaaaabbbbcccceeee"],"options":{"matchall": true}}}}`},
 	}
 	for _, tp := range parameters {
 		var r Runner
