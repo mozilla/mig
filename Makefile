@@ -44,7 +44,7 @@ MKDIR		:= mkdir
 INSTALL		:= install
 
 
-all: go_get_deps mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
+all: go_get_deps test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
 
 mig-agent:
 	echo building mig-agent for $(OS)/$(ARCH)
@@ -311,11 +311,14 @@ worker-compliance-item:
 doc:
 	make -C doc doc
 
-test: mig-agent
-	$(BINDIR)/mig-agent-latest -m=file '{"searches": {"shouldmatch": {"names": ["^root"],"sizes": ["<10m"],"options": {"matchall": true},"paths": ["/etc/passwd"]},"shouldnotmatch": {"options": {"maxdepth": 1},"paths": ["/tmp"],"contents": ["should not match"]}}}'
+test: test-modules test-memory-modules
+	#$(GO) test mig/...
 
 test-modules:
 	$(GO) test mig/modules
+
+test-memory-modules:
+	$(GO) test mig/modules/memory
 
 clean-agent:
 	find bin/ -name mig-agent* -exec rm {} \;
