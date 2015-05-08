@@ -109,7 +109,7 @@ func TestGetStatistics(t *testing.T) {
 func TestReadInputParameters(t *testing.T) {
 	var p params
 	w := strings.NewReader(`{"class":"parameters","parameters":{"someparam":"foo"}}`)
-	err := ReadInputParameters(&p, w)
+	err := ReadInputParameters(w, &p)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -121,7 +121,7 @@ func TestReadInputParameters(t *testing.T) {
 	r2, w2, err := os.Pipe()
 	block := make(chan bool)
 	go func() {
-		err = ReadInputParameters(&p, r2)
+		err = ReadInputParameters(r2, &p)
 		block <- true
 	}()
 	time.Sleep(100 * time.Millisecond)
@@ -145,7 +145,7 @@ func TestWatchForStop(t *testing.T) {
 	w := strings.NewReader(`{"class":"stop"}`)
 	var err error
 	go func() {
-		err = WatchForStop(&stopChan, w)
+		err = WatchForStop(w, &stopChan)
 	}()
 	select {
 	case <-stopChan:
