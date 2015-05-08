@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	ovallib "github.com/ameihm0912/mozoval/go/src/oval"
+	"io"
 	"io/ioutil"
 	"mig/modules"
 	"time"
@@ -44,7 +45,7 @@ type Runner struct {
 	Results    modules.Result
 }
 
-func (r Runner) Run() (resStr string) {
+func (r Runner) Run(in io.Reader) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
@@ -61,7 +62,7 @@ func (r Runner) Run() (resStr string) {
 	startCounters()
 
 	// Read module parameters from stdin
-	err := modules.ReadInputParameters(&r.Parameters)
+	err := modules.ReadInputParameters(in, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}
