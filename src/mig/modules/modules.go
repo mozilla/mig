@@ -9,14 +9,13 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
-	"time"
+	"io"
 )
 
 // Message defines the input messages received by modules.
 type Message struct {
-	Class      MessageClass `json:"class"`      // represent the type of message being passed to the module
-	Parameters interface{}  `json:"parameters"` // for `parameters` class, this interface contains the module parameters
+	Class      MessageClass `json:"class"`                // represent the type of message being passed to the module
+	Parameters interface{}  `json:"parameters,omitempty"` // for `parameters` class, this interface contains the module parameters
 }
 
 type MessageClass string
@@ -62,8 +61,7 @@ var Available = make(map[string]Registration)
 // Register adds a module to the list of available modules
 func Register(name string, runner func() interface{}) {
 	if _, exist := Available[name]; exist {
-		fmt.Fprintf(os.Stderr, "Register: a module named '%s' has already been registered.\nAre you trying to import the same module twice?\n", name)
-		os.Exit(1)
+		panic("Register: a module named " + name + " has already been registered.\nAre you trying to import the same module twice?")
 	}
 	newmodule := &Registration{}
 	newmodule.Runner = runner
@@ -72,7 +70,7 @@ func Register(name string, runner func() interface{}) {
 
 // Moduler provides the interface to a Module
 type Moduler interface {
-	Run() string
+	Run(io.Reader) string
 	ValidateParameters() error
 }
 
@@ -89,27 +87,36 @@ func MakeMessage(class MessageClass, params interface{}) (rawMsg []byte, err err
 	return
 }
 
+// Keep reading until we get a full line or an error, and return
+func readInputLine(rdr *bufio.Reader) ([]byte, error) {
+	var ret []byte
+	for {
+		lb, isPrefix, err := rdr.ReadLine()
+		if err != nil {
+			return ret, err
+		}
+		ret = append(ret, lb...)
+		if !isPrefix {
+			break
+		}
+	}
+	return ret, nil
+}
+
 // ReadInput reads one line of input from stdin, unmarshal it into a modules.Message
 // and returns the message to the caller
-func ReadInput() (msg Message, err error) {
+func ReadInput(r io.Reader) (msg Message, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("ReadInput() -> %v", e)
 		}
 	}()
-	scanner := bufio.NewScanner(os.Stdin)
-	for {
-		// read stdin every second and break the loop if there's data
-		scanner.Scan()
-		if err := scanner.Err(); err != nil {
-			panic(err)
-		}
-		if len(scanner.Bytes()) != 0 {
-			break
-		}
-		time.Sleep(time.Second)
+	reader := bufio.NewReader(r)
+	linebuffer, err := readInputLine(reader)
+	if err != nil {
+		panic(err)
 	}
-	err = json.Unmarshal(scanner.Bytes(), &msg)
+	err = json.Unmarshal(linebuffer, &msg)
 	if err != nil {
 		panic(err)
 	}
@@ -119,13 +126,13 @@ func ReadInput() (msg Message, err error) {
 // ReadInputParameters reads the first line from stdin and expects to find a
 // modules.Message of class `parameters`. This function uses ReadInput and will
 // block waiting for data on stdin
-func ReadInputParameters(p interface{}) (err error) {
+func ReadInputParameters(r io.Reader, p interface{}) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("ReadInputParameters() -> %v", e)
 		}
 	}()
-	msg, err := ReadInput()
+	msg, err := ReadInput(r)
 	if err != nil {
 		panic(err)
 	}
@@ -145,9 +152,9 @@ func ReadInputParameters(p interface{}) (err error) {
 
 // WatchForStop continuously reads stdin for a stop message. When one is received,
 // `true` is sent into the stop channel.
-func WatchForStop(stopChan *chan bool) error {
+func WatchForStop(r io.Reader, stopChan *chan bool) error {
 	for {
-		msg, err := ReadInput()
+		msg, err := ReadInput(r)
 		if err != nil {
 			return err
 		}

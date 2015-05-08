@@ -17,6 +17,7 @@ import (
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
+	"io"
 	"mig/modules"
 	"net"
 	"os"
@@ -56,7 +57,7 @@ const (
 	E_Timeout     = "connection timed out"
 )
 
-func (r Runner) Run() (out string) {
+func (r Runner) Run(in io.Reader) (out string) {
 	var (
 		err error
 		el  elements
@@ -69,7 +70,7 @@ func (r Runner) Run() (out string) {
 			out = string(buf[:])
 		}
 	}()
-	err = modules.ReadInputParameters(&r.Parameters)
+	err = modules.ReadInputParameters(in, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}

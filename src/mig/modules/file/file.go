@@ -618,7 +618,7 @@ var stats statistics
 
 var walkingErrors []string
 
-func (r Runner) Run() (resStr string) {
+func (r Runner) Run(in io.Reader) (resStr string) {
 	var (
 		roots     []string
 		traversed []string
@@ -639,7 +639,7 @@ func (r Runner) Run() (resStr string) {
 		}
 	}()
 	t0 := time.Now()
-	err := modules.ReadInputParameters(&r.Parameters)
+	err := modules.ReadInputParameters(in, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}

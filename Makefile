@@ -35,7 +35,7 @@ MSICONF		:= mig-agent-installer.wxs
 GCC			:= gcc
 CFLAGS		:=
 LDFLAGS		:=
-GOOPTS		:=
+GOOPTS		:= -race
 GO 			:= GOPATH=$(shell pwd):$(shell go env GOROOT)/bin GOOS=$(OS) GOARCH=$(ARCH) go
 GOGETTER	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go get -u
 GOLDFLAGS	:= -ldflags "-X main.version $(BUILDREV)"
@@ -309,10 +309,16 @@ doc:
 test: mig-agent
 	$(BINDIR)/mig-agent-latest -m=file '{"searches": {"shouldmatch": {"names": ["^root"],"sizes": ["<10m"],"options": {"matchall": true},"paths": ["/etc/passwd"]},"shouldnotmatch": {"options": {"maxdepth": 1},"paths": ["/tmp"],"contents": ["should not match"]}}}'
 
+test-modules:
+	$(GO) test mig/modules
+
 clean-agent:
 	find bin/ -name mig-agent* -exec rm {} \;
 	rm -rf packages
 	rm -rf tmp
+
+vet:
+	$(GO) vet mig/...
 
 clean: clean-agent
 	rm -rf bin

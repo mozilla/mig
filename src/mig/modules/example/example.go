@@ -29,6 +29,7 @@ package example
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"mig/modules"
 	"net"
 	"os"
@@ -83,7 +84,7 @@ func (r Runner) ValidateParameters() (err error) {
 // Run *must* be implemented by a module. Its the function that executes the module.
 // It must return a string of marshalled json that contains the results from the module.
 // The code below provides a base module skeleton that can be reused in all modules.
-func (r Runner) Run() (out string) {
+func (r Runner) Run(in io.Reader) (out string) {
 	// a good way to handle execution failures is to catch panics and store
 	// the panicked error into modules.Results.Errors, marshal that, and output
 	// the JSON string back to the caller
@@ -97,7 +98,7 @@ func (r Runner) Run() (out string) {
 	}()
 
 	// read module parameters from stdin
-	err := modules.ReadInputParameters(&r.Parameters)
+	err := modules.ReadInputParameters(in, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}
@@ -112,7 +113,7 @@ func (r Runner) Run() (out string) {
 	moduleDone := make(chan bool)
 	stop := make(chan bool)
 	go r.doModuleStuff(&out, &moduleDone)
-	go modules.WatchForStop(&stop)
+	go modules.WatchForStop(in, &stop)
 
 	select {
 	case <-moduleDone:

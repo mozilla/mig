@@ -12,6 +12,7 @@ package netstat
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"mig/modules"
 	"net"
 	"regexp"
@@ -147,7 +148,7 @@ func validatePort(val string) error {
 	return nil
 }
 
-func (r Runner) Run() (resStr string) {
+func (r Runner) Run(in io.Reader) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
@@ -161,7 +162,7 @@ func (r Runner) Run() (resStr string) {
 	t0 := time.Now()
 
 	// read module parameters from stdin
-	err := modules.ReadInputParameters(&r.Parameters)
+	err := modules.ReadInputParameters(in, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}
