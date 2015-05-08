@@ -246,7 +246,7 @@ func validateLabel(label string) error {
 	if len(label) < 1 {
 		return fmt.Errorf("empty labels are not permitted")
 	}
-	labelregexp := `^([a-zA-Z0-9_-]|.){1,64}$`
+	labelregexp := `^([a-zA-Z0-9_-]){1,64}$`
 	labelre := regexp.MustCompile(labelregexp)
 	if !labelre.MatchString(label) {
 		return fmt.Errorf("The syntax of label '%s' is invalid. Must match regex %s", label, labelregexp)
@@ -266,6 +266,8 @@ func validateRegex(regex string) error {
 }
 
 func (r Runner) Run(in io.Reader) (out string) {
+	var ts statistics
+	stats = ts
 	// in debug mode, we just panic
 	if !debug {
 		defer func() {
