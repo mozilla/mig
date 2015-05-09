@@ -127,7 +127,7 @@ func (s *search) makeChecks() (err error) {
 		}
 	}()
 	if s.Options.MaxLength == 0 {
-		s.Options.MaxLength = float64(^uintptr(0) >> 1)
+		s.Options.MaxLength = float64(^uint64(0))
 	}
 	for _, v := range s.Names {
 		var c check
@@ -552,12 +552,12 @@ func (r Runner) walkProcMemory(proc process.Process, procname string) (err error
 		return
 	}
 	// keep track of the number of bytes read to exit when maxlength is reached
-	readBytes := 0
+	var readBytes float64
 	walkfn := func(curStartAddr uintptr, buf []byte) (keepSearching bool) {
 		if readBytes == 0 {
-			readBytes += len(buf)
+			readBytes += float64(len(buf))
 		} else {
-			readBytes += len(buf) / 2
+			readBytes += float64(len(buf) / 2)
 		}
 		if debug {
 			fmt.Println("walkProcMemory: reading", bufsize, "bytes starting at addr", curStartAddr, "; read", readBytes, "bytes so far")
@@ -569,7 +569,7 @@ func (r Runner) walkProcMemory(proc process.Process, procname string) (err error
 			}
 			// if the search is meant to stop at a given address, and we're passed
 			// that point then deactivate the search now
-			if float64(readBytes) >= search.Options.MaxLength {
+			if readBytes >= search.Options.MaxLength {
 				search.deactivate()
 				goto skip
 			}
@@ -621,7 +621,7 @@ func (r Runner) walkProcMemory(proc process.Process, procname string) (err error
 			}
 		}
 	}
-	stats.MemoryRead += float64(readBytes)
+	stats.MemoryRead += readBytes
 	return
 }
 
