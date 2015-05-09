@@ -99,7 +99,9 @@ type psres struct {
 
 /* Statistic counters:
 - ProcessCount is the total numbers of processes inspected
+- MemoryRead is the total number of bytes of memory inspected
 - Totalhits is the total number of checks that hit
+- Failures is an array of soft errors encountered during inspection
 - Exectime is the total execution time of the module
 */
 type statistics struct {
