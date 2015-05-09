@@ -109,7 +109,7 @@ func TestSearches(t *testing.T) {
 	var parameters = []testParams{
 		{true, `{"searches":{"s1":{"names":["go"]}}}`},
 		{false, `{"searches":{"s1":{"libraries":["^caribou.so$"]}}}`},
-		{true, `{"searches":{"s1":{"contents":["memory_test"]}}}`},
+		{true, `{"searches":{"s1":{"contents":["memory_test"], "names": ["go"]}}}`},
 		{false, `{"searches":{"s1":{"names":["1983yrotewdshhhoiufhes7fd29"],"bytes":["ffffffffaaaabbbbcccceeee"],"options":{"matchall": true}}}}`},
 	}
 	for _, tp := range parameters {
