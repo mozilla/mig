@@ -170,6 +170,11 @@ func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []st
 		resStr := fmt.Sprintf("ovalresult id=%v title=\"%v\" outcome=%v", x.ID, x.Title, x.Status)
 		prints = append(prints, resStr)
 	}
+	if !foundOnly {
+		for _, we := range result.Errors {
+			prints = append(prints, we)
+		}
+	}
 
 	return
 }
