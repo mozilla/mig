@@ -11,7 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	ovallib "github.com/ameihm0912/mozoval/go/src/oval"
+	ovallib "github.com/mozilla/mozoval/go/src/oval"
 	"io"
 	"io/ioutil"
 	"mig/modules"
@@ -72,7 +72,6 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 		panic(err)
 	}
 
-	ovallib.Init()
 	ovallib.SetMaxChecks(r.Parameters.MaxConcurrentEval)
 
 	e := &elements{}
