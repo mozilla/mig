@@ -38,6 +38,7 @@ LDFLAGS		:=
 GOOPTS		:= -race
 GO 			:= GOPATH=$(shell pwd):$(shell go env GOROOT)/bin GOOS=$(OS) GOARCH=$(ARCH) go
 GOGETTER	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go get -u
+GOTEST  	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go test
 GOLDFLAGS	:= -ldflags "-X main.version $(BUILDREV)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
@@ -311,14 +312,12 @@ worker-compliance-item:
 doc:
 	make -C doc doc
 
-test: test-modules test-memory-modules
+test: test-modules
 	#$(GO) test mig/...
 
 test-modules:
-	$(GO) test mig/modules
-
-test-memory-modules:
-	$(GO) test mig/modules/memory
+	# test all modules
+	$(GOTEST) mig/modules...
 
 clean-agent:
 	find bin/ -name mig-agent* -exec rm {} \;
