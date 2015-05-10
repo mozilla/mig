@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
-package migoval
+package pkg
 
 import (
 	"bytes"
@@ -35,7 +35,7 @@ func endCounters() {
 }
 
 func init() {
-	modules.Register("oval", func() interface{} {
+	modules.Register("pkg", func() interface{} {
 		return new(Runner)
 	})
 }
