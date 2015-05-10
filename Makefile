@@ -44,7 +44,7 @@ MKDIR		:= mkdir
 INSTALL		:= install
 
 
-all: go_get_deps mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
+all: go_get_deps test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
 
 mig-agent:
 	echo building mig-agent for $(OS)/$(ARCH)
@@ -98,7 +98,7 @@ go_get_common_deps:
 	$(GOGETTER) code.google.com/p/go.crypto/openpgp
 	$(GOGETTER) code.google.com/p/gcfg
 
-go_get_agent_deps: go_get_common_deps go_get_ping_deps
+go_get_agent_deps: go_get_common_deps go_get_ping_deps go_get_memory_deps
 	$(GOGETTER) code.google.com/p/go.crypto/sha3
 	$(GOGETTER) github.com/streadway/amqp
 	$(GOGETTER) github.com/kardianos/osext
@@ -113,6 +113,11 @@ go_get_ping_deps:
 	$(GOGETTER) golang.org/x/net/icmp
 	$(GOGETTER) golang.org/x/net/ipv4
 	$(GOGETTER) golang.org/x/net/ipv6
+
+go_get_memory_deps:
+	$(GOGETTER) github.com/mozilla/masche/process
+	$(GOGETTER) github.com/mozilla/masche/listlibs
+	$(GOGETTER) github.com/mozilla/masche/memsearch
 
 go_get_platform_deps: go_get_common_deps
 	$(GOGETTER) github.com/streadway/amqp
@@ -306,11 +311,14 @@ worker-compliance-item:
 doc:
 	make -C doc doc
 
-test: mig-agent
-	$(BINDIR)/mig-agent-latest -m=file '{"searches": {"shouldmatch": {"names": ["^root"],"sizes": ["<10m"],"options": {"matchall": true},"paths": ["/etc/passwd"]},"shouldnotmatch": {"options": {"maxdepth": 1},"paths": ["/tmp"],"contents": ["should not match"]}}}'
+test: test-modules test-memory-modules
+	#$(GO) test mig/...
 
 test-modules:
 	$(GO) test mig/modules
+
+test-memory-modules:
+	$(GO) test mig/modules/memory
 
 clean-agent:
 	find bin/ -name mig-agent* -exec rm {} \;

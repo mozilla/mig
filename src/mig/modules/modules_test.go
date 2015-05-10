@@ -26,16 +26,16 @@ func TestRegister(t *testing.T) {
 		return new(testRunner)
 	})
 	if _, ok := Available["testing"]; !ok {
-		t.Errorf("testing module registration failed")
+		t.Fatalf("testing module registration failed")
 	}
 	// test availability of unregistered module
 	if _, ok := Available["shouldnotberegistered"]; ok {
-		t.Errorf("testing module availability failed")
+		t.Fatalf("testing module availability failed")
 	}
 	// test registration of already registered module
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("failed to panic on double registration of testing module")
+			t.Fatalf("failed to panic on double registration of testing module")
 		}
 	}()
 	Register("testing", func() interface{} {
@@ -48,18 +48,18 @@ func TestMakeMessage(t *testing.T) {
 	p.SomeParam = "foo"
 	raw, err := MakeMessage(MsgClassParameters, p)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Fatalf(err.Error())
 	}
 	if string(raw) != `{"class":"parameters","parameters":{"someparam":"foo"}}` {
-		t.Errorf("Invalid module message class `parameters`")
+		t.Fatalf("Invalid module message class `parameters`")
 	}
 
 	raw, err = MakeMessage(MsgClassStop, nil)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Fatalf(err.Error())
 	}
 	if string(raw) != `{"class":"stop"}` {
-		t.Errorf("Invalid module message class `stop`")
+		t.Fatalf("Invalid module message class `stop`")
 	}
 }
 
@@ -77,10 +77,10 @@ func TestGetElements(t *testing.T) {
 	var el element
 	err := r.GetElements(&el)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Fatalf(err.Error())
 	}
 	if el.SomeElement != "foo" {
-		t.Errorf("failed to get element from module results")
+		t.Fatalf("failed to get element from module results")
 	}
 
 }
@@ -99,10 +99,10 @@ func TestGetStatistics(t *testing.T) {
 	var stats statistics
 	err := r.GetStatistics(&stats)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Fatalf(err.Error())
 	}
 	if stats.SomeCounter != 16.64 {
-		t.Errorf("failed to get statistics from module results")
+		t.Fatalf("failed to get statistics from module results")
 	}
 }
 
@@ -111,10 +111,10 @@ func TestReadInputParameters(t *testing.T) {
 	w := strings.NewReader(`{"class":"parameters","parameters":{"someparam":"foo"}}`)
 	err := ReadInputParameters(w, &p)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Fatalf(err.Error())
 	}
 	if p.SomeParam != "foo" {
-		t.Errorf("failed to read input parameters from stdin")
+		t.Fatalf("failed to read input parameters from stdin")
 	}
 	// test delayed write. use a pipe so that reader doesn't reach EOF on the first
 	// read of the empty buffer.
@@ -130,13 +130,13 @@ func TestReadInputParameters(t *testing.T) {
 	select {
 	case <-block:
 	case <-time.After(2 * time.Second):
-		t.Errorf("input parameters read timed out")
+		t.Fatalf("input parameters read timed out")
 	}
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Fatalf(err.Error())
 	}
 	if p.SomeParam != "bar" {
-		t.Errorf("failed to read input parameters")
+		t.Fatalf("failed to read input parameters")
 	}
 }
 
@@ -151,6 +151,6 @@ func TestWatchForStop(t *testing.T) {
 	case <-stopChan:
 		break
 	case <-time.After(1 * time.Second):
-		t.Errorf("failed to catch stop message")
+		t.Fatalf("failed to catch stop message")
 	}
 }
