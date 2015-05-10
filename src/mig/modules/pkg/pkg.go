@@ -45,6 +45,18 @@ type Runner struct {
 	Results    modules.Result
 }
 
+func buildResults(e elements, r *modules.Result, matches int) (buf []byte, err error) {
+	r.Success = true
+	if matches > 0 {
+		r.FoundAnything = true
+	}
+	r.Elements = e
+	endCounters()
+	r.Statistics = stats
+	buf, err = json.Marshal(r)
+	return
+}
+
 func (r Runner) Run(in io.Reader) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -83,14 +95,7 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 			e.Matches = append(e.Matches, *npi)
 		}
 
-		r.Results.Success = true
-		if len(e.Matches) > 0 {
-			r.Results.FoundAnything = true
-		}
-		r.Results.Elements = e
-		endCounters()
-		r.Results.Statistics = stats
-		buf, err := json.Marshal(r.Results)
+		buf, err := buildResults(*e, &r.Results, len(e.Matches))
 		if err != nil {
 			panic(err)
 		}
@@ -129,14 +134,7 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 			e.OvalResults = append(e.OvalResults, *nmor)
 		}
 
-		r.Results.Success = true
-		if len(e.OvalResults) > 0 {
-			r.Results.FoundAnything = true
-		}
-		r.Results.Elements = e
-		endCounters()
-		r.Results.Statistics = stats
-		buf, err := json.Marshal(r.Results)
+		buf, err := buildResults(*e, &r.Results, len(e.OvalResults))
 		if err != nil {
 			panic(err)
 		}
