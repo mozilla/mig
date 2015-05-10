@@ -105,7 +105,7 @@ go_get_agent_deps: go_get_common_deps go_get_ping_deps go_get_memory_deps
 	$(GOGETTER) github.com/jvehent/service-go
 	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
 	$(GOGETTER) camlistore.org/pkg/misc/pinentry
-	$(GOGETTER) github.com/ameihm0912/mozoval/go/src/oval
+	$(GOGETTER) github.com/mozilla/mozoval/go/src/oval
 ifeq ($(OS),windows)
 	$(GOGETTER) code.google.com/p/winsvc/eventlog
 endif
