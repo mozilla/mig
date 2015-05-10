@@ -99,7 +99,7 @@
             <p>A module must implement a <cite>modules.Moduler</cite> interface, which contains two mandatory functions: <cite>Run()</cite> and <cite>ValidateParameters()</cite>.</p>
             <pre class="code go"><span class="c1">// Moduler provides the interface to a Module
 </span><span class="kd">type</span> <span class="nx">Moduler</span> <span class="kd">interface</span> <span class="p">{</span>
-    <span class="nx">Run</span><span class="p">()</span> <span class="kt">string</span>
+    <span class="nx">Run</span><span class="p">(</span><span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span><span class="p">)</span> <span class="kt">string</span>
     <span class="nx">ValidateParameters</span><span class="p">()</span> <span class="kt">error</span>
 <span class="p">}</span></pre>
             <section id="parameters">
@@ -124,8 +124,8 @@
             </section>
             <section id="run">
                 <h4>1.2.2   Run</h4>
-                <p>On the receiving side, the module is invoked via its <cite>Run()</cite> function. It starts by trying to read parameters from stdin, then validates the parameters against its own formatting rules, performs work and returns results in a JSON string.</p>
-                <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">Run</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
+                <p>On the receiving side, the module is invoked via its <cite>Run()</cite> function. It starts by trying to read parameters from stdin, via the <cite>in io.Reader</cite>. It then validates the parameters against its own formatting rules, performs work and returns results in a JSON string.</p>
+                <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">Run</span><span class="p">(</span><span class="nx">in</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
     <span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
         <span class="k">if</span> <span class="nx">e</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">e</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
             <span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">"%v"</span><span class="p">,</span> <span class="nx">e</span><span class="p">))</span>
@@ -135,7 +135,7 @@
         <span class="p">}</span>
     <span class="p">}()</span>
 
-    <span class="nx">err</span> <span class="o">:=</span> <span class="nx">modules</span><span class="p">.</span><span class="nx">ReadInputParameters</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">)</span>
+    <span class="nx">err</span> <span class="o">:=</span> <span class="nx">modules</span><span class="p">.</span><span class="nx">ReadInputParameters</span><span class="p">(</span><span class="nx">in</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">)</span>
     <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
         <span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
     <span class="p">}</span>
@@ -377,7 +377,7 @@
             <h3>2.3   Run</h3>
             <p>Run is what the agent will call when the module is executed. It starts by defining a panic handling routine that will transform panics into <cite>modules.Result.Errors</cite> and return the JSON.</p>
             <p>Then, <cite>Run()</cite> reads parameters from stdin. The call to <cite>modules.ReadInputParameters</cite> will block until one line of input is received. If what was received isn't valid parameters, it panics.</p>
-            <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">Run</span><span class="p">()</span> <span class="p">(</span><span class="nx">out</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+            <pre class="code go"><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="nx">Runner</span><span class="p">)</span> <span class="nx">Run</span><span class="p">(</span><span class="nx">in</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span><span class="p">)</span> <span class="p">(</span><span class="nx">out</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
         <span class="k">if</span> <span class="nx">e</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">e</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
             <span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Results</span><span class="p">.</span><span class="nx">Errors</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">"%v"</span><span class="p">,</span> <span class="nx">e</span><span class="p">))</span>
@@ -387,7 +387,7 @@
         <span class="p">}</span>
     <span class="p">}()</span>
 
-    <span class="nx">err</span> <span class="o">:=</span> <span class="nx">modules</span><span class="p">.</span><span class="nx">ReadInputParameters</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">)</span>
+    <span class="nx">err</span> <span class="o">:=</span> <span class="nx">modules</span><span class="p">.</span><span class="nx">ReadInputParameters</span><span class="p">(</span><span class="nx">in</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">r</span><span class="p">.</span><span class="nx">Parameters</span><span class="p">)</span>
     <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
         <span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
     <span class="p">}</span>
@@ -399,7 +399,7 @@
     <span class="nx">moduleDone</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span>
     <span class="nx">stop</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span>
     <span class="k">go</span> <span class="nx">r</span><span class="p">.</span><span class="nx">doModuleStuff</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">out</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">moduleDone</span><span class="p">)</span>
-    <span class="k">go</span> <span class="nx">modules</span><span class="p">.</span><span class="nx">WatchForStop</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">stop</span><span class="p">)</span>
+    <span class="k">go</span> <span class="nx">modules</span><span class="p">.</span><span class="nx">WatchForStop</span><span class="p">(</span><span class="nx">in</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">stop</span><span class="p">)</span>
 
     <span class="k">select</span> <span class="p">{</span>
     <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">moduleDone</span><span class="p">:</span>
