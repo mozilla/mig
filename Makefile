@@ -136,14 +136,20 @@ go_get_client_deps: go_get_common_deps
 	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
 	$(GOGETTER) camlistore.org/pkg/misc/pinentry
 ifeq ($(OS),darwin)
-	$(GOGETTER) github.com/bobappleyard/readline
-	echo 'make sure that you have readline installed via {port,brew} install readline'
+	@echo $(GOGETTER) github.com/bobappleyard/readline
+	@if ! $(GOGETTER) github.com/bobappleyard/readline; then \
+		echo 'make sure that you have readline installed via {port,brew} install readline'; \
+		exit 1; \
+	fi
 endif
 ifeq ($(OS),linux)
-	$(GOGETTER) github.com/bobappleyard/readline
-	echo 'make sure that you have readline installed via:'
-	echo '* yum install readline-devel'
-	echo '* apt-get install libreadline-dev'
+	@echo $(GOGETTER) github.com/bobappleyard/readline
+	@if ! $(GOGETTER) github.com/bobappleyard/readline; then \
+		echo 'make sure that you have readline installed via:'; \
+		echo '* yum install readline-devel'; \
+		echo '* apt-get install libreadline-dev'; \
+		exit 1; \
+	fi
 endif
 
 go_get_deps: go_get_common_deps go_get_agent_deps go_get_platform_deps go_get_client_deps
