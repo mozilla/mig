@@ -15,6 +15,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mig/modules"
+	"regexp"
 	"runtime"
 	"time"
 )
@@ -56,6 +57,20 @@ func buildResults(e elements, r *modules.Result, matches int) (buf []byte, err e
 	r.Statistics = stats
 	buf, err = json.Marshal(r)
 	return
+}
+
+func makeOvalString(inbuf string) (string, error) {
+	b := bytes.NewBufferString(inbuf)
+	decoder := base64.NewDecoder(base64.StdEncoding, b)
+	gz, err := gzip.NewReader(decoder)
+	if err != nil {
+		return "", err
+	}
+	ovalbuf, err := ioutil.ReadAll(gz)
+	if err != nil {
+		return "", err
+	}
+	return string(ovalbuf), nil
 }
 
 func (r Runner) Run(in io.Reader) (resStr string) {
@@ -107,18 +122,11 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 		resStr = string(buf)
 		return
 	} else if r.Parameters.OvalDef != "" {
-		b := bytes.NewBufferString(r.Parameters.OvalDef)
-		decoder := base64.NewDecoder(base64.StdEncoding, b)
-		gz, err := gzip.NewReader(decoder)
+		ovalbuf, err := makeOvalString(r.Parameters.OvalDef)
 		if err != nil {
 			panic(err)
 		}
-		ovalbuf, err := ioutil.ReadAll(gz)
-		if err != nil {
-			panic(err)
-		}
-
-		od, err := ovallib.ParseBuffer(string(ovalbuf))
+		od, err := ovallib.ParseBuffer(ovalbuf)
 		if err != nil {
 			panic(err)
 		}
@@ -154,6 +162,27 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 func (r Runner) ValidateParameters() (err error) {
 	if r.Parameters.MaxConcurrentEval <= 0 || r.Parameters.MaxConcurrentEval > 10 {
 		return fmt.Errorf("concurrent evaluation must be between > 0 and <= 10")
+	}
+
+	// If an oval definition has been supplied, try parsing it to validate it
+	if r.Parameters.OvalDef != "" {
+		ovalbuf, err := makeOvalString(r.Parameters.OvalDef)
+		if err != nil {
+			return err
+		}
+		_, err = ovallib.ParseBuffer(ovalbuf)
+		if err != nil {
+			return err
+		}
+	}
+
+	// If package match parameters have been specified, make sure they all
+	// compile here.
+	for _, x := range r.Parameters.PkgMatch.Matches {
+		_, err = regexp.Compile(x)
+		if err != nil {
+			return err
+		}
 	}
 	return
 }
