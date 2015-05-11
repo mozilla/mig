@@ -9,13 +9,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"mig/modules"
+	"mig/testutil"
 	"testing"
 )
 
 func TestRegistration(t *testing.T) {
-	if _, ok := modules.Available["memory"]; !ok {
-		t.Fatalf("module registration failed")
-	}
+	testutil.CheckModuleRegistration(t, "memory")
 }
 
 type testParams struct {
