@@ -35,7 +35,7 @@ MSICONF		:= mig-agent-installer.wxs
 GCC			:= gcc
 CFLAGS		:=
 LDFLAGS		:=
-GOOPTS		:= -race
+GOOPTS		:=
 GO 			:= GOPATH=$(shell pwd):$(shell go env GOROOT)/bin GOOS=$(OS) GOARCH=$(ARCH) go
 GOGETTER	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go get -u
 GOLDFLAGS	:= -ldflags "-X main.version $(BUILDREV)"
