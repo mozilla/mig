@@ -15,6 +15,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mig/modules"
+	"runtime"
 	"time"
 )
 
@@ -70,6 +71,10 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 			return
 		}
 	}()
+
+	// Restrict go runtime processor utilization here, this might be moved
+	// into a more generic agent module function at some point.
+	runtime.GOMAXPROCS(1)
 
 	startCounters()
 
