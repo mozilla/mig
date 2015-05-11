@@ -33,7 +33,7 @@ func startCounters() {
 }
 
 func endCounters() {
-	stats.OvalRuntime = time.Now().Sub(counters.startTime)
+	stats.ExecRuntime = time.Now().Sub(counters.startTime).String()
 }
 
 func init() {
@@ -122,11 +122,14 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 		resStr = string(buf)
 		return
 	} else if r.Parameters.OvalDef != "" {
+		stats.InDefSize = len(r.Parameters.OvalDef)
 		ovalbuf, err := makeOvalString(r.Parameters.OvalDef)
 		if err != nil {
 			panic(err)
 		}
+		pst := time.Now()
 		od, err := ovallib.ParseBuffer(ovalbuf)
+		stats.Parsetime = time.Now().Sub(pst).String()
 		if err != nil {
 			panic(err)
 		}
@@ -188,9 +191,16 @@ func (r Runner) ValidateParameters() (err error) {
 }
 
 func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
-	var elem elements
+	var (
+		elem  elements
+		stats Statistics
+	)
 
 	err = result.GetElements(&elem)
+	if err != nil {
+		panic(err)
+	}
+	err = result.GetStatistics(&stats)
 	if err != nil {
 		panic(err)
 	}
@@ -208,6 +218,8 @@ func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []st
 		for _, we := range result.Errors {
 			prints = append(prints, we)
 		}
+		stats := fmt.Sprintf("Statistics: runtime %v, parsetime %v, defsize %v", stats.ExecRuntime, stats.Parsetime, stats.InDefSize)
+		prints = append(prints, stats)
 	}
 
 	return
@@ -235,7 +247,9 @@ type PkgInfo struct {
 }
 
 type Statistics struct {
-	OvalRuntime time.Duration `json:"ovalruntime"`
+	ExecRuntime string `json:"execruntime"`
+	Parsetime   string `json:"ovalparsetime"`
+	InDefSize   int    `json:"inputdefinitionsize"`
 }
 
 type Parameters struct {
