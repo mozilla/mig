@@ -22,9 +22,9 @@ func printHelp(isCmd bool) {
 	}
 	fmt.Printf(`Query parameters
 ----------------
-%spkgmatch <string> - OS package search
+%sname <regexp>     - OS package search
                     ex: pkgmatch linux-image
-		    query for installed OS packages containing substring
+		    query for installed OS packages matching expression
 
 %soval <path>       - OVAL processor
 		    ex: oval ./ovaldefs.xml
@@ -57,7 +57,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	}
 
 	fs.Init("migoval", flag.ContinueOnError)
-	fs.Var(&pkgMatch, "pkgmatch", "see help")
+	fs.Var(&pkgMatch, "name", "see help")
 	fs.StringVar(&ovalDefs, "oval", "", "see help")
 	fs.IntVar(&maxEval, "concurrency", 1, "see help")
 	fs.BoolVar(&includeFalse, "includefalse", false, "see help")

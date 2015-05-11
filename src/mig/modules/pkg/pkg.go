@@ -89,7 +89,7 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 	e := &elements{}
 
 	if len(r.Parameters.PkgMatch.Matches) > 0 {
-		oresp := ovallib.PackageQuery(r.Parameters.PkgMatch.Matches)
+		oresp := ovallib.PackageQuery(r.Parameters.PkgMatch.Matches, true)
 		for _, x := range oresp {
 			npi := &PkgInfo{PkgName: x.Name, PkgVersion: x.Version, PkgType: x.PkgType}
 			e.Matches = append(e.Matches, *npi)
