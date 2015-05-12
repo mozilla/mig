@@ -23,7 +23,7 @@ func printHelp(isCmd bool) {
 	fmt.Printf(`Query parameters
 ----------------
 %sname <regexp>     - OS package search
-                    ex: pkgmatch linux-image
+                    ex: name linux-image
 		    query for installed OS packages matching expression
 
 %soval <path>       - OVAL processor
