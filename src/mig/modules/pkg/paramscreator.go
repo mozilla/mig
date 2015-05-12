@@ -6,6 +6,7 @@
 package pkg
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
@@ -13,6 +14,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"strings"
 )
 
 func printHelp(isCmd bool) {
@@ -40,6 +43,84 @@ func printHelp(isCmd bool) {
                     ex: includefalse
 		    Also includes definitions in results that evaluated to false
 `, dash, dash, dash, dash)
+}
+
+func loadOvalDefinitions(path string) (string, error) {
+	var b bytes.Buffer
+	fd, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer fd.Close()
+
+	encoder := base64.NewEncoder(base64.StdEncoding, &b)
+	gz := gzip.NewWriter(encoder)
+	_, err = io.Copy(gz, fd)
+	if err != nil {
+		return "", err
+	}
+	gz.Close()
+	encoder.Close()
+	return b.String(), nil
+}
+
+func (r Runner) ParamsCreator() (interface{}, error) {
+	p := newParameters()
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Printf("search> ")
+		scanmore := scanner.Scan()
+		if err := scanner.Err(); err != nil {
+			fmt.Println("Invalid input. Try again")
+			continue
+		}
+		if !scanmore {
+			goto exit
+		}
+		input := scanner.Text()
+		if input == "done" {
+			goto exit
+		} else if input == "help" {
+			printHelp(false)
+			continue
+		} else if input == "includefalse" {
+			p.IncludeFalse = true
+			continue
+		}
+		arr := strings.SplitN(input, " ", 2)
+		if len(arr) != 2 {
+			fmt.Printf("Invalid input format!\n")
+			printHelp(false)
+			continue
+		}
+		checkType := arr[0]
+		checkValue := arr[1]
+		switch checkType {
+		case "name":
+			p.PkgMatch.Matches = append(p.PkgMatch.Matches, checkValue)
+		case "oval":
+			obuf, err := loadOvalDefinitions(checkValue)
+			if err != nil {
+				fmt.Printf("%v\n", err)
+				continue
+			}
+			p.OvalDef = obuf
+		case "concurrency":
+			mce, err := strconv.Atoi(checkValue)
+			if err != nil {
+				fmt.Printf("%v\n", err)
+				continue
+			}
+			p.MaxConcurrentEval = mce
+		default:
+			fmt.Printf("Invalid method!\nTry 'help'\n")
+			continue
+		}
+	}
+
+exit:
+	r.Parameters = *p
+	return r.Parameters, r.ValidateParameters()
 }
 
 func (r Runner) ParamsParser(args []string) (interface{}, error) {
@@ -72,22 +153,11 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	p.IncludeFalse = includeFalse
 
 	if ovalDefs != "" {
-		var b bytes.Buffer
-		fd, err := os.Open(ovalDefs)
+		obuf, err := loadOvalDefinitions(ovalDefs)
 		if err != nil {
 			return nil, err
 		}
-		defer fd.Close()
-
-		encoder := base64.NewEncoder(base64.StdEncoding, &b)
-		gz := gzip.NewWriter(encoder)
-		_, err = io.Copy(gz, fd)
-		gz.Close()
-		encoder.Close()
-		if err != nil {
-			return nil, err
-		}
-		p.OvalDef = b.String()
+		p.OvalDef = obuf
 	}
 
 	r.Parameters = *p
