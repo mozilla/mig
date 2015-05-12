@@ -29,19 +29,16 @@ Registration
 
 A module must import ``mig/modules``.
 
-A module registers itself at runtime via its init() function which must call
-``modules.Register`` with a module name and an instance of the ``Runner`` struct.
-
-The ``Runner`` struct must contain two fields: module parameters and module
-results. The former can use any format the module choses to use, the latter
-must implement the ``modules.Result`` struct.
+A module registers itself at runtime via its ``init()`` function which must
+call ``modules.Register`` with a module name and a "runner function" returning
+an anonymous object (``interface {}``) that must implement the
+``modules.Moduler``:
 
 .. code:: go
 
-	// Runner gives access to the exported functions and structs of the module
-	type Runner struct {
-		Parameters myModuleParams
-		Results    modules.Result
+	type Moduler interface {
+		Run(io.Reader) string
+		ValidateParameters() error
 	}
 
 A module must have a unique name. A good practice is to use the same name for
@@ -55,6 +52,10 @@ the module name as for the Go package name. The code sample below shows how the
 	import (
 		"mig/modules"
 	)
+
+    type Runner struct {
+        // ...
+    }
 
 	// init is called by the Go runtime at startup. We use this function to
 	// register the module in a global array of available modules, so the
@@ -71,10 +72,6 @@ anonymously, which means that their ``init()`` function will be executed even if
 the modules are unused in the agent. Therefore, when MIG Agent starts, all
 modules execute their ``init()`` function, add their names and runner function to
 the global list of available module, and stop there.
-
-Later on, when the agent receives a command to execute, it looks up modules in
-the global list ``modules.Available``, and if a module is registered to execute
-the command, calls it via its runner function.
 
 The list of modules imported in the agent is maintained in
 ``conf/available_modules.go``. You should use this file to add or remove modules.
@@ -94,24 +91,36 @@ The list of modules imported in the agent is maintained in
 Execution
 ---------
 
-A module must implement a ``modules.Moduler`` interface, which contains two
-mandatory functions: ``Run()`` and ``ValidateParameters()``.
+When the agent receives a command to execute, it looks up modules in
+the global list ``modules.Available``, and if a module is registered to execute
+the command, calls its runner function to get a new object representing the run,
+and then calls that object's ``Run`` method.
+
+Runner Structure
+~~~~~~~~~~~~~~~~
+
+A mig module typically defines its own ``Runner`` struct implementing the
+``modules.Moduler`` interface and representing a single run of the module.  The
+``Runner`` struct contains two fields: module parameters and module results.
+The former is any format the module choses to use, while the latter generally
+implements the ``modules.Result`` struct (note that this is not required, but
+it is the easiest way to return a properly-formatted JSON result).
 
 .. code:: go
 
-	// Moduler provides the interface to a Module
-	type Moduler interface {
-		Run(io.Reader) string
-		ValidateParameters() error
+	// Runner gives access to the exported functions and structs of the module
+	type Runner struct {
+		Parameters myModuleParams
+		Results    modules.Result
 	}
 
 Parameters
 ~~~~~~~~~~
 When a module is available to run an operation, the agent passes the operation
-parameters to the standard input of module. This is done by calling the agent binary
-with the flag **-m**, followed by the name of the module.
+parameters to the module.
 
-This can easily be done on the command line directly:
+The easiest way to see this is to invoke the agent binary
+with the flag **-m**, followed by the name of the module:
 
 .. code:: bash
 
@@ -119,37 +128,14 @@ This can easily be done on the command line directly:
 	[info] using builtin conf
 	{"foundanything":true,"success":true,"elements":{"hostname":"fedbox2.jaffa.linuxwall.info","addresses":["172.21.0.3/20","fe80::8e70:5aff:fec8:be50/64"],"lookeduphost":{"www.google.com":["74.125.196.105","74.125.196.147","74.125.196.106","74.125.196.104","74.125.196.103","74.125.196.99","2607:f8b0:4002:c07::6a"]}},"statistics":{"stufffound":3},"errors":null}
 
-Modules accept different type of inputs on stdin. The most basic one is the
-``parameters`` input, but a module could also receive a ``stop`` input that
-indicates that the module should stop its execution immediately. The format of
-module input messages is defined by ``modules.Message``.
-
-.. code:: go
-
-	// Message defines the input messages received by modules.
-	type Message struct {
-		Class      string      // represent the type of message being passed to the module
-		Parameters interface{} // for `parameters` class, this interface contains the module parameters
-	}
-
-	const (
-		MsgClassParameters string = "parameters"
-		MsgClassStop       string = "stop"
-	)
-
-When the agent receives a command to pass to a module for execution, it
-extracts the operation parameters from ``Command.Action.Operations[N].Parameters``
-and copies them into ``Message.Parameters``. It then sets ``Message.Class`` to
-``modules.MsgClassParameters``, marshals the struct into JSON, and pass the
-resulting ``[]byte`` to the module's standard input.
+The module receives this JSON input as an ``io.Reader`` passed to its ``Run`` method.
 
 Run
 ~~~
 
-On the receiving side, the module is invoked via its ``Run()`` function. It
-starts by trying to read parameters from stdin, via the ``in io.Reader``. It 
-then validates the parameters against its own formatting rules, performs work
-and returns results in a JSON string.
+The module's ``Run`` method should start by trying to read parameters from the
+given ``in io.Reader``. It then validates the parameters against its own
+formatting rules, performs work and returns results in a JSON string.
 
 .. code:: go
 
@@ -183,9 +169,11 @@ indicate to the MIG platform that the module has failed to run on this agent.
 Validate Parameters
 ~~~~~~~~~~~~~~~~~~~
 
-A module must implement the ``ValidateParameters()`` interface. The role of that
-interface is to go through the parameters supplied by the caller and verify
-that they follow a format expected by the module.
+A module must implement the ``ValidateParameters()`` method.
+
+The role of that interface is to go through the parameters supplied to ``Run``
+and verify that they follow a format expected by the module.  This method is
+useful during ``Run`` but is not called from outside the module.
 
 Go is strongly typed, so there's no risk of finding a string when a float is
 expected. However, this function should verify that values are in a proper
@@ -260,7 +248,7 @@ Additional interfaces
 HasResultsPrinter
 ~~~~~~~~~~~~~~~~~
 
-``HasResultsPrinter`` is an interface used to allow a module ``Runner`` to implement
+``HasResultsPrinter`` is an interface used to allow a module to implement
 the **PrintResults()** function. ``PrintResults()`` is a pretty-printer used to display
 the results of a module as an array of string. It is defined as a module-specific
 interface because only the module knows how to parse its ``Elements`` and
@@ -272,13 +260,14 @@ The interface is defined as:
 
 	// HasResultsPrinter implements functions used by module to print information
 	type HasResultsPrinter interface {
-		PrintResults(Result, bool) ([]string, error)
+		PrintResults(result Result, showResultsOnly bool) ([]string, error)
 	}
 
 A typical implementation of ``PrintResults`` takes a ``modules.Result`` struct and
 a boolean that indicates whether the printer should display errors and
 statistics or only found results. When that boolean is set to ``true``, errors, stats
-and empty results are **not** displayed.
+and empty results are **not** displayed.  Note that the ``result`` argument is
+the result of unmarhsalling the marhsalled value returned from the ``Run`` method.
 
 The function returns results into an array of strings.
 
@@ -572,7 +561,7 @@ where ``&out`` is a pointer to the string that ``Run()`` will return, and
 ``&moduleDone`` is a channel that will receive a boolean when the module is done
 doing stuff.
 
-Meanwhile, we start another goroutine ``go modules.WatchForStop(&stop)`` that
+Meanwhile, we start another goroutine ``go modules.WatchForStop(in, &stop)`` that
 will continously read the standard input of the module. If a ``stop`` message is
 received on the standard input, the goroutine inserts a boolean in the ``stop``
 channel. This method is typically used by the agent to ask a module to shutdown.
@@ -580,7 +569,7 @@ channel. This method is typically used by the agent to ask a module to shutdown.
 Both routines are running in parallel, and we use a ``select {case}`` to detect
 the first one that has activity. If the module is done, ``Run()`` exits normally
 by returning the value of ``out``. But if a stop message is received, then
-``Run()`` panics, which will generate a nicely formatter error in the defer block.
+``Run()`` panics, which will generate a nicely formatted error in the defer block.
 
 Doing work and building results
 -------------------------------
