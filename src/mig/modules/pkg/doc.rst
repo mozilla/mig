@@ -32,7 +32,10 @@ giving a properly formatted OVAL definition file as an argument.
 
 The `includefalse` parameter can be specified if false evaluations should be
 returned to the investigator. By default. only OVAL definitions that have
-evaluated to true are returned.
+evaluated to true are returned. For example, if the OVAL definitions are
+intended to check for missing patches, only missing patches or vulnerabilities that
+are identified are returned. With `includefalse`, all results will be returned
+including package tests that were determined to be up to date.
 
 The mozoval library supports the use of concurrent goroutines for definition
 evaluation. By default, only a single routine is used to evaluate definitions
@@ -65,4 +68,6 @@ The library may not support certain functions or parameters that are supported
 in OVAL; validation should be done on definition files being used to ensure they
 are supported. mozoval is under development, and is intended to support additional
 functionality in the future.
+
+Information on OVAL can be found at the `Mitre OVAL <https://oval.mitre.org/>`_ site.
 
