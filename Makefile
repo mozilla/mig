@@ -288,21 +288,27 @@ else
 		-o ./mig-clients-$(BUILDREV)-$(FPMARCH).dmg tmpdmg
 endif
 
-rpm-scheduler: mig-scheduler
+deb-server: go_get_platform_deps mig-scheduler mig-api worker-agent-intel worker-compliance-item
 	rm -rf tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/usr/bin/mig-scheduler
-	$(INSTALL) -D -m 0640 conf/mig-scheduler.cfg.inc tmp/etc/mig/mig-scheduler.cfg
+	# add binaries
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/opt/mig/bin/mig-scheduler
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-api tmp/opt/mig/bin/mig-api
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-intel-worker tmp/opt/mig/bin//mig-agent-intel-worker
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-compliance-item-worker tmp/opt/mig/bin/mig-compliance-item-worker
+	$(INSTALL) -D -m 0755 tools/list_new_agents.sh tmp/opt/mig/bin/list_new_agents.sh
+	# add configuration templates
+	$(INSTALL) -D -m 0640 conf/scheduler.cfg.inc tmp/etc/mig/scheduler.cfg
+	$(INSTALL) -D -m 0640 conf/api.cfg.inc tmp/etc/mig/api.cfg
+	$(INSTALL) -D -m 0640 conf/agent-intel-worker.cfg.inc tmp/etc/mig/agent-intel-worker.cfg
+	$(INSTALL) -D -m 0640 conf/compliance-item-worker.cfg.inc tmp/etc/mig/compliance-item-worker.cfg
+	# add upstart configs
+	$(INSTALL) -D -m 0640 conf/upstart/mig-scheduler.conf tmp/etc/init/mig-scheduler.conf
+	$(INSTALL) -D -m 0640 conf/upstart/mig-api.conf tmp/etc/init/mig-api.conf
+	$(INSTALL) -D -m 0640 conf/upstart/mig-compliance-item-worker.conf tmp/etc/init/mig-compliance-item-worker.conf
+	$(INSTALL) -D -m 0640 conf/upstart/mig-agent-intel-worker.conf tmp/etc/init/mig-agent-intel-worker.conf
 	$(MKDIR) -p tmp/var/cache/mig
-	fpm -C tmp -n mig-scheduler --license GPL --vendor mozilla --description "Mozilla InvestiGator Scheduler" \
-		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
-
-rpm-api: mig-api
-	rm -rf tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-api tmp/usr/bin/mig-api
-	$(INSTALL) -D -m 0640 conf/mig-api.cfg.inc tmp/etc/mig/mig-api.cfg
-	$(MKDIR) -p tmp/var/cache/mig
-	fpm -C tmp -n mig-api --license GPL --vendor mozilla --description "Mozilla InvestiGator API" \
-		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t rpm .
+	fpm -C tmp -n mig-server --license GPL --vendor mozilla --description "Mozilla InvestiGator Server" \
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
 
 worker-agent-verif:
 	$(MKDIR) -p $(BINDIR)
@@ -310,11 +316,11 @@ worker-agent-verif:
 
 worker-agent-intel:
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_agent_intel_worker $(GOLDFLAGS) mig/workers/agent_intel
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-intel-worker $(GOLDFLAGS) mig/workers/agent_intel
 
 worker-compliance-item:
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_compliance_item_worker $(GOLDFLAGS) mig/workers/compliance_item
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-compliance-item-worker $(GOLDFLAGS) mig/workers/compliance_item
 
 doc:
 	make -C doc doc

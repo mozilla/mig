@@ -46,7 +46,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s - a worker that transform commands results into compliance items and publishes them to mozdef\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-	var configPath = flag.String("c", "/etc/mig/compliance_item_worker.cfg", "Load configuration from file")
+	var configPath = flag.String("c", "/etc/mig/compliance-item-worker.cfg", "Load configuration from file")
 	flag.Parse()
 	err = gcfg.ReadFileInto(&conf, *configPath)
 	if err != nil {
