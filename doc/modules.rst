@@ -32,11 +32,11 @@ A module must import ``mig/modules``.
 A module registers itself at runtime via its ``init()`` function which must
 call ``modules.Register`` with a module name and a "runner function" returning
 an anonymous object (``interface {}``) that must implement the
-``modules.Moduler``:
+``modules.Executer`` interface:
 
 .. code:: go
 
-	type Moduler interface {
+	type Executer interface {
 		Run(io.Reader) string
 		ValidateParameters() error
 	}
@@ -100,7 +100,7 @@ Runner Structure
 ~~~~~~~~~~~~~~~~
 
 A mig module typically defines its own ``Runner`` struct implementing the
-``modules.Moduler`` interface and representing a single run of the module.  The
+``modules.Executer`` interface and representing a single run of the module.  The
 ``Runner`` struct contains two fields: module parameters and module results.
 The former is any format the module choses to use, while the latter generally
 implements the ``modules.Result`` struct (note that this is not required, but

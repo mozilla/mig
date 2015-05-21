@@ -12,8 +12,8 @@ func CheckModuleRegistration(t *testing.T, module_name string) {
 	}
 
 	modRunner := registration.Runner()
-	if _, ok := modRunner.(modules.Moduler); !ok {
-		t.Fatalf("module %s registration function does not return a Moduler",
+	if _, ok := modRunner.(modules.Executer); !ok {
+		t.Fatalf("module %s registration function does not return a Executer",
 			module_name)
 	}
 }

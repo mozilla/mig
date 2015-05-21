@@ -50,8 +50,8 @@ type Result struct {
 	Errors        []string    `json:"errors"`
 }
 
-// Moduler provides the interface to a Module
-type Moduler interface {
+// Executer provides the interface to an execution of a module
+type Executer interface {
 	Run(io.Reader) string
 	ValidateParameters() error
 }
