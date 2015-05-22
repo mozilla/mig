@@ -6,6 +6,7 @@
 package modules
 
 import (
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -15,13 +16,21 @@ import (
 type testModule struct {
 }
 
-func (m *testModule) NewRun() interface{} {
+func (m *testModule) NewRun() Runner {
 	return new(testRunner)
 }
 
 type testRunner struct {
 	Parameters params
 	Results    Result
+}
+
+func (r *testRunner) ValidateParameters() (err error) {
+	return nil
+}
+
+func (r *testRunner) Run(in io.Reader) (out string) {
+	return ""
 }
 
 type params struct {

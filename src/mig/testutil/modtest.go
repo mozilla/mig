@@ -11,9 +11,6 @@ func CheckModuleRegistration(t *testing.T, module_name string) {
 		t.Fatalf("module %s not registered", module_name)
 	}
 
-	execution := mod.NewRun()
-	if _, ok := execution.(modules.Runner); !ok {
-		t.Fatalf("module %s registration function does not return a Runner",
-			module_name)
-	}
+	// test getting a run instance (just don't fail!)
+	mod.NewRun()
 }

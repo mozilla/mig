@@ -164,7 +164,7 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 	}
 	// instanciate and call module
 	run := modules.Available[mode].NewRun()
-	out = run.(modules.Runner).Run(os.Stdin)
+	out = run.Run(os.Stdin)
 	if pretty {
 		var modres modules.Result
 		err := json.Unmarshal([]byte(out), &modres)

@@ -37,7 +37,7 @@ call ``modules.Register`` with a module name and an object implementing
 .. code:: go
 
     type Moduler interface {
-        NewRun() interface{}
+        NewRun() Runner
     }
 
 A module must have a unique name. A good practice is to use the same name for
@@ -46,8 +46,7 @@ single Go package to implement multiple modules, simply by registering
 different Modulers with different names.
 
 The sole method of a Moduler creates a new object to represent a "run" of the
-module.  In fact, the method returns an ``interface {}`` that must implement the
-``modules.Runner`` interface:
+module, implementing the ``modules.Runner`` interface:
 
 .. code:: go
 

@@ -39,7 +39,7 @@ func endCounters() {
 type module struct {
 }
 
-func (m *module) NewRun() interface{} {
+func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
