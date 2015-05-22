@@ -26,7 +26,7 @@ import (
 )
 
 func init() {
-	modules.Register("ping", func() interface{} {
+	modules.OldRegister("ping", func() interface{} {
 		return new(Runner)
 	})
 }

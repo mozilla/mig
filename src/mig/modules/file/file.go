@@ -36,7 +36,7 @@ import (
 var debug bool = false
 
 func init() {
-	modules.Register("file", func() interface{} {
+	modules.OldRegister("file", func() interface{} {
 		return new(Runner)
 	})
 }

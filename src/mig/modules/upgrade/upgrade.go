@@ -33,7 +33,7 @@ import (
 )
 
 func init() {
-	modules.Register("upgrade", func() interface{} {
+	modules.OldRegister("upgrade", func() interface{} {
 		return new(Runner)
 	})
 }

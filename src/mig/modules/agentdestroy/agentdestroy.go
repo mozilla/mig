@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	modules.Register("agentdestroy", func() interface{} {
+	modules.OldRegister("agentdestroy", func() interface{} {
 		return new(Runner)
 	})
 }

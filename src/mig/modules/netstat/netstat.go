@@ -22,7 +22,7 @@ import (
 )
 
 func init() {
-	modules.Register("netstat", func() interface{} {
+	modules.OldRegister("netstat", func() interface{} {
 		return new(Runner)
 	})
 }

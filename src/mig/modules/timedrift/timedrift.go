@@ -21,7 +21,7 @@ import (
 // register the module in a global array of available modules, so the
 // agent knows we exist
 func init() {
-	modules.Register("timedrift", func() interface{} {
+	modules.OldRegister("timedrift", func() interface{} {
 		return new(Runner)
 	})
 }

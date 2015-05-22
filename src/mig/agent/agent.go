@@ -163,7 +163,7 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	// instanciate and call module
-	modRunner := modules.Available[mode].Runner()
+	modRunner := modules.Available[mode].NewRunner()
 	out = modRunner.(modules.Executer).Run(os.Stdin)
 	if pretty {
 		var modres modules.Result

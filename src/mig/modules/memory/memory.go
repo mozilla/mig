@@ -24,7 +24,7 @@ import (
 var debug bool = false
 
 func init() {
-	modules.Register("memory", func() interface{} {
+	modules.OldRegister("memory", func() interface{} {
 		return new(Runner)
 	})
 }

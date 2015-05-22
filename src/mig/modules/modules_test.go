@@ -22,7 +22,7 @@ type params struct {
 
 func TestRegister(t *testing.T) {
 	// test simple registration
-	Register("testing", func() interface{} {
+	OldRegister("testing", func() interface{} {
 		return new(testRunner)
 	})
 	if _, ok := Available["testing"]; !ok {
@@ -38,7 +38,7 @@ func TestRegister(t *testing.T) {
 			t.Fatalf("failed to panic on double registration of testing module")
 		}
 	}()
-	Register("testing", func() interface{} {
+	OldRegister("testing", func() interface{} {
 		return new(testRunner)
 	})
 }

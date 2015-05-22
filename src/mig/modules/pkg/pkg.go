@@ -37,7 +37,7 @@ func endCounters() {
 }
 
 func init() {
-	modules.Register("pkg", func() interface{} {
+	modules.OldRegister("pkg", func() interface{} {
 		return new(Runner)
 	})
 }

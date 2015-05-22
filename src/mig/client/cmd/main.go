@@ -155,7 +155,7 @@ func main() {
 	for _, arg := range fs.Args() {
 		modargs = append(modargs, arg)
 	}
-	modRunner = modules.Available[op.Module].Runner()
+	modRunner = modules.Available[op.Module].NewRunner()
 	if _, ok := modRunner.(modules.HasParamsParser); !ok {
 		fmt.Fprintf(os.Stderr, "[error] module '%s' does not support command line invocation\n", op.Module)
 		os.Exit(2)
