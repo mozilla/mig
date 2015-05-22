@@ -77,7 +77,7 @@ The code sample below shows how the ``example`` module uses package name
     }
 
     func (m *module) NewRunner() interface{} {
-        return new(Runner)
+        return new(run)
     }
 
     // init is called by the Go runtime at startup. We use this function to
@@ -87,8 +87,7 @@ The code sample below shows how the ``example`` module uses package name
         modules.Register("example", new(module))
     }
 
-    // Runner gives access to the exported functions and structs of the module
-    type Runner struct {
+    type run struct {
         Parameters params
         Results    modules.Result
     }
@@ -124,20 +123,19 @@ the global list ``modules.Available``, and if a module is registered to execute
 the command, calls its runner function to get a new object representing the run,
 and then calls that object's ``Run`` method.
 
-Runner Structure
+Runner Interface
 ~~~~~~~~~~~~~~~~
 
-A mig module typically defines its own ``Runner`` struct implementing the
+A mig module typically defines its own ``run`` struct implementing the
 ``modules.Runner`` interface and representing a single run of the module.  The
-``Runner`` struct contains two fields: module parameters and module results.
+``run`` struct typically contains two fields: module parameters and module results.
 The former is any format the module choses to use, while the latter generally
 implements the ``modules.Result`` struct (note that this is not required, but
 it is the easiest way to return a properly-formatted JSON result).
 
 .. code:: go
 
-	// Runner gives access to the exported functions and structs of the module
-	type Runner struct {
+	type run struct {
 		Parameters myModuleParams
 		Results    modules.Result
 	}
@@ -167,7 +165,7 @@ formatting rules, performs work and returns results in a JSON string.
 
 .. code:: go
 
-	func (r Runner) Run(in io.Reader) string {
+	func (r *run) Run(in io.Reader) string {
 		defer func() {
 			if e := recover(); e != nil {
 				r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
@@ -301,7 +299,7 @@ The function returns results into an array of strings.
 
 .. code:: go
 
-	func (r Runner) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
+	func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
 		var (
 			el    elements
 			stats statistics
@@ -351,7 +349,7 @@ A module implementation would have the function:
 
 .. code:: go
 
-	func (r Runner) ParamsCreator() (interface{}, error) {
+	func (r *run) ParamsCreator() (interface{}, error) {
 		fmt.Println("initializing netstat parameters creation")
 		var err error
 		var p params
@@ -408,7 +406,7 @@ A typical implementation from the ``timedrift`` module looks as follows:
 
 .. code:: go
 
-	func (r Runner) ParamsParser(args []string) (interface{}, error) {
+	func (r *run) ParamsParser(args []string) (interface{}, error) {
 		var (
 			err   error
 			drift string
@@ -470,12 +468,11 @@ needed structs.
 	// agent knows we exist
 	func init() {
 		modules.Register("example", func() interface{} {
-			return new(Runner)
+			return new(run)
 		})
 	}
 
-	// Runner gives access to the exported functions and structs of the module
-	type Runner struct {
+	type run struct {
 		Parameters params
 		Results    modules.Result
 	}
@@ -522,7 +519,7 @@ Next we'll implement a parameters validation function.
 
 .. code:: go
 
-	func (r Runner) ValidateParameters() (err error) {
+	func (r *run) ValidateParameters() (err error) {
 		fqdn := regexp.MustCompilePOSIX(`^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`)
 		for _, host := range r.Parameters.LookupHost {
 			if !fqdn.MatchString(host) {
@@ -550,7 +547,7 @@ valid parameters, it panics.
 
 .. code:: go
 
-	func (r Runner) Run(in io.Reader) (out string) {
+	func (r *run) Run(in io.Reader) (out string) {
 		defer func() {
 			if e := recover(); e != nil {
 				r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
@@ -616,7 +613,7 @@ implement the rules defined earlier in this page.
 
 .. code:: go
 
-	func (r Runner) doModuleStuff(out *string, moduleDone *chan bool) error {
+	func (r *run) doModuleStuff(out *string, moduleDone *chan bool) error {
 		var (
 			el    elements
 			stats statistics
@@ -665,7 +662,7 @@ implement the rules defined earlier in this page.
 		return nil
 	}
 
-	func (r Runner) buildResults(el elements, stats statistics) string {
+	func (r *run) buildResults(el elements, stats statistics) string {
 		if len(r.Results.Errors) == 0 {
 			r.Results.Success = true
 		}
@@ -697,7 +694,7 @@ the ``prints`` array of strings.
 
 .. code:: go
 
-	func (r Runner) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
+	func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
 		var (
 			el    elements
 			stats statistics

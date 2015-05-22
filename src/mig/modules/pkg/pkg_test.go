@@ -22,7 +22,7 @@ func TestRegistration(t *testing.T) {
 }
 
 func TestParameters(t *testing.T) {
-	var r Runner
+	var r run
 
 	validPayload := "H4sIAPiTeFUAA7PJL0vMiU9JTcvMyyzJzM8rVqjIzckrtlXKKCkpsNLXB0nr5WaWFKXq5Rel60f4+gQnZ6TmJoIldJH06Zoq2XHZ6KMbZ8cFAGdvQOxiAAAA"
 

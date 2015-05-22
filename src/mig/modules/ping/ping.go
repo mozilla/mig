@@ -29,14 +29,14 @@ type module struct {
 }
 
 func (m *module) NewRunner() interface{} {
-	return new(Runner)
+	return new(run)
 }
 
 func init() {
 	modules.Register("ping", new(module))
 }
 
-type Runner struct {
+type run struct {
 	Parameters params
 	Results    modules.Result
 }
@@ -62,7 +62,7 @@ const (
 	E_Timeout     = "connection timed out"
 )
 
-func (r Runner) Run(in io.Reader) (out string) {
+func (r *run) Run(in io.Reader) (out string) {
 	var (
 		err error
 		el  elements
@@ -138,7 +138,7 @@ func (r Runner) Run(in io.Reader) (out string) {
 	return r.buildResults(el)
 }
 
-func (r *Runner) ValidateParameters() (err error) {
+func (r *run) ValidateParameters() (err error) {
 	// check if Protocol is a valid one that we support with this module
 	switch r.Parameters.Protocol {
 	case "icmp", "udp", "tcp":
@@ -187,7 +187,7 @@ func (r *Runner) ValidateParameters() (err error) {
 
 // pingIcmp performs a ping to a destination. It select between ipv4 or ipv6 ping based
 // on the format of the destination ip.
-func (r Runner) pingIcmp() (err error) {
+func (r *run) pingIcmp() (err error) {
 	var (
 		icmpType icmp.Type
 		network  string
@@ -256,7 +256,7 @@ func (r Runner) pingIcmp() (err error) {
 
 // pingTcp performs a straighfoward connection attempt on a destination ip:port and returns
 // an error if the attempt failed
-func (r Runner) pingTcp() (err error) {
+func (r *run) pingTcp() (err error) {
 	conn, err := net.DialTimeout("tcp",
 		fmt.Sprintf("%s:%d", r.Parameters.Destination, int(r.Parameters.DestinationPort)),
 		time.Duration(r.Parameters.Timeout)*time.Second)
@@ -278,7 +278,7 @@ func (r Runner) pingTcp() (err error) {
 // Because UDP does not reply to connection requests, a lack of response may indicate that the
 // port is open, or that the packet got dropped. We chose to be optimistic and treat lack of
 // response (connection timeout) as an open port.
-func (r Runner) pingUdp() (err error) {
+func (r *run) pingUdp() (err error) {
 	// Make it ip:port format
 	destination := r.Parameters.Destination + ":" + fmt.Sprintf("%d", int(r.Parameters.DestinationPort))
 
@@ -306,7 +306,7 @@ func (r Runner) pingUdp() (err error) {
 	return nil
 }
 
-func (r Runner) buildResults(el elements) string {
+func (r *run) buildResults(el elements) string {
 	r.Results.Elements = el
 	if len(r.Results.Errors) == 0 {
 		r.Results.Success = true
@@ -318,7 +318,7 @@ func (r Runner) buildResults(el elements) string {
 	return string(jsonOutput[:])
 }
 
-func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
+func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
 	var el elements
 	defer func() {
 		if e := recover(); e != nil {

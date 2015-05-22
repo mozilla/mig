@@ -27,14 +27,14 @@ type module struct {
 }
 
 func (m *module) NewRunner() interface{} {
-	return new(Runner)
+	return new(run)
 }
 
 func init() {
 	modules.Register("memory", new(module))
 }
 
-type Runner struct {
+type run struct {
 	Parameters params
 	Results    modules.Result
 }
@@ -213,7 +213,7 @@ func (c *check) storeMatch(proc process.Process) {
 	return
 }
 
-func (r Runner) ValidateParameters() (err error) {
+func (r *run) ValidateParameters() (err error) {
 	var labels []string
 	for label, s := range r.Parameters.Searches {
 		labels = append(labels, label)
@@ -298,7 +298,7 @@ func validateBytes(bytes string) error {
 	return nil
 }
 
-func (r Runner) Run(in io.Reader) (out string) {
+func (r *run) Run(in io.Reader) (out string) {
 	var ts statistics
 	stats = ts
 	// in debug mode, we just panic
@@ -393,7 +393,7 @@ func (r Runner) Run(in io.Reader) (out string) {
 // evaluateProcess takes a single process and applies searches to it. All searches are evaluated. The `name` and `library`
 // checks are run first, and if needed, the memory of the process is read to run the checks on `contents` and `bytes`.
 // The logic is optimized to only read the process memory once and apply all the checks to it.
-func (r Runner) evaluateProcess(proc process.Process) (err error) {
+func (r *run) evaluateProcess(proc process.Process) (err error) {
 	if !debug {
 		defer func() {
 			if e := recover(); e != nil {
@@ -512,7 +512,7 @@ func (s search) checkLibraries(proc process.Process, procname string) (matchedal
 	return
 }
 
-func (r Runner) walkProcMemory(proc process.Process, procname string) (err error) {
+func (r *run) walkProcMemory(proc process.Process, procname string) (err error) {
 	// find longest byte string to search for, which determines the buffer size
 	bufsize := uint(4096)
 	// find lowest offset, which determines start address
@@ -630,7 +630,7 @@ func (r Runner) walkProcMemory(proc process.Process, procname string) (err error
 	return
 }
 
-func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
+func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 	// in debug mode, we just panic
 	if !debug {
 		defer func() {
@@ -810,7 +810,7 @@ func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
 // only results that have at least one match are returned.
 // If foundOnly is not set, all results are returned, along with errors and
 // statistics.
-func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
+func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
 	var (
 		el    searchResults
 		stats statistics

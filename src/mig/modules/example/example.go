@@ -42,7 +42,7 @@ type module struct {
 }
 
 func (m *module) NewRunner() interface{} {
-	return new(Runner)
+	return new(run)
 }
 
 // init is called by the Go runtime at startup. We use this function to
@@ -52,8 +52,7 @@ func init() {
 	modules.Register("example", new(module))
 }
 
-// Runner gives access to the exported functions and structs of the module
-type Runner struct {
+type run struct {
 	Parameters params
 	Results    modules.Result
 }
@@ -78,7 +77,7 @@ type statistics struct {
 // ValidateParameters *must* be implemented by a module. It provides a method
 // to verify that the parameters passed to the module conform the expected format.
 // It must return an error if the parameters do not validate.
-func (r Runner) ValidateParameters() (err error) {
+func (r *run) ValidateParameters() (err error) {
 	fqdn := regexp.MustCompilePOSIX(`^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`)
 	for _, host := range r.Parameters.LookupHost {
 		if !fqdn.MatchString(host) {
@@ -91,7 +90,7 @@ func (r Runner) ValidateParameters() (err error) {
 // Run *must* be implemented by a module. Its the function that executes the module.
 // It must return a string of marshalled json that contains the results from the module.
 // The code below provides a base module skeleton that can be reused in all modules.
-func (r Runner) Run(in io.Reader) (out string) {
+func (r *run) Run(in io.Reader) (out string) {
 	// a good way to handle execution failures is to catch panics and store
 	// the panicked error into modules.Results.Errors, marshal that, and output
 	// the JSON string back to the caller
@@ -134,7 +133,7 @@ func (r Runner) Run(in io.Reader) (out string) {
 // module. There is no implementation requirement. It's good practice to have it
 // return the JSON string Run() expects to return. We also make it return a boolean
 // in the `moduleDone` channel to do flow control in Run().
-func (r Runner) doModuleStuff(out *string, moduleDone *chan bool) error {
+func (r *run) doModuleStuff(out *string, moduleDone *chan bool) error {
 	var (
 		el    elements
 		stats statistics
@@ -189,7 +188,7 @@ func (r Runner) doModuleStuff(out *string, moduleDone *chan bool) error {
 // buildResults takes the results found by the module, as well as statistics,
 // and puts all that into a JSON string. It also takes care of setting the
 // success and foundanything flags.
-func (r Runner) buildResults(el elements, stats statistics) string {
+func (r *run) buildResults(el elements, stats statistics) string {
 	if len(r.Results.Errors) == 0 {
 		r.Results.Success = true
 	}
@@ -208,7 +207,7 @@ func (r Runner) buildResults(el elements, stats statistics) string {
 // PrintResults() is an *optional* method that returns results in a human-readable format.
 // if matchOnly is set, only results that have at least one match are returned.
 // If matchOnly is not set, all results are returned, along with errors and statistics.
-func (r Runner) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
+func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
 	var (
 		el    elements
 		stats statistics

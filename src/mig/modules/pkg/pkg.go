@@ -40,14 +40,14 @@ type module struct {
 }
 
 func (m *module) NewRunner() interface{} {
-	return new(Runner)
+	return new(run)
 }
 
 func init() {
 	modules.Register("pkg", new(module))
 }
 
-type Runner struct {
+type run struct {
 	Parameters Parameters
 	Results    modules.Result
 }
@@ -78,7 +78,7 @@ func makeOvalString(inbuf string) (string, error) {
 	return string(ovalbuf), nil
 }
 
-func (r Runner) Run(in io.Reader) (resStr string) {
+func (r *run) Run(in io.Reader) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
@@ -167,7 +167,7 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 	return
 }
 
-func (r Runner) ValidateParameters() (err error) {
+func (r *run) ValidateParameters() (err error) {
 	if r.Parameters.MaxConcurrentEval <= 0 || r.Parameters.MaxConcurrentEval > 10 {
 		return fmt.Errorf("concurrent evaluation must be between > 0 and <= 10")
 	}
@@ -205,7 +205,7 @@ func (r Runner) ValidateParameters() (err error) {
 	return
 }
 
-func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
+func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
 	var (
 		elem  elements
 		stats Statistics

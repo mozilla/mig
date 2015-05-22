@@ -24,14 +24,14 @@ type module struct {
 }
 
 func (m *module) NewRunner() interface{} {
-	return new(Runner)
+	return new(run)
 }
 
 func init() {
 	modules.Register("agentdestroy", new(module))
 }
 
-type Runner struct {
+type run struct {
 	Parameters Parameters
 	Results    modules.Result
 }
@@ -54,7 +54,7 @@ type results struct {
 	Errors  []string `json:"errors,omitempty"`
 }
 
-func (r Runner) ValidateParameters() (err error) {
+func (r *run) ValidateParameters() (err error) {
 	if r.Parameters.PID < 2 || r.Parameters.PID > 65535 {
 		return fmt.Errorf("PID '%s' is not in the range [2:65535]", r.Parameters.PID)
 	}
@@ -64,7 +64,7 @@ func (r Runner) ValidateParameters() (err error) {
 	return
 }
 
-func (r Runner) Run(in io.Reader) (out string) {
+func (r *run) Run(in io.Reader) (out string) {
 	defer func() {
 		if e := recover(); e != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
@@ -171,7 +171,7 @@ func getAgentVersion(binary string) (cversion string, err error) {
 	return
 }
 
-func (r Runner) buildResults() (jsonResults string) {
+func (r *run) buildResults() (jsonResults string) {
 	jsonOutput, err := json.Marshal(r.Results)
 	if err != nil {
 		panic(err)

@@ -43,7 +43,7 @@ listeningport <port>	search for an open socket on the local system listening on 
 // ParamsCreator implements an interactive parameters creation interface, which
 // receives user input,  stores it into a Parameters structure, validates it,
 // and returns that structure as an interface. It is mainly used by the MIG Console
-func (r Runner) ParamsCreator() (interface{}, error) {
+func (r *run) ParamsCreator() (interface{}, error) {
 	fmt.Println("initializing netstat parameters creation")
 	var err error
 	var p params
@@ -159,7 +159,7 @@ const cmd_help string = `
 // ParamsParser implements a command line parameters parser that takes a string
 // and returns a Parameters structure in an interface. It will display the module
 // help if the arguments string spell the work 'help'
-func (r Runner) ParamsParser(args []string) (interface{}, error) {
+func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		err                    error
 		lm, nm, li, ni, ci, lp flagParam
