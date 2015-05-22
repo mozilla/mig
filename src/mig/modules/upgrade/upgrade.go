@@ -35,7 +35,7 @@ import (
 type module struct {
 }
 
-func (m *module) NewRunner() interface{} {
+func (m *module) NewRun() interface{} {
 	return new(run)
 }
 

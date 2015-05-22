@@ -15,7 +15,7 @@ import (
 type testModule struct {
 }
 
-func (m *testModule) NewRunner() interface{} {
+func (m *testModule) NewRun() interface{} {
 	return new(testRunner)
 }
 

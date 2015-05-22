@@ -71,7 +71,7 @@ func main() {
 		a                                              mig.Action
 		migrc, show, render, target, expiration, afile string
 		modargs                                        []string
-		modRunner                                      interface{}
+		run                                            interface{}
 	)
 	defer func() {
 		if e := recover(); e != nil {
@@ -155,12 +155,12 @@ func main() {
 	for _, arg := range fs.Args() {
 		modargs = append(modargs, arg)
 	}
-	modRunner = modules.Available[op.Module].NewRunner()
-	if _, ok := modRunner.(modules.HasParamsParser); !ok {
+	run = modules.Available[op.Module].NewRun()
+	if _, ok := run.(modules.HasParamsParser); !ok {
 		fmt.Fprintf(os.Stderr, "[error] module '%s' does not support command line invocation\n", op.Module)
 		os.Exit(2)
 	}
-	op.Parameters, err = modRunner.(modules.HasParamsParser).ParamsParser(modargs)
+	op.Parameters, err = run.(modules.HasParamsParser).ParamsParser(modargs)
 	if err != nil || op.Parameters == nil {
 		panic(err)
 	}

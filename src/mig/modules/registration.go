@@ -9,7 +9,7 @@ package modules
 
 // A mig module implements this interface
 type Moduler interface {
-	NewRunner() interface{}
+	NewRun() interface{}
 }
 
 // The set of registered modules

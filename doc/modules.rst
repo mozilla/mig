@@ -37,7 +37,7 @@ call ``modules.Register`` with a module name and an object implementing
 .. code:: go
 
     type Moduler interface {
-        NewRunner() interface{}
+        NewRun() interface{}
     }
 
 A module must have a unique name. A good practice is to use the same name for
@@ -76,7 +76,7 @@ The code sample below shows how the ``example`` module uses package name
     type module struct {
     }
 
-    func (m *module) NewRunner() interface{} {
+    func (m *module) NewRun() interface{} {
         return new(run)
     }
 
