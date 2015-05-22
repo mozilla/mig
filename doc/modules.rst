@@ -47,11 +47,11 @@ different Modulers with different names.
 
 The sole method of a Moduler creates a new object to represent a "run" of the
 module.  In fact, the method returns an ``interface {}`` that must implement the
-``modules.Executer`` interface:
+``modules.Runner`` interface:
 
 .. code:: go
 
-	type Executer interface {
+	type Runner interface {
 		Run(io.Reader) string
 		ValidateParameters() error
 	}
@@ -128,7 +128,7 @@ Runner Structure
 ~~~~~~~~~~~~~~~~
 
 A mig module typically defines its own ``Runner`` struct implementing the
-``modules.Executer`` interface and representing a single run of the module.  The
+``modules.Runner`` interface and representing a single run of the module.  The
 ``Runner`` struct contains two fields: module parameters and module results.
 The former is any format the module choses to use, while the latter generally
 implements the ``modules.Result`` struct (note that this is not required, but
