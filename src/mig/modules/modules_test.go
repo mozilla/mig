@@ -12,19 +12,25 @@ import (
 	"time"
 )
 
+type testModule struct {
+}
+
+func (m *testModule) NewRunner() interface{} {
+	return new(testRunner)
+}
+
 type testRunner struct {
 	Parameters params
 	Results    Result
 }
+
 type params struct {
 	SomeParam string `json:"someparam"`
 }
 
 func TestRegister(t *testing.T) {
 	// test simple registration
-	OldRegister("testing", func() interface{} {
-		return new(testRunner)
-	})
+	Register("testing", new(testModule))
 	if _, ok := Available["testing"]; !ok {
 		t.Fatalf("testing module registration failed")
 	}
@@ -38,9 +44,7 @@ func TestRegister(t *testing.T) {
 			t.Fatalf("failed to panic on double registration of testing module")
 		}
 	}()
-	OldRegister("testing", func() interface{} {
-		return new(testRunner)
-	})
+	Register("testing", new(testModule))
 }
 
 func TestMakeMessage(t *testing.T) {

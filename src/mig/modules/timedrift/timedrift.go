@@ -17,13 +17,15 @@ import (
 	"time"
 )
 
-// init is called by the Go runtime at startup. We use this function to
-// register the module in a global array of available modules, so the
-// agent knows we exist
+type module struct {
+}
+
+func (m *module) NewRunner() interface{} {
+	return new(Runner)
+}
+
 func init() {
-	modules.OldRegister("timedrift", func() interface{} {
-		return new(Runner)
-	})
+	modules.Register("timedrift", new(module))
 }
 
 // Runner gives access to the exported functions and structs of the module

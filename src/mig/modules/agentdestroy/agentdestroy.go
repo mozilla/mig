@@ -20,10 +20,15 @@ import (
 	"runtime"
 )
 
+type module struct {
+}
+
+func (m *module) NewRunner() interface{} {
+	return new(Runner)
+}
+
 func init() {
-	modules.OldRegister("agentdestroy", func() interface{} {
-		return new(Runner)
-	})
+	modules.Register("agentdestroy", new(module))
 }
 
 type Runner struct {

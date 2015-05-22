@@ -23,10 +23,15 @@ import (
 
 var debug bool = false
 
+type module struct {
+}
+
+func (m *module) NewRunner() interface{} {
+	return new(Runner)
+}
+
 func init() {
-	modules.OldRegister("memory", func() interface{} {
-		return new(Runner)
-	})
+	modules.Register("memory", new(module))
 }
 
 type Runner struct {

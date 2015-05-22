@@ -25,10 +25,15 @@ import (
 	"time"
 )
 
+type module struct {
+}
+
+func (m *module) NewRunner() interface{} {
+	return new(Runner)
+}
+
 func init() {
-	modules.OldRegister("ping", func() interface{} {
-		return new(Runner)
-	})
+	modules.Register("ping", new(module))
 }
 
 type Runner struct {

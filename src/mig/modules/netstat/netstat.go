@@ -21,10 +21,15 @@ import (
 	"time"
 )
 
+type module struct {
+}
+
+func (m *module) NewRunner() interface{} {
+	return new(Runner)
+}
+
 func init() {
-	modules.OldRegister("netstat", func() interface{} {
-		return new(Runner)
-	})
+	modules.Register("netstat", new(module))
 }
 
 type Runner struct {

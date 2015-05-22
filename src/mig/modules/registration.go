@@ -12,23 +12,8 @@ type Moduler interface {
 	NewRunner() interface{}
 }
 
-// an internal Moduler to support OldRegister
-type module struct {
-	newRunner func() interface{}
-}
-
-func (m *module) NewRunner() interface{} {
-	return m.newRunner()
-}
-
 // The set of registered modules
 var Available = make(map[string]Moduler)
-
-// Register adds a module to the list of available modules
-func OldRegister(name string, runner func() interface{}) {
-	mod := &module{runner}
-	Register(name, mod)
-}
 
 // Register a new module as available
 func Register(name string, mod Moduler) {

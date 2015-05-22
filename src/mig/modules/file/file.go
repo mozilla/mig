@@ -35,10 +35,15 @@ import (
 
 var debug bool = false
 
+type module struct {
+}
+
+func (m *module) NewRunner() interface{} {
+	return new(Runner)
+}
+
 func init() {
-	modules.OldRegister("file", func() interface{} {
-		return new(Runner)
-	})
+	modules.Register("file", new(module))
 }
 
 type Runner struct {

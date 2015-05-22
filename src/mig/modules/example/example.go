@@ -36,13 +36,20 @@ import (
 	"regexp"
 )
 
+// An instance of this type will represent this module; it's possible to add
+// additional data fields here, although that is rarely needed.
+type module struct {
+}
+
+func (m *module) NewRunner() interface{} {
+	return new(Runner)
+}
+
 // init is called by the Go runtime at startup. We use this function to
 // register the module in a global array of available modules, so the
 // agent knows we exist
 func init() {
-	modules.OldRegister("example", func() interface{} {
-		return new(Runner)
-	})
+	modules.Register("example", new(module))
 }
 
 // Runner gives access to the exported functions and structs of the module

@@ -32,10 +32,15 @@ import (
 	"time"
 )
 
+type module struct {
+}
+
+func (m *module) NewRunner() interface{} {
+	return new(Runner)
+}
+
 func init() {
-	modules.OldRegister("upgrade", func() interface{} {
-		return new(Runner)
-	})
+	modules.Register("upgrade", new(module))
 }
 
 type Runner struct {

@@ -36,10 +36,15 @@ func endCounters() {
 	stats.ExecRuntime = time.Now().Sub(counters.startTime).String()
 }
 
+type module struct {
+}
+
+func (m *module) NewRunner() interface{} {
+	return new(Runner)
+}
+
 func init() {
-	modules.OldRegister("pkg", func() interface{} {
-		return new(Runner)
-	})
+	modules.Register("pkg", new(module))
 }
 
 type Runner struct {
