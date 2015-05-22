@@ -30,8 +30,23 @@ Registration
 A module must import ``mig/modules``.
 
 A module registers itself at runtime via its ``init()`` function which must
-call ``modules.Register`` with a module name and a "runner function" returning
-an anonymous object (``interface {}``) that must implement the
+call ``modules.Register`` with a module name and an object implementing
+``modules.Moduler``:
+
+
+.. code:: go
+
+    type Moduler interface {
+        NewRunner() interface{}
+    }
+
+A module must have a unique name. A good practice is to use the same name for
+the module name as for the Go package name.  However, it is possible for a
+single Go package to implement multiple modules, simply by registering
+different Modulers with different names.
+
+The sole method of a Moduler creates a new object to represent a "run" of the
+module.  In fact, the method returns an ``interface {}`` that must implement the
 ``modules.Executer`` interface:
 
 .. code:: go
@@ -41,9 +56,12 @@ an anonymous object (``interface {}``) that must implement the
 		ValidateParameters() error
 	}
 
-A module must have a unique name. A good practice is to use the same name for
-the module name as for the Go package name. The code sample below shows how the
-``example`` module uses package name ``example`` and registers with name ``example``.
+Any run-specific information should be associated with this object and not with
+the Moduler or stored in a global variable.  It should be possible for multiple
+runs of the module to execute simultaneously.
+
+The code sample below shows how the ``example`` module uses package name
+``example`` and registers with name ``example``.
 
 .. code:: go
 
@@ -53,18 +71,28 @@ the module name as for the Go package name. The code sample below shows how the
 		"mig/modules"
 	)
 
-    type Runner struct {
-        // ...
+    // An instance of this type will represent this module; it's possible to add
+    // additional data fields here, although that is rarely needed.
+    type module struct {
     }
 
-	// init is called by the Go runtime at startup. We use this function to
-	// register the module in a global array of available modules, so the
-	// agent knows we exist
-	func init() {
-		modules.Register("example", func() interface{} {
-			return new(Runner)
-		})
-	}
+    func (m *module) NewRunner() interface{} {
+        return new(Runner)
+    }
+
+    // init is called by the Go runtime at startup. We use this function to
+    // register the module in a global array of available modules, so the
+    // agent knows we exist
+    func init() {
+        modules.Register("example", new(module))
+    }
+
+    // Runner gives access to the exported functions and structs of the module
+    type Runner struct {
+        Parameters params
+        Results    modules.Result
+    }
+
 
 ``init()`` is a go builtin function that is executed automatically in all
 imported packages when a program starts. In the agents, modules are imported
