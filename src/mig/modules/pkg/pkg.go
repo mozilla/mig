@@ -273,5 +273,5 @@ type PkgMatch struct {
 }
 
 func newParameters() *Parameters {
-	return &Parameters{}
+	return &Parameters{MaxConcurrentEval: 1}
 }

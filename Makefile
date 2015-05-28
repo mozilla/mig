@@ -45,7 +45,8 @@ MKDIR		:= mkdir
 INSTALL		:= install
 
 
-all: go_get_deps test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
+all: go_get_deps all-but-deps
+all-but-deps: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
 
 mig-agent:
 	echo building mig-agent for $(OS)/$(ARCH)
