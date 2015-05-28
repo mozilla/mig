@@ -1,6 +1,6 @@
 {
   "name": "Shellshock IOCs (nginx and more)",
-  "target": "queueloc like 'linux.%'",
+  "target": "environment->>'os' IN ('linux','darwin') AND mode='daemon'",
   "threat": {
     "family": "malware",
     "level": "high"
