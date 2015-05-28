@@ -145,9 +145,9 @@ func main() {
 			goto exit
 		case "help":
 			fmt.Printf(`The following orders are available:
-action <id|new>		enter interactive action mode. if <id> is given, go to reader mode. if "new" is given, enter launcher mode.
+action <id>		enter interactive action reader mode for action <id>
 agent <id>		enter interactive agent reader mode for agent <id>
-create action		enter interactive action creation mode
+create action		create a new action
 create investigator	create a new investigator, will prompt for name and public key
 command <id>		enter command reader mode for command <id>
 exit			leave
