@@ -167,6 +167,16 @@ func (r Runner) ValidateParameters() (err error) {
 		return fmt.Errorf("concurrent evaluation must be between > 0 and <= 10")
 	}
 
+	// Supplying a definition with other modes is invalid
+	if r.Parameters.OvalDef != "" && len(r.Parameters.PkgMatch.Matches) > 0 {
+		return fmt.Errorf("cannot specify definition mode with other modes")
+	}
+
+	// Make sure a mode has been specified
+	if r.Parameters.OvalDef == "" && len(r.Parameters.PkgMatch.Matches) == 0 {
+		return fmt.Errorf("must specify a mode of operation")
+	}
+
 	// If an oval definition has been supplied, try parsing it to validate it
 	if r.Parameters.OvalDef != "" {
 		ovalbuf, err := makeOvalString(r.Parameters.OvalDef)
