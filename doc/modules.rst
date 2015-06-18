@@ -30,7 +30,7 @@ Registration
 A module must import ``mig/modules``.
 
 A module registers itself at runtime via its ``init()`` function which must
-call ``modules.Register`` with a module name and an object implementing
+call ``modules.Register`` with a module name and an instance implementing
 ``modules.Moduler``:
 
 
@@ -45,7 +45,7 @@ the module name as for the Go package name.  However, it is possible for a
 single Go package to implement multiple modules, simply by registering
 different Modulers with different names.
 
-The sole method of a Moduler creates a new object to represent a "run" of the
+The sole method of a Moduler creates a new instance to represent a "run" of the
 module, implementing the ``modules.Runner`` interface:
 
 .. code:: go
@@ -55,7 +55,7 @@ module, implementing the ``modules.Runner`` interface:
 		ValidateParameters() error
 	}
 
-Any run-specific information should be associated with this object and not with
+Any run-specific information should be associated with this instance and not with
 the Moduler or stored in a global variable.  It should be possible for multiple
 runs of the module to execute simultaneously.
 
@@ -119,8 +119,8 @@ Execution
 
 When the agent receives a command to execute, it looks up modules in
 the global list ``modules.Available``, and if a module is registered to execute
-the command, calls its runner function to get a new object representing the run,
-and then calls that object's ``Run`` method.
+the command, calls its runner function to get a new instance representing the run,
+and then calls that instance's ``Run`` method.
 
 Runner Interface
 ~~~~~~~~~~~~~~~~
