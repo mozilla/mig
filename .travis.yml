@@ -1,8 +1,8 @@
 language: go
 go:
-    - tip
+    - 1.4.2
 addons:
-    postgresql: "9.3"
+    postgresql: "9.4"
 notifications:
     irc:
         channels:
