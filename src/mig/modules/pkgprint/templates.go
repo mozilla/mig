@@ -49,6 +49,14 @@ var templates = []ppTemplate{
 		transformNull,
 		"/proc",
 	}},
+	{"pythonegg", fingerprint{
+		"PKG-INFO",
+		false,
+		"egg-info",
+		"^Version: (\\S+)",
+		transformNull,
+		"",
+	}},
 }
 
 func getTemplateFingerprint(name string) *fingerprint {
