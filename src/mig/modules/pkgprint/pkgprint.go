@@ -38,7 +38,7 @@ type MatchEntry struct {
 	Match string `json:"match"`
 }
 
-func executeTemplate(tname string, depth int) (FPResult, error) {
+func executeTemplate(tname string, depth int, root string) (FPResult, error) {
 	var (
 		res FPResult
 		err error
@@ -50,6 +50,9 @@ func executeTemplate(tname string, depth int) (FPResult, error) {
 	res.Name = tname
 	s := NewSimpleFileLocator()
 	s.maxDepth = depth
+	if root != "/" {
+		s.root = root
+	}
 	s.Locate(fp.filename, fp.isRegexp)
 	for _, x := range s.matches {
 		// If an error occurs here, just ignore it and keep going.
@@ -243,7 +246,7 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 	}
 
 	if r.Parameters.TemplateMode {
-		fpres, err := executeTemplate(r.Parameters.TemplateParams.Name, r.Parameters.SearchDepth)
+		fpres, err := executeTemplate(r.Parameters.TemplateParams.Name, r.Parameters.SearchDepth, r.Parameters.SearchRoot)
 		if err != nil {
 			panic(err)
 		}
@@ -291,7 +294,8 @@ type Parameters struct {
 	TemplateMode   bool           `json:"templatemode"`
 	TemplateParams TemplateParams `json:"template"`
 
-	SearchDepth int `json:"depth"`
+	SearchDepth int    `json:"depth"`
+	SearchRoot  string `json:"root"`
 }
 
 type TemplateParams struct {

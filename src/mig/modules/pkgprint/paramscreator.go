@@ -20,13 +20,23 @@ func printHelp(isCmd bool) {
 %stemplate <name>   - Scan using template
                     ex: template mediawiki
 		    query for specific module supplied template
-`, dash)
+
+%sdepth <int>       - Specify maximum directory search depth
+                    ex: depth 2
+		    default depth is 10
+
+%sroot <path>       - Specify search root
+                    ex: root /usr/local
+		    default root is /
+`, dash, dash, dash)
 }
 
 func (r Runner) ParamsParser(args []string) (interface{}, error) {
 	var (
 		fs           flag.FlagSet
 		templateName string
+		depth        int
+		root         string
 	)
 
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
@@ -36,6 +46,8 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 
 	fs.Init("pkgprint", flag.ContinueOnError)
 	fs.StringVar(&templateName, "template", "", "see help")
+	fs.IntVar(&depth, "depth", 10, "see help")
+	fs.StringVar(&root, "root", "/", "see help")
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -46,6 +58,8 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 		p.TemplateParams.Name = templateName
 		p.TemplateMode = true
 	}
+	p.SearchDepth = depth
+	p.SearchRoot = root
 
 	r.Parameters = *p
 
