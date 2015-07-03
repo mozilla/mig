@@ -21,6 +21,7 @@ type fingerprint struct {
 	pathFilter   string
 	contentMatch string
 	transform    func(string) (string, error)
+	forceRoot    string
 }
 
 var templates = []ppTemplate{
@@ -30,6 +31,7 @@ var templates = []ppTemplate{
 		"",
 		".*wgVersion = (\\S+)",
 		transformNull,
+		"",
 	}},
 	{"django", fingerprint{
 		"__init__.py",
@@ -37,6 +39,15 @@ var templates = []ppTemplate{
 		"django",
 		"^VERSION = (\\S+, \\S+, \\S+, \\S+, \\S+)",
 		transformDjango,
+		"",
+	}},
+	{"linuxkernel", fingerprint{
+		"version",
+		false,
+		"",
+		"^(Linux version.*)",
+		transformNull,
+		"/proc",
 	}},
 }
 

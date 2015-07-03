@@ -53,6 +53,13 @@ func executeTemplate(tname string, depth int, root string) (FPResult, error) {
 	if root != "/" {
 		s.root = root
 	}
+
+	// If the fingerprint has a forced root, override the root that has
+	// been specified.
+	if fp.forceRoot != "" {
+		s.root = fp.forceRoot
+	}
+
 	s.Locate(fp.filename, fp.isRegexp)
 	for _, x := range s.matches {
 		// If a path filter exists and does not match the file, ignore
