@@ -74,7 +74,7 @@ func executeTemplate(tname string, depth int, root string) (FPResult, error) {
 
 		// If an error occurs here, just ignore it and keep going.
 		m, _ := FileContentCheck(x, fp.contentMatch)
-		if len(m) == 0 {
+		if m == nil || len(m) == 0 {
 			continue
 		}
 		for _, i := range m {
