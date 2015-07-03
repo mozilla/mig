@@ -5,6 +5,11 @@
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 package pkgprint
 
+import (
+	"fmt"
+	"regexp"
+)
+
 type ppTemplate struct {
 	name        string
 	fingerprint fingerprint
@@ -26,6 +31,13 @@ var templates = []ppTemplate{
 		".*wgVersion = (\\S+)",
 		transformNull,
 	}},
+	{"django", fingerprint{
+		"__init__.py",
+		false,
+		"django",
+		"^VERSION = (\\S+, \\S+, \\S+, \\S+, \\S+)",
+		transformDjango,
+	}},
 }
 
 func getTemplateFingerprint(name string) *fingerprint {
@@ -35,6 +47,16 @@ func getTemplateFingerprint(name string) *fingerprint {
 		}
 	}
 	return nil
+}
+
+func transformDjango(in string) (string, error) {
+	re := regexp.MustCompile("^\\((\\S+), (\\S+), (\\S+),")
+	buf := re.FindStringSubmatch(in)
+	if len(buf) != 4 {
+		return "", fmt.Errorf("transform django: invalid input \"%v\"", in)
+	}
+	ret := fmt.Sprintf("%v.%v.%v", buf[1], buf[2], buf[3])
+	return ret, nil
 }
 
 func transformNull(in string) (string, error) {

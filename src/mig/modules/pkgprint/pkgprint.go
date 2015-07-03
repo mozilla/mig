@@ -55,6 +55,16 @@ func executeTemplate(tname string, depth int, root string) (FPResult, error) {
 	}
 	s.Locate(fp.filename, fp.isRegexp)
 	for _, x := range s.matches {
+		// If a path filter exists and does not match the file, ignore
+		// it.
+		if fp.pathFilter != "" {
+			var flag bool
+			flag, err = regexp.MatchString(fp.pathFilter, x)
+			if err != nil || !flag {
+				continue
+			}
+		}
+
 		// If an error occurs here, just ignore it and keep going.
 		m, _ := FileContentCheck(x, fp.contentMatch)
 		if len(m) == 0 {
