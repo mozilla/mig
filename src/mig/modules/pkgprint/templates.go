@@ -49,6 +49,14 @@ var templates = []ppTemplate{
 		transformNull,
 		"/proc",
 	}},
+	{"linuxmodules", fingerprint{
+		"modules",
+		false,
+		"",
+		"^(\\S+)",
+		transformNull,
+		"/proc",
+	}},
 	{"pythonegg", fingerprint{
 		"PKG-INFO",
 		false,
