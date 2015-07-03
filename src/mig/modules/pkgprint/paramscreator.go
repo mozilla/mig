@@ -28,6 +28,14 @@ func printHelp(isCmd bool) {
 %sroot <path>       - Specify search root
                     ex: root /usr/local
 		    default root is /
+
+Available templates:
+
+linuxkernel         - Running Linux kernel information
+linuxmodules        - Loaded Linux modules
+pythonegg           - Python package versions
+django              - Django framework versions
+mediawiki           - MediaWiki framework versions
 `, dash, dash, dash)
 }
 
