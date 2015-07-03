@@ -5,6 +5,11 @@
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 package pkgprint
 
+import (
+	"mig/testutil"
+	"testing"
+)
+
 func TestRegistration(t *testing.T) {
 	testutil.CheckModuleRegistration(t, "pkgprint")
 }
