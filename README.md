@@ -28,7 +28,7 @@ weekend isn't starting great, and the thought of manually inspecting thousands
 of systems isn't making it any better.
 
 MIG can help. The signature of the vulnerable PHP app (an md5 of a file, a regex
-on file, or just a filename) can be searches for across all your systems using
+on file, or just a filename) can be searched for across all your systems using
 the `file` module. Similarly, indicators of compromise such as specific log
 entries, backdoor files with {md5,sha{1,256,512,3-{256,512}}} hashes, IP
 addresses from botnets or signature in processes memories can be investigated
