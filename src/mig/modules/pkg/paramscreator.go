@@ -64,7 +64,7 @@ func loadOvalDefinitions(path string) (string, error) {
 	return b.String(), nil
 }
 
-func (r Runner) ParamsCreator() (interface{}, error) {
+func (r *run) ParamsCreator() (interface{}, error) {
 	p := newParameters()
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -123,7 +123,7 @@ exit:
 	return r.Parameters, r.ValidateParameters()
 }
 
-func (r Runner) ParamsParser(args []string) (interface{}, error) {
+func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		fs           flag.FlagSet
 		ovalDefs     string

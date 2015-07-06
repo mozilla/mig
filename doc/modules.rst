@@ -30,20 +30,37 @@ Registration
 A module must import ``mig/modules``.
 
 A module registers itself at runtime via its ``init()`` function which must
-call ``modules.Register`` with a module name and a "runner function" returning
-an anonymous object (``interface {}``) that must implement the
+call ``modules.Register`` with a module name and an instance implementing
 ``modules.Moduler``:
+
 
 .. code:: go
 
-	type Moduler interface {
+    type Moduler interface {
+        NewRun() Runner
+    }
+
+A module must have a unique name. A good practice is to use the same name for
+the module name as for the Go package name.  However, it is possible for a
+single Go package to implement multiple modules, simply by registering
+different Modulers with different names.
+
+The sole method of a Moduler creates a new instance to represent a "run" of the
+module, implementing the ``modules.Runner`` interface:
+
+.. code:: go
+
+	type Runner interface {
 		Run(io.Reader) string
 		ValidateParameters() error
 	}
 
-A module must have a unique name. A good practice is to use the same name for
-the module name as for the Go package name. The code sample below shows how the
-``example`` module uses package name ``example`` and registers with name ``example``.
+Any run-specific information should be associated with this instance and not with
+the Moduler or stored in a global variable.  It should be possible for multiple
+runs of the module to execute simultaneously.
+
+The code sample below shows how the ``example`` module uses package name
+``example`` and registers with name ``example``.
 
 .. code:: go
 
@@ -53,18 +70,27 @@ the module name as for the Go package name. The code sample below shows how the
 		"mig/modules"
 	)
 
-    type Runner struct {
-        // ...
+    // An instance of this type will represent this module; it's possible to add
+    // additional data fields here, although that is rarely needed.
+    type module struct {
     }
 
-	// init is called by the Go runtime at startup. We use this function to
-	// register the module in a global array of available modules, so the
-	// agent knows we exist
-	func init() {
-		modules.Register("example", func() interface{} {
-			return new(Runner)
-		})
-	}
+    func (m *module) NewRun() interface{} {
+        return new(run)
+    }
+
+    // init is called by the Go runtime at startup. We use this function to
+    // register the module in a global array of available modules, so the
+    // agent knows we exist
+    func init() {
+        modules.Register("example", new(module))
+    }
+
+    type run struct {
+        Parameters params
+        Results    modules.Result
+    }
+
 
 ``init()`` is a go builtin function that is executed automatically in all
 imported packages when a program starts. In the agents, modules are imported
@@ -93,23 +119,22 @@ Execution
 
 When the agent receives a command to execute, it looks up modules in
 the global list ``modules.Available``, and if a module is registered to execute
-the command, calls its runner function to get a new object representing the run,
-and then calls that object's ``Run`` method.
+the command, calls its runner function to get a new instance representing the run,
+and then calls that instance's ``Run`` method.
 
-Runner Structure
+Runner Interface
 ~~~~~~~~~~~~~~~~
 
-A mig module typically defines its own ``Runner`` struct implementing the
-``modules.Moduler`` interface and representing a single run of the module.  The
-``Runner`` struct contains two fields: module parameters and module results.
+A mig module typically defines its own ``run`` struct implementing the
+``modules.Runner`` interface and representing a single run of the module.  The
+``run`` struct typically contains two fields: module parameters and module results.
 The former is any format the module choses to use, while the latter generally
 implements the ``modules.Result`` struct (note that this is not required, but
 it is the easiest way to return a properly-formatted JSON result).
 
 .. code:: go
 
-	// Runner gives access to the exported functions and structs of the module
-	type Runner struct {
+	type run struct {
 		Parameters myModuleParams
 		Results    modules.Result
 	}
@@ -139,7 +164,7 @@ formatting rules, performs work and returns results in a JSON string.
 
 .. code:: go
 
-	func (r Runner) Run(in io.Reader) string {
+	func (r *run) Run(in io.Reader) string {
 		defer func() {
 			if e := recover(); e != nil {
 				r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
@@ -273,7 +298,7 @@ The function returns results into an array of strings.
 
 .. code:: go
 
-	func (r Runner) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
+	func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
 		var (
 			el    elements
 			stats statistics
@@ -323,7 +348,7 @@ A module implementation would have the function:
 
 .. code:: go
 
-	func (r Runner) ParamsCreator() (interface{}, error) {
+	func (r *run) ParamsCreator() (interface{}, error) {
 		fmt.Println("initializing netstat parameters creation")
 		var err error
 		var p params
@@ -380,7 +405,7 @@ A typical implementation from the ``timedrift`` module looks as follows:
 
 .. code:: go
 
-	func (r Runner) ParamsParser(args []string) (interface{}, error) {
+	func (r *run) ParamsParser(args []string) (interface{}, error) {
 		var (
 			err   error
 			drift string
@@ -442,12 +467,11 @@ needed structs.
 	// agent knows we exist
 	func init() {
 		modules.Register("example", func() interface{} {
-			return new(Runner)
+			return new(run)
 		})
 	}
 
-	// Runner gives access to the exported functions and structs of the module
-	type Runner struct {
+	type run struct {
 		Parameters params
 		Results    modules.Result
 	}
@@ -494,7 +518,7 @@ Next we'll implement a parameters validation function.
 
 .. code:: go
 
-	func (r Runner) ValidateParameters() (err error) {
+	func (r *run) ValidateParameters() (err error) {
 		fqdn := regexp.MustCompilePOSIX(`^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`)
 		for _, host := range r.Parameters.LookupHost {
 			if !fqdn.MatchString(host) {
@@ -522,7 +546,7 @@ valid parameters, it panics.
 
 .. code:: go
 
-	func (r Runner) Run(in io.Reader) (out string) {
+	func (r *run) Run(in io.Reader) (out string) {
 		defer func() {
 			if e := recover(); e != nil {
 				r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
@@ -588,7 +612,7 @@ implement the rules defined earlier in this page.
 
 .. code:: go
 
-	func (r Runner) doModuleStuff(out *string, moduleDone *chan bool) error {
+	func (r *run) doModuleStuff(out *string, moduleDone *chan bool) error {
 		var (
 			el    elements
 			stats statistics
@@ -637,7 +661,7 @@ implement the rules defined earlier in this page.
 		return nil
 	}
 
-	func (r Runner) buildResults(el elements, stats statistics) string {
+	func (r *run) buildResults(el elements, stats statistics) string {
 		if len(r.Results.Errors) == 0 {
 			r.Results.Success = true
 		}
@@ -669,7 +693,7 @@ the ``prints`` array of strings.
 
 .. code:: go
 
-	func (r Runner) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
+	func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
 		var (
 			el    elements
 			stats statistics

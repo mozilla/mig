@@ -32,13 +32,18 @@ import (
 	"time"
 )
 
-func init() {
-	modules.Register("upgrade", func() interface{} {
-		return new(Runner)
-	})
+type module struct {
 }
 
-type Runner struct {
+func (m *module) NewRun() modules.Runner {
+	return new(run)
+}
+
+func init() {
+	modules.Register("upgrade", new(module))
+}
+
+type run struct {
 	Parameters params
 	Results    modules.Result
 }
@@ -65,7 +70,7 @@ type statistics struct {
 	DownloadSize int64  `json:"downloadsize"`
 }
 
-func (r Runner) ValidateParameters() (err error) {
+func (r run) ValidateParameters() (err error) {
 	locre := regexp.MustCompile(`^https?://`)
 	checksumre := regexp.MustCompile(`^[a-zA-Z0-9]{64}$`)
 	for k, v := range r.Parameters {
@@ -82,7 +87,7 @@ func (r Runner) ValidateParameters() (err error) {
 	return
 }
 
-func (r Runner) Run(in io.Reader) (out string) {
+func (r run) Run(in io.Reader) (out string) {
 	defer func() {
 		if e := recover(); e != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
@@ -309,7 +314,7 @@ func moveBinary(binPath, version string) (linkloc string, err error) {
 
 // buildResults transforms the ConnectedIPs map into a Results
 // map that is serialized in JSON and returned as a string
-func (r Runner) buildResults() string {
+func (r run) buildResults() string {
 	var el elements
 	el.OldPID = os.Getppid()
 	r.Results.Elements = el

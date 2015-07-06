@@ -35,13 +35,18 @@ import (
 
 var debug bool = false
 
-func init() {
-	modules.Register("file", func() interface{} {
-		return new(Runner)
-	})
+type module struct {
 }
 
-type Runner struct {
+func (m *module) NewRun() modules.Runner {
+	return new(run)
+}
+
+func init() {
+	modules.Register("file", new(module))
+}
+
+type run struct {
 	Parameters Parameters
 	Results    modules.Result
 }
@@ -373,7 +378,7 @@ func (c *check) storeMatch(file string) {
 	return
 }
 
-func (r Runner) ValidateParameters() (err error) {
+func (r *run) ValidateParameters() (err error) {
 	var labels []string
 	for label, s := range r.Parameters.Searches {
 		labels = append(labels, label)
@@ -618,7 +623,7 @@ var stats statistics
 
 var walkingErrors []string
 
-func (r Runner) Run(in io.Reader) (resStr string) {
+func (r *run) Run(in io.Reader) (resStr string) {
 	var (
 		roots     []string
 		traversed []string
@@ -733,7 +738,7 @@ func (r Runner) Run(in io.Reader) (resStr string) {
 	return
 }
 
-func (r Runner) pathWalk(path string, roots []string) (traversed []string, err error) {
+func (r *run) pathWalk(path string, roots []string) (traversed []string, err error) {
 	var (
 		subdirs []string
 		target  *os.File
@@ -940,7 +945,7 @@ func followSymLink(link string) (mode os.FileMode, path string, err error) {
 }
 
 // evaluateFile takes a single file and applies searches to it
-func (r Runner) evaluateFile(file string) (err error) {
+func (r *run) evaluateFile(file string) (err error) {
 	var activeSearches []string
 	defer func() {
 		if e := recover(); e != nil {
@@ -1100,7 +1105,7 @@ func (s search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
 	return
 }
 
-func (r Runner) checkContent(file string) {
+func (r *run) checkContent(file string) {
 	var (
 		err error
 		fd  *os.File
@@ -1191,7 +1196,7 @@ func (r Runner) checkContent(file string) {
 	return
 }
 
-func (r Runner) checkHash(file string, hashtype checkType) {
+func (r *run) checkHash(file string, hashtype checkType) {
 	var (
 		err error
 	)
@@ -1315,7 +1320,7 @@ func newResults() *modules.Result {
 	return &modules.Result{Elements: make(SearchResults), FoundAnything: false}
 }
 
-func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
+func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("buildResults() -> %v", e)
@@ -1496,7 +1501,7 @@ func (r Runner) buildResults(t0 time.Time) (resStr string, err error) {
 // only results that have at least one match are returned.
 // If foundOnly is not set, all results are returned, along with errors and
 // statistics.
-func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
+func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
 	var (
 		el    SearchResults
 		stats statistics

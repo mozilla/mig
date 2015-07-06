@@ -6,25 +6,40 @@
 package modules
 
 import (
+	"io"
 	"os"
 	"strings"
 	"testing"
 	"time"
 )
 
+type testModule struct {
+}
+
+func (m *testModule) NewRun() Runner {
+	return new(testRunner)
+}
+
 type testRunner struct {
 	Parameters params
 	Results    Result
 }
+
+func (r *testRunner) ValidateParameters() (err error) {
+	return nil
+}
+
+func (r *testRunner) Run(in io.Reader) (out string) {
+	return ""
+}
+
 type params struct {
 	SomeParam string `json:"someparam"`
 }
 
 func TestRegister(t *testing.T) {
 	// test simple registration
-	Register("testing", func() interface{} {
-		return new(testRunner)
-	})
+	Register("testing", new(testModule))
 	if _, ok := Available["testing"]; !ok {
 		t.Fatalf("testing module registration failed")
 	}
@@ -38,9 +53,7 @@ func TestRegister(t *testing.T) {
 			t.Fatalf("failed to panic on double registration of testing module")
 		}
 	}()
-	Register("testing", func() interface{} {
-		return new(testRunner)
-	})
+	Register("testing", new(testModule))
 }
 
 func TestMakeMessage(t *testing.T) {

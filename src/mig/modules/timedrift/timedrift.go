@@ -17,17 +17,18 @@ import (
 	"time"
 )
 
-// init is called by the Go runtime at startup. We use this function to
-// register the module in a global array of available modules, so the
-// agent knows we exist
-func init() {
-	modules.Register("timedrift", func() interface{} {
-		return new(Runner)
-	})
+type module struct {
 }
 
-// Runner gives access to the exported functions and structs of the module
-type Runner struct {
+func (m *module) NewRun() modules.Runner {
+	return new(run)
+}
+
+func init() {
+	modules.Register("timedrift", new(module))
+}
+
+type run struct {
 	Parameters params
 	Results    modules.Result
 }
@@ -57,14 +58,14 @@ type ntpstats struct {
 	Reachable bool      `json:"reachable"`
 }
 
-func (r Runner) ValidateParameters() (err error) {
+func (r *run) ValidateParameters() (err error) {
 	if r.Parameters.Drift != "" {
 		_, err = time.ParseDuration(r.Parameters.Drift)
 	}
 	return err
 }
 
-func (r Runner) Run(in io.Reader) (out string) {
+func (r *run) Run(in io.Reader) (out string) {
 	var (
 		stats statistics
 		el    elements
@@ -233,7 +234,7 @@ func GetNetworkTime(host string) (t time.Time, latency string, err error) {
 }
 
 // buildResults marshals the results
-func (r Runner) buildResults(el elements, stats statistics) string {
+func (r *run) buildResults(el elements, stats statistics) string {
 	r.Results.Elements = el
 	r.Results.Statistics = stats
 	if len(r.Results.Errors) == 0 {
@@ -250,7 +251,7 @@ func (r Runner) buildResults(el elements, stats statistics) string {
 	return string(jsonOutput[:])
 }
 
-func (r Runner) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
+func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
 	var (
 		el    elements
 		stats statistics
@@ -313,7 +314,7 @@ If no drift is set, the module only returns local time.
 `, dash, dash)
 }
 
-func (r Runner) ParamsCreator() (interface{}, error) {
+func (r *run) ParamsCreator() (interface{}, error) {
 	fmt.Println("initializing timedrift parameters creation")
 	var err error
 	var p params
@@ -345,7 +346,7 @@ func (r Runner) ParamsCreator() (interface{}, error) {
 	return r.Parameters, r.ValidateParameters()
 }
 
-func (r Runner) ParamsParser(args []string) (interface{}, error) {
+func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		err   error
 		drift string

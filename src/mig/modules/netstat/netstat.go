@@ -21,13 +21,18 @@ import (
 	"time"
 )
 
-func init() {
-	modules.Register("netstat", func() interface{} {
-		return new(Runner)
-	})
+type module struct {
 }
 
-type Runner struct {
+func (m *module) NewRun() modules.Runner {
+	return new(run)
+}
+
+func init() {
+	modules.Register("netstat", new(module))
+}
+
+type run struct {
 	Parameters params
 	Results    modules.Result
 }
@@ -79,7 +84,7 @@ type statistics struct {
 	Totalhits float64 `json:"totalhits"`
 }
 
-func (r Runner) ValidateParameters() (err error) {
+func (r *run) ValidateParameters() (err error) {
 	for _, val := range r.Parameters.LocalMAC {
 		err = validateMAC(val)
 		if err != nil {
@@ -148,7 +153,7 @@ func validatePort(val string) error {
 	return nil
 }
 
-func (r Runner) Run(in io.Reader) (resStr string) {
+func (r *run) Run(in io.Reader) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
@@ -314,7 +319,7 @@ func HasLocalIP(ipStr string) (found bool, elements []element, err error) {
 	return
 }
 
-func (r Runner) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
+func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
 	var (
 		el    elements
 		stats statistics

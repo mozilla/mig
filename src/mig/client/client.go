@@ -872,10 +872,10 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 			}
 			continue
 		}
-		modRunner := modules.Available[moduleName].Runner()
+		run := modules.Available[moduleName].NewRun()
 		// look for a result printer in the module
-		if _, ok := modRunner.(modules.HasResultsPrinter); ok {
-			outRes, err := modRunner.(modules.HasResultsPrinter).PrintResults(result, onlyFound)
+		if _, ok := run.(modules.HasResultsPrinter); ok {
+			outRes, err := run.(modules.HasResultsPrinter).PrintResults(result, onlyFound)
 			if err != nil {
 				panic(err)
 			}

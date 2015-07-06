@@ -24,7 +24,7 @@ type testParams struct {
 
 func TestParameters(t *testing.T) {
 	var (
-		r   Runner
+		r   run
 		err error
 	)
 	var parameters = []testParams{
@@ -57,7 +57,7 @@ func TestParameters(t *testing.T) {
 
 func TestFindGoTestProcess(t *testing.T) {
 	var (
-		r Runner
+		r run
 		s search
 	)
 	r.Parameters = *newParameters()
@@ -112,7 +112,7 @@ func TestSearches(t *testing.T) {
 		{false, `{"searches":{"s1":{"names":["1983yrotewdshhhoiufhes7fd29"],"bytes":["ffffffffaaaabbbbcccceeee"],"options":{"matchall": true}}}}`},
 	}
 	for _, tp := range parameters {
-		var r Runner
+		var r run
 		r.Parameters = *newParameters()
 		err := json.Unmarshal([]byte(tp.params), &r.Parameters)
 		if err != nil {

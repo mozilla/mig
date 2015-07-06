@@ -6,14 +6,11 @@ import (
 )
 
 func CheckModuleRegistration(t *testing.T, module_name string) {
-	registration, ok := modules.Available[module_name]
+	mod, ok := modules.Available[module_name]
 	if !ok {
 		t.Fatalf("module %s not registered", module_name)
 	}
 
-	modRunner := registration.Runner()
-	if _, ok := modRunner.(modules.Moduler); !ok {
-		t.Fatalf("module %s registration function does not return a Moduler",
-			module_name)
-	}
+	// test getting a run instance (just don't fail!)
+	mod.NewRun()
 }

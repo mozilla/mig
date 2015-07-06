@@ -44,7 +44,7 @@ icmp, tcp and udp ping. See doc at http://mig.mozilla.org/doc/module_ping.html
 }
 
 // ParamsParser implements a command line parameter parser for the ping module
-func (r Runner) ParamsParser(args []string) (interface{}, error) {
+func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		err      error
 		pa       params
@@ -77,7 +77,7 @@ func (r Runner) ParamsParser(args []string) (interface{}, error) {
 }
 
 // ParamsCreator implements an interactive interface for the console
-func (r Runner) ParamsCreator() (interface{}, error) {
+func (r *run) ParamsCreator() (interface{}, error) {
 	var (
 		err error
 		p   params
