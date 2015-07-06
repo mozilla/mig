@@ -70,26 +70,26 @@ The code sample below shows how the ``example`` module uses package name
 		"mig/modules"
 	)
 
-    // An instance of this type will represent this module; it's possible to add
-    // additional data fields here, although that is rarely needed.
-    type module struct {
-    }
+	// An instance of this type will represent this module; it's possible to add
+	// additional data fields here, although that is rarely needed.
+	type module struct {
+	}
 
-    func (m *module) NewRun() interface{} {
-        return new(run)
-    }
+	func (m *module) NewRun() interface{} {
+		return new(run)
+	}
 
-    // init is called by the Go runtime at startup. We use this function to
-    // register the module in a global array of available modules, so the
-    // agent knows we exist
-    func init() {
-        modules.Register("example", new(module))
-    }
+	// init is called by the Go runtime at startup. We use this function to
+	// register the module in a global array of available modules, so the
+	// agent knows we exist
+	func init() {
+		modules.Register("example", new(module))
+	}
 
-    type run struct {
-        Parameters params
-        Results    modules.Result
-    }
+	type run struct {
+		Parameters params
+		Results    modules.Result
+	}
 
 
 ``init()`` is a go builtin function that is executed automatically in all

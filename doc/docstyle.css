@@ -180,14 +180,14 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
 pre.code .ln { color: grey; } /* line numbers */
 //pre.code, code { background-color: #eeeeee }
 pre.code .comment, code .comment, code .c1 { color: #5C6576 }
-pre.code .keyword, code .keyword, code .kd, code .kn, code .k, code .o { color: #3e9101;}
-code .nb { color: #c45918;}
-code .s {color: #0a77c4;}
-pre.code .punctuation, code .punctuation, code .p { color: white;}
-pre.code .literal.string, code .literal.string { color: #0C5404 }
-pre.code .name.builtin, code .name.builtin, code .nx { color: white; }
-pre.code .deleted, code .deleted { background-color: #DEB0A1}
-pre.code .inserted, code .inserted { background-color: #A3D289}
+code, pre.code .keyword, code .keyword, pre.code .kd, pre.code .kn, pre.code .k, pre.code .o { color: #3e9101;}
+pre.code .nb { color: #c45918;}
+pre.code .s {color: #0a77c4;}
+pre.code .punctuation, pre.code .punctuation, pre.code .p { color: white;}
+pre.code .literal.string, pre.code .literal.string { color: #0C5404 }
+pre.code .name.builtin, pre.code .name.builtin, pre.code .nx { color: white; }
+pre.code .deleted, pre.code .deleted { background-color: #DEB0A1}
+pre.code .inserted, pre.code .inserted { background-color: #A3D289}
 
 table {
   width: 100%;

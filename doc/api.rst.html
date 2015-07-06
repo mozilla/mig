@@ -57,9 +57,9 @@
             </li>
         </ol>
         <pre class="code bash"><span class="nv">$ </span>hexdump -C <span class="o">&lt;&lt;&lt;</span> <span class="s1">'1;2006-01-02T15:04:05Z;1825922807490630059'</span>
-<span class="m">00000000</span>  <span class="m">31</span> 3b <span class="m">32</span> <span class="m">30</span> <span class="m">30</span> <span class="m">36</span> 2d <span class="m">30</span>  <span class="m">31</span> 2d <span class="m">30</span> <span class="m">32</span> <span class="m">54</span> <span class="m">31</span> <span class="m">35</span> 3a  <span class="p">|</span>1<span class="p">;</span>2006-01-02T15:<span class="p">|</span>
-<span class="m">00000010</span>  <span class="m">30</span> <span class="m">34</span> 3a <span class="m">30</span> <span class="m">35</span> 5a 3b <span class="m">31</span>  <span class="m">38</span> <span class="m">32</span> <span class="m">35</span> <span class="m">39</span> <span class="m">32</span> <span class="m">32</span> <span class="m">38</span> <span class="m">30</span>  <span class="p">|</span>04:05Z<span class="p">;</span>182592280<span class="p">|</span>
-<span class="m">00000020</span>  <span class="m">37</span> <span class="m">34</span> <span class="m">39</span> <span class="m">30</span> <span class="m">36</span> <span class="m">33</span> <span class="m">30</span> <span class="m">30</span>  <span class="m">35</span> <span class="m">39</span> 0a                 <span class="p">|</span>7490630059.<span class="p">|</span>
+00000000  31 3b 32 30 30 36 2d 30  31 2d 30 32 54 31 35 3a  |1;2006-01-02T15:|
+00000010  30 34 3a 30 35 5a 3b 31  38 32 35 39 32 32 38 30  |04:05Z;182592280|
+00000020  37 34 39 30 36 33 30 30  35 39 0a                 |7490630059.|
 0000002b</pre>
         <ol start="2" type="1">
             <li>PGP sign <strong>str</strong> with the private key of the investigator. Armor and detach the signature into <strong>armoredSig</strong>:
@@ -665,190 +665,190 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</pr
                             <span class="s2">"^authpriv\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"</span>
                           <span class="o">]</span>,
                           <span class="s2">"names"</span>: <span class="o">[</span>
-                            <span class="s2">"^r?syslog.conf</span><span class="nv">$"</span><span class="s2">
-                          ],
-                          "</span>options<span class="s2">": {
-                            "</span>matchall<span class="s2">": true,
-                            "</span>maxdepth<span class="s2">": 1
-                          },
-                          "</span>paths<span class="s2">": [
-                            "</span>/etc<span class="s2">"
-                          ]
-                        },
-                        "</span>daemontoremotesyslog<span class="s2">": {
-                          "</span>contents<span class="s2">": [
-                            "</span>^daemon<span class="se">\\</span>.<span class="se">\\</span>*.*@<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span>.<span class="s2">"
-                          ],
-                          "</span>names<span class="s2">": [
-                            "</span>^r?syslog.conf<span class="s2">$"
-                          ],
-                          "</span>options<span class="s2">": {
-                            "</span>matchall<span class="s2">": true,
-                            "</span>maxdepth<span class="s2">": 1
-                          },
-                          "</span>paths<span class="s2">": [
-                            "</span>/etc<span class="s2">"
-                          ]
-                        },
-                        "</span>kerntoremotesyslog<span class="s2">": {
-                          "</span>contents<span class="s2">": [
-                            "</span>^kern<span class="se">\\</span>.<span class="se">\\</span>*.*@<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="s2">"
-                          ],
-                          "</span>names<span class="s2">": [
-                            "</span>^r?syslog.conf<span class="s2">$"
-                          ],
-                          "</span>options<span class="s2">": {
-                            "</span>matchall<span class="s2">": true,
-                            "</span>maxdepth<span class="s2">": 1
-                          },
-                          "</span>paths<span class="s2">": [
-                            "</span>/etc<span class="s2">"
-                          ]
-                        }
-                      }
-                    }
-                  }
-                ],
-                "</span>pgpsignatures<span class="s2">": [
-                  "</span>ws....<span class="s2">"
-                ],
-                "</span>starttime<span class="s2">": "</span>0001-01-01T00:00:00Z<span class="s2">",
-                "</span>syntaxversion<span class="s2">": 2,
-                "</span>target<span class="s2">": "</span>agents.queueloc like <span class="s1">'linux.%'</span> AND tags-&gt;&gt;<span class="s1">'operator'</span><span class="o">=</span><span class="s1">'IT'</span><span class="s2">",
-                "</span>threat<span class="s2">": {
-                  "</span>family<span class="s2">": "</span>compliance<span class="s2">",
-                  "</span>level<span class="s2">": "</span>medium<span class="s2">",
-                  "</span>ref<span class="s2">": "</span>sysmediumlogs1<span class="s2">",
-                  "</span><span class="nb">type</span><span class="s2">": "</span>system<span class="s2">"
-                },
-                "</span>validfrom<span class="s2">": "</span>2015-02-23T14:03:00Z<span class="s2">"
-              },
-              "</span>agent<span class="s2">": {
-                "</span>destructiontime<span class="s2">": "</span>0001-01-01T00:00:00Z<span class="s2">",
-                "</span>environment<span class="s2">": {
-                  "</span>isproxied<span class="s2">": false
-                },
-                "</span>heartbeatts<span class="s2">": "</span>0001-01-01T00:00:00Z<span class="s2">",
-                "</span>id<span class="s2">": 1.423779015943327e+18,
-                "</span>mode<span class="s2">": "",
-                "</span>name<span class="s2">": "</span>syslog1.private.mydomain.example.net<span class="s2">",
-                "</span>queueloc<span class="s2">": "</span>linux.syslog1.private.mydomain.example.net.e98r198dhq<span class="s2">",
-                "</span>starttime<span class="s2">": "</span>0001-01-01T00:00:00Z<span class="s2">",
-                "</span>version<span class="s2">": "</span>20150122+ad43a11.prod<span class="s2">"
-              },
-              "</span>finishtime<span class="s2">": "</span>2015-02-23T14:03:10.402108Z<span class="s2">",
-              "</span>id<span class="s2">": 1.4247001809013307e+18,
-              "</span>results<span class="s2">": [
-                {
-                  "</span>elements<span class="s2">": {
-                    "</span>authprivtoremotesyslog<span class="s2">": [
-                      {
-                        "</span>file<span class="s2">": "",
-                        "</span>fileinfo<span class="s2">": {
-                          "</span>lastmodified<span class="s2">": "",
-                          "</span>mode<span class="s2">": "",
-                          "</span>size<span class="s2">": 0
-                        },
-                        "</span>search<span class="s2">": {
-                          "</span>contents<span class="s2">": [
-                            "</span>^authpriv<span class="se">\\</span>.<span class="se">\\</span>*.*@<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="s2">"
-                          ],
-                          "</span>names<span class="s2">": [
-                            "</span>^r?syslog.conf<span class="s2">$"
-                          ],
-                          "</span>options<span class="s2">": {
-                            "</span>matchall<span class="s2">": true,
-                            "</span>matchlimit<span class="s2">": 0,
-                            "</span>maxdepth<span class="s2">": 0
-                          },
-                          "</span>paths<span class="s2">": [
-                            "</span>/etc<span class="s2">"
-                          ]
-                        }
-                      }
-                    ],
-                    "</span>daemontoremotesyslog<span class="s2">": [
-                      {
-                        "</span>file<span class="s2">": "",
-                        "</span>fileinfo<span class="s2">": {
-                          "</span>lastmodified<span class="s2">": "",
-                          "</span>mode<span class="s2">": "",
-                          "</span>size<span class="s2">": 0
-                        },
-                        "</span>search<span class="s2">": {
-                          "</span>contents<span class="s2">": [
-                            "</span>^daemon<span class="se">\\</span>.<span class="se">\\</span>*.*@<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span>.<span class="s2">"
-                          ],
-                          "</span>names<span class="s2">": [
-                            "</span>^r?syslog.conf<span class="s2">$"
-                          ],
-                          "</span>options<span class="s2">": {
-                            "</span>matchall<span class="s2">": true,
-                            "</span>matchlimit<span class="s2">": 0,
-                            "</span>maxdepth<span class="s2">": 0
-                          },
-                          "</span>paths<span class="s2">": [
-                            "</span>/etc<span class="s2">"
-                          ]
-                        }
-                      }
-                    ],
-                    "</span>kerntoremotesyslog<span class="s2">": [
-                      {
-                        "</span>file<span class="s2">": "",
-                        "</span>fileinfo<span class="s2">": {
-                          "</span>lastmodified<span class="s2">": "",
-                          "</span>mode<span class="s2">": "",
-                          "</span>size<span class="s2">": 0
-                        },
-                        "</span>search<span class="s2">": {
-                          "</span>contents<span class="s2">": [
-                            "</span>^kern<span class="se">\\</span>.<span class="se">\\</span>*.*@<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="se">\\</span>.<span class="o">[</span>0-9<span class="o">]{</span>1,3<span class="o">}</span><span class="s2">"
-                          ],
-                          "</span>names<span class="s2">": [
-                            "</span>^r?syslog.conf<span class="s2">$"
-                          ],
-                          "</span>options<span class="s2">": {
-                            "</span>matchall<span class="s2">": true,
-                            "</span>matchlimit<span class="s2">": 0,
-                            "</span>maxdepth<span class="s2">": 0
-                          },
-                          "</span>paths<span class="s2">": [
-                            "</span>/etc<span class="s2">"
-                          ]
-                        }
-                      }
-                    ]
-                  },
-                  "</span>errors<span class="s2">": null,
-                  "</span>foundanything<span class="s2">": false,
-                  "</span>statistics<span class="s2">": {
-                    "</span>exectime<span class="s2">": "</span>20.968752ms<span class="s2">",
-                    "</span>filescount<span class="s2">": 140,
-                    "</span>openfailed<span class="s2">": 0,
-                    "</span>totalhits<span class="s2">": 0
-                  },
-                  "</span>success<span class="s2">": true
-                }
-              ],
-              "</span>starttime<span class="s2">": "</span>2015-02-23T14:03:00.901331Z<span class="s2">",
-              "</span>status<span class="s2">": "</span>success<span class="s2">"
-            }
-          }
-        ],
-        "</span>href<span class="s2">": "</span>https://api.mig.example.net/api/v1/command?commandid<span class="o">=</span>1424700180901330688<span class="s2">",
-        "</span>links<span class="s2">": [
-          {
-            "</span>href<span class="s2">": "</span>https://api.mig.example.net/api/v1/action?actionid<span class="o">=</span>6115472790658567168<span class="s2">",
-            "</span>rel<span class="s2">": "</span>action<span class="s2">"
-          }
-        ]
-      }
-    ],
-    "</span>template<span class="s2">": {},
-    "</span>version<span class="s2">": "</span>1.0<span class="s2">"
-  }
-}</span></pre>
+                            <span class="s2">"^r?syslog.conf$"</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"options"</span>: <span class="o">{</span>
+                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
+                            <span class="s2">"maxdepth"</span>: 1
+                          <span class="o">}</span>,
+                          <span class="s2">"paths"</span>: <span class="o">[</span>
+                            <span class="s2">"/etc"</span>
+                          <span class="o">]</span>
+                        <span class="o">}</span>,
+                        <span class="s2">"daemontoremotesyslog"</span>: <span class="o">{</span>
+                          <span class="s2">"contents"</span>: <span class="o">[</span>
+                            <span class="s2">"^daemon\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}."</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"names"</span>: <span class="o">[</span>
+                            <span class="s2">"^r?syslog.conf$"</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"options"</span>: <span class="o">{</span>
+                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
+                            <span class="s2">"maxdepth"</span>: 1
+                          <span class="o">}</span>,
+                          <span class="s2">"paths"</span>: <span class="o">[</span>
+                            <span class="s2">"/etc"</span>
+                          <span class="o">]</span>
+                        <span class="o">}</span>,
+                        <span class="s2">"kerntoremotesyslog"</span>: <span class="o">{</span>
+                          <span class="s2">"contents"</span>: <span class="o">[</span>
+                            <span class="s2">"^kern\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"names"</span>: <span class="o">[</span>
+                            <span class="s2">"^r?syslog.conf$"</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"options"</span>: <span class="o">{</span>
+                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
+                            <span class="s2">"maxdepth"</span>: 1
+                          <span class="o">}</span>,
+                          <span class="s2">"paths"</span>: <span class="o">[</span>
+                            <span class="s2">"/etc"</span>
+                          <span class="o">]</span>
+                        <span class="o">}</span>
+                      <span class="o">}</span>
+                    <span class="o">}</span>
+                  <span class="o">}</span>
+                <span class="o">]</span>,
+                <span class="s2">"pgpsignatures"</span>: <span class="o">[</span>
+                  <span class="s2">"ws...."</span>
+                <span class="o">]</span>,
+                <span class="s2">"starttime"</span>: <span class="s2">"0001-01-01T00:00:00Z"</span>,
+                <span class="s2">"syntaxversion"</span>: 2,
+                <span class="s2">"target"</span>: <span class="s2">"agents.queueloc like 'linux.%' AND tags-&gt;&gt;'operator'='IT'"</span>,
+                <span class="s2">"threat"</span>: <span class="o">{</span>
+                  <span class="s2">"family"</span>: <span class="s2">"compliance"</span>,
+                  <span class="s2">"level"</span>: <span class="s2">"medium"</span>,
+                  <span class="s2">"ref"</span>: <span class="s2">"sysmediumlogs1"</span>,
+                  <span class="s2">"type"</span>: <span class="s2">"system"</span>
+                <span class="o">}</span>,
+                <span class="s2">"validfrom"</span>: <span class="s2">"2015-02-23T14:03:00Z"</span>
+              <span class="o">}</span>,
+              <span class="s2">"agent"</span>: <span class="o">{</span>
+                <span class="s2">"destructiontime"</span>: <span class="s2">"0001-01-01T00:00:00Z"</span>,
+                <span class="s2">"environment"</span>: <span class="o">{</span>
+                  <span class="s2">"isproxied"</span>: <span class="nb">false</span>
+                <span class="o">}</span>,
+                <span class="s2">"heartbeatts"</span>: <span class="s2">"0001-01-01T00:00:00Z"</span>,
+                <span class="s2">"id"</span>: 1.423779015943327e+18,
+                <span class="s2">"mode"</span>: <span class="s2">""</span>,
+                <span class="s2">"name"</span>: <span class="s2">"syslog1.private.mydomain.example.net"</span>,
+                <span class="s2">"queueloc"</span>: <span class="s2">"linux.syslog1.private.mydomain.example.net.e98r198dhq"</span>,
+                <span class="s2">"starttime"</span>: <span class="s2">"0001-01-01T00:00:00Z"</span>,
+                <span class="s2">"version"</span>: <span class="s2">"20150122+ad43a11.prod"</span>
+              <span class="o">}</span>,
+              <span class="s2">"finishtime"</span>: <span class="s2">"2015-02-23T14:03:10.402108Z"</span>,
+              <span class="s2">"id"</span>: 1.4247001809013307e+18,
+              <span class="s2">"results"</span>: <span class="o">[</span>
+                <span class="o">{</span>
+                  <span class="s2">"elements"</span>: <span class="o">{</span>
+                    <span class="s2">"authprivtoremotesyslog"</span>: <span class="o">[</span>
+                      <span class="o">{</span>
+                        <span class="s2">"file"</span>: <span class="s2">""</span>,
+                        <span class="s2">"fileinfo"</span>: <span class="o">{</span>
+                          <span class="s2">"lastmodified"</span>: <span class="s2">""</span>,
+                          <span class="s2">"mode"</span>: <span class="s2">""</span>,
+                          <span class="s2">"size"</span>: 0
+                        <span class="o">}</span>,
+                        <span class="s2">"search"</span>: <span class="o">{</span>
+                          <span class="s2">"contents"</span>: <span class="o">[</span>
+                            <span class="s2">"^authpriv\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"names"</span>: <span class="o">[</span>
+                            <span class="s2">"^r?syslog.conf$"</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"options"</span>: <span class="o">{</span>
+                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
+                            <span class="s2">"matchlimit"</span>: 0,
+                            <span class="s2">"maxdepth"</span>: 0
+                          <span class="o">}</span>,
+                          <span class="s2">"paths"</span>: <span class="o">[</span>
+                            <span class="s2">"/etc"</span>
+                          <span class="o">]</span>
+                        <span class="o">}</span>
+                      <span class="o">}</span>
+                    <span class="o">]</span>,
+                    <span class="s2">"daemontoremotesyslog"</span>: <span class="o">[</span>
+                      <span class="o">{</span>
+                        <span class="s2">"file"</span>: <span class="s2">""</span>,
+                        <span class="s2">"fileinfo"</span>: <span class="o">{</span>
+                          <span class="s2">"lastmodified"</span>: <span class="s2">""</span>,
+                          <span class="s2">"mode"</span>: <span class="s2">""</span>,
+                          <span class="s2">"size"</span>: 0
+                        <span class="o">}</span>,
+                        <span class="s2">"search"</span>: <span class="o">{</span>
+                          <span class="s2">"contents"</span>: <span class="o">[</span>
+                            <span class="s2">"^daemon\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}."</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"names"</span>: <span class="o">[</span>
+                            <span class="s2">"^r?syslog.conf$"</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"options"</span>: <span class="o">{</span>
+                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
+                            <span class="s2">"matchlimit"</span>: 0,
+                            <span class="s2">"maxdepth"</span>: 0
+                          <span class="o">}</span>,
+                          <span class="s2">"paths"</span>: <span class="o">[</span>
+                            <span class="s2">"/etc"</span>
+                          <span class="o">]</span>
+                        <span class="o">}</span>
+                      <span class="o">}</span>
+                    <span class="o">]</span>,
+                    <span class="s2">"kerntoremotesyslog"</span>: <span class="o">[</span>
+                      <span class="o">{</span>
+                        <span class="s2">"file"</span>: <span class="s2">""</span>,
+                        <span class="s2">"fileinfo"</span>: <span class="o">{</span>
+                          <span class="s2">"lastmodified"</span>: <span class="s2">""</span>,
+                          <span class="s2">"mode"</span>: <span class="s2">""</span>,
+                          <span class="s2">"size"</span>: 0
+                        <span class="o">}</span>,
+                        <span class="s2">"search"</span>: <span class="o">{</span>
+                          <span class="s2">"contents"</span>: <span class="o">[</span>
+                            <span class="s2">"^kern\\.\\*.*@[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"names"</span>: <span class="o">[</span>
+                            <span class="s2">"^r?syslog.conf$"</span>
+                          <span class="o">]</span>,
+                          <span class="s2">"options"</span>: <span class="o">{</span>
+                            <span class="s2">"matchall"</span>: <span class="nb">true</span>,
+                            <span class="s2">"matchlimit"</span>: 0,
+                            <span class="s2">"maxdepth"</span>: 0
+                          <span class="o">}</span>,
+                          <span class="s2">"paths"</span>: <span class="o">[</span>
+                            <span class="s2">"/etc"</span>
+                          <span class="o">]</span>
+                        <span class="o">}</span>
+                      <span class="o">}</span>
+                    <span class="o">]</span>
+                  <span class="o">}</span>,
+                  <span class="s2">"errors"</span>: null,
+                  <span class="s2">"foundanything"</span>: <span class="nb">false</span>,
+                  <span class="s2">"statistics"</span>: <span class="o">{</span>
+                    <span class="s2">"exectime"</span>: <span class="s2">"20.968752ms"</span>,
+                    <span class="s2">"filescount"</span>: 140,
+                    <span class="s2">"openfailed"</span>: 0,
+                    <span class="s2">"totalhits"</span>: 0
+                  <span class="o">}</span>,
+                  <span class="s2">"success"</span>: <span class="nb">true</span>
+                <span class="o">}</span>
+              <span class="o">]</span>,
+              <span class="s2">"starttime"</span>: <span class="s2">"2015-02-23T14:03:00.901331Z"</span>,
+              <span class="s2">"status"</span>: <span class="s2">"success"</span>
+            <span class="o">}</span>
+          <span class="o">}</span>
+        <span class="o">]</span>,
+        <span class="s2">"href"</span>: <span class="s2">"https://api.mig.example.net/api/v1/command?commandid=1424700180901330688"</span>,
+        <span class="s2">"links"</span>: <span class="o">[</span>
+          <span class="o">{</span>
+            <span class="s2">"href"</span>: <span class="s2">"https://api.mig.example.net/api/v1/action?actionid=6115472790658567168"</span>,
+            <span class="s2">"rel"</span>: <span class="s2">"action"</span>
+          <span class="o">}</span>
+        <span class="o">]</span>
+      <span class="o">}</span>
+    <span class="o">]</span>,
+    <span class="s2">"template"</span>: <span class="o">{}</span>,
+    <span class="s2">"version"</span>: <span class="s2">"1.0"</span>
+  <span class="o">}</span>
+<span class="o">}</span></pre>
         </section>
         <section id="get-api-v1-investigator">
             <h3>2.8   GET /api/v1/investigator</h3>
@@ -945,7 +945,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</pr
                 <li>Response: Collection+JSON</li>
                 <li>Example: (without authentication)</li>
             </ul>
-            <pre class="code bash"><span class="nv">$ </span>curl -iv -X POST -d <span class="nv">id</span><span class="o">=</span><span class="m">1234</span> -d <span class="nv">status</span><span class="o">=</span>disabled https://api.mig.example.net/api/v1/investigator/update/</pre>
+            <pre class="code bash"><span class="nv">$ </span>curl -iv -X POST -d <span class="nv">id</span><span class="o">=</span>1234 -d <span class="nv">status</span><span class="o">=</span>disabled https://api.mig.example.net/api/v1/investigator/update/</pre>
         </section>
         <section id="get-api-v1-search">
             <h3>2.11   GET /api/v1/search</h3>
@@ -1025,16 +1025,16 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</pr
                 <li>Examples:</li>
             </ul>
             <p>Generate a compliance report from <cite>compliance</cite> action ran over the last 24 hours. For more information on the <cite>compliance</cite> format, see section 2.</p>
-            <pre class="code bash">/api/v1/search?type<span class="o">=</span><span class="nb">command</span><span class="p">&amp;</span><span class="nv">threatfamily</span><span class="o">=</span>compliance<span class="p">&amp;</span><span class="nv">status</span><span class="o">=</span><span class="k">done</span>
-<span class="p">&amp;</span><span class="nv">report</span><span class="o">=</span>complianceitems<span class="p">&amp;</span><span class="nv">limit</span><span class="o">=</span>100000
-<span class="p">&amp;</span><span class="nv">after</span><span class="o">=</span>2014-05-30T00:00:00-04:00<span class="p">&amp;</span><span class="nv">before</span><span class="o">=</span>2014-05-30T23:59:59-04:00</pre>
+            <pre class="code bash">/api/v1/search?type<span class="o">=</span><span class="nb">command</span>&amp;threatfamily<span class="o">=</span>compliance&amp;status<span class="o">=</span><span class="k">done</span>
+&amp;report<span class="o">=</span>complianceitems&amp;limit<span class="o">=</span>100000
+&amp;after<span class="o">=</span>2014-05-30T00:00:00-04:00&amp;before<span class="o">=</span>2014-05-30T23:59:59-04:00</pre>
             <p>List the agents that have sent a heartbeat in the last hour.</p>
-            <pre class="code bash">/api/v1/search?type<span class="o">=</span>agent<span class="p">&amp;</span><span class="nv">after</span><span class="o">=</span>2014-05-30T15:00:00-04:00<span class="p">&amp;</span><span class="nv">limit</span><span class="o">=</span>200</pre>
+            <pre class="code bash">/api/v1/search?type<span class="o">=</span>agent&amp;after<span class="o">=</span>2014-05-30T15:00:00-04:00&amp;limit<span class="o">=</span>200</pre>
             <p>Find actions ran between two dates (limited to 10 results as is the default).</p>
-            <pre class="code bash">/api/v1/search?type<span class="o">=</span>action<span class="p">&amp;</span><span class="nv">status</span><span class="o">=</span>sent
-<span class="p">&amp;</span><span class="nv">after</span><span class="o">=</span>2014-05-01T00:00:00-00:00<span class="p">&amp;</span><span class="nv">before</span><span class="o">=</span>2014-05-30T00:00:00-00:00</pre>
+            <pre class="code bash">/api/v1/search?type<span class="o">=</span>action&amp;status<span class="o">=</span>sent
+&amp;after<span class="o">=</span>2014-05-01T00:00:00-00:00&amp;before<span class="o">=</span>2014-05-30T00:00:00-00:00</pre>
             <p>Find the last 10 commands signed by an investigator identified by name.</p>
-            <pre class="code bash">/api/v1/search?investigatorname<span class="o">=</span>%25bob%25smith%25<span class="p">&amp;</span><span class="nv">limit</span><span class="o">=</span>10<span class="p">&amp;</span><span class="nb">type</span><span class="o">=</span><span class="nb">command</span></pre>
+            <pre class="code bash">/api/v1/search?investigatorname<span class="o">=</span>%25bob%25smith%25&amp;limit<span class="o">=</span>10&amp;type<span class="o">=</span><span class="nb">command</span></pre>
         </section>
     </section>
     <section id="data-transformation">

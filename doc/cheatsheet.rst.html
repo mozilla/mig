@@ -66,12 +66,12 @@
             <p>Here, the '^' in the content regex is important to prevent mig from listing itself while searching for the command line.</p>
             <pre class="code bash">mig file -path /proc/ -name cmdline -content <span class="s2">"^/sbin/auditd"</span></pre>
             <p>Another option, if using '^' is not possible, is to enclose one of the letter of the process name into brackets:</p>
-            <pre class="code bash"><span class="nv">$ </span>mig file -t <span class="s2">"tags-&gt;&gt;'operator'='IT'"</span> -path /proc -name <span class="s2">"^cmdline</span><span class="nv">$"</span><span class="s2"> -maxdepth 2 -content "</span><span class="o">[</span>a<span class="o">]</span>rcsight<span class="s2">"</span></pre>
+            <pre class="code bash"><span class="nv">$ </span>mig file -t <span class="s2">"tags-&gt;&gt;'operator'='IT'"</span> -path /proc -name <span class="s2">"^cmdline$"</span> -maxdepth 2 -content <span class="s2">"[a]rcsight"</span></pre>
         </section>
         <section id="find-which-machines-have-a-specific-usb-device-connected">
             <h3>1.5   Find which machines have a specific USB device connected</h3>
             <p>In this example, we'll look for the CryptoStick USB device (vendor:product 20a0:4107). You can find more device id's with the command <cite>lsusb</cite>.</p>
-            <pre class="code bash">mig file -matchany -path /sys/devices/ -name <span class="s2">"^uevent</span><span class="nv">$"</span><span class="s2"> -content "</span><span class="nv">PRODUCT</span><span class="o">=</span>20a0/4107<span class="s2">"</span></pre>
+            <pre class="code bash">mig file -matchany -path /sys/devices/ -name <span class="s2">"^uevent$"</span> -content <span class="s2">"PRODUCT=20a0/4107"</span></pre>
         </section>
     </section>
     <section id="netstat-module">
@@ -108,7 +108,7 @@
         <section id="test-web-connectivity-to-google">
             <h3>3.1   Test web connectivity to google</h3>
             <p>Testing reachability of google.com over HTTP can be done using the ping module.</p>
-            <pre class="code bash"><span class="nv">$ </span>mig ping -t <span class="s2">"name LIKE '%phx1%'"</span> -d google.com -dp <span class="m">80</span> -p tcp</pre>
+            <pre class="code bash"><span class="nv">$ </span>mig ping -t <span class="s2">"name LIKE '%phx1%'"</span> -d google.com -dp 80 -p tcp</pre>
         </section>
         <section id="list-endpoints-that-cannot-ping-a-destination">
             <h3>3.2   List endpoints that cannot ping a destination</h3>
@@ -120,13 +120,13 @@
         <h2>4   Timedrift module</h2>
         <p>The timedrift module is fairly basic: it retrieves localtime and compares it to NTP time if asked to check for drift. As such, it only takes a single parameter to evaluate drift from network time.</p>
         <pre class="code bash"><span class="nv">$ </span>mig timedrift -drift 60s
-<span class="m">1402</span> agents will be targeted. ctrl+c to cancel. launching in <span class="m">5</span> <span class="m">4</span> <span class="m">3</span> <span class="m">2</span> <span class="m">1</span> GO
+1402 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
 Following action ID 1428420741979034880.
 <span class="nv">status</span><span class="o">=</span>inflight...55% ...66% ...67% ......89% ..89% ...89% ......90% ..90% ......90% ...90% ..90% ...^Cstop following action. agents may still be running. printing available results:
 host1.dc2.example.net <span class="nb">local time </span>is 2015-04-07T15:35:00.768951216Z
 host1.dc2.example.net <span class="nb">local time </span>is out of sync from NTP servers
 host1.dc2.example.net Local <span class="nb">time </span>is ahead of ntp host time.nist.gov by 3m2.660981781s
-<span class="m">1</span> agents have found results</pre>
+1 agents have found results</pre>
     </section>
     <section id="advanced-targetting">
         <h2>5   Advanced targetting</h2>
