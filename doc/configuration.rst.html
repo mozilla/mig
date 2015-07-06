@@ -122,12 +122,12 @@ vim mig-agent-conf.go</pre>
         <section id="stat-socket">
             <h3>2.3   Stat socket</h3>
             <p>The agent can establish a listening TCP socket on localhost for management purpose. The list of supported operations can be obtained by sending the keyword <cite>help</cite> to this socket.</p>
-            <pre class="code bash"><span class="nv">$ </span>nc localhost <span class="m">51664</span> <span class="o">&lt;&lt;&lt;</span> <span class="nb">help
+            <pre class="code bash"><span class="nv">$ </span>nc localhost 51664 <span class="o">&lt;&lt;&lt;</span> <span class="nb">help
 
 </span>Welcome to the MIG agent socket. The commands are:
 pid returns the PID of the running agent</pre>
             <p>To obtain the PID of the running agent, use the following command:</p>
-            <pre class="code bash"><span class="nv">$ </span>nc localhost <span class="m">51664</span> <span class="o">&lt;&lt;&lt;</span> pid <span class="p">;</span> <span class="nb">echo
+            <pre class="code bash"><span class="nv">$ </span>nc localhost 51664 <span class="o">&lt;&lt;&lt;</span> pid ; <span class="nb">echo
 </span>9792</pre>
             <p>Leave the <cite>SOCKET</cite> configuration variable empty to disable the stat socket.</p>
         </section>
@@ -555,14 +555,14 @@ sudo rabbitmqctl set_permissions -p mig api <span class="se">\
             <ol start="6" type="1">
                 <li>Start the scheduler, it shouldn't return any ACCESS error. You can also list the permissions with the command:</li>
             </ol>
-            <pre class="code bash"><span class="nv">$ </span>sudo rabbitmqctl list_permissions -p mig <span class="p">|</span> column -t
+            <pre class="code bash"><span class="nv">$ </span>sudo rabbitmqctl list_permissions -p mig | column -t
 Listing permissions in vhost <span class="s2">"mig"</span> ...
 USER------+CONFIGURE---------------------------------+WRITE-------------------------------------------------+READ-------------------------------------------------+
 admin      .*                                         .*                                                     .*
-scheduler  ^mig<span class="o">(</span><span class="p">|</span><span class="o">(</span>event<span class="p">|</span><span class="se">\\</span>.agt<span class="o">)(</span><span class="p">|</span><span class="se">\\</span>..*<span class="o">))</span><span class="nv">$ </span>            ^mig<span class="o">(</span><span class="p">|</span>event<span class="o">(</span><span class="p">|</span><span class="se">\\</span>..*<span class="o">)</span><span class="p">|</span><span class="se">\\</span>.<span class="o">(</span>agt<span class="se">\\</span>.<span class="o">(</span>heartbeats<span class="p">|</span>results<span class="o">)))</span><span class="nv">$ </span> ^mig<span class="o">(</span><span class="p">|</span>event<span class="o">(</span><span class="p">|</span><span class="se">\\</span>..*<span class="o">)</span><span class="p">|</span><span class="se">\\</span>.<span class="o">(</span>agt<span class="se">\\</span>.<span class="o">(</span>heartbeats<span class="p">|</span>results<span class="o">)))</span><span class="err">$</span>
-agent      ^mig<span class="se">\\</span>.agt<span class="se">\\</span>.<span class="o">(</span>linux<span class="p">|</span>windows<span class="p">|</span>darwin<span class="o">)</span><span class="se">\\</span>..*<span class="nv">$ </span> ^mig<span class="o">(</span><span class="p">|</span><span class="se">\\</span>.agt<span class="se">\\</span>.<span class="o">(</span>linux<span class="p">|</span>windows<span class="p">|</span>darwin<span class="o">)</span><span class="se">\\</span>..*<span class="o">)</span><span class="nv">$ </span>          ^mig<span class="o">(</span><span class="p">|</span><span class="se">\\</span>.agt<span class="se">\\</span>.<span class="o">(</span>linux<span class="p">|</span>windows<span class="p">|</span>darwin<span class="o">)</span><span class="se">\\</span>..*<span class="o">)</span><span class="err">$</span>
-api        ^migevent<span class="se">\\</span>..*<span class="nv">$ </span>                           ^migevent<span class="o">(</span><span class="p">|</span><span class="se">\\</span>..*<span class="o">)</span><span class="nv">$ </span>                                    ^migevent<span class="o">(</span><span class="p">|</span><span class="se">\\</span>..*<span class="o">)</span><span class="err">$</span>
-worker     ^migevent<span class="se">\\</span>..*<span class="nv">$ </span>                           ^migevent<span class="o">(</span><span class="p">|</span><span class="se">\\</span>..*<span class="o">)</span><span class="nv">$ </span>                                    ^migevent<span class="o">(</span><span class="p">|</span><span class="se">\\</span>..*<span class="o">)</span><span class="err">$</span></pre>
+scheduler  ^mig<span class="o">(</span>|<span class="o">(</span>event|<span class="se">\\</span>.agt<span class="o">)(</span>|<span class="se">\\</span>..*<span class="o">))</span><span class="nv">$ </span>            ^mig<span class="o">(</span>|event<span class="o">(</span>|<span class="se">\\</span>..*<span class="o">)</span>|<span class="se">\\</span>.<span class="o">(</span>agt<span class="se">\\</span>.<span class="o">(</span>heartbeats|results<span class="o">)))</span><span class="nv">$ </span> ^mig<span class="o">(</span>|event<span class="o">(</span>|<span class="se">\\</span>..*<span class="o">)</span>|<span class="se">\\</span>.<span class="o">(</span>agt<span class="se">\\</span>.<span class="o">(</span>heartbeats|results<span class="o">)))</span><span class="err">$</span>
+agent      ^mig<span class="se">\\</span>.agt<span class="se">\\</span>.<span class="o">(</span>linux|windows|darwin<span class="o">)</span><span class="se">\\</span>..*<span class="nv">$ </span> ^mig<span class="o">(</span>|<span class="se">\\</span>.agt<span class="se">\\</span>.<span class="o">(</span>linux|windows|darwin<span class="o">)</span><span class="se">\\</span>..*<span class="o">)</span><span class="nv">$ </span>          ^mig<span class="o">(</span>|<span class="se">\\</span>.agt<span class="se">\\</span>.<span class="o">(</span>linux|windows|darwin<span class="o">)</span><span class="se">\\</span>..*<span class="o">)</span><span class="err">$</span>
+api        ^migevent<span class="se">\\</span>..*<span class="nv">$ </span>                           ^migevent<span class="o">(</span>|<span class="se">\\</span>..*<span class="o">)</span><span class="nv">$ </span>                                    ^migevent<span class="o">(</span>|<span class="se">\\</span>..*<span class="o">)</span><span class="err">$</span>
+worker     ^migevent<span class="se">\\</span>..*<span class="nv">$ </span>                           ^migevent<span class="o">(</span>|<span class="se">\\</span>..*<span class="o">)</span><span class="nv">$ </span>                                    ^migevent<span class="o">(</span>|<span class="se">\\</span>..*<span class="o">)</span><span class="err">$</span></pre>
         </section>
         <section id="rabbitmq-tls-configuration">
             <h3>5.3   RabbitMQ TLS configuration</h3>
@@ -613,7 +613,7 @@ worker     ^migevent<span class="se">\\</span>..*<span class="nv">$ </span>     
             <h3>5.4   Queues mirroring</h3>
             <p>By default, queues within a RabbitMQ cluster are located on a single node (the node on which they were first declared). If that node goes down, the queue will become unavailable. To mirror all MIG queues to all nodes of a rabbitmq cluster, use the following policy:</p>
             <pre class="code bash"><span class="c"># rabbitmqctl -p mig set_policy mig-mirror-all "^mig\." '{"ha-mode":"all"}'
-</span>Setting policy <span class="s2">"mig-mirror-all"</span> <span class="k">for</span> pattern <span class="s2">"^mig\\."</span> to <span class="s2">"{\"ha-mode\":\"all\"}"</span> with priority <span class="s2">"0"</span> ...
+</span>Setting policy <span class="s2">"mig-mirror-all"</span> <span class="k">for </span>pattern <span class="s2">"^mig\\."</span> to <span class="s2">"{\"ha-mode\":\"all\"}"</span> with priority <span class="s2">"0"</span> ...
 ...done.</pre>
         </section>
         <section id="cluster-management">
@@ -635,16 +635,16 @@ worker     ^migevent<span class="se">\\</span>..*<span class="nv">$ </span>     
             <p>If one node of the cluster goes down, and the agents have trouble reconnecting, they may throw the error <cite>NOT_FOUND - no binding mig.agt....</cite>. That happens when the binding in question exists but the 'home' node of the (durable) queue is not alive. In case of a mirrored queue that would imply that all mirrors are down. Essentially both the queue and associated bindings are in a limbo state at that point - they neither exist nor do they not exist. <a href="http://rabbitmq.1065348.n5.nabble.com/Can-t-Bind-After-Upgrading-from-3-1-1-to-3-1-5-td29793.html">source</a></p>
             <p>The safest thing to do is to delete all the queues on the cluster, and restart the scheduler. The agents will restart themselves.</p>
             <pre class="code bash"><span class="c"># for queue in $(rabbitmqctl list_queues -p mig|grep ^mig|awk '{print $1}')
-</span><span class="k">do</span>
-    <span class="nb">echo </span>curl -i -u admin:adminpassword -H <span class="s2">"content-type:application/json"</span> <span class="se">\
-</span>    -XDELETE http://localhost:15672/api/queues/mig/<span class="nv">$queue</span><span class="p">;</span>
+</span><span class="k">do
+    </span><span class="nb">echo </span>curl -i -u admin:adminpassword -H <span class="s2">"content-type:application/json"</span> <span class="se">\
+</span>    -XDELETE http://localhost:15672/api/queues/mig/<span class="nv">$queue</span>;
 <span class="k">done</span></pre>
             <p>(remove the <cite>echo</cite> in the command above, it's there as a safety for copy/paste people).</p>
         </section>
         <section id="serving-amqps-on-port-443">
             <h3>5.6   Serving AMQPS on port 443</h3>
             <p>To prevent yours agents from getting blocked by firewalls, it may be a good idea to use port 443 for connections between agents and rabbitmq. However, rabbitmq is not designed to run on a privileged port. The solution, then, is to use iptables to redirect the port on the rabbitmq server.</p>
-            <pre class="code bash">iptables -t nat -A PREROUTING -i eth0 -p tcp --dport <span class="m">443</span> -j REDIRECT --to-port <span class="m">5671</span> -m comment --comment <span class="s2">"Serve RabbitMQ on HTTPS port"</span></pre>
+            <pre class="code bash">iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 5671 -m comment --comment <span class="s2">"Serve RabbitMQ on HTTPS port"</span></pre>
         </section>
     </section>
     <section id="api-configuration">
