@@ -12,6 +12,7 @@ import (
 	_ "mig/modules/netstat"
 	_ "mig/modules/ping"
 	_ "mig/modules/pkg"
+	_ "mig/modules/scribe"
 	_ "mig/modules/timedrift"
 	//_ "mig/modules/upgrade"
 	//_ "mig/modules/example"

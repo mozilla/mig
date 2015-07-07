@@ -33,6 +33,10 @@ func (r *testRunner) Run(in io.Reader) (out string) {
 	return ""
 }
 
+func (r *testRunner) ParamsParser([]string) (interface{}, error) {
+	return nil, nil
+}
+
 type params struct {
 	SomeParam string `json:"someparam"`
 }

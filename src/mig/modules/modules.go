@@ -54,6 +54,7 @@ type Result struct {
 type Runner interface {
 	Run(io.Reader) string
 	ValidateParameters() error
+	ParamsParser([]string) (interface{}, error)
 }
 
 // MakeMessage creates a new modules.Message with a given class and parameters and

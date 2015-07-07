@@ -74,6 +74,10 @@ type statistics struct {
 	StuffFound int64 `json:"stufffound"`
 }
 
+func (r *run) ParamsParser(args []string) (interface{}, error) {
+	return nil, nil
+}
+
 // ValidateParameters *must* be implemented by a module. It provides a method
 // to verify that the parameters passed to the module conform the expected format.
 // It must return an error if the parameters do not validate.
