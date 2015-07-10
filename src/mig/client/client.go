@@ -38,6 +38,7 @@ type Client struct {
 	Token   string
 	Conf    Configuration
 	Version string
+	debug   bool
 }
 
 // Configuration stores the live configuration and global parameters of a client
@@ -241,6 +242,10 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 		}
 	}
 	r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
+	if cli.debug {
+		fmt.Printf("debug: %s %s %s\ndebug: User-Agent: %s\ndebug: X-PGPAUTHORIZATION: %s\n",
+			r.Method, r.URL.String(), r.Proto, r.UserAgent(), r.Header.Get("X-PGPAUTHORIZATION"))
+	}
 	// execute the request
 	resp, err = cli.API.Do(r)
 	if err != nil {
@@ -256,6 +261,10 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 			panic(err)
 		}
 		r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
+		if cli.debug {
+			fmt.Printf("debug: %s %s %s\ndebug: User-Agent: %s\ndebug: X-PGPAUTHORIZATION: %s\n",
+				r.Method, r.URL.String(), r.Proto, r.UserAgent(), r.Header.Get("X-PGPAUTHORIZATION"))
+		}
 		// execute the request
 		resp, err = cli.API.Do(r)
 		if err != nil {
@@ -290,9 +299,16 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 			panic(err)
 		}
 		if len(body) > 1 {
+			if cli.debug {
+				fmt.Printf("debug: RESPONSE BODY:\ndebug: %s\n", body)
+			}
 			err = json.Unmarshal(body, &resource)
 			if err != nil {
 				panic(err)
+			}
+		} else {
+			if cli.debug {
+				fmt.Printf("debug: RESPONSE BODY: EMPTY\n")
 			}
 		}
 	}
@@ -891,5 +907,17 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 	if !onlyFound {
 		fmt.Printf("%scommand %s\n", prefix, cmd.Status)
 	}
+	return
+}
+
+// EnableDebug() prints debug messages to stdout
+func (cli *Client) EnableDebug() {
+	cli.debug = true
+	return
+}
+
+// DisableDebug() disables the printing of debug messages to stdout
+func (cli *Client) DisableDebug() {
+	cli.debug = false
 	return
 }
