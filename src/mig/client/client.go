@@ -321,7 +321,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 }
 
 // GetAction retrieves a MIG Action from the API using its Action ID
-func (cli Client) GetAction(aid float64) (a mig.Action, links []cljs.Link, err error) {
+func (cli Client) GetAction(aid uint64) (a mig.Action, links []cljs.Link, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("GetAction() -> %v", e)
@@ -408,7 +408,7 @@ func ValueToAction(v interface{}) (a mig.Action, err error) {
 	return
 }
 
-func (cli Client) GetCommand(cmdid float64) (cmd mig.Command, err error) {
+func (cli Client) GetCommand(cmdid uint64) (cmd mig.Command, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("GetCommand() -> %v", e)
@@ -446,7 +446,7 @@ func ValueToCommand(v interface{}) (cmd mig.Command, err error) {
 	return
 }
 
-func (cli Client) GetAgent(agtid float64) (agt mig.Agent, err error) {
+func (cli Client) GetAgent(agtid uint64) (agt mig.Agent, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("GetAgent() -> %v", e)
@@ -484,7 +484,7 @@ func ValueToAgent(v interface{}) (agt mig.Agent, err error) {
 	return
 }
 
-func (cli Client) GetInvestigator(iid float64) (inv mig.Investigator, err error) {
+func (cli Client) GetInvestigator(iid uint64) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("GetInvestigator() -> %v", e)
@@ -567,7 +567,7 @@ func (cli Client) PostInvestigator(name string, pubkey []byte) (inv mig.Investig
 }
 
 // PostInvestigatorStatus updates the status of an Investigator
-func (cli Client) PostInvestigatorStatus(iid float64, newstatus string) (err error) {
+func (cli Client) PostInvestigatorStatus(iid uint64, newstatus string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PostInvestigatorStatus() -> %v", e)

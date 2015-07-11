@@ -33,7 +33,7 @@ func (db *DB) AgentByQueueAndPID(queueloc string, pid int) (agent mig.Agent, err
 }
 
 // AgentByID returns a single agent identified by its ID
-func (db *DB) AgentByID(id float64) (agent mig.Agent, err error) {
+func (db *DB) AgentByID(id uint64) (agent mig.Agent, err error) {
 	var jTags, jEnv []byte
 	err = db.c.QueryRow(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime,
 		status, tags, environment FROM agents WHERE id=$1`, id).Scan(
@@ -379,7 +379,7 @@ func (db *DB) SumIdleAgentsByVersion() (sum []mig.AgentsVersionsSum, err error) 
 }
 
 // CountOnlineEndpoints retrieves a count of unique endpoints that have online agents
-func (db *DB) CountOnlineEndpoints() (sum float64, err error) {
+func (db *DB) CountOnlineEndpoints() (sum uint64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(DISTINCT(queueloc)) FROM agents WHERE status=$1`,
 		mig.AgtStatusOnline).Scan(&sum)
 	if err != nil {
@@ -394,7 +394,7 @@ func (db *DB) CountOnlineEndpoints() (sum float64, err error) {
 
 // CountIdleEndpoints retrieves a count of unique endpoints that have idle agents
 // and do not have an online agent
-func (db *DB) CountIdleEndpoints() (sum float64, err error) {
+func (db *DB) CountIdleEndpoints() (sum uint64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
 			SELECT queueloc FROM agents
 			WHERE status=$1
@@ -415,7 +415,7 @@ func (db *DB) CountIdleEndpoints() (sum float64, err error) {
 }
 
 // CountNewEndpointsretrieves a count of new endpoints that started after `pointInTime`
-func (db *DB) CountNewEndpoints(recent, old time.Time) (sum float64, err error) {
+func (db *DB) CountNewEndpoints(recent, old time.Time) (sum uint64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
 				SELECT queueloc FROM agents
 				WHERE queueloc NOT IN (
@@ -438,7 +438,7 @@ func (db *DB) CountNewEndpoints(recent, old time.Time) (sum float64, err error) 
 }
 
 // CountDoubleAgents counts the number of endpoints that run more than one agent
-func (db *DB) CountDoubleAgents() (sum float64, err error) {
+func (db *DB) CountDoubleAgents() (sum uint64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
 			SELECT queueloc FROM agents
 			WHERE queueloc IN (
@@ -460,7 +460,7 @@ func (db *DB) CountDoubleAgents() (sum float64, err error) {
 }
 
 // CountDisappearedEndpoints a count of endpoints that have disappeared over a given period
-func (db *DB) CountDisappearedEndpoints(pointInTime time.Time) (sum float64, err error) {
+func (db *DB) CountDisappearedEndpoints(pointInTime time.Time) (sum uint64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
 			SELECT queueloc FROM agents
 			WHERE queueloc NOT IN (
@@ -511,7 +511,7 @@ func (db *DB) GetDisappearedEndpoints(oldest time.Time) (queues []string, err er
 }
 
 // CountFlappingEndpoints a count of endpoints that have restarted their agent recently
-func (db *DB) CountFlappingEndpoints() (sum float64, err error) {
+func (db *DB) CountFlappingEndpoints() (sum uint64, err error) {
 	err = db.c.QueryRow(`SELECT COUNT(*) FROM (
 				SELECT queueloc FROM agents
 				WHERE status=$1 OR status=$2

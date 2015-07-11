@@ -31,7 +31,7 @@ func getInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getInvestigator()"}.Debug()
 	}()
-	iid, err := strconv.ParseFloat(request.URL.Query()["investigatorid"][0], 64)
+	iid, err := strconv.ParseUint(request.URL.Query()["investigatorid"][0], 10, 64)
 	if err != nil {
 		err = fmt.Errorf("Wrong parameters 'investigatorid': '%v'", err)
 		panic(err)
@@ -206,7 +206,7 @@ func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	if iid == "" {
 		panic("Investigator ID must not be empty")
 	}
-	inv.ID, err = strconv.ParseFloat(iid, 64)
+	inv.ID, err = strconv.ParseUint(iid, 10, 4)
 	if err != nil {
 		panic(err)
 	}

@@ -16,7 +16,7 @@ import (
 )
 
 // CommandByID retrieves a command from the database using its ID
-func (db *DB) CommandByID(id float64) (cmd mig.Command, err error) {
+func (db *DB) CommandByID(id uint64) (cmd mig.Command, err error) {
 	var jRes, jDesc, jThreat, jOps, jSig []byte
 	err = db.c.QueryRow(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
 		actions.id, actions.name, actions.target, actions.description, actions.threat,
@@ -65,7 +65,7 @@ func (db *DB) CommandByID(id float64) (cmd mig.Command, err error) {
 	return
 }
 
-func (db *DB) CommandsByActionID(actionid float64) (commands []mig.Command, err error) {
+func (db *DB) CommandsByActionID(actionid uint64) (commands []mig.Command, err error) {
 	rows, err := db.c.Query(`SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
 		actions.id, actions.name, actions.target, actions.description, actions.threat,
 		actions.operations, actions.validfrom, actions.expireafter,

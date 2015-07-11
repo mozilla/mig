@@ -18,7 +18,7 @@ const (
 // Agent stores the description of an agent and serves as a canvas
 // for heartbeat messages
 type Agent struct {
-	ID              float64     `json:"id,omitempty"`
+	ID              uint64      `json:"id,omitempty"`
 	Name            string      `json:"name"`
 	QueueLoc        string      `json:"queueloc"`
 	Mode            string      `json:"mode"`
@@ -47,19 +47,19 @@ type AgentEnv struct {
 
 type AgentsStats struct {
 	Timestamp             time.Time           `json:"timestamp"`
-	OnlineAgents          float64             `json:"onlineagents"`
+	OnlineAgents          uint64              `json:"onlineagents"`
 	OnlineAgentsByVersion []AgentsVersionsSum `json:"onlineagentsbyversion"`
-	OnlineEndpoints       float64             `json:"onlineendpoints"`
-	IdleAgents            float64             `json:"idleagents"`
+	OnlineEndpoints       uint64              `json:"onlineendpoints"`
+	IdleAgents            uint64              `json:"idleagents"`
 	IdleAgentsByVersion   []AgentsVersionsSum `json:"idleagentsbyversion"`
-	IdleEndpoints         float64             `json:"idleendpoints"`
-	NewEndpoints          float64             `json:"newendpoints"`
-	MultiAgentsEndpoints  float64             `json:"multiagentsendpoints"`
-	DisappearedEndpoints  float64             `json:"disappearedendpoints"`
-	FlappingEndpoints     float64             `json:"flappingendpoints"`
+	IdleEndpoints         uint64              `json:"idleendpoints"`
+	NewEndpoints          uint64              `json:"newendpoints"`
+	MultiAgentsEndpoints  uint64              `json:"multiagentsendpoints"`
+	DisappearedEndpoints  uint64              `json:"disappearedendpoints"`
+	FlappingEndpoints     uint64              `json:"flappingendpoints"`
 }
 
 type AgentsVersionsSum struct {
-	Version string  `json:"version"`
-	Count   float64 `json:"count"`
+	Version string `json:"version"`
+	Count   uint64 `json:"count"`
 }

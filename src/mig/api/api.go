@@ -112,27 +112,27 @@ func getInvName(r *http.Request) string {
 }
 
 // invIDType defines a type to store the ID of an investigator in the request context
-type invIDType float64
+type invIDType uint64
 
 const authenticatedInvID invIDType = 0
 
 // getInvID returns the ID of the investigator, 0 if not found, -1 if auth failed
-func getInvID(r *http.Request) float64 {
+func getInvID(r *http.Request) uint64 {
 	if id := context.Get(r, authenticatedInvID); id != nil {
-		return id.(float64)
+		return id.(uint64)
 	}
 	return 0.0
 }
 
 // opIDType defines a type for the operation ID
-type opIDType float64
+type opIDType uint64
 
 const opID opIDType = 0
 
 // getOpID returns an operation ID from a request context, and if not found, generates one
-func getOpID(r *http.Request) float64 {
+func getOpID(r *http.Request) uint64 {
 	if opid := context.Get(r, opID); opid != nil {
-		return opid.(float64)
+		return opid.(uint64)
 	}
 	return mig.GenID()
 }
@@ -158,7 +158,7 @@ func authenticate(pass handler) handler {
 		}
 		if r.Header.Get("X-PGPAUTHORIZATION") == "" {
 			inv.Name = "authmissing"
-			inv.ID = -1
+			inv.ID = 0
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: "X-PGPAUTHORIZATION header not found"})
 			respond(401, resource, w, r)
@@ -167,7 +167,7 @@ func authenticate(pass handler) handler {
 		inv, err = verifySignedToken(r.Header.Get("X-PGPAUTHORIZATION"))
 		if err != nil {
 			inv.Name = "authfailed"
-			inv.ID = -1
+			inv.ID = 0
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Authorization verification failed with error '%v'", err)})
 			respond(401, resource, w, r)

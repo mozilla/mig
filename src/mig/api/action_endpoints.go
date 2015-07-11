@@ -179,7 +179,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAction()"}.Debug()
 	}()
-	actionID, err := strconv.ParseFloat(request.URL.Query()["actionid"][0], 64)
+	actionID, err := strconv.ParseUint(request.URL.Query()["actionid"][0], 10, 64)
 	if err != nil {
 		err = fmt.Errorf("Wrong parameters 'actionid': '%v'", err)
 		panic(err)
@@ -190,7 +190,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 	if actionID > 0 {
 		a, err = ctx.DB.ActionByID(actionID)
 		if err != nil {
-			if a.ID == -1 {
+			if a.ID < 1 {
 				// not found, return 404
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),

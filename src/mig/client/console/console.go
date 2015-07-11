@@ -217,7 +217,7 @@ func printStatus(cli client.Client) (err error) {
 	actout := make([]string, 2)
 	actout[0] = "Latest Actions:"
 	actout[1] = "----    ID      ---- + ----         Name         ---- + -Sent- + ----    Date     ---- + ---- Investigators ----"
-	var onlineagents, onlineendpoints, idleagents, idleendpoints, newendpoints, doubleagents, disappearedendpoints, flappingendpoints float64
+	var onlineagents, onlineendpoints, idleagents, idleendpoints, newendpoints, doubleagents, disappearedendpoints, flappingendpoints uint64
 	for _, item := range st.Collection.Items {
 		for _, data := range item.Data {
 			switch data.Name {
@@ -229,21 +229,21 @@ func printStatus(cli client.Client) (err error) {
 				str := fmt.Sprintf("%s   %s   %6d   %s   %s", idstr, name, sent, datestr, invs)
 				actout = append(actout, str)
 			case "online agents":
-				onlineagents = data.Value.(float64)
+				onlineagents = data.Value.(uint64)
 			case "online endpoints":
-				onlineendpoints = data.Value.(float64)
+				onlineendpoints = data.Value.(uint64)
 			case "idle agents":
-				idleagents = data.Value.(float64)
+				idleagents = data.Value.(uint64)
 			case "idle endpoints":
-				idleendpoints = data.Value.(float64)
+				idleendpoints = data.Value.(uint64)
 			case "new endpoints":
-				newendpoints = data.Value.(float64)
+				newendpoints = data.Value.(uint64)
 			case "endpoints running 2 or more agents":
-				doubleagents = data.Value.(float64)
+				doubleagents = data.Value.(uint64)
 			case "disappeared endpoints":
-				disappearedendpoints = data.Value.(float64)
+				disappearedendpoints = data.Value.(uint64)
 			case "flapping endpoints":
-				flappingendpoints = data.Value.(float64)
+				flappingendpoints = data.Value.(uint64)
 			case "online agents by version":
 				bData, err := json.Marshal(data.Value)
 				if err != nil {

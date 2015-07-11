@@ -24,7 +24,7 @@ const ActionVersion uint16 = 2
 // an Action is the json object that is created by an investigator
 // and provided to the MIG platform. It must be PGP signed.
 type Action struct {
-	ID             float64        `json:"id"`
+	ID             uint64         `json:"id"`
 	Name           string         `json:"name"`
 	Target         string         `json:"target"`
 	Description    Description    `json:"description,omitempty"`
@@ -57,10 +57,10 @@ type ActionCounters struct {
 // a description is a simple object that contains detail about the
 // action's author, and it's revision.
 type Description struct {
-	Author   string  `json:"author,omitempty"`
-	Email    string  `json:"email,omitempty"`
-	URL      string  `json:"url,omitempty"`
-	Revision float64 `json:"revision,omitempty"`
+	Author   string `json:"author,omitempty"`
+	Email    string `json:"email,omitempty"`
+	URL      string `json:"url,omitempty"`
+	Revision uint64 `json:"revision,omitempty"`
 }
 
 // a threat provides the investigator with an idea of how dangerous
@@ -134,12 +134,12 @@ func (a Action) ToTempFile() (filename string, err error) {
 const MAXINT = int(^uint(0) >> 1)
 
 // GenID returns a unique ID 64 bits nanosecond timestamp
-func GenID() float64 {
+func GenID() uint64 {
 	id := time.Now().UnixNano()
 	if id < 1 {
-		return float64(rand.Int63())
+		return uint64(rand.Int63())
 	}
-	return float64(id)
+	return uint64(id)
 }
 
 // GenHexID returns a string with an hexadecimal encoded ID

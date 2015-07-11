@@ -29,7 +29,7 @@ func actionReader(input string, cli client.Client) (err error) {
 	if len(inputArr) < 2 {
 		panic("wrong order format. must be 'action <actionid>'")
 	}
-	aid, err := strconv.ParseFloat(inputArr[1], 64)
+	aid, err := strconv.ParseUint(inputArr[1], 10, 64)
 	if err != nil {
 		panic(err)
 	}
@@ -201,7 +201,7 @@ func searchFoundAnything(a mig.Action, wantFound bool, cli client.Client) (err e
 	if err != nil {
 		panic(err)
 	}
-	agents := make(map[float64]mig.Command)
+	agents := make(map[uint64]mig.Command)
 	for _, item := range resource.Collection.Items {
 		for _, data := range item.Data {
 			if data.Name != "command" {

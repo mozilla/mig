@@ -41,7 +41,7 @@ func (db *DB) ActiveInvestigatorsKeys() (keys [][]byte, err error) {
 }
 
 // InvestigatorByID searches the database for an investigator with a given ID
-func (db *DB) InvestigatorByID(iid float64) (inv mig.Investigator, err error) {
+func (db *DB) InvestigatorByID(iid uint64) (inv mig.Investigator, err error) {
 	err = db.c.QueryRow("SELECT id, name, pgpfingerprint, publickey, status, createdat, lastmodified FROM investigators WHERE id=$1",
 		iid).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status, &inv.CreatedAt, &inv.LastModified)
 	if err != nil {
@@ -74,7 +74,7 @@ func (db *DB) InvestigatorByFingerprint(fp string) (inv mig.Investigator, err er
 }
 
 //InvestigatorByActionID returns the list of investigators that signed a given action
-func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err error) {
+func (db *DB) InvestigatorByActionID(aid uint64) (invs []mig.Investigator, err error) {
 	rows, err := db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
 		investigators.status, investigators.createdat, investigators.lastmodified
 		FROM investigators, signatures
@@ -103,7 +103,7 @@ func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err 
 
 // InsertInvestigator creates a new investigator in the database and returns its ID,
 // or an error if the insertion failed, or if the investigator already exists
-func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) {
+func (db *DB) InsertInvestigator(inv mig.Investigator) (iid uint64, err error) {
 	_, err = db.c.Exec(`INSERT INTO investigators
 		(name, pgpfingerprint, publickey, status, createdat, lastmodified)
 		VALUES ($1, $2, $3, 'active', $4, $5 )`,
@@ -124,7 +124,7 @@ func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) 
 
 // InsertSchedulerInvestigator creates a new migscheduler investigator in the database
 // and returns its ID, or an error if the insertion failed, or if the investigator already exists
-func (db *DB) InsertSchedulerInvestigator(inv mig.Investigator) (iid float64, err error) {
+func (db *DB) InsertSchedulerInvestigator(inv mig.Investigator) (iid uint64, err error) {
 	_, err = db.c.Exec(`INSERT INTO investigators
 		(name, pgpfingerprint, publickey, privatekey, status, createdat, lastmodified)
 		VALUES ($1, $2, $3, $4, 'active', $5, $6)`,

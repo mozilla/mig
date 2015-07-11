@@ -87,7 +87,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			if float64(i) > p.Limit {
+			if uint64(i) > p.Limit {
 				break
 			}
 		}
@@ -108,7 +108,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			if float64(i) > p.Limit {
+			if uint64(i) > p.Limit {
 				break
 			}
 		}
@@ -125,7 +125,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				if err != nil {
 					panic(err)
 				}
-				if float64(i) > p.Limit {
+				if uint64(i) > p.Limit {
 					break
 				}
 			}
@@ -140,7 +140,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				if err != nil {
 					panic(err)
 				}
-				if float64(i) > p.Limit {
+				if uint64(i) > p.Limit {
 					break
 				}
 			}
@@ -155,7 +155,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				if err != nil {
 					panic(err)
 				}
-				if float64(i) > p.Limit {
+				if uint64(i) > p.Limit {
 					break
 				}
 			}
@@ -170,7 +170,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				if err != nil {
 					panic(err)
 				}
-				if float64(i) > p.Limit {
+				if uint64(i) > p.Limit {
 					break
 				}
 			}
@@ -237,7 +237,7 @@ func parseSearchParameters(qp url.Values) (p migdb.SearchParameters, filterFound
 		case "investigatorname":
 			p.InvestigatorName = qp["investigatorname"][0]
 		case "limit":
-			p.Limit, err = strconv.ParseFloat(qp["limit"][0], 64)
+			p.Limit, err = strconv.ParseUint(qp["limit"][0], 10, 64)
 			if err != nil {
 				panic("invalid limit parameter")
 			}

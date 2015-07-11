@@ -284,7 +284,7 @@ func updateAction(cmds []mig.Command, ctx Context) (err error) {
 
 	// there may be multiple actions to update, since commands can be mixed,
 	// so we keep a map of actions
-	actions := make(map[float64]mig.Action)
+	actions := make(map[uint64]mig.Action)
 
 	for _, cmd := range cmds {
 		var a mig.Action

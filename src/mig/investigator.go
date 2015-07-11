@@ -10,7 +10,7 @@ import (
 )
 
 type Investigator struct {
-	ID             float64   `json:"id,omitempty"`
+	ID             uint64    `json:"id,omitempty"`
 	Name           string    `json:"name"`
 	PGPFingerprint string    `json:"pgpfingerprint"`
 	PublicKey      []byte    `json:"publickey,omitempty"`

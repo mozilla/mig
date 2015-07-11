@@ -27,7 +27,7 @@ import (
 // database and message brokers. It also contains some statistics.
 // Context is intended as a single structure that can be passed around easily.
 type Context struct {
-	OpID  float64 // ID of the current operation, used for tracking
+	OpID  uint64 // ID of the current operation, used for tracking
 	Agent struct {
 		// configuration
 		TimeOut, HeartbeatFreq, Whitelist string

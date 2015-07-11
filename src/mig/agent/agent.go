@@ -31,7 +31,7 @@ var version string
 var publication sync.Mutex
 
 type moduleResult struct {
-	id       float64
+	id       uint64
 	err      error
 	status   string
 	output   modules.Result
@@ -40,7 +40,7 @@ type moduleResult struct {
 
 type moduleOp struct {
 	err         error
-	id          float64
+	id          uint64
 	mode        string
 	params      interface{}
 	resultChan  chan moduleResult
@@ -48,7 +48,7 @@ type moduleOp struct {
 	expireafter time.Time
 }
 
-var runningOps = make(map[float64]moduleOp)
+var runningOps = make(map[uint64]moduleOp)
 
 func main() {
 	var err error
