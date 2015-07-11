@@ -38,6 +38,7 @@ type Client struct {
 	Token   string
 	Conf    Configuration
 	Version string
+	debug   bool
 }
 
 // Configuration stores the live configuration and global parameters of a client
@@ -241,6 +242,10 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 		}
 	}
 	r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
+	if cli.debug {
+		fmt.Printf("debug: %s %s %s\ndebug: User-Agent: %s\ndebug: X-PGPAUTHORIZATION: %s\n",
+			r.Method, r.URL.String(), r.Proto, r.UserAgent(), r.Header.Get("X-PGPAUTHORIZATION"))
+	}
 	// execute the request
 	resp, err = cli.API.Do(r)
 	if err != nil {
@@ -256,6 +261,10 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 			panic(err)
 		}
 		r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
+		if cli.debug {
+			fmt.Printf("debug: %s %s %s\ndebug: User-Agent: %s\ndebug: X-PGPAUTHORIZATION: %s\n",
+				r.Method, r.URL.String(), r.Proto, r.UserAgent(), r.Header.Get("X-PGPAUTHORIZATION"))
+		}
 		// execute the request
 		resp, err = cli.API.Do(r)
 		if err != nil {
@@ -290,9 +299,16 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 			panic(err)
 		}
 		if len(body) > 1 {
+			if cli.debug {
+				fmt.Printf("debug: RESPONSE BODY:\ndebug: %s\n", body)
+			}
 			err = json.Unmarshal(body, &resource)
 			if err != nil {
 				panic(err)
+			}
+		} else {
+			if cli.debug {
+				fmt.Printf("debug: RESPONSE BODY: EMPTY\n")
 			}
 		}
 	}
@@ -305,7 +321,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 }
 
 // GetAction retrieves a MIG Action from the API using its Action ID
-func (cli Client) GetAction(aid float64) (a mig.Action, links []cljs.Link, err error) {
+func (cli Client) GetAction(aid uint64) (a mig.Action, links []cljs.Link, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("GetAction() -> %v", e)
@@ -392,7 +408,7 @@ func ValueToAction(v interface{}) (a mig.Action, err error) {
 	return
 }
 
-func (cli Client) GetCommand(cmdid float64) (cmd mig.Command, err error) {
+func (cli Client) GetCommand(cmdid uint64) (cmd mig.Command, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("GetCommand() -> %v", e)
@@ -430,7 +446,7 @@ func ValueToCommand(v interface{}) (cmd mig.Command, err error) {
 	return
 }
 
-func (cli Client) GetAgent(agtid float64) (agt mig.Agent, err error) {
+func (cli Client) GetAgent(agtid uint64) (agt mig.Agent, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("GetAgent() -> %v", e)
@@ -468,7 +484,7 @@ func ValueToAgent(v interface{}) (agt mig.Agent, err error) {
 	return
 }
 
-func (cli Client) GetInvestigator(iid float64) (inv mig.Investigator, err error) {
+func (cli Client) GetInvestigator(iid uint64) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("GetInvestigator() -> %v", e)
@@ -551,7 +567,7 @@ func (cli Client) PostInvestigator(name string, pubkey []byte) (inv mig.Investig
 }
 
 // PostInvestigatorStatus updates the status of an Investigator
-func (cli Client) PostInvestigatorStatus(iid float64, newstatus string) (err error) {
+func (cli Client) PostInvestigatorStatus(iid uint64, newstatus string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PostInvestigatorStatus() -> %v", e)
@@ -891,5 +907,17 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 	if !onlyFound {
 		fmt.Printf("%scommand %s\n", prefix, cmd.Status)
 	}
+	return
+}
+
+// EnableDebug() prints debug messages to stdout
+func (cli *Client) EnableDebug() {
+	cli.debug = true
+	return
+}
+
+// DisableDebug() disables the printing of debug messages to stdout
+func (cli *Client) DisableDebug() {
+	cli.debug = false
 	return
 }

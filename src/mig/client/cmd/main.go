@@ -43,6 +43,7 @@ usage: %s <module> <global options> <module parameters>
 		* agents named *mysql*:  -t "name like '%%mysql%%'"
 		* proxied linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
 		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
+-v		verbose output, includes debug information and raw queries
 
 Progress information is sent to stderr, silence it with "2>/dev/null".
 Results are sent to stdout, redirect them with "1>/path/to/file".
@@ -70,6 +71,7 @@ func main() {
 		op                                             mig.Operation
 		a                                              mig.Action
 		migrc, show, render, target, expiration, afile string
+		verbose                                        bool
 		modargs                                        []string
 		run                                            interface{}
 	)
@@ -87,6 +89,7 @@ func main() {
 	fs.StringVar(&target, "t", fmt.Sprintf("status='%s' AND mode='daemon'", mig.AgtStatusOnline), "action target")
 	fs.StringVar(&expiration, "e", "300s", "expiration")
 	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
+	fs.BoolVar(&verbose, "v", false, "Enable verbose output")
 
 	// if first argument is missing, or is help, print help
 	// otherwise, pass the remainder of the arguments to the module for parsing
@@ -180,6 +183,10 @@ readytolaunch:
 	cli, err = client.NewClient(conf, "cmd-"+version)
 	if err != nil {
 		panic(err)
+	}
+
+	if verbose {
+		cli.EnableDebug()
 	}
 
 	// set the validity 60 second in the past to deal with clock skew

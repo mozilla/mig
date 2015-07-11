@@ -15,9 +15,9 @@ import (
 )
 
 type Command struct {
-	ID     float64 `json:"id"`
-	Action Action  `json:"action"`
-	Agent  Agent   `json:"agent"`
+	ID     uint64 `json:"id"`
+	Action Action `json:"action"`
+	Agent  Agent  `json:"agent"`
 
 	// Status can be one of:
 	// sent: the command has been sent by the scheduler to the agent

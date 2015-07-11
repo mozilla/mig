@@ -75,8 +75,7 @@ func (db *DB) LastActions(limit int) (actions []mig.Action, err error) {
 
 // ActionByID retrieves an action from the database using its ID
 // If the query fails, the returned action will have ID -1
-func (db *DB) ActionByID(id float64) (a mig.Action, err error) {
-	a.ID = -1
+func (db *DB) ActionByID(id uint64) (a mig.Action, err error) {
 	var jDesc, jThreat, jOps, jSig []byte
 	err = db.c.QueryRow(`SELECT id, name, target, description, threat, operations,
 		validfrom, expireafter, starttime, finishtime, lastupdatetime,
@@ -116,7 +115,7 @@ func (db *DB) ActionByID(id float64) (a mig.Action, err error) {
 }
 
 // ActionMetaByID retrieves the metadata fields of an action from the database using its ID
-func (db *DB) ActionMetaByID(id float64) (a mig.Action, err error) {
+func (db *DB) ActionMetaByID(id uint64) (a mig.Action, err error) {
 	err = db.c.QueryRow(`SELECT id, name, validfrom, expireafter, starttime, finishtime, lastupdatetime,
 		status FROM actions WHERE id=$1`, id).Scan(&a.ID, &a.Name, &a.ValidFrom, &a.ExpireAfter,
 		&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status)
@@ -175,7 +174,7 @@ func (db *DB) UpdateAction(a mig.Action) (err error) {
 // InsertOrUpdateAction looks for an existing action in DB and update it,
 // or insert a new one if none is found
 func (db *DB) InsertOrUpdateAction(a mig.Action) (inserted bool, err error) {
-	var id float64
+	var id uint64
 	err = db.c.QueryRow(`SELECT id FROM actions WHERE id=$1`, a.ID).Scan(&id)
 	if err != nil && err != sql.ErrNoRows {
 		return inserted, fmt.Errorf("Error while retrieving action: '%v'", err)
@@ -222,7 +221,7 @@ func (db *DB) FinishAction(a mig.Action) (err error) {
 
 // InsertSignature create an entry in the signatures tables that map an investigator
 // to an action and a signature
-func (db *DB) InsertSignature(aid, iid float64, sig string) (err error) {
+func (db *DB) InsertSignature(aid, iid uint64, sig string) (err error) {
 	_, err = db.c.Exec(`INSERT INTO signatures(actionid, investigatorid, pgpsignature)
 		VALUES($1, $2, $3)`, aid, iid, sig)
 	if err != nil {
@@ -231,7 +230,7 @@ func (db *DB) InsertSignature(aid, iid float64, sig string) (err error) {
 	return
 }
 
-func (db *DB) GetActionCounters(aid float64) (counters mig.ActionCounters, err error) {
+func (db *DB) GetActionCounters(aid uint64) (counters mig.ActionCounters, err error) {
 	rows, err := db.c.Query(`SELECT DISTINCT(status), COUNT(id) FROM commands
 		WHERE actionid = $1 GROUP BY status`, aid)
 	if err != nil && err != sql.ErrNoRows {

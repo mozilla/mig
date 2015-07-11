@@ -13,8 +13,8 @@ import (
 
 type CommandLocation struct {
 	Endpoint      string  `json:"endpoint"`
-	CommandID     float64 `json:"commandid"`
-	ActionID      float64 `json:"actionid"`
+	CommandID     uint64  `json:"commandid"`
+	ActionID      uint64  `json:"actionid"`
 	FoundAnything bool    `json:"foundanything"`
 	Latitude      float64 `json:"latitude"`
 	Longitude     float64 `json:"longitude"`

@@ -28,7 +28,7 @@ type SearchParameters struct {
 	FoundAnything    bool      `json:"foundanything"`
 	InvestigatorID   string    `json:"investigatorid"`
 	InvestigatorName string    `json:"investigatorname"`
-	Limit            float64   `json:"limit"`
+	Limit            uint64    `json:"limit"`
 	Report           string    `json:"report"`
 	Status           string    `json:"status"`
 	Target           string    `json:"target"`
@@ -55,7 +55,7 @@ func NewSearchParameters() (p SearchParameters) {
 }
 
 type IDs struct {
-	minActionID, maxActionID, minCommandID, maxCommandID, minAgentID, maxAgentID, minInvID, maxInvID float64
+	minActionID, maxActionID, minCommandID, maxCommandID, minAgentID, maxAgentID, minInvID, maxInvID uint64
 }
 
 // SearchCommands returns an array of commands that match search parameters
@@ -377,38 +377,40 @@ func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Inves
 	return
 }
 
+const MAXINT64 = uint64(^uint64(0) >> 1)
+
 func makeIDsFromParams(p SearchParameters) (ids IDs, err error) {
 	ids.minActionID = 0
-	ids.maxActionID = 18446744073709551616 //2^64
+	ids.maxActionID = MAXINT64 //2^64 -1
 	if p.ActionID != "∞" {
-		ids.minActionID, err = strconv.ParseFloat(p.ActionID, 64)
+		ids.minActionID, err = strconv.ParseUint(p.ActionID, 10, 64)
 		if err != nil {
 			return
 		}
 		ids.maxActionID = ids.minActionID
 	}
 	ids.minCommandID = 0
-	ids.maxCommandID = 18446744073709551616 //2^64
+	ids.maxCommandID = MAXINT64 //2^64
 	if p.CommandID != "∞" {
-		ids.minCommandID, err = strconv.ParseFloat(p.CommandID, 64)
+		ids.minCommandID, err = strconv.ParseUint(p.CommandID, 10, 64)
 		if err != nil {
 			return
 		}
 		ids.maxCommandID = ids.minCommandID
 	}
 	ids.minAgentID = 0
-	ids.maxAgentID = 18446744073709551616 //2^64
+	ids.maxAgentID = MAXINT64 //2^64
 	if p.AgentID != "∞" {
-		ids.minAgentID, err = strconv.ParseFloat(p.AgentID, 64)
+		ids.minAgentID, err = strconv.ParseUint(p.AgentID, 10, 64)
 		if err != nil {
 			return
 		}
 		ids.maxAgentID = ids.minAgentID
 	}
 	ids.minInvID = 0
-	ids.maxInvID = 18446744073709551616 //2^64
+	ids.maxInvID = MAXINT64 //2^64
 	if p.InvestigatorID != "∞" {
-		ids.minInvID, err = strconv.ParseFloat(p.InvestigatorID, 64)
+		ids.minInvID, err = strconv.ParseUint(p.InvestigatorID, 10, 64)
 		if err != nil {
 			return
 		}

@@ -30,7 +30,7 @@ func investigatorReader(input string, cli client.Client) (err error) {
 	if len(inputArr) < 2 {
 		panic("wrong order format. must be 'investigator <investigatorid>'")
 	}
-	iid, err := strconv.ParseFloat(inputArr[1], 64)
+	iid, err := strconv.ParseUint(inputArr[1], 10, 64)
 	if err != nil {
 		panic(err)
 	}
@@ -129,7 +129,7 @@ exit:
 	return
 }
 
-func printInvestigatorLastActions(iid float64, limit int, cli client.Client) (err error) {
+func printInvestigatorLastActions(iid uint64, limit int, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("printInvestigatorLastActions() -> %v", e)

@@ -26,7 +26,7 @@ func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAgentsDashboard()"}.Debug()
 	}()
-	agentID, err := strconv.ParseFloat(request.URL.Query()["agentid"][0], 64)
+	agentID, err := strconv.ParseUint(request.URL.Query()["agentid"][0], 10, 64)
 	if err != nil {
 		err = fmt.Errorf("Wrong parameters 'agentid': '%v'", err)
 		panic(err)

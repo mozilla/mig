@@ -29,7 +29,7 @@ func agentReader(input string, cli client.Client) (err error) {
 	if len(inputArr) < 2 {
 		panic("wrong order format. must be 'agent <agentid>'")
 	}
-	agtid, err := strconv.ParseFloat(inputArr[1], 64)
+	agtid, err := strconv.ParseUint(inputArr[1], 10, 64)
 	if err != nil {
 		panic(err)
 	}
@@ -138,7 +138,7 @@ exit:
 	return
 }
 
-func printAgentLastCommands(agtid float64, limit int, cli client.Client) (err error) {
+func printAgentLastCommands(agtid uint64, limit int, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("printAgentLastCommands() -> %v", e)

@@ -53,7 +53,7 @@ func startRoutines(ctx Context) {
 	// sending them one by one
 	go func() {
 		ctx.OpID = mig.GenID()
-		readyCmd := make(map[float64]mig.Command)
+		readyCmd := make(map[uint64]mig.Command)
 		ctr := 0
 		for {
 			select {
@@ -114,7 +114,7 @@ func startRoutines(ctx Context) {
 	// Goroutine that updates an action when a command is done
 	go func() {
 		ctx.OpID = mig.GenID()
-		doneCmd := make(map[float64]mig.Command)
+		doneCmd := make(map[uint64]mig.Command)
 		ctr := 0
 		for {
 			select {

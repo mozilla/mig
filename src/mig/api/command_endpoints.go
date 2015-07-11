@@ -29,7 +29,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getCommand()"}.Debug()
 	}()
-	commandID, err := strconv.ParseFloat(request.URL.Query()["commandid"][0], 64)
+	commandID, err := strconv.ParseUint(request.URL.Query()["commandid"][0], 10, 64)
 	if err != nil {
 		err = fmt.Errorf("Wrong parameters 'commandid': '%v'", err)
 		panic(err)

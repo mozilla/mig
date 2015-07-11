@@ -258,6 +258,9 @@ func returnCommands(cmdFiles []string, ctx Context) (err error) {
 			} else {
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "command updated in database"}.Debug()
 			}
+
+			// pass the command over to the Command Done channel
+			ctx.Channels.CommandDone <- cmd
 		}()
 		// remove command from inflight dir
 		inflightPath := fmt.Sprintf("%s/%.0f-%.0f.json", ctx.Directories.Command.InFlight, cmd.Action.ID, cmd.ID)
@@ -265,9 +268,6 @@ func returnCommands(cmdFiles []string, ctx Context) (err error) {
 
 		// remove command from Returned dir
 		os.Remove(cmdFile)
-
-		// pass the command over to the Command Done channel
-		ctx.Channels.CommandDone <- cmd
 	}
 	return
 }
@@ -284,7 +284,7 @@ func updateAction(cmds []mig.Command, ctx Context) (err error) {
 
 	// there may be multiple actions to update, since commands can be mixed,
 	// so we keep a map of actions
-	actions := make(map[float64]mig.Action)
+	actions := make(map[uint64]mig.Action)
 
 	for _, cmd := range cmds {
 		var a mig.Action

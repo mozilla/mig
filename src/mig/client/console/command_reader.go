@@ -27,7 +27,7 @@ func commandReader(input string, cli client.Client) (err error) {
 	if len(inputArr) < 2 {
 		panic("wrong order format. must be 'command <commandid>'")
 	}
-	cmdid, err := strconv.ParseFloat(inputArr[1], 64)
+	cmdid, err := strconv.ParseUint(inputArr[1], 10, 64)
 	if err != nil {
 		panic(err)
 	}
