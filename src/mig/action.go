@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"mig/pgp"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -131,15 +131,31 @@ func (a Action) ToTempFile() (filename string, err error) {
 	return
 }
 
-const MAXINT = int(^uint(0) >> 1)
+type id struct {
+	value float64
+	sync.Mutex
+}
 
-// GenID returns a unique ID 64 bits nanosecond timestamp
+var globalID id
+
+// GenID() returns a float64 ID number that is unique to this process. The ID is initialized
+// at the number of seconds since MIG's creation date, shifted 16 bits to the right and incremented
+// by one every time a new ID is requested. The resulting value must fit in 53 bits of precision
+// provided by the float64 type.
 func GenID() float64 {
-	id := time.Now().UnixNano()
-	if id < 1 {
-		return float64(rand.Int63())
+	globalID.Lock()
+	defer globalID.Unlock()
+	if globalID.value < 1 {
+		// if id hasn't been initialized yet, set it to number of seconds since
+		// MIG's inception, plus one
+		tmpid := int64(time.Since(time.Unix(1367258400, 0)).Seconds() + 1)
+		tmpid = tmpid << 16
+		globalID.value = float64(tmpid)
+		return globalID.value
+	} else {
+		globalID.value++
+		return globalID.value
 	}
-	return float64(id)
 }
 
 // GenHexID returns a string with an hexadecimal encoded ID
