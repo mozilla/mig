@@ -34,6 +34,7 @@ func main() {
 	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
 	var quiet = flag.Bool("q", false, "don't display banners and prompts")
 	var showversion = flag.Bool("V", false, "show build version and exit")
+	var verbose = flag.Bool("v", false, "verbose output, includes debug information and raw queries")
 	flag.Parse()
 
 	if *showversion {
@@ -73,6 +74,9 @@ func main() {
 	cli, err := client.NewClient(conf, "console-"+version)
 	if err != nil {
 		panic(err)
+	}
+	if *verbose {
+		cli.EnableDebug()
 	}
 	// print platform status
 	err = printStatus(cli)
