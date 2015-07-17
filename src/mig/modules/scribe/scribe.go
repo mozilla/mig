@@ -52,7 +52,7 @@ type run struct {
 	Results    modules.Result
 }
 
-func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
+func buildResultsScribe(e elements, r *modules.Result) (buf []byte, err error) {
 	r.Success = true
 	r.Elements = e
 	if len(e.Results) > 0 {
@@ -194,7 +194,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 			}
 			e.Results = append(e.Results, tr)
 		}
-		buf, err := buildResults(*e, &r.Results)
+		buf, err := buildResultsScribe(*e, &r.Results)
 		if err != nil {
 			panic(err)
 		}
