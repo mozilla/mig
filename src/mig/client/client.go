@@ -291,6 +291,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 	if err != nil {
 		panic(err)
 	}
+	hasResource := false
 	if resp.Body != nil {
 		// unmarshal the body. don't attempt to interpret it, as long as it
 		// fits into a cljs.Resource, it's acceptable
@@ -306,6 +307,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 			if err != nil {
 				panic(err)
 			}
+			hasResource = true
 		} else {
 			if cli.debug {
 				fmt.Printf("debug: RESPONSE BODY: EMPTY\n")
@@ -313,8 +315,12 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 		}
 	}
 	if resp.StatusCode != 200 {
-		err = fmt.Errorf("error: HTTP %d. API call failed with error '%v' (code %s)",
-			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		if hasResource {
+			err = fmt.Errorf("error: HTTP %d. API call failed with error '%v' (code %s)",
+				resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		} else {
+			err = fmt.Errorf("error: HTTP %d %s. No response body.", resp.StatusCode, http.StatusText(resp.StatusCode))
+		}
 		panic(err)
 	}
 	return
