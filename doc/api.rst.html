@@ -992,6 +992,7 @@ X-PGPAUTHORIZATION: 1;2014-11-04T19:13:37Z;13094113753132512760;iQEcBAA.....</pr
                                 <li><cite>investigatorid</cite>: filter results on the investigator ID</li>
                                 <li><cite>investigatorname</cite>: filter results on string investigator name, accept <cite>ILIKE</cite> pattern</li>
                                 <li><cite>limit</cite>: limit the number of results to 10,000 by default</li>
+                                <li><cite>offset</cite>: discard the X first results, defaults to 0. Used in conjunction with <cite>limit</cite>, offset can be used to paginate search results. ex: <strong>&amp;limit=10&amp;offset=50</strong> will grab 10 results discarding the first 50.</li>
                                 <li>
                                     <dl>
                                         <dt><cite>report</cite>: if set, return results in the given report format:</dt>

@@ -780,66 +780,75 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 		}
 	}()
 	var (
-		found  bool
-		report string
-		locs   []CommandLocation
+		found                   bool
+		report, foundQ          string
+		locs                    []CommandLocation
+		limit, offset, agtCount int = 10, 0, 0
 	)
-	switch render {
-	case "map":
+	if render == "map" {
 		report = "&report=geolocations"
 	}
-	var resource *cljs.Resource
 	switch show {
-	case "all":
-		target := fmt.Sprintf("search?type=command&limit=1000000&actionid=%.0f%s", a.ID, report)
-		resource, err = cli.GetAPIResource(target)
-		if err != nil {
-			panic(err)
-		}
 	case "found":
 		found = true
-		target := fmt.Sprintf("search?type=command&limit=1000000&foundanything=true&actionid=%.0f%s", a.ID, report)
-		resource, err = cli.GetAPIResource(target)
-		if err != nil {
-			panic(err)
-		}
+		foundQ = "&foundanything=true"
 	case "notfound":
-		target := fmt.Sprintf("search?type=command&limit=1000000&foundanything=false&actionid=%.0f%s", a.ID, report)
-		resource, err = cli.GetAPIResource(target)
-		if err != nil {
-			panic(err)
-		}
+		found = false
+		foundQ = "&foundanything=false"
+	case "all":
+		found = false
 	default:
 		return fmt.Errorf("invalid parameter '%s'", show)
 	}
-	count := 0
-	for _, item := range resource.Collection.Items {
-		for _, data := range item.Data {
-			switch render {
-			case "map":
-				if data.Name != "geolocation" {
-					continue
+
+	// loop until all results have been retrieved using paginated queries
+	for {
+		target := fmt.Sprintf("search?type=command&limit=%d&offset=%d&actionid=%.0f%s%s", limit, offset, a.ID, foundQ, report)
+		resource, err := cli.GetAPIResource(target)
+		// because we query using pagination, the last query will return a 404 with no result.
+		// When that happens, GetAPIResource returns an error which we do not report to the user
+		if resource.Collection.Error.Message == "no results found" {
+			err = nil
+			break
+		} else if err != nil {
+			panic(err)
+		}
+		count := 0
+		for _, item := range resource.Collection.Items {
+			for _, data := range item.Data {
+				switch render {
+				case "map":
+					if data.Name != "geolocation" {
+						continue
+					}
+					loc, err := ValueToLocation(data.Value)
+					if err != nil {
+						panic(err)
+					}
+					locs = append(locs, loc)
+				default:
+					if data.Name != "command" {
+						continue
+					}
+					cmd, err := ValueToCommand(data.Value)
+					if err != nil {
+						panic(err)
+					}
+					err = PrintCommandResults(cmd, found, true)
+					if err != nil {
+						panic(err)
+					}
+					count++
 				}
-				loc, err := ValueToLocation(data.Value)
-				if err != nil {
-					panic(err)
-				}
-				locs = append(locs, loc)
-			default:
-				if data.Name != "command" {
-					continue
-				}
-				cmd, err := ValueToCommand(data.Value)
-				if err != nil {
-					panic(err)
-				}
-				err = PrintCommandResults(cmd, found, true)
-				if err != nil {
-					panic(err)
-				}
-				count++
 			}
 		}
+		// if count is still at zero, we didn't get any results from the query and exit the loop
+		if count == 0 {
+			break
+		}
+		// else increase limit and offset and continue
+		offset += 10
+		agtCount += count
 	}
 	switch render {
 	case "map":
@@ -850,10 +859,10 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 		}
 	default:
 		s := "agent has"
-		if count > 1 {
+		if agtCount > 1 {
 			s = "agents have"
 		}
-		fmt.Fprintf(os.Stderr, "\x1b[31m%d %s %s results\x1b[0m\n", count, s, show)
+		fmt.Fprintf(os.Stderr, "\x1b[31m%d %s %s results\x1b[0m\n", agtCount, s, show)
 	}
 	return
 }

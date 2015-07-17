@@ -29,6 +29,7 @@ type SearchParameters struct {
 	InvestigatorID   string    `json:"investigatorid"`
 	InvestigatorName string    `json:"investigatorname"`
 	Limit            float64   `json:"limit"`
+	Offset           float64   `json:"offset"`
 	Report           string    `json:"report"`
 	Status           string    `json:"status"`
 	Target           string    `json:"target"`
@@ -48,9 +49,49 @@ func NewSearchParameters() (p SearchParameters) {
 	p.ThreatFamily = "%"
 	p.Status = "%"
 	p.Limit = 10000
+	p.Offset = 0
 	p.InvestigatorID = "∞"
 	p.InvestigatorName = "%"
 	p.Type = "action"
+	return
+}
+
+// String() returns a query string with the current search parameters
+func (p SearchParameters) String() (query string) {
+	query = fmt.Sprintf("type=%s&after=%s&before=%s", p.Type, p.After.Format(time.RFC3339), p.Before.Format(time.RFC3339))
+	if p.AgentName != "%" {
+		query += fmt.Sprintf("&agentname=%s", p.AgentName)
+	}
+	if p.AgentID != "∞" {
+		query += fmt.Sprintf("&agentid=%s", p.AgentID)
+	}
+	if p.ActionName != "%" {
+		query += fmt.Sprintf("&actionname=%s", p.ActionName)
+	}
+	if p.ActionID != "∞" {
+		query += fmt.Sprintf("&actionid=%s", p.ActionID)
+	}
+	if p.CommandID != "∞" {
+		query += fmt.Sprintf("&commandid=%s", p.CommandID)
+	}
+	if p.InvestigatorID != "∞" {
+		query += fmt.Sprintf("&investigatorid=%s", p.InvestigatorID)
+	}
+	if p.InvestigatorName != "%" {
+		query += fmt.Sprintf("&investigatorname=%s", p.InvestigatorName)
+	}
+	if p.ThreatFamily != "%" {
+		query += fmt.Sprintf("&threatfamily=%s", p.ThreatFamily)
+	}
+	if p.Status != "%" {
+		query += fmt.Sprintf("&status=%s", p.Status)
+	}
+	if p.Limit != 10000 {
+		query += fmt.Sprintf("&limit=%.0f", p.Limit)
+	}
+	if p.Offset != 0 {
+		query += fmt.Sprintf("&offset=%.0f", p.Offset)
+	}
 	return
 }
 
@@ -99,8 +140,8 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 		vals = append(vals, p.ThreatFamily)
 		valctr += 1
 	}
-	query += fmt.Sprintf(`GROUP BY commands.id, actions.id, agents.id ORDER BY commands.id ASC LIMIT $%d;`, valctr+1)
-	vals = append(vals, uint64(p.Limit))
+	query += fmt.Sprintf(`GROUP BY commands.id, actions.id, agents.id ORDER BY commands.id ASC LIMIT $%d OFFSET $%d;`, valctr+1, valctr+2)
+	vals = append(vals, uint64(p.Limit), uint64(p.Offset))
 
 	stmt, err := db.c.Prepare(query)
 	if err != nil {
@@ -208,10 +249,10 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 		AND actions.status ILIKE $14
 		AND actions.threat#>>'{family}' ILIKE $15
 		GROUP BY actions.id
-		ORDER BY actions.id DESC LIMIT $16`,
+		ORDER BY actions.id DESC LIMIT $16 OFFSET $17`,
 		p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
 		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
-		p.Status, p.ThreatFamily, uint64(p.Limit))
+		p.Status, p.ThreatFamily, uint64(p.Limit), uint64(p.Offset))
 	if err != nil {
 		err = fmt.Errorf("Error while finding actions: '%v'", err)
 		return
@@ -292,10 +333,10 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 		AND investigators.name ILIKE $13
 		AND agents.status ILIKE $14
 		GROUP BY agents.id
-		ORDER BY agents.id DESC LIMIT $15`,
+		ORDER BY agents.id DESC LIMIT $15 OFFSET $16`,
 		p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
 		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
-		p.Status, uint64(p.Limit))
+		p.Status, uint64(p.Limit), uint64(p.Offset))
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
@@ -342,10 +383,10 @@ func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Inves
 			AND investigators.name ILIKE $13
 			AND investigators.status ILIKE $14
 			GROUP BY investigators.id
-			ORDER BY investigators.id DESC LIMIT $15`,
+			ORDER BY investigators.id DESC LIMIT $15 OFFSET $16`,
 			p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
 			p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
-			p.Status, uint64(p.Limit))
+			p.Status, uint64(p.Limit), uint64(p.Offset))
 	} else {
 		rows, err = db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
 			investigators.status, investigators.createdat, investigators.lastmodified
@@ -354,8 +395,8 @@ func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Inves
 			AND investigators.name ILIKE $3
 			AND investigators.status ILIKE $4
 			GROUP BY investigators.id
-			ORDER BY investigators.id DESC LIMIT $5`,
-			ids.minInvID, ids.maxInvID, p.InvestigatorName, p.Status, uint64(p.Limit))
+			ORDER BY investigators.id DESC LIMIT $5 OFFSET $6`,
+			ids.minInvID, ids.maxInvID, p.InvestigatorName, p.Status, uint64(p.Limit), uint64(p.Offset))
 	}
 	if err != nil {
 		err = fmt.Errorf("Error while finding investigators: '%v'", err)
@@ -377,9 +418,11 @@ func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Inves
 	return
 }
 
+const MAXFLOAT64 float64 = 9007199254740991 // 2^53-1
+
 func makeIDsFromParams(p SearchParameters) (ids IDs, err error) {
 	ids.minActionID = 0
-	ids.maxActionID = 18446744073709551616 //2^64
+	ids.maxActionID = MAXFLOAT64
 	if p.ActionID != "∞" {
 		ids.minActionID, err = strconv.ParseFloat(p.ActionID, 64)
 		if err != nil {
@@ -388,7 +431,7 @@ func makeIDsFromParams(p SearchParameters) (ids IDs, err error) {
 		ids.maxActionID = ids.minActionID
 	}
 	ids.minCommandID = 0
-	ids.maxCommandID = 18446744073709551616 //2^64
+	ids.maxCommandID = MAXFLOAT64
 	if p.CommandID != "∞" {
 		ids.minCommandID, err = strconv.ParseFloat(p.CommandID, 64)
 		if err != nil {
@@ -397,7 +440,7 @@ func makeIDsFromParams(p SearchParameters) (ids IDs, err error) {
 		ids.maxCommandID = ids.minCommandID
 	}
 	ids.minAgentID = 0
-	ids.maxAgentID = 18446744073709551616 //2^64
+	ids.maxAgentID = MAXFLOAT64
 	if p.AgentID != "∞" {
 		ids.minAgentID, err = strconv.ParseFloat(p.AgentID, 64)
 		if err != nil {
@@ -406,7 +449,7 @@ func makeIDsFromParams(p SearchParameters) (ids IDs, err error) {
 		ids.maxAgentID = ids.minAgentID
 	}
 	ids.minInvID = 0
-	ids.maxInvID = 18446744073709551616 //2^64
+	ids.maxInvID = MAXFLOAT64
 	if p.InvestigatorID != "∞" {
 		ids.minInvID, err = strconv.ParseFloat(p.InvestigatorID, 64)
 		if err != nil {

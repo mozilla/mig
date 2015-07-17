@@ -387,6 +387,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 			{Name: "investigatorid", Value: "123456789...", Prompt: "filter results on the investigator id"},
 			{Name: "investigatorname", Value: "%bob%", Prompt: "filter results on the investigator name"},
 			{Name: "limit", Value: "10000", Prompt: "limit the number of results to 10,000 by default"},
+			{Name: "offset", Value: "0", Prompt: "skip the first results, default value of 0 does not skip"},
 			{Name: "report", Value: "(compliancesummary|complianceitems)", Prompt: "if set, return results in the given report format"},
 			{Name: "status", Value: "(sent|success|cancelled|expired|failed|timeout|...)", Prompt: "filter results on the type's status"},
 			{Name: "threatfamily", Value: "(compliance|backdoor|...)", Prompt: "filter results of the threat family"},

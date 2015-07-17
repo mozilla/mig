@@ -87,7 +87,7 @@ func main() {
 	for {
 		// completion
 		var symbols = []string{"action", "agent", "create", "command", "help", "history",
-			"exit", "showcfg", "status", "investigator", "search", "where", "and"}
+			"exit", "showcfg", "status", "investigator", "search", "query", "where", "and"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -158,7 +158,8 @@ exit			leave
 help			show this help
 history <count>		print last <count> entries in history. count=10 by default.
 investigator <id>	enter interactive investigator management mode for investigator <id>
-search			perform a search. see "search help" for more information.
+query <uri>		send a raw query string, without the base url, to the api
+search <search>		perform a search. see "search help" for more information.
 showcfg			display running configuration
 status			display platform status: connected agents, latest actions, ...
 `)
@@ -179,6 +180,13 @@ status			display platform status: connected agents, latest actions, ...
 			if err != nil {
 				log.Println(err)
 			}
+		case "query":
+			fmt.Println("querying", orders[1])
+			resource, err := cli.GetAPIResource(orders[1])
+			if err != nil {
+				log.Println(err)
+			}
+			fmt.Printf("%+v\n", resource)
 		case "search":
 			err = search(input, cli)
 			if err != nil {

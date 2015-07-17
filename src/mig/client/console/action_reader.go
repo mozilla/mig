@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bobappleyard/readline"
-	"github.com/jvehent/cljs"
 	"io"
 	"mig"
 	"mig/client"
@@ -33,7 +32,7 @@ func actionReader(input string, cli client.Client) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	a, links, err := cli.GetAction(aid)
+	a, _, err := cli.GetAction(aid)
 	if err != nil {
 		panic(err)
 	}
@@ -46,8 +45,8 @@ func actionReader(input string, cli client.Client) (err error) {
 	prompt := fmt.Sprintf("\x1b[31;1maction %d>\x1b[0m ", uint64(aid)%1000)
 	for {
 		// completion
-		var symbols = []string{"command", "copy", "counters", "details", "exit", "foundanything", "foundnothing",
-			"grep", "help", "investigators", "json", "ls", "found", "pretty", "r", "results", "times"}
+		var symbols = []string{"command", "copy", "counters", "details", "exit", "grep", "help", "investigators",
+			"json", "list", "all", "found", "notfound", "pretty", "r", "results", "times"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -80,7 +79,7 @@ func actionReader(input string, cli client.Client) (err error) {
 			}
 			goto exit
 		case "counters":
-			a, links, err = cli.GetAction(aid)
+			a, _, err = cli.GetAction(aid)
 			if err != nil {
 				panic(err)
 			}
@@ -90,38 +89,40 @@ func actionReader(input string, cli client.Client) (err error) {
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
-		case "foundanything":
-			err = searchFoundAnything(a, true, cli)
-			if err != nil {
-				panic(err)
-			}
-		case "foundnothing":
-			err = searchFoundAnything(a, false, cli)
-			if err != nil {
-				panic(err)
-			}
 		case "help":
 			fmt.Printf(`The following orders are available:
 command <id>	jump to command reader mode for command <id>
+
 copy		enter action launcher mode using current action as template
+
 counters	display the counters of the action
+
 details		display the details of the action, including status & times
+
 exit		exit this mode (also works with ctrl+d)
-foundanything	list commands and agents that have found something
-foundnothing	list commands and agents that have found nothing
+
 help		show this help
+
 investigators   print the list of investigators that signed the action
+
 json         	show the json of the action
-ls <filter>	returns the list of commands with their status
-		'filter' is a pipe separated string of filter:
+
+list <show>	returns the list of commands with their status
+		<show>: * set to "all" to get all results (default)
+			* set to "found" to only display positive results
+			* set to "notfound" for negative results
+		list can be followed by a 'filter' pipe:
 		ex: ls | grep server1.(dom1|dom2) | grep -v example.net
+
 r		refresh the action (get latest version from upstream)
+
 results <show> <render>	display results of all commands
 			<show>: * set to "all" to get all results (default)
 				* set to "found" to only display positive results
 				* set to "notfound" for negative results
 			<render>: * set to "text" to print results in console (default)
 				  * set to "map" to generate an open a google map
+
 times		show the various timestamps of the action
 `)
 		case "investigators":
@@ -135,13 +136,13 @@ times		show the various timestamps of the action
 				panic(err)
 			}
 			fmt.Printf("%s\n", ajson)
-		case "ls":
-			err = actionPrintLinks(links, orders)
+		case "list":
+			err = actionPrintList(aid, orders, cli)
 			if err != nil {
 				panic(err)
 			}
 		case "r":
-			a, links, err = cli.GetAction(aid)
+			a, _, err = cli.GetAction(aid)
 			if err != nil {
 				panic(err)
 			}
@@ -182,49 +183,6 @@ times		show the various timestamps of the action
 	}
 exit:
 	fmt.Printf("\n")
-	return
-}
-
-func searchFoundAnything(a mig.Action, wantFound bool, cli client.Client) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("searchFoundAnything() -> %v", e)
-		}
-	}()
-	target := "search?type=command&limit=1000000&actionid=" + fmt.Sprintf("%.0f", a.ID)
-	if wantFound {
-		target += "&foundanything=true"
-	} else {
-		target += "&foundanything=false"
-	}
-	resource, err := cli.GetAPIResource(target)
-	if err != nil {
-		panic(err)
-	}
-	agents := make(map[float64]mig.Command)
-	for _, item := range resource.Collection.Items {
-		for _, data := range item.Data {
-			if data.Name != "command" {
-				continue
-			}
-			cmd, err := client.ValueToCommand(data.Value)
-			if err != nil {
-				panic(err)
-			}
-			agents[cmd.Agent.ID] = cmd
-		}
-	}
-	if wantFound {
-		fmt.Printf("%d agents have found things\n", len(agents))
-	} else {
-		fmt.Printf("%d agents have not found anything\n", len(agents))
-	}
-	if len(agents) > 0 {
-		fmt.Println("---- Command ID ----    ---- Agent Name & ID----")
-		for agtid, cmd := range agents {
-			fmt.Printf("%20.0f    %s [%.0f]\n", cmd.ID, cmd.Agent.Name, agtid)
-		}
-	}
 	return
 }
 
@@ -314,39 +272,105 @@ Times          valid from %s until %s
 	return
 }
 
-func actionPrintLinks(links []cljs.Link, orders []string) (err error) {
+func actionPrintList(aid float64, orders []string, cli client.Client) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("actionPrintLinks() -> %v", e)
+			err = fmt.Errorf("actionPrintList() -> %v", e)
 		}
 	}()
+	show := "all"
 	has_filter := false
 	var filter []string
 	if len(orders) > 1 {
-		has_filter = true
-		filter = orders[1:len(orders)]
-	}
-	ctr := 0
-	for _, link := range links {
-		if has_filter {
-			str, err := filterString(link.Rel, filter)
-			if err != nil {
-				fmt.Printf("Invalid filter '%s': '%v'\n", filter, err)
-				break
+		switch orders[1] {
+		case "all", "found", "notfound":
+			show = orders[1]
+			if len(orders) > 2 && orders[2] == "|" {
+				has_filter = true
+				filter = orders[2:]
 			}
-			if str != "" {
-				fmt.Println(str)
-				ctr++
-			}
-		} else {
-			fmt.Println(link.Rel)
-			ctr++
+		case "|":
+			has_filter = true
+			filter = orders[1:]
 		}
 	}
-	fmt.Printf("%d command", ctr)
-	if ctr > 1 {
-		fmt.Printf("s")
+	cmds, err := searchCommands(aid, show, cli)
+	if err != nil {
+		panic(err)
 	}
-	fmt.Printf(" found\n")
+	ctr := 0
+	if len(cmds) > 0 {
+		fmt.Println("---- Command ID ----    ---- Agent Name & ID----")
+		for _, cmd := range cmds {
+			str := fmt.Sprintf("%20.0f    %s [%.0f]", cmd.ID, cmd.Agent.Name, cmd.Agent.ID)
+			if has_filter {
+				filtered, err := filterString(str, filter)
+				if err != nil {
+					fmt.Printf("Invalid filter '%s': '%v'\n", filter, err)
+					break
+				}
+				if filtered != "" {
+					fmt.Println(filtered)
+					ctr++
+				}
+			} else {
+				fmt.Println(str)
+			}
+		}
+	}
+	switch show {
+	case "found":
+		fmt.Printf("%d agents have found things\n", ctr)
+	case "notfound":
+		fmt.Printf("%d agents have found nothing\n", ctr)
+	case "all":
+		fmt.Printf("%d agents have returned\n", ctr)
+	}
+	return
+}
+
+func searchCommands(aid float64, show string, cli client.Client) (cmds []mig.Command, err error) {
+	defer func() {
+		fmt.Printf("\n")
+		if e := recover(); e != nil {
+			err = fmt.Errorf("searchCommands() -> %v", e)
+		}
+	}()
+	base := fmt.Sprintf("search?type=command&actionid=%.0f", aid)
+	switch show {
+	case "found":
+		base += "&foundanything=true"
+	case "notfound":
+		base += "&foundanything=false"
+	}
+	offset := 0
+	// loop until all results have been retrieved using paginated queries
+	for {
+		fmt.Printf(".")
+		target := fmt.Sprintf("%s&limit=50&offset=%d", base, offset)
+		resource, err := cli.GetAPIResource(target)
+		// because we query using pagination, the last query will return a 404 with no result.
+		// When that happens, GetAPIResource returns an error which we do not report to the user
+		if resource.Collection.Error.Message == "no results found" {
+			err = nil
+			break
+		} else if err != nil {
+			panic(err)
+		}
+		for _, item := range resource.Collection.Items {
+			for _, data := range item.Data {
+				if data.Name != "command" {
+					continue
+				}
+				cmd, err := client.ValueToCommand(data.Value)
+				if err != nil {
+					panic(err)
+				}
+				cmds = append(cmds, cmd)
+			}
+		}
+		// else increase limit and offset and continue
+		offset += 50
+	}
 	return
 }

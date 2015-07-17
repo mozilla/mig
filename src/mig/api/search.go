@@ -17,6 +17,12 @@ import (
 	"time"
 )
 
+type pagination struct {
+	Limit  float64 `json:"limit"`
+	Offset float64 `json:"offset"`
+	Next   string  `json:"next"`
+}
+
 // search runs searches
 func search(respWriter http.ResponseWriter, request *http.Request) {
 	var (
@@ -36,7 +42,12 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				Data: []cljs.Data{{Name: "search parameters", Value: p}},
 			})
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			if fmt.Sprintf("%v", e) == "no results found" {
+				respond(404, resource, respWriter, request)
+			} else {
+				respond(500, resource, respWriter, request)
+			}
+
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving search()"}.Debug()
 	}()
@@ -116,6 +127,9 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		switch p.Type {
 		case "action":
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d actions", len(results.([]mig.Action)))}
+			if len(results.([]mig.Action)) == 0 {
+				panic("no results found")
+			}
 			for i, r := range results.([]mig.Action) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("%s%s/action?actionid=%.0f",
@@ -131,6 +145,9 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			}
 		case "agent":
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d agents", len(results.([]mig.Agent)))}
+			if len(results.([]mig.Agent)) == 0 {
+				panic("no results found")
+			}
 			for i, r := range results.([]mig.Agent) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("%s%s/agent?agentid=%.0f",
@@ -146,6 +163,9 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			}
 		case "command":
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Command)))}
+			if len(results.([]mig.Command)) == 0 {
+				panic("no results found")
+			}
 			for i, r := range results.([]mig.Command) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("%s%s/command?commandid=%.0f",
@@ -161,6 +181,9 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			}
 		case "investigator":
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d investigators", len(results.([]mig.Investigator)))}
+			if len(results.([]mig.Investigator)) == 0 {
+				panic("no results found")
+			}
 			for i, r := range results.([]mig.Investigator) {
 				err = resource.AddItem(cljs.Item{
 					Href: fmt.Sprintf("%s%s/investigator?investigatorid=%.0f",
@@ -174,6 +197,26 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 					break
 				}
 			}
+		}
+	}
+	// if needed, add pagination info
+	if p.Offset > 0 {
+		// go to next limit and offset values before making the next URL
+		nextCount := p.Limit - p.Offset
+		nextP := p
+		nextP.Limit += nextCount
+		nextP.Offset += nextCount
+		page := pagination{
+			Limit:  p.Limit,
+			Offset: p.Offset,
+			Next:   ctx.Server.BaseURL + "/search?" + nextP.String(),
+		}
+		err = resource.AddItem(cljs.Item{
+			Href: loc,
+			Data: []cljs.Data{{Name: "pagination", Value: page}},
+		})
+		if err != nil {
+			panic(err)
 		}
 	}
 	// add search parameters at the end of the response
@@ -240,6 +283,11 @@ func parseSearchParameters(qp url.Values) (p migdb.SearchParameters, filterFound
 			p.Limit, err = strconv.ParseFloat(qp["limit"][0], 64)
 			if err != nil {
 				panic("invalid limit parameter")
+			}
+		case "offset":
+			p.Offset, err = strconv.ParseFloat(qp["offset"][0], 64)
+			if err != nil {
+				panic("invalid offset parameter")
 			}
 		case "report":
 			switch qp["report"][0] {

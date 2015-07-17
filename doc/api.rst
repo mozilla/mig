@@ -980,6 +980,10 @@ GET /api/v1/search
 
 	- `limit`: limit the number of results to 10,000 by default
 
+	- `offset`: discard the X first results, defaults to 0. Used in conjunction
+	  with `limit`, offset can be used to paginate search results.
+	  ex: **&limit=10&offset=50** will grab 10 results discarding the first 50.
+
 	- `report`: if set, return results in the given report format:
 		- `complianceitems` returns command results as compliance items
 		- `geolocations` returns command results as geolocation endpoints
