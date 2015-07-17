@@ -25,7 +25,11 @@ func printHelp(isCmd bool) {
 %spath <path>      - scribe processor
 		    ex: scribe ./mytests.json
 		    process scribe document on agent
-`, dash)
+
+%sonlytrue <bool>  - only true evaluations
+                    ex: onlytrue true
+		    just return document tests that evaluate to true
+`, dash, dash)
 }
 
 func loadScribeDocument(path string) (*scribelib.Document, error) {
@@ -93,6 +97,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		fs        flag.FlagSet
 		scribeDoc string
+		onlyTrue  bool
 	)
 
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
@@ -102,6 +107,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 
 	fs.Init("scribe", flag.ContinueOnError)
 	fs.StringVar(&scribeDoc, "path", "", "see help")
+	fs.BoolVar(&onlyTrue, "onlytrue", false, "see help")
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -116,6 +122,8 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 		}
 		p.ScribeDoc = *dp
 	}
+
+	p.OnlyTrue = onlyTrue
 
 	r.Parameters = *p
 

@@ -174,6 +174,9 @@ func (r *run) Run(in io.Reader) (resStr string) {
 		if err != nil {
 			panic(err)
 		}
+		if !tr.MasterResult && r.Parameters.OnlyTrue {
+			continue
+		}
 		e.Results = append(e.Results, tr)
 	}
 	buf, err := buildResults(*e, &r.Results)
@@ -228,6 +231,7 @@ type statistics struct {
 
 type parameters struct {
 	ScribeDoc scribelib.Document `json:"scribedoc"` // The scribe document for analysis.
+	OnlyTrue  bool               `json:"onlytrue"`  // Only return true evaluations
 }
 
 func newParameters() *parameters {
