@@ -315,6 +315,7 @@ func actionPrintList(aid float64, orders []string, cli client.Client) (err error
 				}
 			} else {
 				fmt.Println(str)
+				ctr++
 			}
 		}
 	}
