@@ -52,7 +52,7 @@ type Context struct {
 
 // Init() initializes a context from a configuration file into an
 // existing context struct
-func Init(path string) (ctx Context, err error) {
+func Init(path string, debug bool) (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("Init() -> %v", e)
@@ -71,6 +71,10 @@ func Init(path string) (ctx Context, err error) {
 		panic(err)
 	}
 
+	if debug {
+		ctx.Logging.Level = "debug"
+		ctx.Logging.Mode = "stdout"
+	}
 	ctx.Logging, err = mig.InitLogger(ctx.Logging, "mig-api")
 	if err != nil {
 		panic(err)

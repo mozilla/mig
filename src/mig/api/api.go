@@ -30,6 +30,7 @@ func main() {
 
 	// command line options
 	var config = flag.String("c", "/etc/mig/api.cfg", "Load configuration from file")
+	var debug = flag.Bool("d", false, "Debug mode: run in foreground, log to stdout.")
 	var showversion = flag.Bool("V", false, "Show build version and exit")
 	flag.Parse()
 
@@ -41,7 +42,7 @@ func main() {
 	// The context initialization takes care of parsing the configuration,
 	// and creating connections to database, syslog, ...
 	fmt.Fprintf(os.Stderr, "Initializing API context...")
-	ctx, err = Init(*config) //ctx is a global variable
+	ctx, err = Init(*config, *debug) //ctx is a global variable
 	if err != nil {
 		fmt.Printf("\nFATAL: %v\n", err)
 		os.Exit(9)
