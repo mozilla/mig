@@ -15,6 +15,7 @@ import (
 	"io"
 	"mig/modules"
 	"mig/modules/file"
+	"regexp"
 	"runtime"
 	"strconv"
 	"time"
@@ -63,6 +64,18 @@ func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 			es := fmt.Sprintf("Error: %v in \"%v\"", x.Error, x.Name)
 			r.Errors = append(r.Errors, es)
 		}
+	}
+	endCounters()
+	r.Statistics = stats
+	buf, err = json.Marshal(r)
+	return
+}
+
+func buildResultsPackage(e elements, r *modules.Result) (buf []byte, err error) {
+	r.Success = true
+	r.Elements = e
+	if len(e.Packages) > 0 {
+		r.FoundAnything = true
 	}
 	endCounters()
 	r.Statistics = stats
@@ -161,34 +174,75 @@ func (r *run) Run(in io.Reader) (resStr string) {
 
 	document := r.Parameters.ScribeDoc
 	e := &elements{}
-	e.Results = make([]scribelib.TestResult, 0)
 
-	// Proceed with analysis here. ValidateParameters() will have already
-	// validated the document.
-	err = scribelib.AnalyzeDocument(document)
-	if err != nil {
-		panic(err)
-	}
-	for _, x := range document.GetTestNames() {
-		tr, err := scribelib.GetResults(&document, x)
+	switch r.Parameters.RunMode {
+	case modeScribe:
+		e.Results = make([]scribelib.TestResult, 0)
+		// Proceed with analysis here. ValidateParameters() will have already
+		// validated the document.
+		err = scribelib.AnalyzeDocument(document)
 		if err != nil {
 			panic(err)
 		}
-		if !tr.MasterResult && r.Parameters.OnlyTrue {
-			continue
+		for _, x := range document.GetTestNames() {
+			tr, err := scribelib.GetResults(&document, x)
+			if err != nil {
+				panic(err)
+			}
+			if !tr.MasterResult && r.Parameters.OnlyTrue {
+				continue
+			}
+			e.Results = append(e.Results, tr)
 		}
-		e.Results = append(e.Results, tr)
+		buf, err := buildResults(*e, &r.Results)
+		if err != nil {
+			panic(err)
+		}
+		resStr = string(buf)
+		return
+	case modePackage:
+		e.Packages = make([]scribelib.PackageInfo, 0)
+		pkglist := scribelib.QueryPackages()
+		re, err := regexp.Compile(r.Parameters.PkgMatch)
+		if err != nil {
+			panic(err)
+		}
+		for _, x := range pkglist {
+			if !re.MatchString(x.Name) {
+				continue
+			}
+			e.Packages = append(e.Packages, x)
+		}
+		buf, err := buildResultsPackage(*e, &r.Results)
+		if err != nil {
+			panic(err)
+		}
+		resStr = string(buf)
+		return
+	default:
 	}
-	buf, err := buildResults(*e, &r.Results)
-	if err != nil {
-		panic(err)
-	}
-	resStr = string(buf)
+	panic("no operation executed")
 	return
 }
 
 func (r *run) ValidateParameters() (err error) {
-	err = r.Parameters.ScribeDoc.Validate()
+	if r.Parameters.RunMode != modeScribe && r.Parameters.RunMode != modePackage {
+		return fmt.Errorf("invalid run mode specified")
+	}
+	switch r.Parameters.RunMode {
+	case modeScribe:
+		err = r.Parameters.ScribeDoc.Validate()
+	case modePackage:
+		if len(r.Parameters.PkgMatch) == 0 {
+			return fmt.Errorf("must specify pkgmatch in package mode")
+		}
+		_, err := regexp.Compile(r.Parameters.PkgMatch)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("invalid run mode specified")
+	}
 	return
 }
 
@@ -206,6 +260,10 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 	if err != nil {
 		panic(err)
 	}
+	for _, x := range elem.Packages {
+		s := fmt.Sprintf("package name:%v version:%v type:%v", x.Name, x.Version, x.Type)
+		prints = append(prints, s)
+	}
 	for _, x := range elem.Results {
 		for _, y := range x.SingleLineResults() {
 			prints = append(prints, y)
@@ -222,16 +280,26 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 }
 
 type elements struct {
-	Results []scribelib.TestResult `json:"results"` // Results of evaluation.
+	Results  []scribelib.TestResult  `json:"results"`  // Results of evaluation.
+	Packages []scribelib.PackageInfo `json:"packages"` // Results of package query.
 }
 
 type statistics struct {
 	ExecRuntime string `json:"execruntime"` // Total execution time.
 }
 
+// Execution modes
+const (
+	_ = iota
+	modeScribe
+	modePackage
+)
+
 type parameters struct {
 	ScribeDoc scribelib.Document `json:"scribedoc"` // The scribe document for analysis.
 	OnlyTrue  bool               `json:"onlytrue"`  // Only return true evaluations
+	RunMode   int                `json:"runmode"`   // Execution mode
+	PkgMatch  string             `json:"pkgmatch"`  // Match regexp for package mode
 }
 
 func newParameters() *parameters {

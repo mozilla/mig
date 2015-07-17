@@ -26,10 +26,14 @@ func printHelp(isCmd bool) {
 		    ex: scribe ./mytests.json
 		    process scribe document on agent
 
+%spkgmatch <regex> - package query
+                    ex: package '^openssl'
+		    scribe package query for matching string
+
 %sonlytrue <bool>  - only true evaluations
                     ex: onlytrue true
 		    just return document tests that evaluate to true
-`, dash, dash)
+`, dash, dash, dash)
 }
 
 func loadScribeDocument(path string) (*scribelib.Document, error) {
@@ -98,6 +102,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 		fs        flag.FlagSet
 		scribeDoc string
 		onlyTrue  bool
+		pkgMatch  string
 	)
 
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
@@ -108,6 +113,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.Init("scribe", flag.ContinueOnError)
 	fs.StringVar(&scribeDoc, "path", "", "see help")
 	fs.BoolVar(&onlyTrue, "onlytrue", false, "see help")
+	fs.StringVar(&pkgMatch, "pkgmatch", "", "see help")
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -121,6 +127,10 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 			return nil, err
 		}
 		p.ScribeDoc = *dp
+		p.RunMode = modeScribe
+	} else if pkgMatch != "" {
+		p.PkgMatch = pkgMatch
+		p.RunMode = modePackage
 	}
 
 	p.OnlyTrue = onlyTrue
