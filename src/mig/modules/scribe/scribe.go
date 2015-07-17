@@ -3,6 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
+
+// scribe module implementation for MIG.
 package scribe
 
 import (
@@ -20,8 +22,7 @@ import (
 
 var stats statistics
 
-// Various counters used to populate module statistics at the end of the
-// run.
+// Counters to populate statistics at end of run.
 var counters struct {
 	startTime time.Time
 }
@@ -55,6 +56,13 @@ func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 	r.Elements = e
 	if len(e.Results) > 0 {
 		r.FoundAnything = true
+	}
+	// If any tests resulted in an error, store them as errors in the command.
+	for _, x := range e.Results {
+		if x.IsError {
+			es := fmt.Sprintf("Error: %v in \"%v\"", x.Error, x.Name)
+			r.Errors = append(r.Errors, es)
+		}
 	}
 	endCounters()
 	r.Statistics = stats
@@ -178,10 +186,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 
 func (r *run) ValidateParameters() (err error) {
 	err = r.Parameters.ScribeDoc.Validate()
-	if err != nil {
-		return err
-	}
-	return nil
+	return
 }
 
 func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
@@ -207,7 +212,7 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 		for _, we := range result.Errors {
 			prints = append(prints, we)
 		}
-		s := fmt.Sprintf("Statistics: runtime %v, parsetime %v, defsize %v", stats.ExecRuntime, stats.Parsetime, stats.InDocSize)
+		s := fmt.Sprintf("Statistics: runtime %v", stats.ExecRuntime)
 		prints = append(prints, s)
 	}
 	return
@@ -218,9 +223,7 @@ type elements struct {
 }
 
 type statistics struct {
-	ExecRuntime string `json:"execruntime"`       // Total execution time.
-	Parsetime   string `json:"scribeparsetime"`   // Document parse time.
-	InDocSize   int    `json:"inputdocumentsize"` // Input document size.
+	ExecRuntime string `json:"execruntime"` // Total execution time.
 }
 
 type parameters struct {
