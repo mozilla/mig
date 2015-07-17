@@ -11,7 +11,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	scribelib "github.com/ameihm0912/scribe/src/scribe"
+	scribelib "github.com/mozilla/scribe/src/scribe"
 	"io"
 	"mig/modules"
 	"mig/modules/file"

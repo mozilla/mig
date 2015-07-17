@@ -10,7 +10,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	scribelib "github.com/ameihm0912/scribe/src/scribe"
+	scribelib "github.com/mozilla/scribe/src/scribe"
 	"os"
 	"strings"
 )
