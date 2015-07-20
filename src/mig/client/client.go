@@ -864,6 +864,42 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 		}
 		fmt.Fprintf(os.Stderr, "\x1b[31m%d %s %s results\x1b[0m\n", agtCount, s, show)
 	}
+	if show != "all" {
+		var unsuccessful map[string][]string
+		unsuccessful = make(map[string][]string)
+		for _, status := range []string{mig.StatusCancelled, mig.StatusExpired, mig.StatusFailed, mig.StatusTimeout} {
+			offset = 0
+			for {
+				// print commands that have not returned successfully
+				target := fmt.Sprintf("search?type=command&limit=%d&offset=%d&actionid=%.0f&status=%s", limit, offset, a.ID, status)
+				resource, err := cli.GetAPIResource(target)
+				// because we query using pagination, the last query will return a 404 with no result.
+				// When that happens, GetAPIResource returns an error which we do not report to the user
+				if resource.Collection.Error.Message == "no results found" {
+					err = nil
+					break
+				} else if err != nil {
+					panic(err)
+				}
+				for _, item := range resource.Collection.Items {
+					for _, data := range item.Data {
+						if data.Name != "command" {
+							continue
+						}
+						cmd, err := ValueToCommand(data.Value)
+						if err != nil {
+							panic(err)
+						}
+						unsuccessful[status] = append(unsuccessful[status], cmd.Agent.Name)
+					}
+				}
+				offset += limit
+			}
+		}
+		for status, agents := range unsuccessful {
+			fmt.Fprintf(os.Stderr, "\x1b[35m%s: %s\x1b[0m\n", status, strings.Join(agents, ", "))
+		}
+	}
 	return
 }
 
