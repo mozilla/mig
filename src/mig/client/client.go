@@ -783,7 +783,7 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 		found                   bool
 		report, foundQ          string
 		locs                    []CommandLocation
-		limit, offset, agtCount int = 10, 0, 0
+		limit, offset, agtCount int = 37, 0, 0
 	)
 	if render == "map" {
 		report = "&report=geolocations"
@@ -847,7 +847,7 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 			break
 		}
 		// else increase limit and offset and continue
-		offset += 10
+		offset += limit
 		agtCount += count
 	}
 	switch render {
