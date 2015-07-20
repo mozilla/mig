@@ -11,9 +11,11 @@ import (
 	"fmt"
 	"github.com/bobappleyard/readline"
 	"io"
+	"io/ioutil"
 	"log"
 	"mig"
 	"mig/client"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -182,11 +184,23 @@ status			display platform status: connected agents, latest actions, ...
 			}
 		case "query":
 			fmt.Println("querying", orders[1])
-			resource, err := cli.GetAPIResource(orders[1])
+			r, err := http.NewRequest("GET", orders[1], nil)
 			if err != nil {
-				log.Println(err)
+				panic(err)
 			}
-			fmt.Printf("%+v\n", resource)
+			resp, err := cli.Do(r)
+			if err != nil {
+				panic(err)
+			}
+			if err != nil || resp.Body == nil {
+				log.Println("query failed")
+			} else {
+				body, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Printf("%s\n", body)
+			}
 		case "search":
 			err = search(input, cli)
 			if err != nil {
