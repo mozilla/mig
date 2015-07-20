@@ -201,11 +201,8 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	// if needed, add pagination info
 	if p.Offset > 0 {
-		// go to next limit and offset values before making the next URL
-		nextCount := p.Limit - p.Offset
 		nextP := p
-		nextP.Limit += nextCount
-		nextP.Offset += nextCount
+		nextP.Offset += p.Limit
 		page := pagination{
 			Limit:  p.Limit,
 			Offset: p.Offset,
