@@ -225,14 +225,6 @@ agent-remove-script:
 	echo 'echo mig-agent removed but not killed if running' >> tmp/agent_remove.sh
 	chmod 0755 tmp/agent_remove.sh
 
-agent-cron:
-	mkdir -p tmp/etc/cron.d/
-	echo 'PATH="/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin"'			> tmp/etc/cron.d/mig-agent
-	echo 'SHELL=/bin/bash'																>> tmp/etc/cron.d/mig-agent
-	echo 'MAILTO=""'																	>> tmp/etc/cron.d/mig-agent
-	echo '*/10 * * * * root /sbin/mig-agent -q=pid 2>&1 1>/dev/null || /sbin/mig-agent' >> tmp/etc/cron.d/mig-agent
-	chmod 0644 tmp/etc/cron.d/mig-agent
-
 msi-agent: mig-agent
 ifneq ($(OS),windows)
 	echo 'you must set OS=windows on the make command line to compile a MSI package'
@@ -346,4 +338,4 @@ clean: clean-agent
 	rm -rf tmp
 	find src/ -maxdepth 1 -mindepth 1 ! -name mig -exec rm -rf {} \;
 
-.PHONY: clean clean-agent doc go_get_deps_into_system mig-agent-386 mig-agent-amd64 agent-install-script agent-cron
+.PHONY: clean clean-agent doc go_get_deps_into_system agent-install-script agent-remove-script
