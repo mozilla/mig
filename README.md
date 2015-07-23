@@ -2,8 +2,6 @@ MIG: Mozilla InvestiGator
 =========================
 <img style="float: right" src="doc/.files/MIG-logo-CC-small.jpg" size="300px">
 
-**Note: MIG is under heavy development. The code is stable and used in production, but changes may be backward incompatible. Be warned.**
-
 [![Build Status](https://travis-ci.org/mozilla/mig.svg?branch=master)](https://travis-ci.org/mozilla/mig)
 
 MIG is OpSec's platform for investigative surgery of remote endpoints.
@@ -18,23 +16,22 @@ or configuration of endpoints.
 | network inspection| ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | (partial) |
 | memory inspection | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) |
 | vuln management   | ![check](doc/.files/check_mark_green.png) | (planned) | (planned) |
+| log analysis      | (planned) | (planned) | (planned) |
 | system auditing   | (planned) | (planned) | (planned) |
 
-
-Imagine that it's 7am on a saturday morning, and someone just released a
+Imagine it is 7am on a saturday morning, and someone just released a
 critical vulnerability for your favorite PHP application. The vuln is already
-exploited and security groups are releasing indicators of compromise. Your
-weekend isn't starting great, and the thought of manually inspecting thousands
-of systems isn't making it any better.
+exploited and security groups are releasing indicators of compromise (IOCs).
+Your weekend isn't starting great, and the thought of manually inspecting
+thousands of systems isn't making it any better.
 
-MIG can help. The signature of the vulnerable PHP app (an md5 of a file, a regex
-on file, or just a filename) can be searched for across all your systems using
-the `file` module. Similarly, indicators of compromise such as specific log
-entries, backdoor files with {md5,sha{1,256,512,3-{256,512}}} hashes, IP
-addresses from botnets or signature in processes memories can be investigated
-using MIG. Suddenly, your weekend is looking a lot better. And with just a few
-command lines, thousands of systems will be remotely investigated to verify that
-you're not at risk.
+MIG can help. The signature of the vulnerable PHP app (the md5 of a file, a regex,
+or just a filename) can be searched for across all your systems using
+the `file` module. Similarly, IOCs such as specific log entries, backdoor files
+with {md5,sha{1,256,512,3-{256,512}}} hashes, IP addresses from botnets or byte
+strings in processes memories can be investigated using MIG. Suddenly, your
+weekend is looking a lot better. And with just a few commands, thousands of systems
+will be remotely investigated to verify that you're not at risk.
 
 ![MIG command line demo](doc/.files/mig-cmd-demo.gif)
 
@@ -61,17 +58,27 @@ platform, but only reply to questions instead. All actions are signed by GPG
 keys that are not stored in the platform, thus preventing a compromise from
 taking over the entire infrastructure.
 
-Discussion
+Technology
 ----------
-Join **#mig** on [irc.mozilla.org](https://wiki.mozilla.org/IRC)
+MIG is built in Go and uses a REST API that receives signed JSON messages distributed
+to agents via RabbitMQ and stored in a Postgres database.
 
-Video presentation
-------------------
+It is:
+* Massively Distributed means Fast.
+* Simple to deploy and Cross-Platform.
+* Secured using OpenPGP.
+* Respectful of privacy by never retrieving raw data from endpoints.
 
 Check out this 10 minutes video for a more general presentation and a demo of
 the console interface.
 
 [![MIG youtube video](http://img.youtube.com/vi/wJwj5YB6FFA/0.jpg)](http://www.youtube.com/watch?v=wJwj5YB6FFA)
+
+A more detailed presentation is available at [MIG HITB Slides](https://jve.linuxwall.info/ressources/taf/MIG_HITB/).
+
+Discussion
+----------
+Join **#mig** on [irc.mozilla.org](https://wiki.mozilla.org/IRC)
 
 Documentation
 -------------
