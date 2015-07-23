@@ -920,11 +920,6 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 		return
 	}
 	for i, result := range cmd.Results {
-		if !onlyFound {
-			for _, rerr := range result.Errors {
-				fmt.Fprintf(os.Stderr, "%s[error] %s\n", prefix, rerr)
-			}
-		}
 		if len(cmd.Action.Operations) <= i {
 			if !onlyFound {
 				fmt.Fprintf(os.Stderr, "%s[error] operation %d did not return results\n", prefix, i)
