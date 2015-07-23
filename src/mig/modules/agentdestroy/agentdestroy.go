@@ -86,8 +86,7 @@ func (r *run) Run(in io.Reader) (out string) {
 
 	// Refuse to suicide
 	if r.Parameters.PID == os.Getppid() {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("PID '%d' is mine. Refusing to suicide.", r.Parameters.PID))
-		return r.buildResults()
+		panic(fmt.Sprintf("PID '%d' is mine. Refusing to suicide.", r.Parameters.PID))
 	}
 
 	// get the path of the agent's executable
@@ -96,59 +95,52 @@ func (r *run) Run(in io.Reader) (out string) {
 	case "linux", "darwin", "freebsd", "openbsd", "netbsd":
 		targetExecutable, err = os.Readlink(fmt.Sprintf("/proc/%d/exe", r.Parameters.PID))
 		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Executable path of PID '%d' not found: '%v'", r.Parameters.PID, err))
-			return r.buildResults()
+			panic(fmt.Sprintf("Executable path of PID '%d' not found: '%v'", r.Parameters.PID, err))
 		}
 	case "windows":
 		targetExecutable = fmt.Sprintf("C:\\Program Files\\mig\\mig-agent-%s.exe", r.Parameters.Version)
 	default:
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("'%s' isn't a supported OS", runtime.GOOS))
-		return r.buildResults()
+		panic(fmt.Sprintf("'%s' isn't a supported OS", runtime.GOOS))
 	}
 	// verify that the executable we're removing isn't in use by the current agent
 	// this can happen when two agents are running of the same executable
 	// in which case, do not remove the executable, and only kill the process
 	myExecutable, err := osext.Executable()
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Failed to retrieve my executable location: '%v'", err))
-		return r.buildResults()
+		panic(fmt.Sprintf("Failed to retrieve my executable location: '%v'", err))
 	}
 	removeExecutable := true
 	if myExecutable == targetExecutable {
 		r.Results.Errors = append(r.Results.Errors, "Executable not removed because current agent uses it as well")
 		removeExecutable = false
 	}
-
+	removeStatus := ""
 	if removeExecutable {
 		// check that the binary we're removing has the right version
 		version, err := getAgentVersion(targetExecutable)
 		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Failed to check agent version: '%v'", err))
-			return r.buildResults()
+			panic(fmt.Sprintf("Failed to check agent version: '%v'", err))
 		}
 		if version != r.Parameters.Version {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Version mismatch. Expected '%s', found '%s'", r.Parameters.Version, version))
-			return r.buildResults()
+			panic(fmt.Sprintf("Version mismatch. Expected '%s', found '%s'", r.Parameters.Version, version))
 		}
 		err = os.Remove(targetExecutable)
 		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("Failed to remove executable '%s': '%v'", targetExecutable, err))
-			return r.buildResults()
+			panic(fmt.Sprintf("Failed to remove executable '%s': '%v'", targetExecutable, err))
 		}
+		removeStatus = fmt.Sprintf(" and its executable removed from %s", targetExecutable)
 	}
 
 	// Then kill the PID
 	process, err := os.FindProcess(r.Parameters.PID)
 	if err != nil {
-		r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("PID '%d' not found. Returned error '%v'", r.Parameters.PID, err))
-		return r.buildResults()
-	} else {
-		err = process.Kill()
-		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("PID '%d' not killed. Returned error '%v'", r.Parameters.PID, err))
-			return r.buildResults()
-		}
+		panic(fmt.Sprintf("PID '%d' not found. Returned error '%v'", r.Parameters.PID, err))
 	}
+	err = process.Kill()
+	if err != nil {
+		panic(fmt.Sprintf("PID '%d' not killed. Returned error '%v'", r.Parameters.PID, err))
+	}
+	r.Results.Elements = fmt.Sprintf("PID %d from agent %s has been killed%s", r.Parameters.PID, r.Parameters.Version, removeStatus)
 	r.Results.Success = true
 	return r.buildResults()
 }
@@ -177,4 +169,27 @@ func (r *run) buildResults() (jsonResults string) {
 		panic(err)
 	}
 	return string(jsonOutput[:])
+}
+
+func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
+	var statusMsg string
+	err = result.GetElements(&statusMsg)
+	if err != nil {
+		prints = append(prints, "[error] failed to retrieve status message from results")
+	}
+	if statusMsg != "" {
+		prints = append(prints, statusMsg)
+	}
+	if foundOnly {
+		return
+	}
+	for _, e := range result.Errors {
+		prints = append(prints, "[error] "+e)
+	}
+	if result.Success {
+		prints = append(prints, fmt.Sprintf("agentdestroy module has succeeded"))
+	} else {
+		prints = append(prints, fmt.Sprintf("agentdestroy module has failed"))
+	}
+	return
 }
