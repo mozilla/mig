@@ -288,7 +288,7 @@ func initRelay(orig_ctx Context) (ctx Context, err error) {
 		panic(err)
 	}
 	// declare the "mig" exchange used for communication with the agents
-	err = ctx.MQ.Chan.ExchangeDeclare("mig", "topic", true, false, false, false, nil)
+	err = ctx.MQ.Chan.ExchangeDeclare("mig", "direct", true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
