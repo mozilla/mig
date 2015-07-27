@@ -11,7 +11,6 @@ import (
 	_ "mig/modules/memory"
 	_ "mig/modules/netstat"
 	_ "mig/modules/ping"
-	_ "mig/modules/pkg"
 	_ "mig/modules/timedrift"
 	//_ "mig/modules/upgrade"
 	//_ "mig/modules/example"
