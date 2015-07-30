@@ -20,7 +20,11 @@ import (
 )
 
 type IDs struct {
-	minActionID, maxActionID, minCommandID, maxCommandID, minAgentID, maxAgentID, minInvID, maxInvID float64
+	minActionID, maxActionID   float64
+	minCommandID, maxCommandID float64
+	minAgentID, maxAgentID     float64
+	minInvID, maxInvID         float64
+	minManID, maxManID         float64
 }
 
 const MAXFLOAT64 float64 = 9007199254740991 // 2^53-1
@@ -61,6 +65,15 @@ func makeIDsFromParams(p search.Parameters) (ids IDs, err error) {
 			return
 		}
 		ids.maxInvID = ids.minInvID
+	}
+	ids.minManID = 0
+	ids.maxManID = MAXFLOAT64
+	if p.ManifestID != "∞" {
+		ids.minManID, err = strconv.ParseFloat(p.ManifestID, 64)
+		if err != nil {
+			return
+		}
+		ids.maxManID = ids.minManID
 	}
 	return
 }
@@ -821,6 +834,82 @@ func (db *DB) SearchInvestigators(p search.Parameters) (investigators []mig.Inve
 			return
 		}
 		investigators = append(investigators, inv)
+	}
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
+	return
+}
+
+func (db *DB) SearchManifests(p search.Parameters) (mrecords []mig.ManifestRecord, err error) {
+	var rows *sql.Rows
+	ids, err := makeIDsFromParams(p)
+	columns := `manifests.id, manifests.name, manifests.status, manifests.target, manifests.timestamp`
+	where := ""
+	vals := []interface{}{}
+	valctr := 0
+	if p.Before.Before(time.Now().Add(search.DefaultWindow - time.Hour)) {
+		where += fmt.Sprintf(`manifests.timestamp <= $%d `, valctr+1)
+		vals = append(vals, p.Before)
+		valctr += 1
+	}
+	if p.After.After(time.Now().Add(-(search.DefaultWindow - time.Hour))) {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`manifests.timestamp >= $%d `, valctr+1)
+		vals = append(vals, p.After)
+		valctr += 1
+	}
+	if p.ManifestName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`manifests.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.ManifestName)
+		valctr += 1
+	}
+	if p.ManifestID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`manifests.id >= $%d AND manifests.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minManID, ids.maxManID)
+		valctr += 2
+	}
+	if p.Status != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`manifests.status ILIKE $%d`, valctr+1)
+		vals = append(vals, p.Status)
+		valctr += 1
+	}
+	query := fmt.Sprintf(`SELECT %s FROM manifests WHERE %s;`, columns, where)
+	stmt, err := db.c.Prepare(query)
+	if err != nil {
+		err = fmt.Errorf("Error while preparing search statement: '%v' in '%s'", err, query)
+		return
+	}
+	if stmt != nil {
+		defer stmt.Close()
+	}
+	rows, err = stmt.Query(vals...)
+	if err != nil {
+		err = fmt.Errorf("Error while finding manifests: '%v'", err)
+	}
+	if rows != nil {
+		defer rows.Close()
+	}
+	for rows.Next() {
+		var mr mig.ManifestRecord
+		err = rows.Scan(&mr.ID, &mr.Name, &mr.Status, &mr.Target, &mr.Timestamp)
+		if err != nil {
+			err = fmt.Errorf("Failed to retrieve manifest data: '%v'", err)
+			return
+		}
+		mrecords = append(mrecords, mr)
 	}
 	if err := rows.Err(); err != nil {
 		err = fmt.Errorf("Failed to complete database query: '%v'", err)

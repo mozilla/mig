@@ -45,7 +45,7 @@ INSTALL		:= install
 
 
 all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-action-generator mig-action-verifier worker-agent-intel \
-	runner-compliance runner-scribe
+	runner-compliance runner-scribe mig-loader
 
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
@@ -71,6 +71,13 @@ mig-runner: create-bindir
 
 mig-action-generator: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
+
+mig-loader: create-bindir
+	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
+	# test if the agent configuration variable contains something different than the default value
+	# and if so, replace the link to the default configuration with the provided configuration
+	if [ $(AGTCONF) != "conf/mig-agent-conf.go.inc" ]; then rm mig-loader/configuration.go; cp $(AGTCONF) mig-loader/configuration.go; fi
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader $(GOLDFLAGS) mig.ninja/mig/mig-loader
 
 mig-action-verifier: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
@@ -271,6 +278,7 @@ test:  test-modules
 	$(GO) test mig.ninja/mig/mig-scheduler/...
 	$(GO) test mig.ninja/mig/mig-api/...
 	$(GO) test mig.ninja/mig/mig-runner/...
+	$(GO) test mig.ninja/mig/mig-loader/...
 	$(GO) test mig.ninja/mig/client/...
 	$(GO) test mig.ninja/mig/database/...
 	$(GO) test mig.ninja/mig/workers/...

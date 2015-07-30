@@ -4,7 +4,7 @@
 //
 // Contributor:
 // - Aaron Meihm ameihm@mozilla.com [:alm]
-package main
+package agentcontext
 
 import (
 	"fmt"
@@ -25,20 +25,20 @@ const AWSMETAPORT int = 80
 // service
 const FETCHBODYMAX int64 = 10240
 
-func addAWSMetadata(orig_ctx Context) (ctx Context, err error) {
+func addAWSMetadata(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 
 	// First, check and see if we have access to a valid metadata service
 	buf, err := awsFetchMeta("")
 	if err != nil || buf == "" {
-		ctx.Channels.Log <- mig.Log{Desc: "AWS metadata service not found, skipping fetch"}.Debug()
+		logChan <- mig.Log{Desc: "AWS metadata service not found, skipping fetch"}.Debug()
 		return ctx, nil
 	}
 
 	// Attempt to fetch metadata; if any error occurs we just revert to the
 	// previous context
-	ctx.Channels.Log <- mig.Log{Desc: "Attempting to retrieve AWS instance metadata"}.Debug()
-	flist := []func(Context) (Context, error){
+	logChan <- mig.Log{Desc: "Attempting to retrieve AWS instance metadata"}.Debug()
+	flist := []func(AgentContext) (AgentContext, error){
 		addAWSInstanceID,
 		addAWSLocalIPV4,
 		addAWSAMIID,
@@ -47,55 +47,55 @@ func addAWSMetadata(orig_ctx Context) (ctx Context, err error) {
 	for i := range flist {
 		ctx, err = flist[i](ctx)
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Error during metadata fetch: %v", err)}.Debug()
+			logChan <- mig.Log{Desc: fmt.Sprintf("Error during metadata fetch: %v", err)}.Debug()
 			return orig_ctx, nil
 		}
 	}
-	ctx.Channels.Log <- mig.Log{Desc: "AWS metadata fetch successful"}.Debug()
+	logChan <- mig.Log{Desc: "AWS metadata fetch successful"}.Debug()
 	return ctx, nil
 }
 
-func addAWSInstanceID(orig_ctx Context) (ctx Context, err error) {
+func addAWSInstanceID(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	var res string
 	res, err = awsFetchMeta("instance-id")
 	if err != nil {
 		return
 	}
-	ctx.Agent.Env.AWS.InstanceID = res
+	ctx.AWS.InstanceID = res
 	return
 }
 
-func addAWSLocalIPV4(orig_ctx Context) (ctx Context, err error) {
+func addAWSLocalIPV4(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	var res string
 	res, err = awsFetchMeta("local-ipv4")
 	if err != nil {
 		return
 	}
-	ctx.Agent.Env.AWS.LocalIPV4 = res
+	ctx.AWS.LocalIPV4 = res
 	return
 }
 
-func addAWSAMIID(orig_ctx Context) (ctx Context, err error) {
+func addAWSAMIID(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	var res string
 	res, err = awsFetchMeta("ami-id")
 	if err != nil {
 		return
 	}
-	ctx.Agent.Env.AWS.AMIID = res
+	ctx.AWS.AMIID = res
 	return
 }
 
-func addAWSInstanceType(orig_ctx Context) (ctx Context, err error) {
+func addAWSInstanceType(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	var res string
 	res, err = awsFetchMeta("instance-type")
 	if err != nil {
 		return
 	}
-	ctx.Agent.Env.AWS.InstanceType = res
+	ctx.AWS.InstanceType = res
 	return
 }
 

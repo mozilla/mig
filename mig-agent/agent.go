@@ -29,6 +29,21 @@ import (
 // available, like during a shutdown
 var publication sync.Mutex
 
+// Agent runtime options; stores command line flags used when the agent was
+// executed.
+type runtimeOptions struct {
+	debug          bool
+	mode           string
+	file           string
+	config         string
+	query          string
+	foreground     bool
+	upgrading      bool
+	serviceInstall bool
+	pretty         bool
+	showversion    bool
+}
+
 type moduleResult struct {
 	id       float64
 	err      error
@@ -51,7 +66,10 @@ type moduleOp struct {
 var runningOps = make(map[float64]moduleOp)
 
 func main() {
-	var err error
+	var (
+		runOpt runtimeOptions
+		err    error
+	)
 	// only use half the cpus available on the machine, never more
 	cpus := runtime.NumCPU() / 2
 	if cpus == 0 {
@@ -61,27 +79,26 @@ func main() {
 
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
-	var (
-		debug       = flag.Bool("d", false, "Debug mode: run in foreground, log to stdout.")
-		mode        = flag.String("m", "agent", "Module to run (eg. agent, filechecker).")
-		file        = flag.String("i", "/path/to/file", "Load action from file.")
-		config      = flag.String("c", "/etc/mig/mig-agent.cfg", "Load configuration from file.")
-		query       = flag.String("q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
-		foreground  = flag.Bool("f", false, "Agent will fork into background by default. Except if this flag is set.")
-		upgrading   = flag.Bool("u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
-		pretty      = flag.Bool("p", false, "When running a module, pretty print the results instead of returning JSON.")
-		showversion = flag.Bool("V", false, "Print Agent version to stdout and exit.")
-	)
+	flag.BoolVar(&runOpt.debug, "d", false, "Debug mode: run in foreground, log to stdout.")
+	flag.StringVar(&runOpt.mode, "m", "agent", "Module to run (eg. agent, filechecker).")
+	flag.StringVar(&runOpt.file, "i", "/path/to/file", "Load action from file.")
+	flag.StringVar(&runOpt.config, "c", "/etc/mig/mig-agent.cfg", "Load configuration from file.")
+	flag.StringVar(&runOpt.query, "q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
+	flag.BoolVar(&runOpt.foreground, "f", false, "Agent will fork into background by default. Except if this flag is set.")
+	flag.BoolVar(&runOpt.upgrading, "u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
+	flag.BoolVar(&runOpt.serviceInstall, "s", false, "Do not run agent, instead just install agent as a service.")
+	flag.BoolVar(&runOpt.pretty, "p", false, "When running a module, pretty print the results instead of returning JSON.")
+	flag.BoolVar(&runOpt.showversion, "V", false, "Print Agent version to stdout and exit.")
 
 	flag.Parse()
 
-	if *showversion {
+	if runOpt.showversion {
 		fmt.Println(mig.Version)
 		os.Exit(0)
 	}
 
-	if *query != "somequery" {
-		resp, err := socketQuery(SOCKET, *query)
+	if runOpt.query != "somequery" {
+		resp, err := socketQuery(SOCKET, runOpt.query)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -90,8 +107,8 @@ func main() {
 		goto exit
 	}
 
-	if *file != "/path/to/file" {
-		res, err := loadActionFromFile(*file, *pretty)
+	if runOpt.file != "/path/to/file" {
+		res, err := loadActionFromFile(runOpt.file, runOpt.pretty)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -101,39 +118,39 @@ func main() {
 	}
 
 	// attempt to read a local configuration file
-	err = configLoad(*config)
+	err = configLoad(runOpt.config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[warn] Could not load a local conf from %q, err: %v\n", *config, err)
+		fmt.Fprintf(os.Stderr, "[warn] Could not load a local conf from %q, err: %v\n", runOpt.config, err)
 		fmt.Fprintf(os.Stderr, "[info] Using builtin conf.\n")
 	} else {
-		fmt.Fprintf(os.Stderr, "[info] Using external conf from %q\n", *config)
+		fmt.Fprintf(os.Stderr, "[info] Using external conf from %q\n", runOpt.config)
 	}
 
-	if *debug {
-		*foreground = true
+	if runOpt.debug {
+		runOpt.foreground = true
 		LOGGINGCONF.Level = "debug"
 		LOGGINGCONF.Mode = "stdout"
 	}
 
 	// if checkin mode is set in conf, enforce the mode
-	if CHECKIN && *mode == "agent" {
-		*mode = "agent-checkin"
+	if CHECKIN && runOpt.mode == "agent" {
+		runOpt.mode = "agent-checkin"
 	}
 	// run the agent in the correct mode. the default is to call a module.
-	switch *mode {
+	switch runOpt.mode {
 	case "agent":
-		err = runAgent(*foreground, *upgrading, *debug)
+		err = runAgent(runOpt)
 		if err != nil {
 			panic(err)
 		}
 	case "agent-checkin":
-		*foreground = true
+		runOpt.foreground = true
 		// in checkin mode, the agent is not allowed to run for longer than
 		// MODULETIMEOUT, so we create a timer that force exit if the run
 		// takes too long.
 		done := make(chan error, 1)
 		go func() {
-			done <- runAgentCheckin(*foreground, *upgrading, *debug)
+			done <- runAgentCheckin(runOpt)
 		}()
 		select {
 		// add 10% to moduletimeout to let the agent kill modules before exiting
@@ -146,7 +163,7 @@ func main() {
 			}
 		}
 	default:
-		fmt.Printf("%s", runModuleDirectly(*mode, nil, *pretty))
+		fmt.Printf("%s", runModuleDirectly(runOpt.mode, nil, runOpt.pretty))
 	}
 exit:
 }
@@ -246,10 +263,10 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 
 // runAgentCheckin is the one-off startup function for agent mode, where the
 // agent shuts itself down after running outstanding commands
-func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
+func runAgentCheckin(runOpt runtimeOptions) (err error) {
 	var ctx Context
 	// initialize the agent
-	ctx, err = Init(foreground, upgrading)
+	ctx, err = Init(runOpt.foreground, runOpt.upgrading, false)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Init failed: '%v'", err)
 		os.Exit(0)
@@ -303,16 +320,20 @@ done:
 
 // runAgent is the startup function for agent mode. It only exits when the agent
 // must shut down.
-func runAgent(foreground, upgrading, debug bool) (err error) {
+//
+// The serviceInstall flag indicates this is an attempt to install the agent as
+// a service, but not run it. This flag could replace the upgrading flag at
+// some point.
+func runAgent(runOpt runtimeOptions) (err error) {
 	var (
 		ctx        Context
 		exitReason string
 	)
 	// initialize the agent
-	ctx, err = Init(foreground, upgrading)
+	ctx, err = Init(runOpt.foreground, runOpt.upgrading, runOpt.serviceInstall)
 	if err != nil {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
-		if foreground {
+		if runOpt.foreground {
 			// if in foreground mode, don't retry, just panic
 			time.Sleep(1 * time.Second)
 			panic(err)
@@ -350,7 +371,7 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 	Destroy(ctx)
 
 	// if we're in debug mode, exit right away
-	if debug {
+	if runOpt.debug {
 		return
 	}
 

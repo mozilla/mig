@@ -1,0 +1,1 @@
+../conf/mig-agent-conf.go.inc

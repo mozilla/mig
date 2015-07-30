@@ -4,7 +4,7 @@
 //
 // Contributor:
 // - Julien Vehent jvehent@mozilla.com [:ulfr]
-package main
+package agentcontext
 
 import (
 	"bytes"
@@ -16,13 +16,12 @@ import (
 	"strings"
 )
 
-func findHostname(orig_ctx Context) (ctx Context, err error) {
+func findHostname(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("findHostname() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving findHostname()"}.Debug()
 	}()
 
 	// get the hostname
@@ -34,37 +33,37 @@ func findHostname(orig_ctx Context) (ctx Context, err error) {
 		if err != nil {
 			panic(err)
 		}
-		ctx.Agent.Hostname = hostname
+		ctx.Hostname = hostname
 		return ctx, err
 	}
 	// remove trailing newline
-	ctx.Agent.Hostname = fmt.Sprintf("%s", out[0:len(out)-1])
+	ctx.Hostname = fmt.Sprintf("%s", out[0:len(out)-1])
 	return
 }
 
-func findOSInfo(orig_ctx Context) (ctx Context, err error) {
+func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("findOSInfo() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving findOSInfo()"}.Debug()
+		logChan <- mig.Log{Desc: "leaving findOSInfo()"}.Debug()
 	}()
-	ctx.Agent.Env.Ident, err = getLSBRelease()
+	ctx.OSIdent, err = getLSBRelease()
 	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Info()
-		ctx.Agent.Env.Ident, err = getIssue()
+		logChan <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Info()
+		ctx.OSIdent, err = getIssue()
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("getIssue() failed: %v", err)}.Info()
+			logChan <- mig.Log{Desc: fmt.Sprintf("getIssue() failed: %v", err)}.Info()
 		}
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Ident is %s", ctx.Agent.Env.Ident)}.Debug()
+	logChan <- mig.Log{Desc: fmt.Sprintf("Ident is %s", ctx.OSIdent)}.Debug()
 
-	ctx.Agent.Env.Init, err = getInit()
+	ctx.Init, err = getInit()
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init is %s", ctx.Agent.Env.Init)}.Debug()
+	logChan <- mig.Log{Desc: fmt.Sprintf("Init is %s", ctx.Init)}.Debug()
 
 	return
 }
@@ -136,6 +135,6 @@ func getInit() (initname string, err error) {
 	return
 }
 
-func getRunDir() string {
+func GetRunDir() string {
 	return "/var/lib/mig/"
 }

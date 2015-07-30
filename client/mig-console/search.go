@@ -29,10 +29,10 @@ func search(input string, cli client.Client) (err error) {
 	}
 	sType := ""
 	switch orders[1] {
-	case "action", "agent", "command", "investigator":
+	case "action", "agent", "command", "investigator", "manifest":
 		sType = orders[1]
 	case "", "help":
-		fmt.Printf(`usage: search <action|agent|command|investigator> where <key>=<value> [and <key>=<value>...]
+		fmt.Printf(`usage: search <action|agent|command|investigator|manifest> where <key>=<value> [and <key>=<value>...]
 
 Example:
 mig> search command where agentname=%%khazad%% and investigatorname=%%vehent%% and actionname=%%memory%% and after=2015-09-09T17:00:00Z
@@ -86,6 +86,11 @@ The following search parameters are available, per search type:
 	- agentname=<str>	search investigators that ran actions on an agent named <str>,
 	- status=<str>		search investigators by status amongst: active, disabled
 
+* manifest:
+        - manifestid=<id>       search manifests by id
+        - manifestname=<str>    search manifests by name
+	- status=<str>          search manifests by status amongst: active, staged, disabled
+
 All searches accept the 'limit=<num>' parameter to limits the number of results returned by a search, defaults to 100
 Parameters that accept a <str> can use wildcards * and % (ex: name=jul%veh% ).
 No spaces are permitted within parameters. Spaces are used to separate search parameters.
@@ -116,6 +121,8 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 		fmt.Println("----  ID  ---- + ----         Name         ---- + --- Last Updated ---")
 	case "investigator":
 		fmt.Println("- ID - + ----         Name         ---- + --- Status ---")
+	case "manifest":
+		fmt.Println("- ID - + ----      Name      ---- + -- Status -- + -------------- Target -------- + ---- Timestamp ---")
 	}
 	for _, item := range resources.Collection.Items {
 		for _, data := range item.Data {
@@ -187,6 +194,40 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 					name = name[0:27] + "..."
 				}
 				fmt.Printf("%6.0f   %s   %s\n", inv.ID, name, inv.Status)
+			case "manifest":
+				mr, err := client.ValueToManifestRecord(data.Value)
+				if err != nil {
+					panic(err)
+				}
+				name := mr.Name
+				if len(name) < 24 {
+					for i := len(name); i < 24; i++ {
+						name += " "
+					}
+				}
+				if len(name) > 24 {
+					name = name[0:21] + "..."
+				}
+				status := mr.Status
+				if len(status) < 12 {
+					for i := len(status); i < 12; i++ {
+						status += " "
+					}
+				}
+				if len(status) > 12 {
+					status = status[0:12]
+				}
+				target := mr.Target
+				if len(target) < 30 {
+					for i := len(target); i < 30; i++ {
+						target += " "
+					}
+				}
+				if len(target) > 30 {
+					target = target[0:27] + "..."
+				}
+				fmt.Printf("%6.0f   %s   %s   %s   %s\n", mr.ID, name,
+					status, target, mr.Timestamp)
 			}
 		}
 	}
@@ -252,6 +293,10 @@ func parseSearchQuery(orders []string) (p migdbsearch.Parameters, err error) {
 			if err != nil {
 				panic("invalid limit parameter")
 			}
+		case "manifestname":
+			p.ManifestName = value
+		case "manifestid":
+			p.ManifestID = value
 		case "status":
 			p.Status = value
 		case "name":

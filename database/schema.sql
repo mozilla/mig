@@ -107,6 +107,39 @@ ALTER TABLE ONLY investigators
     ADD CONSTRAINT investigators_pkey PRIMARY KEY (id);
 CREATE UNIQUE INDEX investigators_pgpfingerprint_idx ON investigators USING btree (pgpfingerprint);
 
+CREATE SEQUENCE manifests_id_seq START 1;
+CREATE TABLE manifests (
+	id        numeric NOT NULL DEFAULT nextval('manifests_id_seq'),
+	name      character varying(256) NOT NULL,
+	content   text NOT NULL,
+	timestamp timestamp with time zone NOT NULL,
+	status    character varying(255) NOT NULL,
+	target    character varying(2048) NOT NULL
+);
+ALTER TABLE public.manifests OWNER TO migadmin;
+ALTER TABLE ONLY manifests
+    ADD CONSTRAINT manifests_pkey PRIMARY KEY (id);
+
+CREATE TABLE manifestsig (
+	manifestid     numeric NOT NULL,
+	investigatorid numeric NOT NULL,
+	pgpsignature   character varying(4096) NOT NULL
+);
+
+CREATE SEQUENCE loaders_id_seq START 1;
+CREATE TABLE loaders (
+	id         numeric NOT NULL DEFAULT nextval('loaders_id_seq'),
+	loadername character varying(256) NOT NULL,
+	loaderkey  character varying(64) NOT NULL,
+	name       character varying(2048),
+	env        json,
+	tags       json
+);
+ALTER TABLE ONLY loaders
+    ADD CONSTRAINT loaders_pkey PRIMARY KEY (id);
+CREATE UNIQUE INDEX loaders_loadername_loaderkey_idx ON loaders USING btree(loadername, loaderkey);
+ALTER TABLE public.loaders OWNER TO migadmin;
+
 CREATE TABLE modules (
     id      numeric NOT NULL,
     name    character varying(256) NOT NULL
@@ -134,6 +167,9 @@ ALTER TABLE ONLY commands
 ALTER TABLE ONLY commands
     ADD CONSTRAINT commands_agentid_fkey FOREIGN KEY (agentid) REFERENCES agents(id);
 
+ALTER TABLE ONLY manifestsig
+    ADD CONSTRAINT manifestsig_manifestid_fkey FOREIGN KEY (manifestid) REFERENCES manifests(id);
+
 ALTER TABLE ONLY invagtmodperm
     ADD CONSTRAINT invagtmodperm_agentid_fkey FOREIGN KEY (agentid) REFERENCES agents(id);
 
@@ -156,12 +192,15 @@ GRANT INSERT ON investigators TO migscheduler;
 GRANT USAGE ON SEQUENCE investigators_id_seq TO migscheduler;
 
 -- API has limited permissions, and cannot list scheduler private keys in the investigators table, but can update their statuses
-GRANT SELECT ON actions, agents, agents_stats, agtmodreq, commands, invagtmodperm, modules, signatures TO migapi;
+GRANT SELECT ON actions, agents, agents_stats, agtmodreq, commands, invagtmodperm, loaders, manifests, manifestsig, modules, signatures TO migapi;
 GRANT SELECT (id, name, pgpfingerprint, publickey, status, createdat, lastmodified) ON investigators TO migapi;
-GRANT INSERT ON actions, signatures TO migapi;
+GRANT INSERT ON actions, signatures, manifests, manifestsig TO migapi;
 GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified) ON investigators TO migapi;
 GRANT UPDATE (status, lastmodified) ON investigators TO migapi;
+GRANT UPDATE (name, env, tags) ON loaders TO migapi;
 GRANT USAGE ON SEQUENCE investigators_id_seq TO migapi;
+GRANT USAGE ON SEQUENCE loaders_id_seq TO migapi;
+GRANT USAGE ON SEQUENCE manifests_id_seq TO migapi;
 
 -- readonly user is used for things like expanding targets
 CREATE ROLE migreadonly;

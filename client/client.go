@@ -372,6 +372,63 @@ func (cli Client) GetAction(aid float64) (a mig.Action, links []cljs.Link, err e
 	return
 }
 
+// GetManifestRecord retrieves a MIG manifest record from the API using the
+// record ID
+func (cli Client) GetManifestRecord(mid float64) (mr mig.ManifestRecord, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("GetManifestRecord() -> %v", e)
+		}
+	}()
+	target := fmt.Sprintf("manifest?manifestid=%.0f", mid)
+	resource, err := cli.GetAPIResource(target)
+	if err != nil {
+		panic(err)
+	}
+	if resource.Collection.Items[0].Data[0].Name != "manifest" {
+		panic("API returned something that is not a manifest... something's wrong.")
+	}
+	mr, err = ValueToManifestRecord(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("PostManifestSignature() -> %v", e)
+		}
+	}()
+	data := url.Values{"manifestid": {fmt.Sprintf("%.0f", mr.ID)}, "signature": {sig}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"manifest/sign/",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	if resp.StatusCode != 202 {
+		err = fmt.Errorf("error: HTTP %d. action creation failed.", resp.StatusCode)
+		panic(err)
+	}
+	var resource *cljs.Resource
+	err = json.Unmarshal(body, &resource)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
 // PostAction submits a MIG Action to the API and returns the reflected action with API ID
 func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	defer func() {
@@ -431,6 +488,23 @@ func ValueToAction(v interface{}) (a mig.Action, err error) {
 		panic(err)
 	}
 	err = json.Unmarshal(bData, &a)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+func ValueToManifestRecord(v interface{}) (m mig.ManifestRecord, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("ValueToManifestRecord() -> %v", e)
+		}
+	}()
+	bData, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(bData, &m)
 	if err != nil {
 		panic(err)
 	}
@@ -718,6 +792,26 @@ func (cli Client) SignAction(a mig.Action) (signed_action mig.Action, err error)
 	}
 	a.PGPSignatures = append(a.PGPSignatures, sig)
 	signed_action = a
+	return
+}
+
+// SignManifest takes a MIG manifest record, signs it with the key identified
+// in the configuration and returns the signature
+func (cli Client) SignManifest(m mig.ManifestRecord) (ret string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("SignManifest() -> %v", e)
+		}
+	}()
+	secring, err := os.Open(cli.Conf.GPG.Home + "/secring.gpg")
+	if err != nil {
+		panic(err)
+	}
+	defer secring.Close()
+	ret, err = m.Sign(cli.Conf.GPG.KeyID, secring)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 

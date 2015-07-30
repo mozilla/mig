@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mig.ninja/mig"
+	"mig.ninja/mig/mig-agent/agentcontext"
 	"net"
 	"os"
 	"strings"
@@ -138,7 +139,7 @@ func socketQuery(bind, query string) (resp string, err error) {
 	}
 	if query == "shutdown" {
 		// attempt to read the agent secret id and append it to the shutdown order
-		id, err := ioutil.ReadFile(getRunDir() + ".migagtid")
+		id, err := ioutil.ReadFile(agentcontext.GetRunDir() + ".migagtid")
 		if err != nil {
 			panic(err)
 		}

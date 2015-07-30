@@ -70,6 +70,11 @@ func main() {
 	// unauthenticated endpoints
 	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")
 	s.HandleFunc("/ip", getIP).Methods("GET")
+	// Loader manifest endpoints
+	s.HandleFunc("/manifest", authenticate(getManifest)).Methods("GET")
+	s.HandleFunc("/manifest/sign/", authenticate(signManifest)).Methods("POST")
+	s.HandleFunc("/manifest/agent/", getAgentManifest).Methods("POST")
+	s.HandleFunc("/manifest/fetch/", getManifestFile).Methods("POST")
 	// all other resources require authentication
 	s.HandleFunc("/", authenticate(getHome)).Methods("GET")
 	s.HandleFunc("/search", authenticate(search)).Methods("GET")

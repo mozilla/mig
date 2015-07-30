@@ -87,7 +87,8 @@ func main() {
 	for {
 		// completion
 		var symbols = []string{"action", "agent", "create", "command", "help", "history",
-			"exit", "showcfg", "status", "investigator", "search", "query", "where", "and"}
+			"exit", "manifest", "showcfg", "status", "investigator", "search", "query",
+			"where", "and"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -177,6 +178,11 @@ status			display platform status: connected agents, latest actions, ...
 			}
 		case "investigator":
 			err = investigatorReader(input, cli)
+			if err != nil {
+				log.Println(err)
+			}
+		case "manifest":
+			err = manifestReader(input, cli)
 			if err != nil {
 				log.Println(err)
 			}
