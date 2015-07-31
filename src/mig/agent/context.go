@@ -17,12 +17,14 @@ import (
 	"github.com/kardianos/osext"
 	"github.com/streadway/amqp"
 	"io/ioutil"
+	mrand "math/rand"
 	"mig"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -277,7 +279,12 @@ func createIDFile(ctx Context) (id []byte, err error) {
 		}
 	}()
 	// generate an ID
-	sid := mig.GenB32ID()
+	r := mrand.New(mrand.NewSource(time.Now().UnixNano()))
+	sid := strconv.FormatUint(uint64(r.Int63()), 36)
+	sid += strconv.FormatUint(uint64(r.Int63()), 36)
+	sid += strconv.FormatUint(uint64(r.Int63()), 36)
+	sid += strconv.FormatUint(uint64(r.Int63()), 36)
+
 	// check that the storage DIR exist, and that it's a dir
 	tdir, err := os.Open(ctx.Agent.RunDir)
 	defer tdir.Close()
