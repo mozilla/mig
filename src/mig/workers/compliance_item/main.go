@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"github.com/jvehent/gozdef"
 	"mig"
-	"mig/event"
 	"mig/modules"
 	"mig/modules/file"
 	"mig/workers"
@@ -60,7 +59,7 @@ func main() {
 
 	// bind to the MIG even queue
 	workerQueue := "migevent.worker." + workerName
-	consumerChan, err := workers.InitMqWithConsumer(conf.Mq, workerQueue, event.Q_Cmd_Res)
+	consumerChan, err := workers.InitMqWithConsumer(conf.Mq, workerQueue, mig.Ev_Q_Cmd_Res)
 	if err != nil {
 		panic(err)
 	}
@@ -71,7 +70,7 @@ func main() {
 		panic(err)
 	}
 
-	mig.ProcessLog(logctx, mig.Log{Desc: "worker started, consuming queue " + workerQueue + " from key " + event.Q_Cmd_Res})
+	mig.ProcessLog(logctx, mig.Log{Desc: "worker started, consuming queue " + workerQueue + " from key " + mig.Ev_Q_Cmd_Res})
 	tFamRe := regexp.MustCompile("(?i)^compliance$")
 	for event := range consumerChan {
 		var cmd mig.Command

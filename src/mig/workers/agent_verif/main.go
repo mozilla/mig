@@ -9,7 +9,7 @@ import (
 	"code.google.com/p/gcfg"
 	"flag"
 	"fmt"
-	"mig/event"
+	"mig"
 	"mig/workers"
 	"os"
 )
@@ -35,14 +35,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// set a binding to route events from event.Q_Agt_Auth_Fail into the queue named after the worker
+	// set a binding to route events from mig.Ev_Q_Agt_Auth_Fail into the queue named after the worker
 	// and return a channel that consumes the queue
 	workerQueue := "migevent.worker." + workerName
-	consumerChan, err := workers.InitMqWithConsumer(conf.Mq, workerQueue, event.Q_Agt_Auth_Fail)
+	consumerChan, err := workers.InitMqWithConsumer(conf.Mq, workerQueue, mig.Ev_Q_Agt_Auth_Fail)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("started worker", workerName, "consuming queue", workerQueue, "from key", event.Q_Agt_Auth_Fail)
+	fmt.Println("started worker", workerName, "consuming queue", workerQueue, "from key", mig.Ev_Q_Agt_Auth_Fail)
 	for event := range consumerChan {
 		fmt.Printf("%s\n", event.Body)
 	}

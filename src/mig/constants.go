@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
-package event
+package mig
 
+// event queues
 const (
-	Q_Agt_Auth_Fail = "agent.authentication.failure"
-	Q_Agt_New       = "agent.new"
-	Q_Cmd_Res       = "command.results"
+	Ev_Q_Agt_Auth_Fail = "agent.authentication.failure"
+	Ev_Q_Agt_New       = "agent.new"
+	Ev_Q_Cmd_Res       = "command.results"
 )
