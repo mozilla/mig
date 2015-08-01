@@ -59,7 +59,7 @@
     port  = 5672
     user  = "guest"
     pass  = "guest"
-    vhost = "/"
+    vhost = "mig"
 
 ; TLS options
 ;   usetls  = true

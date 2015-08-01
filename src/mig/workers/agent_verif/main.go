@@ -17,7 +17,8 @@ import (
 const workerName = "agent_verif"
 
 type Config struct {
-	Mq workers.MqConf
+	Mq      workers.MqConf
+	Logging mig.Logging
 }
 
 func main() {
@@ -29,9 +30,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s - a worker verifying agents that fail to authenticate\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-	var configPath = flag.String("c", "/etc/mig/agent_verif_worker.cfg", "Load configuration from file")
+	var configPath = flag.String("c", "/etc/mig/agent-verif-worker.cfg", "Load configuration from file")
 	flag.Parse()
 	err = gcfg.ReadFileInto(&conf, *configPath)
+	if err != nil {
+		panic(err)
+	}
+	logctx, err := mig.InitLogger(conf.Logging, workerName)
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +49,7 @@ func main() {
 	}
 	fmt.Println("started worker", workerName, "consuming queue", workerQueue, "from key", mig.Ev_Q_Agt_Auth_Fail)
 	for event := range consumerChan {
-		fmt.Printf("%s\n", event.Body)
+		mig.ProcessLog(logctx, mig.Log{Desc: fmt.Sprintf("unverified agent '%s'", event.Body)})
 	}
 	return
 }
