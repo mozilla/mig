@@ -52,7 +52,7 @@ mig-agent:
 	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
 	cp $(AGTCONF) src/mig/agent/configuration.go
-	if [ ! -r $(AVAILMODS) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
+	if [ ! -r $(AVAILMODS) ]; then echo "$(AVAILMODS) configuration file is missing" ; exit 1; fi
 	cp $(AVAILMODS) src/mig/agent/available_modules.go
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig/agent
