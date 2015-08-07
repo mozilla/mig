@@ -161,6 +161,8 @@ func (r *run) Run(in io.Reader) (resStr string) {
 
 	document := r.Parameters.ScribeDoc
 	e := &elements{}
+	e.HumanOutput = r.Parameters.HumanOutput
+	e.JSONOutput = r.Parameters.JSONOutput
 
 	e.Results = make([]scribelib.TestResult, 0)
 	// Proceed with analysis here. ValidateParameters() will have already
@@ -206,8 +208,14 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 		panic(err)
 	}
 	for _, x := range elem.Results {
-		for _, y := range x.SingleLineResults() {
-			prints = append(prints, y)
+		if elem.HumanOutput {
+			prints = append(prints, x.String())
+		} else if elem.JSONOutput {
+			prints = append(prints, x.JSON())
+		} else {
+			for _, y := range x.SingleLineResults() {
+				prints = append(prints, y)
+			}
 		}
 	}
 	if !foundOnly {
@@ -221,7 +229,9 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 }
 
 type elements struct {
-	Results []scribelib.TestResult `json:"results"` // Results of evaluation.
+	Results     []scribelib.TestResult `json:"results"`     // Results of evaluation.
+	HumanOutput bool                   `json:"humanoutput"` // Requested human output mode.
+	JSONOutput  bool                   `json:"jsonoutput"`  // Requested JSON output mode.
 }
 
 type statistics struct {
@@ -229,8 +239,10 @@ type statistics struct {
 }
 
 type parameters struct {
-	ScribeDoc scribelib.Document `json:"scribedoc"` // The scribe document for analysis.
-	OnlyTrue  bool               `json:"onlytrue"`  // Only return true evaluations
+	ScribeDoc   scribelib.Document `json:"scribedoc"`   // The scribe document for analysis.
+	OnlyTrue    bool               `json:"onlytrue"`    // Only return true evaluations
+	HumanOutput bool               `json:"humanoutput"` // Use scribe extended output mode.
+	JSONOutput  bool               `json:"jsonoutput"`  // Use JSON output mode.
 }
 
 func newParameters() *parameters {

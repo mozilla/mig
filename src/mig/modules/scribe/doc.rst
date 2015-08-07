@@ -25,6 +25,10 @@ Document analysis mode can be used by specifying a document to analyze with
 with `path` option. By default, all tests are returned with a result. To
 return only tests that evaluate to true, the `onlytrue` option can be used.
 
+By default, results are returned in line mode (one result per line). The
+`human` flag can be used to output extended results, and the `json` flag
+can be used to output each result as a JSON document.
+
 Document analysis mode
 ~~~~~~~~~~~~~~~~~~~~~~
 In document analysis mode, a JSON document is supplied containing a valid

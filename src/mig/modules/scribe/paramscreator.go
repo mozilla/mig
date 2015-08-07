@@ -29,7 +29,15 @@ func printHelp(isCmd bool) {
 %sonlytrue <bool>  - only true evaluations
                     ex: onlytrue true
 		    just return document tests that evaluate to true
-`, dash, dash, dash)
+
+%shuman <bool>     - human output mode
+                    ex: human true
+		    write results in extended format
+
+%sjson <bool>      - json output mode
+                    ex: json true
+		    write results as JSON documents
+`, dash, dash, dash, dash)
 }
 
 func loadScribeDocument(path string) (*scribelib.Document, error) {
@@ -65,6 +73,15 @@ func (r *run) ParamsCreator() (interface{}, error) {
 		} else if input == "help" {
 			printHelp(false)
 			continue
+		} else if input == "json" {
+			p.JSONOutput = true
+			continue
+		} else if input == "human" {
+			p.HumanOutput = true
+			continue
+		} else if input == "onlytrue" {
+			p.OnlyTrue = true
+			continue
 		}
 		arr := strings.SplitN(input, " ", 2)
 		if len(arr) != 2 {
@@ -95,9 +112,11 @@ exit:
 
 func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
-		fs        flag.FlagSet
-		scribeDoc string
-		onlyTrue  bool
+		fs          flag.FlagSet
+		scribeDoc   string
+		onlyTrue    bool
+		outputHuman bool
+		outputJSON  bool
 	)
 
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
@@ -107,6 +126,8 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 
 	fs.Init("scribe", flag.ContinueOnError)
 	fs.StringVar(&scribeDoc, "path", "", "see help")
+	fs.BoolVar(&outputHuman, "human", false, "see help")
+	fs.BoolVar(&outputJSON, "json", false, "see help")
 	fs.BoolVar(&onlyTrue, "onlytrue", false, "see help")
 	err := fs.Parse(args)
 	if err != nil {
@@ -114,6 +135,9 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	}
 
 	p := newParameters()
+
+	p.HumanOutput = outputHuman
+	p.JSONOutput = outputJSON
 
 	if scribeDoc == "" {
 		return nil, fmt.Errorf("-path option is required")
