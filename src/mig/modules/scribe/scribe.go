@@ -61,7 +61,7 @@ func buildResultsScribe(e elements, r *modules.Result) (buf []byte, err error) {
 	// If any tests resulted in an error, store them as errors in the command.
 	for _, x := range e.Results {
 		if x.IsError {
-			es := fmt.Sprintf("Error: %v in \"%v\"", x.Error, x.Name)
+			es := fmt.Sprintf("Error: %v in \"%v\"", x.Error, x.TestID)
 			r.Errors = append(r.Errors, es)
 		}
 	}
@@ -184,7 +184,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 		if err != nil {
 			panic(err)
 		}
-		for _, x := range document.GetTestNames() {
+		for _, x := range document.GetTestIdentifiers() {
 			tr, err := scribelib.GetResults(&document, x)
 			if err != nil {
 				panic(err)
