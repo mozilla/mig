@@ -54,6 +54,13 @@ func loadScribeDocument(path string) (*scribelib.Document, error) {
 	return &dp, nil
 }
 
+func checkBoolFlag(flag string) bool {
+	if strings.ToLower(flag) == "true" {
+		return true
+	}
+	return false
+}
+
 func (r *run) ParamsCreator() (interface{}, error) {
 	p := newParameters()
 	scanner := bufio.NewScanner(os.Stdin)
@@ -73,15 +80,6 @@ func (r *run) ParamsCreator() (interface{}, error) {
 		} else if input == "help" {
 			printHelp(false)
 			continue
-		} else if input == "json" {
-			p.JSONOutput = true
-			continue
-		} else if input == "human" {
-			p.HumanOutput = true
-			continue
-		} else if input == "onlytrue" {
-			p.OnlyTrue = true
-			continue
 		}
 		arr := strings.SplitN(input, " ", 2)
 		if len(arr) != 2 {
@@ -99,6 +97,12 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				continue
 			}
 			p.ScribeDoc = *dp
+		case "json":
+			p.JSONOutput = checkBoolFlag(checkValue)
+		case "human":
+			p.HumanOutput = checkBoolFlag(checkValue)
+		case "onlytrue":
+			p.OnlyTrue = checkBoolFlag(checkValue)
 		default:
 			fmt.Printf("Invalid method!\nTry 'help'\n")
 			continue
