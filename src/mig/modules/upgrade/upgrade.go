@@ -87,10 +87,6 @@ func (r run) ValidateParameters() (err error) {
 	return
 }
 
-func (r *run) ParamsParser(args []string) (interface{}, error) {
-	return nil, nil
-}
-
 func (r run) Run(in io.Reader) (out string) {
 	defer func() {
 		if e := recover(); e != nil {

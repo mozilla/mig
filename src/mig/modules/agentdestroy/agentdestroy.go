@@ -54,10 +54,6 @@ type results struct {
 	Errors  []string `json:"errors,omitempty"`
 }
 
-func (r *run) ParamsParser(args []string) (interface{}, error) {
-	return nil, nil
-}
-
 func (r *run) ValidateParameters() (err error) {
 	if r.Parameters.PID < 2 || r.Parameters.PID > 65535 {
 		return fmt.Errorf("PID '%s' is not in the range [2:65535]", r.Parameters.PID)
