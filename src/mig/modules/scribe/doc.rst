@@ -15,45 +15,46 @@ The scribe module is intended to help support:
 * Executing policy checks on systems, for example as part of using MIG for vulnerability management
 * Execute more advanced file content tests involving dependencies
 
-In addition to supporting on-host analysis using scribe documents, the
-module can also be used to query elements of the host system such as the
-package manager database for installed package information.
-
 This document does not discuss the details around writing scribe tests, the
 scribe project documentation should be reviewed for that. This document focuses
 on usage of the scribe module within MIG and provides some examples.
 
 Usage
 -----
-The scribe module supports two execution modes, scribe document analysis
-and package query mode. To use document analysis mode, the `path` option can
-be given to the module along with the path to a scribe document. To use
-package query mode, the `pkgmatch` option is supplied with a regular expression
-specifying which packages to return information for from the agent.
+Document analysis mode can be used by specifying a document to analyze with
+with `path` option. By default, all tests are returned with a result. To
+return only tests that evaluate to true, the `onlytrue` option can be used.
 
 Document analysis mode
 ~~~~~~~~~~~~~~~~~~~~~~
 In document analysis mode, a JSON document is supplied containing a valid
 scribe document.
 
-A scribe document contains a series of tests. Tests are typically comprised
-of two elements - a test source, which details a source of information from
-the host system, and an evaluator which specifies criteria that must match
-for the test to be true.
+A scribe document contains a series of objects and tests. Objects obtain
+information from the system, and tests evaluate this information against
+specified criteria. An object can return more than one candidate, for example
+if multiple files are identified on a system that match certain criteria. In
+this case, the test will evaluate each candidate, and return a result for
+each one.
 
 The following is a simple document example that validates OpenSSL is at least
-version 1.0.1e. If this test fails, it will return true.
+version 1.0.1e. If the criteria in the test matches, it will return true.
 
 .. code:: json
 
     {
-        "tests": [
+        "objects": [
         {
-            "name": "openssl test",
-            "identifier": "test-0001",
+            "object": "openssl-package",
             "package": {
                 "name": "openssl"
-            },
+            }
+        }
+        ],
+        "tests": [
+        {
+            "test": "openssl test",
+            "object": "openssl-package",
             "evr": {
                 "operation": "<",
                 "value": "1.0.1e"
@@ -76,11 +77,9 @@ Passing this to the module will return the test status.
 
 In this case, the test returns false. The master result for the test indicates
 false, as the sub result was false. A single test can have multiple sub-results
-if the source matched more then one object on the system. For example, multiple
-versions of the same package are installed, multiple files are identified that
-match file criteria, and so on. In this case, the evaluator will be applied to
-each object identifier. If at least one evaluation is true, the master result
-for the test will be true.
+if the object identified more then one object on the system. In this case, the
+evaluator will be applied to each object identifier. If at least one evaluation
+is true, the master result for the test will be true.
 
 A more advanced test, returning true if, in this example Django is identified
 on the system and the version is less than 1.4.5, and /etc/testfile also exists
@@ -89,60 +88,40 @@ on the system.
 .. code:: json
 
     {
-        "tests": [
+        "objects": [
         {
-            "name": "djangoinit",
-            "identifier": "test-0001",
+            "object": "djangoinit",
             "filecontent": {
                 "path": "/",
                 "file": "__init__\\.py",
-                "expression": "^VERSION = \\((\\S+), (\\S+), (\\S+),"
+                "expression": "^VERSION = \\((\\S+), (\\S+), (\\S+),",
+                "concat": "."
             }
         },
         {
-            "name": "modifier",
-            "identifier": "test-0002",
-            "modifier": {
-                "concat": {
-                    "operator": "."
-                },
-                "sources": [
-                { "name": "djangoinit", "select": "all" }
-                ]
-            },
-            "evr": {
-                "operation": "<",
-                "value": "1.4.5"
-            },
-            "if": [ "test file exists" ]
-        },
-        {
-            "name": "testfile",
-            "aliases": [ "test file exists" ],
-            "identifier": "test-0003",
+            "object": "testfile",
             "filename": {
                 "path": "/etc",
                 "file": "(testfile)"
             }
+        }
+        ],
+        "tests": [
+        {
+            "test": "django and test file",
+            "object": "djangoinit",
+            "evr": {
+                "operation": "<",
+                "value": "1.4.5"
+            },
+            "if": [ "testfile exists" ]
+        },
+        {
+            "test": "testfile exists",
+            "object": "testfile"
         }
         ]
     }
 
 The module is designed to only return a true or a false for tests; file content
 from the file system is never returned from the agent.
-
-Package query mode
-~~~~~~~~~~~~~~~~~~
-Package query mode can be used by specifying a `pkgmatch` argument to the
-scribe module with a regular expression. Any packages identified on the
-agent system will be returned along with their version details. This mode
-does not do any test analysis, but instead queries directly into the
-scribe library to access the package management interface.
-
-Currently the following package managers are supported for query on an agent system.
-
-* **RPM**: RPM based package managers, for Red Hat, CentOS, etc
-* **dpkg**: DPKG based package managers, for Debian, Ubuntu, etc
-
-Packages managed in other package managers will not be returned by the module.
-
