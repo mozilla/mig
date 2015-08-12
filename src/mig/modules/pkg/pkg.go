@@ -6,14 +6,10 @@
 package pkg
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	ovallib "github.com/mozilla/mozoval/go/src/oval"
+	scribelib "github.com/mozilla/scribe/src/scribe"
 	"io"
-	"io/ioutil"
 	"mig/modules"
 	"regexp"
 	"runtime"
@@ -52,30 +48,16 @@ type run struct {
 	Results    modules.Result
 }
 
-func buildResults(e elements, r *modules.Result, matches int) (buf []byte, err error) {
+func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 	r.Success = true
-	if matches > 0 {
+	r.Elements = e
+	if len(e.Packages) > 0 {
 		r.FoundAnything = true
 	}
-	r.Elements = e
 	endCounters()
 	r.Statistics = stats
 	buf, err = json.Marshal(r)
 	return
-}
-
-func makeOvalString(inbuf string) (string, error) {
-	b := bytes.NewBufferString(inbuf)
-	decoder := base64.NewDecoder(base64.StdEncoding, b)
-	gz, err := gzip.NewReader(decoder)
-	if err != nil {
-		return "", err
-	}
-	ovalbuf, err := ioutil.ReadAll(gz)
-	if err != nil {
-		return "", err
-	}
-	return string(ovalbuf), nil
 }
 
 func (r *run) Run(in io.Reader) (resStr string) {
@@ -109,93 +91,34 @@ func (r *run) Run(in io.Reader) (resStr string) {
 		panic(err)
 	}
 
-	ovallib.SetMaxChecks(r.Parameters.MaxConcurrentEval)
-
 	e := &elements{}
-
-	if len(r.Parameters.PkgMatch.Matches) > 0 {
-		oresp := ovallib.PackageQuery(r.Parameters.PkgMatch.Matches, true)
-		for _, x := range oresp {
-			npi := &PkgInfo{PkgName: x.Name, PkgVersion: x.Version, PkgType: x.PkgType}
-			e.Matches = append(e.Matches, *npi)
-		}
-
-		buf, err := buildResults(*e, &r.Results, len(e.Matches))
+	e.Packages = make([]scribelib.PackageInfo, 0)
+	pkglist := scribelib.QueryPackages()
+	for _, x := range r.Parameters.PkgMatch.Matches {
+		re, err := regexp.Compile(x)
 		if err != nil {
 			panic(err)
 		}
-		resStr = string(buf)
-		return
-	} else if r.Parameters.OvalDef != "" {
-		stats.InDefSize = len(r.Parameters.OvalDef)
-		ovalbuf, err := makeOvalString(r.Parameters.OvalDef)
-		if err != nil {
-			panic(err)
-		}
-		pst := time.Now()
-		od, err := ovallib.ParseBuffer(ovalbuf)
-		stats.Parsetime = time.Now().Sub(pst).String()
-		if err != nil {
-			panic(err)
-		}
-		ovalresults, err := ovallib.Execute(od)
-		if err != nil {
-			panic(err)
-		}
-		for _, x := range ovalresults {
-			if !r.Parameters.IncludeFalse {
-				if x.Status == ovallib.RESULT_FALSE {
-					continue
-				}
+		for _, y := range pkglist {
+			if !re.MatchString(y.Name) {
+				continue
 			}
-			nmor := &MOResult{}
-			nmor.Title = x.Title
-			nmor.Status = x.StatusString()
-			nmor.ID = x.ID
-			e.OvalResults = append(e.OvalResults, *nmor)
+			e.Packages = append(e.Packages, y)
 		}
-
-		buf, err := buildResults(*e, &r.Results, len(e.OvalResults))
-		if err != nil {
-			panic(err)
-		}
-		resStr = string(buf)
-		return
 	}
-
-	panic("no function specified")
+	buf, err := buildResults(*e, &r.Results)
+	if err != nil {
+		panic(err)
+	}
+	resStr = string(buf)
 	return
 }
 
 func (r *run) ValidateParameters() (err error) {
-	if r.Parameters.MaxConcurrentEval <= 0 || r.Parameters.MaxConcurrentEval > 10 {
-		return fmt.Errorf("concurrent evaluation must be between > 0 and <= 10")
+	if len(r.Parameters.PkgMatch.Matches) == 0 {
+		return fmt.Errorf("must specify at least one package to match")
 	}
-
-	// Supplying a definition with other modes is invalid
-	if r.Parameters.OvalDef != "" && len(r.Parameters.PkgMatch.Matches) > 0 {
-		return fmt.Errorf("cannot specify definition mode with other modes")
-	}
-
-	// Make sure a mode has been specified
-	if r.Parameters.OvalDef == "" && len(r.Parameters.PkgMatch.Matches) == 0 {
-		return fmt.Errorf("must specify a mode of operation")
-	}
-
-	// If an oval definition has been supplied, try parsing it to validate it
-	if r.Parameters.OvalDef != "" {
-		ovalbuf, err := makeOvalString(r.Parameters.OvalDef)
-		if err != nil {
-			return err
-		}
-		_, err = ovallib.ParseBuffer(ovalbuf)
-		if err != nil {
-			return err
-		}
-	}
-
-	// If package match parameters have been specified, make sure they all
-	// compile here.
+	// Make sure all package match parameters are valid expressions.
 	for _, x := range r.Parameters.PkgMatch.Matches {
 		_, err = regexp.Compile(x)
 		if err != nil {
@@ -220,20 +143,16 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 		panic(err)
 	}
 
-	for _, x := range elem.Matches {
-		resStr := fmt.Sprintf("pkgmatch name=%v version=%v type=%v", x.PkgName, x.PkgVersion, x.PkgType)
+	for _, x := range elem.Packages {
+		resStr := fmt.Sprintf("pkgmatch name=%v version=%v type=%v", x.Name, x.Version, x.Type)
 		prints = append(prints, resStr)
 	}
 
-	for _, x := range elem.OvalResults {
-		resStr := fmt.Sprintf("ovalresult id=%v title=\"%v\" outcome=%v", x.ID, x.Title, x.Status)
-		prints = append(prints, resStr)
-	}
 	if !foundOnly {
 		for _, we := range result.Errors {
 			prints = append(prints, we)
 		}
-		stats := fmt.Sprintf("Statistics: runtime %v, parsetime %v, defsize %v", stats.ExecRuntime, stats.Parsetime, stats.InDefSize)
+		stats := fmt.Sprintf("Statistics: runtime %v", stats.ExecRuntime)
 		prints = append(prints, stats)
 	}
 
@@ -241,46 +160,15 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 }
 
 type elements struct {
-	// In package match mode, the packages the agent has found that match
-	// the query parameters.
-	Matches []PkgInfo `json:"matches"`
-
-	// Results of OVAL definition checks in OVAL mode
-	OvalResults []MOResult `json:"ovalresults"`
-}
-
-type MOResult struct {
-	Title  string `json:"title"`
-	ID     string `json:"id"`
-	Status string `json:"status"`
-}
-
-type PkgInfo struct {
-	PkgName    string `json:"name"`
-	PkgVersion string `json:"version"`
-	PkgType    string `json:"type"`
+	Packages []scribelib.PackageInfo `json:"packages"` // Results of package query.
 }
 
 type Statistics struct {
-	ExecRuntime string `json:"execruntime"`
-	Parsetime   string `json:"ovalparsetime"`
-	InDefSize   int    `json:"inputdefinitionsize"`
+	ExecRuntime string `json:"execruntime"` // Total execution time.
 }
 
 type Parameters struct {
-	// Package match mode, contains a list of strings to use as substring
-	// matches
-	PkgMatch PkgMatch `json:"pkgmatch"`
-
-	// A compressed, base64 encoded OVAL definition file for processing
-	// using OVAL library on agent.
-	OvalDef string `json:"ovaldef"`
-
-	// Concurrent checks to run on agent
-	MaxConcurrentEval int `json:"maxconneval"`
-
-	// Include false results for checks
-	IncludeFalse bool `json:"includefalse"`
+	PkgMatch PkgMatch `json:"pkgmatch"` // List of strings to use as regexp package matches.
 }
 
 type PkgMatch struct {
@@ -288,5 +176,5 @@ type PkgMatch struct {
 }
 
 func newParameters() *Parameters {
-	return &Parameters{MaxConcurrentEval: 1}
+	return &Parameters{}
 }

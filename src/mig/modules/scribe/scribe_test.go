@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
-package pkg
+package scribe
 
 import (
 	"mig/testutil"
@@ -11,5 +11,5 @@ import (
 )
 
 func TestRegistration(t *testing.T) {
-	testutil.CheckModuleRegistration(t, "pkg")
+	testutil.CheckModuleRegistration(t, "scribe")
 }
