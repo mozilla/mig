@@ -98,6 +98,12 @@ sudo cp bin/linux/amd64/mig-api /usr/local/bin/ || fail
 sudo chown mig /usr/local/bin/mig-api || fail
 sudo chmod 550 /usr/local/bin/mig-api || fail
 
+echo -e "\n---- Building MIG Worker\n"
+make worker-agent-verif || fail
+sudo cp bin/linux/amd64/mig_agent_verif_worker /usr/local/bin/ || fail
+sudo chown mig /usr/local/bin/mig_agent_verif_worker || fail
+sudo chmod 550 /usr/local/bin/mig_agent_verif_worker || fail
+
 echo -e "\n---- Building MIG Clients\n"
 make mig-console || fail
 sudo cp bin/linux/amd64/mig-console /usr/local/bin/ || fail
@@ -139,21 +145,31 @@ mqpass=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
 sudo rabbitmqctl delete_user admin
 sudo rabbitmqctl add_user admin $mqpass || fail
 sudo rabbitmqctl set_user_tags admin administrator || fail
-sudo rabbitmqctl delete_user scheduler
-sudo rabbitmqctl add_user scheduler $mqpass || fail
-sudo rabbitmqctl delete_user agent
-sudo rabbitmqctl add_user agent $mqpass || fail
+
 sudo rabbitmqctl delete_vhost mig
 sudo rabbitmqctl add_vhost mig || fail
 sudo rabbitmqctl list_vhosts || fail
+
+sudo rabbitmqctl delete_user scheduler
+sudo rabbitmqctl add_user scheduler $mqpass || fail
 sudo rabbitmqctl set_permissions -p mig scheduler \
-    '^mig(|\.(heartbeat|sched\..*))' \
-    '^mig.*' \
-    '^mig(|\.(heartbeat|sched\..*))' || fail
+    '^(toagents|toschedulers|toworkers|mig\.agt\..*)$' \
+    '^(toagents|toworkers|mig\.agt\.(heartbeats|results))$' \
+    '^(toagents|toschedulers|toworkers|mig\.agt\.(heartbeats|results))$' || fail
+
+sudo rabbitmqctl delete_user agent
+sudo rabbitmqctl add_user agent $mqpass || fail
 sudo rabbitmqctl set_permissions -p mig agent \
-    "^mig\.agt\.*" \
-    "^mig*" \
-    "^mig(|\.agt\..*)" || fail
+    '^mig\.agt\..*$' \
+    '^(toschedulers|mig\.agt\..*)$' \
+    '^(toagents|mig\.agt\..*)$' || fail
+
+sudo rabbitmqctl delete_user worker
+sudo rabbitmqctl add_user worker $mqpass || fail
+sudo rabbitmqctl set_permissions -p mig worker \
+    '^migevent\..*$' \
+    '^migevent(|\..*)$' \
+    '^(toworkers|migevent\..*)$'
 
 echo -e "\n---- Creating Scheduler configuration\n"
 cp conf/scheduler.cfg.inc /tmp/scheduler.cfg
@@ -162,7 +178,6 @@ sed -i "s/freq = \"87s\"/freq = \"3s\"/" /tmp/scheduler.cfg || fail
 sed -i "s/password = \"123456\"/password = \"$dbpass\"/" /tmp/scheduler.cfg || fail
 sed -i "s/user  = \"guest\"/user = \"scheduler\"/" /tmp/scheduler.cfg || fail
 sed -i "s/pass  = \"guest\"/pass = \"$mqpass\"/" /tmp/scheduler.cfg || fail
-sed -i "s|vhost = \"/\"|vhost = \"mig\"|" /tmp/scheduler.cfg || fail
 sudo mv /tmp/scheduler.cfg /etc/mig/scheduler.cfg || fail
 sudo chown mig /etc/mig/scheduler.cfg || fail
 sudo chmod 750 /etc/mig/scheduler.cfg || fail
@@ -176,10 +191,19 @@ sudo chown mig /etc/mig/api.cfg || fail
 sudo chmod 750 /etc/mig/api.cfg || fail
 echo OK
 
+echo -e "\n---- Creating Worker configuration\n"
+cp conf/agent-verif-worker.cfg.inc /tmp/agent-verif-worker.cfg
+sed -i "s/pass = \"secretpassphrase\"/pass = \"$mqpass\"/" /tmp/agent-verif-worker.cfg || fail
+sudo mv /tmp/agent-verif-worker.cfg /etc/mig/agent-verif-worker.cfg || fail
+sudo chown mig /etc/mig/agent-verif-worker.cfg || fail
+sudo chmod 750 /etc/mig/agent-verif-worker.cfg || fail
+echo OK
+
 echo -e "\n---- Starting Scheduler and API in TMUX under mig user\n"
 sudo su mig -c "/usr/bin/tmux new-session -s 'mig' -d"
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-scheduler'"
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-api'"
+sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig_agent_verif_worker'"
 echo OK
 
 # Unset proxy related environment variables from this point on, since we want to ensure we are

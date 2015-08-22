@@ -528,20 +528,20 @@ And add the public PGP key of the scheduler as well:
 RabbitMQ Configuration
 ----------------------
 
-All communications between scheduler and agents rely on RabbitMQ's AMQP
+All communications between schedulers and agents rely on RabbitMQ's AMQP
 protocol. While MIG does not rely on the security of RabbitMQ to pass orders to
 agents, an attacker that gains control to the message broker would be able to
-listen to all message, or shut down MIG entirely. To prevent this, RabbitMQ must
-provide a reasonable amount of protection, at two levels:
+listen to all commands passed to the agents (not results). To prevent this,
+RabbitMQ must provide a reasonable amount of protection, at two levels:
 
 * All communications on the public internet are authenticated using client and
   server certificates. Since all agents share a single client certificate, this
   provides minimal security, and should only be used to make it harder for
   attackers to establish an AMQP connection with rabbitmq.
 
-* A given agent can listen and write to its own queue, and no other. We
-  accomplish this by adding a random number to the queue ID, which is generated
-  by an agent, and hard to guess by another agent.
+* Agents can only listen on their own queue and write to the `toschedulers`
+  exchange. This is accomplished by randomizing the agent queue name and adding
+  tight Access Control rules to RabbitMQ.
 
 Note that, even if a random agent manages to connect to the relay, the scheduler
 will accept its registration only if it is present in the scheduler's whitelist.
@@ -553,27 +553,13 @@ Install the RabbitMQ server from your distribution's packaging system. If your
 distribution does not provide a RabbitMQ package, install `erlang` from yum or
 apt, and then install RabbitMQ using the packages from rabbitmq.com
 
-RabbitMQ Permissions
-~~~~~~~~~~~~~~~~~~~~
-
-0. If you want more than 1024 clients, you may have to increase the max number
-   of file descriptors that rabbitmq is allowed to hold. On linux, increase
-   `nofile` in `/etc/security/limits.conf` as follow:
-
-.. code:: bash
-
-	rabbitmq - nofile 102400
-
-Then, make sure than `pam_limits.so` is included in `/etc/pam.d/common-session`:
-
-.. code:: bash
-
-	session    required     pam_limits.so
+RabbitMQ Configuration
+~~~~~~~~~~~~~~~~~~~~~~
 
 1. On the rabbitmq server, create users:
 
 	* **admin**, with the tag 'administrator'
-	* **scheduler** , **agent**, **api** and **worker** with no tag
+	* **scheduler** , **agent** and **worker** with no tag
 
 All users should have strong passwords. The scheduler password goes into the
 configuration file `conf/mig-scheduler.cfg`, in `[mq] password`. The agent
@@ -588,8 +574,6 @@ string. The admin password is, of course, for yourself.
    sudo rabbitmqctl add_user scheduler SomeRandomPassword
 
    sudo rabbitmqctl add_user agent SomeRandomPassword
-
-   sudo rabbitmqctl add_user api SomeRandomPassword
 
    sudo rabbitmqctl add_user worker SomeRandomPassword
 
@@ -615,63 +599,55 @@ On fresh installation, rabbitmq comes with a `guest` user that as password
 
 3. Create permissions for the scheduler user. The scheduler is allowed to:
 	- CONFIGURE:
-		- create the exchanges `mig` and `migevent`
-		- create and delete any queues under `migevent.*` and `mig.agt.*`
+		- declare the exchanges `toagents`, `toschedulers` and `toworkers`
+		- declare and delete queues under `mig.agt.*`
 	- WRITE:
-		- publish into the exchanges `mig` and `migevent`
-		- bind to the queues `mig.agt.heartbeats` and `mig.agt.results`
-		- bind to any queue under `migevent.*`
+		- publish into the exchanges `toagents` and `toworkers`
+		- consume from queues `mig.agt.heartbeats` and `mig.agt.results`
 	- READ:
-		- bind to the `mig` and `migevent` exchanges
-		- read from the queues `mig.agt.heartbeats`, `mig.agt.results`
-		- read from any queue under `migevent.*`
+		- declare the exchanges `toagents`, `toschedulers` and `toworkers`
+		- consume from queues `mig.agt.heartbeats` and `mig.agt.results` bound
+		  to the `toschedulers` exchange
 
 .. code:: bash
 
 	sudo rabbitmqctl set_permissions -p mig scheduler \
-		'^mig(|(event|\.agt)(|\..*))$' \
-		'^mig(|event(|\..*)|\.(agt\.(heartbeats|results)))$' \
-		'^mig(|event(|\..*)|\.(agt\.(heartbeats|results)))$'
+		'^(toagents|toschedulers|toworkers|mig\.agt\..*)$' \
+		'^(toagents|toworkers|mig\.agt\.(heartbeats|results))$' \
+		'^(toagents|toschedulers|toworkers|mig\.agt\.(heartbeats|results))$'
 
 4. Create permissions for the agent use. The agent is allowed to:
 	- CONFIGURE:
-		- create any queue under `mig.agt.(linux|windows|darwin).*`
+		- create any queue under `mig.agt.*`
 	- WRITE:
-		- publish to the `mig` exchange
-		- bind to any queue under `mig.agt.(linux|windows|darwin).*`
+		- publish to the `toschedulers` exchange
+		- consume from queues under `mig.agt.*`
 	- READ:
-		- bind to the `mig` exchange
-		- read from any queue under `mig.agt.(linux|windows|darwin).*`
+		- consume from queues under `mig.agt.*` bound to the `toagents`
+		  exchange
 
 .. code:: bash
 
 	sudo rabbitmqctl set_permissions -p mig agent \
-		'^mig\.agt\.(linux|windows|darwin)\..*$' \
-		'^mig(|\.agt\.(linux|windows|darwin)\..*)$' \
-		'^mig(|\.agt\.(linux|windows|darwin)\..*)$'
+		'^mig\.agt\..*$' \
+		'^(toschedulers|mig\.agt\..*)$' \
+		'^(toagents|mig\.agt\..*)$'
 
-5. Create permissions for the event workers and api users. The workers and api are allowed to:
+5. Create permissions for the event workers. The workers are allowed to:
 	- CONFIGURE:
-		- create any queue under `migevent.*`
+		- declare queues under `migevent.*`
 	- WRITE:
-		- write into the exchange `migevent`
-		- bind to any queue under `migevent.*`
+		- consume from queues under `migevent.*`
 	- READ:
-		- bind to the `migevent` exchange
-		- read from any queue under `migevent.*`
+	    - consume from queues under `migevent.*` bound to the `toworkers`
+		  exchange
 
 .. code:: bash
 
 	sudo rabbitmqctl set_permissions -p mig worker \
 	'^migevent\..*$' \
 	'^migevent(|\..*)$' \
-	'^migevent(|\..*)$'
-
-	sudo rabbitmqctl set_permissions -p mig api \
-	'^migevent\..*$' \
-	'^migevent(|\..*)$' \
-	'^migevent(|\..*)$'
-
+	'^(toworkers|migevent\..*)$'
 
 6. Start the scheduler, it shouldn't return any ACCESS error. You can also list
    the permissions with the command:
@@ -680,12 +656,9 @@ On fresh installation, rabbitmq comes with a `guest` user that as password
 
 	$ sudo rabbitmqctl list_permissions -p mig | column -t
 	Listing permissions in vhost "mig" ...
-	USER------+CONFIGURE---------------------------------+WRITE-------------------------------------------------+READ-------------------------------------------------+
-	admin      .*                                         .*                                                     .*
-	scheduler  ^mig(|(event|\\.agt)(|\\..*))$             ^mig(|event(|\\..*)|\\.(agt\\.(heartbeats|results)))$  ^mig(|event(|\\..*)|\\.(agt\\.(heartbeats|results)))$
-	agent      ^mig\\.agt\\.(linux|windows|darwin)\\..*$  ^mig(|\\.agt\\.(linux|windows|darwin)\\..*)$           ^mig(|\\.agt\\.(linux|windows|darwin)\\..*)$
-	api        ^migevent\\..*$                            ^migevent(|\\..*)$                                     ^migevent(|\\..*)$
-	worker     ^migevent\\..*$                            ^migevent(|\\..*)$                                     ^migevent(|\\..*)$
+	agent      ^mig\\.agt\\..*$                                    ^(toschedulers|mig\\.agt\\..*)$                          ^(toagents|mig\\.agt\\..*)$
+	scheduler  ^(toagents|toschedulers|toworkers|mig\\.agt\\..*)$  ^(toagents|toworkers|mig\\.agt\\.(heartbeats|results))$  ^(toagents|toschedulers|toworkers|mig\\.agt\\.(heartbeats|results))$
+	worker     ^migevent\\..*$                                     ^migevent(|\\..*)$                                       ^(toworkers|migevent\\..*)$
 
 RabbitMQ TLS configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -818,6 +791,24 @@ the scheduler. The agents will restart themselves.
 
 (remove the `echo` in the command above, it's there as a safety for copy/paste
 people).
+
+Supporting more than 1024 connections
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want more than 1024 clients, you may have to increase the max number of
+file descriptors that rabbitmq is allowed to hold. On linux, increase `nofile`
+in `/etc/security/limits.conf` as follow:
+
+.. code:: bash
+
+	rabbitmq - nofile 102400
+
+Then, make sure than `pam_limits.so` is included in `/etc/pam.d/common-session`:
+
+.. code:: bash
+
+	session    required     pam_limits.so
+
 
 Serving AMQPS on port 443
 ~~~~~~~~~~~~~~~~~~~~~~~~~

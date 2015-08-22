@@ -654,7 +654,7 @@ func sendResults(ctx Context, result mig.Command) (err error) {
 		panic(err)
 	}
 
-	err = publish(ctx, "mig", "mig.agt.results", body)
+	err = publish(ctx, mig.Mq_Ex_ToSchedulers, mig.Mq_Q_Results, body)
 	if err != nil {
 		panic(err)
 	}
@@ -688,8 +688,8 @@ func heartbeat(ctx Context) (err error) {
 		}
 		desc := fmt.Sprintf("heartbeat '%s'", body)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
-		publish(ctx, "mig", "mig.agt.heartbeats", body)
-		// write the heartbeat to disk
+		publish(ctx, mig.Mq_Ex_ToSchedulers, mig.Mq_Q_Heartbeat, body)
+		// update the local heartbeat file
 		err = ioutil.WriteFile(ctx.Agent.RunDir+"mig-agent.ok", []byte(time.Now().String()), 644)
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{Desc: "Failed to write mig-agent.ok to disk"}.Err()
