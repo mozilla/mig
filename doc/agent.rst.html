@@ -4,8 +4,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
-<title>Mozilla InvestiGator: MozDef Compliance Item Worker</title>
-<meta name="author" content="Julien Vehent &lt;jvehent&#64;mozilla.com&gt;" />
+<title>Agent</title>
 <style type="text/css">
 
 body {
@@ -240,106 +239,30 @@ strong {
 </style>
 </head>
 <body>
-<div class="document" id="mozilla-investigator-mozdef-compliance-item-worker">
-<h1 class="title">Mozilla InvestiGator: MozDef Compliance Item Worker</h1>
-<table class="docinfo" frame="void" rules="none">
-<col class="docinfo-name" />
-<col class="docinfo-content" />
-<tbody valign="top">
-<tr><th class="docinfo-name">Author:</th>
-<td>Julien Vehent &lt;<a class="reference external" href="mailto:jvehent&#64;mozilla.com">jvehent&#64;mozilla.com</a>&gt;</td></tr>
-</tbody>
-</table>
-<div class="contents topic" id="table-of-contents">
-<p class="topic-title first">Table of Contents</p>
-<ul class="auto-toc simple">
-<li><a class="reference internal" href="#configuration" id="id1">1&nbsp;&nbsp;&nbsp;Configuration</a><ul class="auto-toc">
-<li><a class="reference internal" href="#upstart" id="id2">1.1&nbsp;&nbsp;&nbsp;Upstart</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<p>The MozDef Compliance Item worker implements a data transformation process that
-converts the results of compliance actions into compliance items, and publishes
-them to a rabbitmq endpoint for consumption by mozdef.
-This worker serves a very specific purpose in the verification of security
-compliance performed byMozilla OpSec. It may not be very useful to anyone else.</p>
-<div class="section" id="configuration">
-<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Configuration</a></h1>
-<p>The configuration needs standard access to MIG's rabbitmq relay, configured in
-the <cite>[mq]</cite> section. Access to MozDef's rabbitmq endpoint is configured in the
-<cite>[mozdef]</cite> section. The <cite>[api]</cite> section must only contain the location of MIG's
-API endpoint, used to build links to commands in compliance items. Standard
-logging can be configured in <cite>[logging]</cite>.</p>
-<pre class="code literal-block">
-[api]
-        host = &quot;https://api.mig.example.net&quot;
-[mozdef]
-        host = &quot;mozdef.rabbitmq.example.net&quot;
-        port = 5671
-        user = &quot;migcomplianceworker&quot;
-        pass = &quot;secretpassphrase&quot;
-        vhost = &quot;mozdef&quot;
-        exchange = &quot;eventtask&quot;
-        routingkey = &quot;eventtask&quot;
-        usetls  = true
-        cacertpath  = &quot;/etc/certs/ca.crt&quot;
-        clientcertpath = &quot;/etc/certs/migcomplianceworker.crt&quot;
-        clientkeypath  = &quot;/etc/certs/migcomplianceworker.key&quot;
-        timeout = &quot;10s&quot;
+<div class="document" id="agent">
+<h1 class="title">Agent</h1>
 
-; https://github.com/ameihm0912/vmintgr
-[vmintgr]
-        bin = &quot;/opt/vmintgr/bin/grouptest&quot;
+<p>The agent accepts different classes of inputs on stdin, as one-line JSON objects. The most common one is the
+<tt class="docutils literal">parameters</tt> class, but it could also receive a <tt class="docutils literal">stop</tt> input that
+indicates that the module should stop its execution immediately. The format of
+module input messages is defined by <tt class="docutils literal">modules.Message</tt>.</p>
+<pre class="code go literal-block">
+<span class="comment single">// Message defines the input messages received by modules.
+</span><span class="keyword declaration">type</span> <span class="name other">Message</span> <span class="keyword declaration">struct</span> <span class="punctuation">{</span>
+        <span class="name other">Class</span>      <span class="keyword type">string</span>      <span class="comment single">// represent the type of message being passed to the module
+</span>        <span class="name other">Parameters</span> <span class="keyword declaration">interface</span><span class="punctuation">{}</span> <span class="comment single">// for `parameters` class, this interface contains the module parameters
+</span><span class="punctuation">}</span>
 
-[mq]
-        host = &quot;relay.mig.example.net&quot;
-        port = 5671
-        user = &quot;worker&quot;
-        pass = &quot;secretpassphrase&quot;
-        vhost = &quot;mig&quot;
-        usetls  = true
-        cacert  = &quot;/etc/certs/ca.crt&quot;
-        tlscert = &quot;/etc/certs/migworker.crt&quot;
-        tlskey  = &quot;/etc/certs/migworker.key&quot;
-        timeout = &quot;10s&quot;
-[logging]
-        mode = &quot;syslog&quot; ; stdout | file | syslog
-        level = &quot;info&quot;
-        host = &quot;localhost&quot;
-        port = 514
-        protocol = &quot;udp&quot;
+<span class="keyword declaration">const</span> <span class="punctuation">(</span>
+        <span class="name other">MsgClassParameters</span> <span class="keyword type">string</span> <span class="punctuation">=</span> <span class="literal string">&quot;parameters&quot;</span>
+        <span class="name other">MsgClassStop</span>       <span class="keyword type">string</span> <span class="punctuation">=</span> <span class="literal string">&quot;stop&quot;</span>
+<span class="punctuation">)</span>
 </pre>
-<div class="section" id="upstart">
-<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Upstart</a></h2>
-<p>To manage this worker with upstart, use the configuration below, for example in
-<cite>/etc/init/mig-compliance-item-worker.conf</cite>.</p>
-<pre class="code literal-block">
-# Mozilla InvestiGator MozDef Compliance Item Worker
-
-description     &quot;MIG MozDef Compliance Item Worker&quot;
-
-start on filesystem or runlevel [2345]
-stop on runlevel [!2345]
-
-setuid mig
-limit nofile 640000 640000
-
-respawn
-respawn limit 10 5
-umask 022
-
-console none
-
-pre-start script
-        test /opt/mig_compliance_item_worker || { stop; exit 0; }
-end script
-
-# Start
-exec /opt/mig_compliance_item_worker
-</pre>
-</div>
-</div>
+<p>When the agent receives a command to pass to a module for execution, it
+extracts the operation parameters from <tt class="docutils literal"><span class="pre">Command.Action.Operations[N].Parameters</span></tt>
+and copies them into <tt class="docutils literal">Message.Parameters</tt>. It then sets <tt class="docutils literal">Message.Class</tt> to
+<tt class="docutils literal">modules.MsgClassParameters</tt>, marshals the struct into JSON, and pass the
+resulting <tt class="docutils literal">[]byte</tt> to the module as an IO stream.</p>
 </div>
 </body>
 </html>

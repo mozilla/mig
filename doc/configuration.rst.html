@@ -1,150 +1,436 @@
-<!DOCTYPE html>
-<html>
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-    <title>Mozilla InvestiGator Configuration Documentation</title>
-    <meta charset="utf-8" />
-    <link href="docstyle.css" rel="stylesheet" />
-    <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
+<title>Mozilla InvestiGator Configuration Documentation</title>
+<meta name="author" content="Julien Vehent &lt;jvehent&#64;mozilla.com&gt;" />
+<style type="text/css">
+
+body {
+  width: 95%;
+  max-width: 900px;
+  margin: 20px;
+  padding: 0;
+  background: #151515 url("../images/bkg.png") 0 0;
+  color: #eaeaea;
+  font: 16px;
+  line-height: 1.5;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+}
+
+/* General & 'Reset' Stuff */
+
+.container {
+  width: 95%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+section {
+  display: block;
+  margin: 0 0 20px 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  /*margin: 0 0 20px;*/
+  margin: 0;
+}
+
+li {
+  line-height: 1.4 ;
+}
+
+/* Header, <header>
+ *    header   - container
+ *       h1       - project name
+ *          h2       - project description
+ *          */
+
+header {
+  background: rgba(0, 0, 0, 0.1);
+  width: 100%;
+  border-bottom: 1px dashed #b5e853;
+  /*padding: 20px 0;
+ *   margin: 0 0 40px 0;*/
+  padding: 5px 0;
+  margin: 0 0 10px 0;
+}
+
+header h1 {
+  font-size: 30px;
+  line-height: 1.5;
+  margin: 0 0 0 -40px;
+  font-weight: bold;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  /*color: #b5e853;*/
+  color: #089d00;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
+               0 0 5px rgba(181, 232, 83, 0.1),
+               0 0 10px rgba(181, 232, 83, 0.1);
+  letter-spacing: -1px;
+  -webkit-font-smoothing: antialiased;
+}
+
+header h1:before {
+  content: "./ ";
+  font-size: 24px;
+}
+
+header h2 {
+  font-size: 18px;
+  font-weight: 300;
+  /*color: #666;*/
+  color: #ff7800;
+}
+
+/* Main Content
+ * */
+
+#main_content {
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+section img {
+  max-width: 100%
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: normal;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  /*color: #b5e853;*/
+  color: #8AB638;
+  letter-spacing: -0.03em;
+  /*text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
+               0 0 5px rgba(181, 232, 83, 0.1),
+               0 0 10px rgba(181, 232, 83, 0.1);*/
+}
+
+#main_content h1 {
+  font-size: 30px;
+}
+
+#main_content h2 {
+  font-size: 24px;
+}
+
+#main_content h3 {
+  font-size: 18px;
+}
+
+#main_content h4 {
+  font-size: 14px;
+}
+
+#main_content h5 {
+  font-size: 12px;
+  text-transform: uppercase;
+  margin: 0 0 5px 0;
+}
+
+#main_content h6 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #999;
+  margin: 0 0 5px 0;
+}
+
+dt {
+  font-style: italic;
+  font-weight: bold;
+}
+/*
+ul li {
+  list-style: none;
+}
+*/
+/*
+ul li:before {
+  content: ">>";
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  font-size: 13px;
+  color: #b5e853;
+  margin-left: -37px;
+  margin-right: 21px;
+  line-height: 16px;
+}
+*/
+
+blockquote {
+  color: #aaa;
+  padding-left: 10px;
+  border-left: 1px dotted #666;
+}
+
+
+pre {
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px;
+  font-size: 14px;
+  //color: #b5e853;
+  border-radius: 2px;
+  -moz-border-radius: 2px;
+  -webkit-border-radius: 2px;
+  text-wrap: normal;
+  overflow: auto;
+  overflow-y: hidden;
+}
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+pre.code .ln { color: grey; } /* line numbers */
+//pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment, code .c1 { color: #FF7428; }
+code, pre.code .keyword, code .keyword, pre.code .kd, pre.code .kn, pre.code .k, pre.code .o { color: #00a5ff; font-weight: bold;}
+pre.code .nb { color: #c45918;}
+pre.code .s {color: #0a77c4;}
+pre.code .punctuation, pre.code .punctuation, pre.code .p { color: white;}
+pre.code .literal.string, pre.code .literal.string { color: #40BF32; }
+pre.code .name.builtin, pre.code .name.builtin, pre.code .nx { color: white; }
+pre.code .deleted, pre.code .deleted { background-color: #DEB0A1}
+pre.code .inserted, pre.code .inserted { background-color: #A3D289}
+
+table {
+  width: 100%;
+  margin: 0 0 20px 0;
+}
+
+th {
+  text-align: left;
+  border-bottom: 1px dashed #b5e853;
+  padding: 5px 10px;
+}
+
+td {
+  padding: 5px 10px;
+}
+
+hr {
+  height: 0;
+  border: 0;
+  border-bottom: 1px dashed #b5e853;
+  color: #b5e853;
+}
+/* Links
+ *    a, a:hover, a:visited
+ *    */
+
+a {
+  color: #63c0f5;
+  text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);
+}
+
+cite {
+  color: #00FF4A;
+}
+
+strong {
+  color: #C64216;
+}
+
+</style>
 </head>
 <body>
-    <h1>Mozilla InvestiGator Configuration Documentation</h1>
-    <aside class="topic contents" id="table-of-contents">
-        <h1>Table of Contents</h1>
-        <ul class="auto-toc">
-            <li><a href="#prepare-a-build-environment">1   Prepare a build environment</a></li>
-            <li><a href="#agent-configuration">2   Agent Configuration</a>
-                <ul class="auto-toc">
-                    <li><a href="#amqps-configuration">2.1   AMQPS configuration</a></li>
-                    <li><a href="#proxy-support">2.2   Proxy support</a></li>
-                    <li><a href="#stat-socket">2.3   Stat socket</a></li>
-                    <li><a href="#logging">2.4   Logging</a></li>
-                    <li><a href="#access-control-lists">2.5   Access Control Lists</a></li>
-                    <li><a href="#investigators-s-public-keys">2.6   Investigators's public keys</a></li>
-                </ul>
-            </li>
-            <li><a href="#build-instructions">3   Build instructions</a>
-                <ul class="auto-toc">
-                    <li><a href="#build-agent-with-specific-configuration-file">3.1   Build agent with specific configuration file</a></li>
-                    <li><a href="#agent-external-configuration-file">3.2   Agent external configuration file</a></li>
-                </ul>
-            </li>
-            <li><a href="#scheduler-configuration">4   Scheduler Configuration</a>
-                <ul class="auto-toc">
-                    <li><a href="#spool-directories">4.1   Spool directories</a></li>
-                    <li><a href="#whitelist">4.2   Whitelist</a></li>
-                    <li><a href="#database-creation">4.3   Database creation</a></li>
-                    <li><a href="#database-tuning">4.4   Database tuning</a></li>
-                    <li><a href="#id1">4.5   Logging</a></li>
-                    <li><a href="#id2">4.6   AMQPS configuration</a></li>
-                    <li><a href="#collector">4.7   Collector</a></li>
-                    <li><a href="#pgp">4.8   PGP</a></li>
-                </ul>
-            </li>
-            <li><a href="#rabbitmq-configuration">5   RabbitMQ Configuration</a>
-                <ul class="auto-toc">
-                    <li><a href="#installation">5.1   Installation</a></li>
-                    <li><a href="#id3">5.2   RabbitMQ Configuration</a></li>
-                    <li><a href="#rabbitmq-tls-configuration">5.3   RabbitMQ TLS configuration</a></li>
-                    <li><a href="#queues-mirroring">5.4   Queues mirroring</a></li>
-                    <li><a href="#cluster-management">5.5   Cluster management</a></li>
-                    <li><a href="#supporting-more-than-1024-connections">5.6   Supporting more than 1024 connections</a></li>
-                    <li><a href="#serving-amqps-on-port-443">5.7   Serving AMQPS on port 443</a></li>
-                </ul>
-            </li>
-            <li><a href="#api-configuration">6   API configuration</a>
-                <ul class="auto-toc">
-                    <li><a href="#location">6.1   Location</a></li>
-                </ul>
-            </li>
-        </ul>
-    </aside>
-    <p>This document describes the steps to build and configure a MIG platform. MIG has 6 major components. The Postgresql database and RabbitMQ relay are external dependencies, and while this document shows one way of deploying them, you are free to use your own method. All other components (scheduler, api, agents and clients) require specific compilation and configuration steps that are explained in this document.</p>
-    <p>Due to the fast changing pace of Go, MIG and its third party packages, we do not currently provide binary packages. You will have to compile the components yourself, which is explained below.</p>
-    <p>A complete environment should be configured in the following order:</p>
-    <ol type="1">
-        <li>retrieve the source and prepare your build environment</li>
-        <li>deploy the postgresql database</li>
-        <li>deploy the rabbitmq relay</li>
-        <li>build, configure and deploy the scheduler</li>
-        <li>build, configure and deploy the api</li>
-        <li>build the clients and create an investigator</li>
-        <li>configure and deploy agents</li>
-    </ol>
-    <section id="prepare-a-build-environment">
-        <h2>1   Prepare a build environment</h2>
-        <p>Install Go from your package manager or <a href="http://golang.org/doc/install/source">from source</a>.</p>
-        <pre class="code bash"><span class="nv">$ </span>wget https://storage.googleapis.com/golang/go1.2.2.linux-amd64.tar.gz
-<span class="nv">$ </span>tar -xzvf go1.2.2.linux-amd64.tar.gz
-<span class="nv">$ </span><span class="nb">export </span><span class="nv">GOROOT</span><span class="o">=</span>~/go
-<span class="nv">$ </span><span class="nb">export </span><span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:<span class="nv">$HOME</span>/go/bin
-<span class="nv">$ </span>go version
-go version go1.2.2 linux/amd64</pre>
-        <p>Then, clone the MIG source code:</p>
-        <pre class="code bash"><span class="nv">$ </span>git clone git@github.com:mozilla/mig.git</pre>
-        <p>Download the dependencies:</p>
-        <pre class="code bash"><span class="nv">$ </span>make go_get_deps
-<span class="nv">GOPATH</span><span class="o">=</span>/home/jvehent/mig go get -u code.google.com/p/go.crypto/openpgp
-<span class="nv">GOPATH</span><span class="o">=</span>/home/jvehent/mig go get -u github.com/streadway/amqp
-<span class="nv">GOPATH</span><span class="o">=</span>/home/jvehent/mig go get -u github.com/lib/pq
-<span class="nv">GOPATH</span><span class="o">=</span>/home/jvehent/mig go get -u github.com/howeyc/fsnotify
-<span class="nv">GOPATH</span><span class="o">=</span>/home/jvehent/mig go get -u code.google.com/p/gcfg
-<span class="nv">GOPATH</span><span class="o">=</span>/home/jvehent/mig go get -u github.com/gorilla/mux
-<span class="nv">GOPATH</span><span class="o">=</span>/home/jvehent/mig go get -u github.com/jvehent/cljs
-<span class="nv">GOPATH</span><span class="o">=</span>/home/jvehent/mig go get -u bitbucket.org/kardianos/osext
-<span class="nv">GOPATH</span><span class="o">=</span>/home/jvehent/mig go get -u bitbucket.org/kardianos/service</pre>
-        <p>Build the scheduler or the API:</p>
-        <pre class="code bash"><span class="nv">$ </span>make mig-scheduler</pre>
-        <p>That's it. Now to build the agent, you need to perform some configuration first.</p>
-    </section>
-    <section id="agent-configuration">
-        <h2>2   Agent Configuration</h2>
-        <p>The MIG Agent configuration must be prepared before build. The configuration is hardwired into the agent, such that no external file is required to run it.</p>
-        <p>TLS Certificates, PGP public keys and configuration variables would normally be stored in external files, that would make installing an agent on an endpoint more complex. The approach of building all of the configuration parameters into the agent means that we can ship a single binary that is self-sufficient. Go's approach to statically built binary also helps greatly eliminate the need for external dependencies. One the agent is built, ship it to an endpoint, run it, and you're done.</p>
-        <p>A template of agent configuration is in 'conf/mig-agent-conf.go.inc'. Copy this to 'conf/mig-agent-conf.go' and edit the file. Make sure to respect Go syntax format.</p>
-        <pre class="code bash">git clone git@github.com:mozilla/mig.git
-cp conf/mig-agent-conf.go<span class="o">{</span>.inc,<span class="o">}</span>
-vim mig-agent-conf.go</pre>
-        <p>Later on, when you run 'make mig-agent', the Makefile will copy the agent configuration to the agent source code, and build the binary. If the configuration file is missing, Makefile will alert you. If you have an error in the format of the file, the Go compiler will return a list of compilation errors for you to fix.</p>
-        <section id="amqps-configuration">
-            <h3>2.1   AMQPS configuration</h3>
-            <p>TLS support between agents and rabbitmq is optional, but strongly recommended. If you want to use TLS, you need to import the PEM encoded client certificate, client key and CA certificate into 'mig-agent-conf.go'.</p>
-            <ol type="1">
-                <li><strong>CACERT</strong> must contain the PEM encoded certificate of the Root CA.</li>
-                <li><strong>AGENTCERT</strong> must contain the PEM encoded client certificate of the agent.</li>
-                <li><strong>AGENTKEY</strong> must contain the PEM encoded client certificate of the agent.</li>
-            </ol>
-            <p>You also need to edit the <strong>AMQPBROKER</strong> variable to invoke <strong>amqps</strong> instead of the regular amqp mode. You probably also want to change the port from 5672 (default amqp) to 5671 (default amqps).</p>
-        </section>
-        <section id="proxy-support">
-            <h3>2.2   Proxy support</h3>
-            <p>The agent supports connecting to the relay via a CONNECT proxy. It will attempt a direct connection first, and if this fails, will look for the environment variable <cite>HTTP_PROXY</cite> to use as a proxy. A list of proxies can be manually added to the configuration of the agent in the <cite>PROXIES</cite> parameters. These proxies will be used if the two previous connections fail.</p>
-            <p>An agent using a proxy will reference the name of the proxy in the environment fields of the heartbeat sent to the scheduler.</p>
-        </section>
-        <section id="stat-socket">
-            <h3>2.3   Stat socket</h3>
-            <p>The agent can establish a listening TCP socket on localhost for management purpose. The list of supported operations can be obtained by sending the keyword <cite>help</cite> to this socket.</p>
-            <pre class="code bash"><span class="nv">$ </span>nc localhost 51664 <span class="o">&lt;&lt;&lt;</span> <span class="nb">help
+<div class="document" id="mozilla-investigator-configuration-documentation">
+<h1 class="title">Mozilla InvestiGator Configuration Documentation</h1>
+<table class="docinfo" frame="void" rules="none">
+<col class="docinfo-name" />
+<col class="docinfo-content" />
+<tbody valign="top">
+<tr><th class="docinfo-name">Author:</th>
+<td>Julien Vehent &lt;<a class="reference external" href="mailto:jvehent&#64;mozilla.com">jvehent&#64;mozilla.com</a>&gt;</td></tr>
+</tbody>
+</table>
+<div class="contents topic" id="table-of-contents">
+<p class="topic-title first">Table of Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#prepare-a-build-environment" id="id4">1&nbsp;&nbsp;&nbsp;Prepare a build environment</a></li>
+<li><a class="reference internal" href="#agent-configuration" id="id5">2&nbsp;&nbsp;&nbsp;Agent Configuration</a><ul class="auto-toc">
+<li><a class="reference internal" href="#amqps-configuration" id="id6">2.1&nbsp;&nbsp;&nbsp;AMQPS configuration</a></li>
+<li><a class="reference internal" href="#proxy-support" id="id7">2.2&nbsp;&nbsp;&nbsp;Proxy support</a></li>
+<li><a class="reference internal" href="#stat-socket" id="id8">2.3&nbsp;&nbsp;&nbsp;Stat socket</a></li>
+<li><a class="reference internal" href="#logging" id="id9">2.4&nbsp;&nbsp;&nbsp;Logging</a></li>
+<li><a class="reference internal" href="#access-control-lists" id="id10">2.5&nbsp;&nbsp;&nbsp;Access Control Lists</a></li>
+<li><a class="reference internal" href="#investigators-s-public-keys" id="id11">2.6&nbsp;&nbsp;&nbsp;Investigators's public keys</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#build-instructions" id="id12">3&nbsp;&nbsp;&nbsp;Build instructions</a><ul class="auto-toc">
+<li><a class="reference internal" href="#build-agent-with-specific-configuration-file" id="id13">3.1&nbsp;&nbsp;&nbsp;Build agent with specific configuration file</a></li>
+<li><a class="reference internal" href="#agent-external-configuration-file" id="id14">3.2&nbsp;&nbsp;&nbsp;Agent external configuration file</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#scheduler-configuration" id="id15">4&nbsp;&nbsp;&nbsp;Scheduler Configuration</a><ul class="auto-toc">
+<li><a class="reference internal" href="#spool-directories" id="id16">4.1&nbsp;&nbsp;&nbsp;Spool directories</a></li>
+<li><a class="reference internal" href="#whitelist" id="id17">4.2&nbsp;&nbsp;&nbsp;Whitelist</a></li>
+<li><a class="reference internal" href="#database-creation" id="id18">4.3&nbsp;&nbsp;&nbsp;Database creation</a></li>
+<li><a class="reference internal" href="#database-tuning" id="id19">4.4&nbsp;&nbsp;&nbsp;Database tuning</a></li>
+<li><a class="reference internal" href="#id1" id="id20">4.5&nbsp;&nbsp;&nbsp;Logging</a></li>
+<li><a class="reference internal" href="#id2" id="id21">4.6&nbsp;&nbsp;&nbsp;AMQPS configuration</a></li>
+<li><a class="reference internal" href="#collector" id="id22">4.7&nbsp;&nbsp;&nbsp;Collector</a></li>
+<li><a class="reference internal" href="#pgp" id="id23">4.8&nbsp;&nbsp;&nbsp;PGP</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#rabbitmq-configuration" id="id24">5&nbsp;&nbsp;&nbsp;RabbitMQ Configuration</a><ul class="auto-toc">
+<li><a class="reference internal" href="#installation" id="id25">5.1&nbsp;&nbsp;&nbsp;Installation</a></li>
+<li><a class="reference internal" href="#id3" id="id26">5.2&nbsp;&nbsp;&nbsp;RabbitMQ Configuration</a></li>
+<li><a class="reference internal" href="#rabbitmq-tls-configuration" id="id27">5.3&nbsp;&nbsp;&nbsp;RabbitMQ TLS configuration</a></li>
+<li><a class="reference internal" href="#queues-mirroring" id="id28">5.4&nbsp;&nbsp;&nbsp;Queues mirroring</a></li>
+<li><a class="reference internal" href="#cluster-management" id="id29">5.5&nbsp;&nbsp;&nbsp;Cluster management</a></li>
+<li><a class="reference internal" href="#supporting-more-than-1024-connections" id="id30">5.6&nbsp;&nbsp;&nbsp;Supporting more than 1024 connections</a></li>
+<li><a class="reference internal" href="#serving-amqps-on-port-443" id="id31">5.7&nbsp;&nbsp;&nbsp;Serving AMQPS on port 443</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#api-configuration" id="id32">6&nbsp;&nbsp;&nbsp;API configuration</a><ul class="auto-toc">
+<li><a class="reference internal" href="#location" id="id33">6.1&nbsp;&nbsp;&nbsp;Location</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>This document describes the steps to build and configure a MIG platform.
+MIG has 6 major components. The Postgresql database and RabbitMQ relay are
+external dependencies, and while this document shows one way of deploying them,
+you are free to use your own method. All other components (scheduler, api,
+agents and clients) require specific compilation and configuration steps that
+are explained in this document.</p>
+<p>Due to the fast changing pace of Go, MIG and its third party packages, we do
+not currently provide binary packages. You will have to compile the components
+yourself, which is explained below.</p>
+<p>A complete environment should be configured in the following order:</p>
+<ol class="arabic simple">
+<li>retrieve the source and prepare your build environment</li>
+<li>deploy the postgresql database</li>
+<li>deploy the rabbitmq relay</li>
+<li>build, configure and deploy the scheduler</li>
+<li>build, configure and deploy the api</li>
+<li>build the clients and create an investigator</li>
+<li>configure and deploy agents</li>
+</ol>
+<div class="section" id="prepare-a-build-environment">
+<h1><a class="toc-backref" href="#id4">1&nbsp;&nbsp;&nbsp;Prepare a build environment</a></h1>
+<p>Install Go from your package manager or <a class="reference external" href="http://golang.org/doc/install/source">from source</a>.</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>wget https://storage.googleapis.com/golang/go1.2.2.linux-amd64.tar.gz
+<span class="name variable">$ </span>tar -xzvf go1.2.2.linux-amd64.tar.gz
+<span class="name variable">$ </span><span class="name builtin">export </span><span class="name variable">GOROOT</span><span class="operator">=</span>~/go
+<span class="name variable">$ </span><span class="name builtin">export </span><span class="name variable">PATH</span><span class="operator">=</span><span class="name variable">$PATH</span>:<span class="name variable">$HOME</span>/go/bin
+<span class="name variable">$ </span>go version
+go version go1.2.2 linux/amd64
+</pre>
+<p>Then, clone the MIG source code:</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>git clone git&#64;github.com:mozilla/mig.git
+</pre>
+<p>Download the dependencies:</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>make go_get_deps
+<span class="name variable">GOPATH</span><span class="operator">=</span>/home/jvehent/mig go get -u code.google.com/p/go.crypto/openpgp
+<span class="name variable">GOPATH</span><span class="operator">=</span>/home/jvehent/mig go get -u github.com/streadway/amqp
+<span class="name variable">GOPATH</span><span class="operator">=</span>/home/jvehent/mig go get -u github.com/lib/pq
+<span class="name variable">GOPATH</span><span class="operator">=</span>/home/jvehent/mig go get -u github.com/howeyc/fsnotify
+<span class="name variable">GOPATH</span><span class="operator">=</span>/home/jvehent/mig go get -u code.google.com/p/gcfg
+<span class="name variable">GOPATH</span><span class="operator">=</span>/home/jvehent/mig go get -u github.com/gorilla/mux
+<span class="name variable">GOPATH</span><span class="operator">=</span>/home/jvehent/mig go get -u github.com/jvehent/cljs
+<span class="name variable">GOPATH</span><span class="operator">=</span>/home/jvehent/mig go get -u bitbucket.org/kardianos/osext
+<span class="name variable">GOPATH</span><span class="operator">=</span>/home/jvehent/mig go get -u bitbucket.org/kardianos/service
+</pre>
+<p>Build the scheduler or the API:</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>make mig-scheduler
+</pre>
+<p>That's it. Now to build the agent, you need to perform some configuration first.</p>
+</div>
+<div class="section" id="agent-configuration">
+<h1><a class="toc-backref" href="#id5">2&nbsp;&nbsp;&nbsp;Agent Configuration</a></h1>
+<p>The MIG Agent configuration must be prepared before build. The configuration is
+hardwired into the agent, such that no external file is required to run it.</p>
+<p>TLS Certificates, PGP public keys and configuration variables would normally
+be stored in external files, that would make installing an agent on an endpoint
+more complex. The approach of building all of the configuration parameters into
+the agent means that we can ship a single binary that is self-sufficient. Go's
+approach to statically built binary also helps greatly eliminate the need for
+external dependencies. One the agent is built, ship it to an endpoint, run it,
+and you're done.</p>
+<p>A template of agent configuration is in 'conf/mig-agent-conf.go.inc'. Copy this
+to 'conf/mig-agent-conf.go' and edit the file. Make sure to respect Go syntax
+format.</p>
+<pre class="code bash literal-block">
+git clone git&#64;github.com:mozilla/mig.git
+cp conf/mig-agent-conf.go<span class="operator">{</span>.inc,<span class="operator">}</span>
+vim mig-agent-conf.go
+</pre>
+<p>Later on, when you run 'make mig-agent', the Makefile will copy the agent
+configuration to the agent source code, and build the binary. If the
+configuration file is missing, Makefile will alert you. If you have an error in
+the format of the file, the Go compiler will return a list of compilation errors
+for you to fix.</p>
+<div class="section" id="amqps-configuration">
+<h2><a class="toc-backref" href="#id6">2.1&nbsp;&nbsp;&nbsp;AMQPS configuration</a></h2>
+<p>TLS support between agents and rabbitmq is optional, but strongly recommended.
+If you want to use TLS, you need to import the PEM encoded client certificate,
+client key and CA certificate into 'mig-agent-conf.go'.</p>
+<ol class="arabic simple">
+<li><strong>CACERT</strong> must contain the PEM encoded certificate of the Root CA.</li>
+<li><strong>AGENTCERT</strong> must contain the PEM encoded client certificate of the agent.</li>
+<li><strong>AGENTKEY</strong> must contain the PEM encoded client certificate of the agent.</li>
+</ol>
+<p>You also need to edit the <strong>AMQPBROKER</strong> variable to invoke <strong>amqps</strong> instead of
+the regular amqp mode. You probably also want to change the port from 5672
+(default amqp) to 5671 (default amqps).</p>
+</div>
+<div class="section" id="proxy-support">
+<h2><a class="toc-backref" href="#id7">2.2&nbsp;&nbsp;&nbsp;Proxy support</a></h2>
+<p>The agent supports connecting to the relay via a CONNECT proxy. It will attempt
+a direct connection first, and if this fails, will look for the environment
+variable <cite>HTTP_PROXY</cite> to use as a proxy. A list of proxies can be manually
+added to the configuration of the agent in the <cite>PROXIES</cite> parameters. These
+proxies will be used if the two previous connections fail.</p>
+<p>An agent using a proxy will reference the name of the proxy in the environment
+fields of the heartbeat sent to the scheduler.</p>
+</div>
+<div class="section" id="stat-socket">
+<h2><a class="toc-backref" href="#id8">2.3&nbsp;&nbsp;&nbsp;Stat socket</a></h2>
+<p>The agent can establish a listening TCP socket on localhost for management
+purpose. The list of supported operations can be obtained by sending the
+keyword <cite>help</cite> to this socket.</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>nc localhost <span class="literal number">51664</span> <span class="operator">&lt;&lt;&lt;</span> <span class="name builtin">help
 
 </span>Welcome to the MIG agent socket. The commands are:
-pid returns the PID of the running agent</pre>
-            <p>To obtain the PID of the running agent, use the following command:</p>
-            <pre class="code bash"><span class="nv">$ </span>nc localhost 51664 <span class="o">&lt;&lt;&lt;</span> pid ; <span class="nb">echo
-</span>9792</pre>
-            <p>Leave the <cite>SOCKET</cite> configuration variable empty to disable the stat socket.</p>
-        </section>
-        <section id="logging">
-            <h3>2.4   Logging</h3>
-            <p>The agent can log to stdout, to a file or to the system logging. On Windows, the system logging is the Event log. On POSIX systems, it's syslog.</p>
-            <p>The <cite>LOGGINGCONF</cite> parameter is used to configure the proper logging level.</p>
-        </section>
-        <section id="access-control-lists">
-            <h3>2.5   Access Control Lists</h3>
-            <p>see <a href="concepts.rst">concepts: Access Control Lists</a></p>
-        </section>
-        <section id="investigators-s-public-keys">
-            <h3>2.6   Investigators's public keys</h3>
-            <p>The public keys of all investigators must be listed in the <cite>PUBLICPGPKEYS</cite> array. Each key is its own entry in the array. To export a public key in the proper format, use the command:</p>
-            <pre class="code bash"><span class="nv">$ </span>gpg --export -a jvehent@mozilla.com
+pid     returns the PID of the running agent
+</pre>
+<p>To obtain the PID of the running agent, use the following command:</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>nc localhost <span class="literal number">51664</span> <span class="operator">&lt;&lt;&lt;</span> pid <span class="punctuation">;</span> <span class="name builtin">echo
+</span>9792
+</pre>
+<p>Leave the <cite>SOCKET</cite> configuration variable empty to disable the stat socket.</p>
+</div>
+<div class="section" id="logging">
+<h2><a class="toc-backref" href="#id9">2.4&nbsp;&nbsp;&nbsp;Logging</a></h2>
+<p>The agent can log to stdout, to a file or to the system logging. On Windows,
+the system logging is the Event log. On POSIX systems, it's syslog.</p>
+<p>The <cite>LOGGINGCONF</cite> parameter is used to configure the proper logging level.</p>
+</div>
+<div class="section" id="access-control-lists">
+<h2><a class="toc-backref" href="#id10">2.5&nbsp;&nbsp;&nbsp;Access Control Lists</a></h2>
+<p>see <a class="reference external" href="concepts.rst">concepts: Access Control Lists</a></p>
+</div>
+<div class="section" id="investigators-s-public-keys">
+<h2><a class="toc-backref" href="#id11">2.6&nbsp;&nbsp;&nbsp;Investigators's public keys</a></h2>
+<p>The public keys of all investigators must be listed in the <cite>PUBLICPGPKEYS</cite>
+array. Each key is its own entry in the array. To export a public key in the
+proper format, use the command:</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>gpg --export -a jvehent&#64;mozilla.com
 
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1
@@ -152,195 +438,291 @@ Version: GnuPG v1
 mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
 QPFOPgu3O3iij6UOVh+LOkqccjJ8gZVLYMJzUQC+2RJ3jvXhti8xZ1hs2iEr65Rj
 zUklHVZguf2Zv2X9Er8rnlW5xzplsVXNWnVvMDXyzx0ufC00dDbCwahLQnv6Vqq8
-etc...</pre>
-            <p>Then insert the whole, with header and footer, into the array:</p>
-            <pre class="code bash">// PGP public key that is authorized to sign actions
-var <span class="nv">PUBLICPGPKEYS</span> <span class="o">=</span> <span class="o">[</span>...<span class="o">]</span>string<span class="o">{</span>
-<span class="sb">`</span>-----BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v1 - bob.kelso@mozilla.com
+etc...
+</pre>
+<p>Then insert the whole, with header and footer, into the array:</p>
+<pre class="code bash literal-block">
+// PGP public key that is authorized to sign actions
+var <span class="name variable">PUBLICPGPKEYS</span> <span class="operator">=</span> <span class="operator">[</span>...<span class="operator">]</span>string<span class="operator">{</span>
+<span class="literal string backtick">`</span>-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v1 - bob.kelso&#64;mozilla.com
 
 mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
-<span class="o">=</span>3tGV
+<span class="operator">=</span>3tGV
 -----END PGP PUBLIC KEY BLOCK-----
-<span class="sb">`</span>,
-<span class="sb">`</span>
+<span class="literal string backtick">`</span>,
+<span class="literal string backtick">`</span>
 -----BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v1. Name: sam.axe@mozilla.com
+Version: GnuPG v1. Name: sam.axe&#64;mozilla.com
 
 mQINBE5bjGABEACnT9K6MEbeDFyCty7KalsNnMjXH73kY4B8aJXbE6SSnRA3gWpa
------END PGP PUBLIC KEY BLOCK-----<span class="sb">`</span><span class="o">}</span></pre>
-        </section>
-    </section>
-    <section id="build-instructions">
-        <h2>3   Build instructions</h2>
-        <p>To build MIG, you need Go version 1.2 or superior. External Go dependencies can be resolved by running <cite>make go_get_deps</cite>:</p>
-        <pre class="code bash"><span class="nv">$ </span>make go_get_deps
-<span class="nv">GOPATH</span><span class="o">=</span>. go get -u code.google.com/p/go.crypto/openpgp
-<span class="nv">GOPATH</span><span class="o">=</span>. go get -u github.com/streadway/amqp
-...</pre>
-        <p>Each component of MIG can be built independently with 'make mig-action-generator', 'make mig-action-verifier', 'make mig-scheduler', 'make mig-api', 'make mig-console' and 'make mig-agent'. To build the entire platform, simply run 'make'.</p>
-        <pre class="code bash"><span class="nv">$ </span>make</pre>
-        <p>Built binaries will be placed in <strong>bin/linux/amd64/</strong> (or in a similar directory if you are building on a different platform).</p>
-        <section id="build-agent-with-specific-configuration-file">
-            <h3>3.1   Build agent with specific configuration file</h3>
-            <p>Use the AGTCONF make variable to specify a different path than 'conf/mig-agent-conf.go'.</p>
-            <pre class="code bash"><span class="nv">$ </span>make mig-agent <span class="nv">AGTCONF</span><span class="o">=</span>conf/mig-agent-conf.dev.go <span class="nv">BUILDENV</span><span class="o">=</span>dev</pre>
-            <p>To cross-compile for a different platform, use the <cite>ARCH</cite> and <cite>OS</cite> make variables:</p>
-            <pre class="code bash"><span class="nv">$ </span>make mig-agent <span class="nv">AGTCONF</span><span class="o">=</span>conf/mig-agent-conf.prod.go <span class="nv">BUILDENV</span><span class="o">=</span>prod <span class="nv">OS</span><span class="o">=</span>windows <span class="nv">ARCH</span><span class="o">=</span>amd64</pre>
-        </section>
-        <section id="agent-external-configuration-file">
-            <h3>3.2   Agent external configuration file</h3>
-            <p>It is possible to use a configuration file with the agent. The location of the file can be specified using the <cite>-c</cite> flag of the agent's binary. If no flag is specific, the agent will look for a configuration file at <cite>/etc/mig/mig-agent.cfg</cite>. If no file is found at this location, the builtin parameters are used.</p>
-            <p>The following parameters are <strong>not</strong> controlable by the configuration file:</p>
-            <ul>
-                <li>list of investigators public keys in <cite>PUBLICPGPKEYS</cite></li>
-                <li>list of access control lists in <cite>AGENTACL</cite></li>
-                <li>list of proxies in <cite>PROXIES</cite></li>
-            </ul>
-            <p>All other parameters can be overriden in the configuration file. Check out the sample file <cite>mig-agent.cfg.inc</cite> in the <strong>conf</strong> folder.</p>
-        </section>
-    </section>
-    <section id="scheduler-configuration">
-        <h2>4   Scheduler Configuration</h2>
-        <p>The scheduler template configuration is in 'conf/mig-scheduler.cfg.inc'. It must be copied to a location of your choice, and edited.</p>
-        <section id="spool-directories">
-            <h3>4.1   Spool directories</h3>
-            <p>The scheduler and the API share a spool for actions and commands that are active in the MIG platform. You need to create that spool on your server, the recommended location is <cite>/var/cache/mig</cite>, but feel free to update that to your needs.</p>
-            <pre class="code bash">sudo mkdir -p /var/cache/mig/<span class="o">{</span>action/new,action/done,action/inflight,action/invalid,command/done,command/inflight,command/ready,command/returned<span class="o">}</span>
+-----END PGP PUBLIC KEY BLOCK-----<span class="literal string backtick">`</span><span class="operator">}</span>
+</pre>
+</div>
+</div>
+<div class="section" id="build-instructions">
+<h1><a class="toc-backref" href="#id12">3&nbsp;&nbsp;&nbsp;Build instructions</a></h1>
+<p>To build MIG, you need Go version 1.2 or superior.
+External Go dependencies can be resolved by running <cite>make go_get_deps</cite>:</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>make go_get_deps
+<span class="name variable">GOPATH</span><span class="operator">=</span>. go get -u code.google.com/p/go.crypto/openpgp
+<span class="name variable">GOPATH</span><span class="operator">=</span>. go get -u github.com/streadway/amqp
+    ...
+</pre>
+<p>Each component of MIG can be built independently with 'make mig-action-generator', 'make mig-action-verifier',
+'make mig-scheduler', 'make mig-api', 'make mig-console' and 'make mig-agent'.
+To build the entire platform, simply run 'make'.</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>make
+</pre>
+<p>Built binaries will be placed in <strong>bin/linux/amd64/</strong> (or in a similar directory
+if you are building on a different platform).</p>
+<div class="section" id="build-agent-with-specific-configuration-file">
+<h2><a class="toc-backref" href="#id13">3.1&nbsp;&nbsp;&nbsp;Build agent with specific configuration file</a></h2>
+<p>Use the AGTCONF make variable to specify a different path than
+'conf/mig-agent-conf.go'.</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>make mig-agent <span class="name variable">AGTCONF</span><span class="operator">=</span>conf/mig-agent-conf.dev.go <span class="name variable">BUILDENV</span><span class="operator">=</span>dev
+</pre>
+<p>To cross-compile for a different platform, use the <cite>ARCH</cite> and <cite>OS</cite> make
+variables:</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>make mig-agent <span class="name variable">AGTCONF</span><span class="operator">=</span>conf/mig-agent-conf.prod.go <span class="name variable">BUILDENV</span><span class="operator">=</span>prod <span class="name variable">OS</span><span class="operator">=</span>windows <span class="name variable">ARCH</span><span class="operator">=</span>amd64
+</pre>
+</div>
+<div class="section" id="agent-external-configuration-file">
+<h2><a class="toc-backref" href="#id14">3.2&nbsp;&nbsp;&nbsp;Agent external configuration file</a></h2>
+<p>It is possible to use a configuration file with the agent. The location of the
+file can be specified using the <cite>-c</cite> flag of the agent's binary. If no flag is
+specific, the agent will look for a configuration file at
+<cite>/etc/mig/mig-agent.cfg</cite>. If no file is found at this location, the builtin
+parameters are used.</p>
+<p>The following parameters are <strong>not</strong> controlable by the configuration file:</p>
+<ul class="simple">
+<li>list of investigators public keys in <cite>PUBLICPGPKEYS</cite></li>
+<li>list of access control lists in <cite>AGENTACL</cite></li>
+<li>list of proxies in <cite>PROXIES</cite></li>
+</ul>
+<p>All other parameters can be overriden in the configuration file. Check out the
+sample file <cite>mig-agent.cfg.inc</cite> in the <strong>conf</strong> folder.</p>
+</div>
+</div>
+<div class="section" id="scheduler-configuration">
+<h1><a class="toc-backref" href="#id15">4&nbsp;&nbsp;&nbsp;Scheduler Configuration</a></h1>
+<p>The scheduler template configuration is in 'conf/mig-scheduler.cfg.inc'. It must
+be copied to a location of your choice, and edited.</p>
+<div class="section" id="spool-directories">
+<h2><a class="toc-backref" href="#id16">4.1&nbsp;&nbsp;&nbsp;Spool directories</a></h2>
+<p>The scheduler and the API share a spool for actions and commands that are
+active in the MIG platform. You need to create that spool on your server, the
+recommended location is <cite>/var/cache/mig</cite>, but feel free to update that to your
+needs.</p>
+<pre class="code bash literal-block">
+sudo mkdir -p /var/cache/mig/<span class="operator">{</span>action/new,action/done,action/inflight,action/invalid,command/done,command/inflight,command/ready,command/returned<span class="operator">}</span>
 
-sudo chown mig-user /var/cache/mig -R</pre>
-        </section>
-        <section id="whitelist">
-            <h3>4.2   Whitelist</h3>
-            <p>Agents's queuelocs must be listed in a whitelist file for the scheduler to accept their registrations. The location of the whitelist is configurable, but a good place for it is in <cite>/var/cache/mig/agents_whitelist.txt</cite>. The file contains one queueloc string on each line. The agent queueloc is taken from the hostname of the endpoint the agent runs on, plus a random value only known to the endpoint and the MIG platform.</p>
-            <pre class="code">linux.agent123.example.net.58b3mndjmbb00
-windows.db4.sub.example.com.56b2andxmyb00</pre>
-            <p>If the scheduler receives a heartbeat from an agent that is not present in the whitelist, it will log an error message. An operator can process the logs and add agents to the whitelist manually.</p>
-            <pre class="code">Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized</pre>
-            <p>For environments that are particularly dynamic, it is possible to use regexes in the whitelist. This is done by prepending <cite>re:</cite> to the whitelist entry.</p>
-            <pre class="code">re:linux.server[0-9]{1,4}.example.net.[a-z0-9]{13}</pre>
-            <p>Keep the list of regexes short. Until MIG implements a better agent validation mechanisms, the whitelist is reread for every registration, and regexes are recompiled every time. On a busy platform, this can be done hundreds of times per second and induce heavy cpu usage.</p>
-        </section>
-        <section id="database-creation">
-            <h3>4.3   Database creation</h3>
-            <p>The dabase for MIG is PostgreSQL. If you are using a local postgres database, you can run the script in <a href="https://github.com/mozilla/mig/blob/master/src/mig/database/createlocaldb.sh">src/mig/database/createlocaldb.sh</a>, which will create the database and 3 users: <cite>migadmin</cite>, <cite>migscheduler</cite> and <cite>migapi</cite>. Each user has different permissions on the database.</p>
-            <p>If you are using a remote database, create a database and an admin user, then modify the variables at the top of <a href="https://github.com/mozilla/mig/blob/master/src/mig/database/createremotedb.sh">src/mig/database/createremotedb.sh</a> and run it. The script will create the DB schema and output the credentials for users <cite>migscheduler</cite> and <cite>migapi</cite>. These credentials need to be references in the MIG Scheduler and API configuration files.</p>
-            <p>Edit the variables in the script <cite>createremotedb.sh</cite>:</p>
-            <pre class="code bash"><span class="nv">$ </span>vim createremotedb.sh
+sudo chown mig-user /var/cache/mig -R
+</pre>
+</div>
+<div class="section" id="whitelist">
+<h2><a class="toc-backref" href="#id17">4.2&nbsp;&nbsp;&nbsp;Whitelist</a></h2>
+<p>Agents's queuelocs must be listed in a whitelist file for the scheduler to accept
+their registrations. The location of the whitelist is configurable, but a good
+place for it is in <cite>/var/cache/mig/agents_whitelist.txt</cite>. The file contains one
+queueloc string on each line. The agent queueloc is taken from the hostname of the
+endpoint the agent runs on, plus a random value only known to the endpoint and
+the MIG platform.</p>
+<pre class="code literal-block">
+linux.agent123.example.net.58b3mndjmbb00
+windows.db4.sub.example.com.56b2andxmyb00
+</pre>
+<p>If the scheduler receives a heartbeat from an agent that is not present in the
+whitelist, it will log an error message. An operator can process the logs and
+add agents to the whitelist manually.</p>
+<pre class="code literal-block">
+Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized
+</pre>
+<p>For environments that are particularly dynamic, it is possible to use regexes
+in the whitelist. This is done by prepending <cite>re:</cite> to the whitelist entry.</p>
+<pre class="code literal-block">
+re:linux.server[0-9]{1,4}.example.net.[a-z0-9]{13}
+</pre>
+<p>Keep the list of regexes short. Until MIG implements a better agent validation
+mechanisms, the whitelist is reread for every registration, and regexes are
+recompiled every time. On a busy platform, this can be done hundreds of times
+per second and induce heavy cpu usage.</p>
+</div>
+<div class="section" id="database-creation">
+<h2><a class="toc-backref" href="#id18">4.3&nbsp;&nbsp;&nbsp;Database creation</a></h2>
+<p>The dabase for MIG is PostgreSQL. If you are using a local postgres database,
+you can run the script in <a class="reference external" href="https://github.com/mozilla/mig/blob/master/src/mig/database/createlocaldb.sh">src/mig/database/createlocaldb.sh</a>, which will create the
+database and 3 users: <cite>migadmin</cite>, <cite>migscheduler</cite> and <cite>migapi</cite>. Each user has
+different permissions on the database.</p>
+<p>If you are using a remote database, create a database and an admin user, then
+modify the variables at the top of <a class="reference external" href="https://github.com/mozilla/mig/blob/master/src/mig/database/createremotedb.sh">src/mig/database/createremotedb.sh</a> and
+run it. The script will create the DB schema and output the credentials for
+users <cite>migscheduler</cite> and <cite>migapi</cite>. These credentials need to be references in
+the MIG Scheduler and API configuration files.</p>
+<p>Edit the variables in the script <cite>createremotedb.sh</cite>:</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>vim createremotedb.sh
 
-<span class="nv">PGDATABASE</span><span class="o">=</span><span class="s1">'mig'</span>
-<span class="nv">PGUSER</span><span class="o">=</span><span class="s1">'migadmin'</span>
-<span class="nv">PGPASS</span><span class="o">=</span><span class="s1">'MYDATABASEPASSWORD'</span>
-<span class="nv">PGHOST</span><span class="o">=</span><span class="s1">'192.168.0.1'</span>
-<span class="nv">PGPORT</span><span class="o">=</span>5432</pre>
-            <p>Then run it against your database server. Make sure that the Postgresql client command line <cite>psql</cite> is installed locally.</p>
-            <pre class="code bash"><span class="nv">$ </span>which psql
+<span class="name variable">PGDATABASE</span><span class="operator">=</span><span class="literal string single">'mig'</span>
+<span class="name variable">PGUSER</span><span class="operator">=</span><span class="literal string single">'migadmin'</span>
+<span class="name variable">PGPASS</span><span class="operator">=</span><span class="literal string single">'MYDATABASEPASSWORD'</span>
+<span class="name variable">PGHOST</span><span class="operator">=</span><span class="literal string single">'192.168.0.1'</span>
+<span class="name variable">PGPORT</span><span class="operator">=</span>5432
+</pre>
+<p>Then run it against your database server. Make sure that the Postgresql client
+command line <cite>psql</cite> is installed locally.</p>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>which psql
 /usr/bin/psql
 
-<span class="nv">$ </span>bash createremotedb.sh
+<span class="name variable">$ </span>bash createremotedb.sh
 
-<span class="o">[</span>... bunch of sql queries ...<span class="o">]</span>
+<span class="operator">[</span>... bunch of sql queries ...<span class="operator">]</span>
 
-created users: migscheduler/4NvQFdwdQ8UOU4ekEOgWDWi3gzG5cg2X migapi/xcJyJhLg1cldIp7eXcxv0U-UqV80tMb-</pre>
-            <p>The <cite>migscheduler</cite> and <cite>migapi</cite> users can now be added to the configuration files or the scheduler and the api.</p>
-            <blockquote>
-                <pre>[postgres]
-    host = "192.168.0.1"
-    port = 5432
-    dbname = "mig"
-    user = "migapi"
-    password = "xcJyJhLg1cldIp7eXcxv0U-UqV80tMb-"
-    sslmode = "verify-full"</pre>
-            </blockquote>
-            <p>Note that <cite>sslmode</cite> can take the values <cite>disable</cite>, <cite>require</cite> (no cert verification) and <cite>verify-full</cite> (requires cert verification). A proper installation should use <cite>verify-full</cite>.</p>
-        </section>
-        <section id="database-tuning">
-            <h3>4.4   Database tuning</h3>
-            <p>The scheduler has an extra parameter to control the max number of database connections. It's important to keep that number relatively low, and increase it with the size of your infrastructure. The default value is set to <cite>10</cite>, and a good production value is <cite>100</cite>.</p>
-            <blockquote>
-                <pre>[postgres]
-    ...
-    maxconn = 10</pre>
-            </blockquote>
-            <p>If the DB insertion rate is lower than the agent heartbeats rate, the scheduler will receive more heartbeats per seconds than it can insert in the database. When that happens, you will see the insertion lag increase in the query below:</p>
-            <pre class="code sql"><span class="n">mig</span><span class="o">=&gt;</span> <span class="k">select</span> <span class="n">NOW</span><span class="p">()</span> <span class="o">-</span> <span class="n">heartbeattime</span> <span class="k">as</span> <span class="ss">"insertion lag"</span>
-<span class="n">mig</span><span class="o">-&gt;</span> <span class="k">from</span> <span class="n">agents</span> <span class="k">order</span> <span class="k">by</span> <span class="n">heartbeattime</span> <span class="k">desc</span> <span class="k">limit</span> <span class="mi">1</span><span class="p">;</span>
-  <span class="n">insertion</span> <span class="n">lag</span>
-<span class="c1">-----------------
-</span> <span class="mi">00</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">00</span><span class="p">.</span><span class="mi">212257</span>
-<span class="p">(</span><span class="mi">1</span> <span class="k">row</span><span class="p">)</span></pre>
-            <p>A healthy insertion lag should be below one second. If the lag increases, and your DB server still isn't stuck at 100% CPU, try increasing the value of <cite>maxconn</cite>. It will cause the scheduler to use more insertion threads.</p>
-        </section>
-        <section id="id1">
-            <h3>4.5   Logging</h3>
-            <p>The scheduler can log to stdout, syslog, or a target file. It will run in foreground if the logging mode is set to 'stdout'. For the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.</p>
-            <blockquote>
-                <pre>[logging]
+created users: migscheduler/4NvQFdwdQ8UOU4ekEOgWDWi3gzG5cg2X migapi/xcJyJhLg1cldIp7eXcxv0U-UqV80tMb-
+</pre>
+<p>The <cite>migscheduler</cite> and <cite>migapi</cite> users can now be added to the configuration
+files or the scheduler and the api.</p>
+<blockquote>
+<pre class="literal-block">
+[postgres]
+        host = &quot;192.168.0.1&quot;
+        port = 5432
+        dbname = &quot;mig&quot;
+        user = &quot;migapi&quot;
+        password = &quot;xcJyJhLg1cldIp7eXcxv0U-UqV80tMb-&quot;
+        sslmode = &quot;verify-full&quot;
+</pre>
+</blockquote>
+<p>Note that <cite>sslmode</cite> can take the values <cite>disable</cite>, <cite>require</cite> (no cert
+verification) and <cite>verify-full</cite> (requires cert verification). A proper
+installation should use <cite>verify-full</cite>.</p>
+</div>
+<div class="section" id="database-tuning">
+<h2><a class="toc-backref" href="#id19">4.4&nbsp;&nbsp;&nbsp;Database tuning</a></h2>
+<p>The scheduler has an extra parameter to control the max number of database
+connections. It's important to keep that number relatively low, and increase it
+with the size of your infrastructure. The default value is set to <cite>10</cite>, and a
+good production value is <cite>100</cite>.</p>
+<blockquote>
+<pre class="literal-block">
+[postgres]
+        ...
+        maxconn = 10
+</pre>
+</blockquote>
+<p>If the DB insertion rate is lower than the agent heartbeats rate, the scheduler
+will receive more heartbeats per seconds than it can insert in the database.
+When that happens, you will see the insertion lag increase in the query below:</p>
+<pre class="code sql literal-block">
+<span class="name">mig</span><span class="operator">=&gt;</span> <span class="keyword">select</span> <span class="name">NOW</span><span class="punctuation">()</span> <span class="operator">-</span> <span class="name">heartbeattime</span> <span class="keyword">as</span> <span class="literal string symbol">&quot;insertion lag&quot;</span>
+<span class="name">mig</span><span class="operator">-&gt;</span> <span class="keyword">from</span> <span class="name">agents</span> <span class="keyword">order</span> <span class="keyword">by</span> <span class="name">heartbeattime</span> <span class="keyword">desc</span> <span class="keyword">limit</span> <span class="literal number integer">1</span><span class="punctuation">;</span>
+  <span class="name">insertion</span> <span class="name">lag</span>
+<span class="comment single">-----------------
+</span> <span class="literal number integer">00</span><span class="punctuation">:</span><span class="literal number integer">00</span><span class="punctuation">:</span><span class="literal number integer">00</span><span class="punctuation">.</span><span class="literal number integer">212257</span>
+<span class="punctuation">(</span><span class="literal number integer">1</span> <span class="keyword">row</span><span class="punctuation">)</span>
+</pre>
+<p>A healthy insertion lag should be below one second. If the lag increases, and
+your DB server still isn't stuck at 100% CPU, try increasing the value of
+<cite>maxconn</cite>. It will cause the scheduler to use more insertion threads.</p>
+</div>
+<div class="section" id="id1">
+<h2><a class="toc-backref" href="#id20">4.5&nbsp;&nbsp;&nbsp;Logging</a></h2>
+<p>The scheduler can log to stdout, syslog, or a target file. It will run in
+foreground if the logging mode is set to 'stdout'.
+For the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.</p>
+<blockquote>
+<pre class="literal-block">
+[logging]
 ; select a mode between 'stdout', 'file' and 'syslog
 ; for syslog, logs go into local3
-mode        = "syslog"
-level       = "debug"
-host        = "localhost"
-port        = 514
-protocol    = "udp"</pre>
-            </blockquote>
-        </section>
-        <section id="id2">
-            <h3>4.6   AMQPS configuration</h3>
-            <p>TLS support between the scheduler and rabbitmq is optional but strongly recommended. To enable it, generate a client certificate and set the [mq] configuration section of the scheduler as follow:</p>
-            <blockquote>
-                <pre>[mq]
-    host = "relay1.mig.example.net"
-    port = 5671
-    user = "scheduler"
-    pass = "secretrabbitmqpassword"
-    vhost = "mig"
+mode            = &quot;syslog&quot;
+level           = &quot;debug&quot;
+host            = &quot;localhost&quot;
+port            = 514
+protocol        = &quot;udp&quot;
+</pre>
+</blockquote>
+</div>
+<div class="section" id="id2">
+<h2><a class="toc-backref" href="#id21">4.6&nbsp;&nbsp;&nbsp;AMQPS configuration</a></h2>
+<p>TLS support between the scheduler and rabbitmq is optional but strongly
+recommended. To enable it, generate a client certificate and set the
+[mq] configuration section of the scheduler as follow:</p>
+<blockquote>
+<pre class="literal-block">
+[mq]
+        host = &quot;relay1.mig.example.net&quot;
+        port = 5671
+        user = &quot;scheduler&quot;
+        pass = &quot;secretrabbitmqpassword&quot;
+        vhost = &quot;mig&quot;
 
 ; TLS options
-    usetls  = true
-    cacert  = "/etc/mig/scheduler/cacert.pem"
-    tlscert = "/etc/mig/scheduler/scheduler-amqps.pem"
-    tlskey  = "/etc/mig/scheduler/scheduler-amqps-key.pem"</pre>
-            </blockquote>
-            <p>Make sure to use <strong>fully qualified paths</strong> otherwise the scheduler will fail to load them after going in the background.</p>
-        </section>
-        <section id="collector">
-            <h3>4.7   Collector</h3>
-            <p>The Collector is a routine ran periodically by the scheduler to inspect the content of its spool. It will load files that may have been missed by the file notification routine, and delete old files after a grace period.</p>
-            <blockquote>
-                <pre>[collector]
-    ; frequency at which the collector runs
-    freq = "60s"
+        usetls  = true
+        cacert  = &quot;/etc/mig/scheduler/cacert.pem&quot;
+        tlscert = &quot;/etc/mig/scheduler/scheduler-amqps.pem&quot;
+        tlskey  = &quot;/etc/mig/scheduler/scheduler-amqps-key.pem&quot;
+</pre>
+</blockquote>
+<p>Make sure to use <strong>fully qualified paths</strong> otherwise the scheduler will fail to
+load them after going in the background.</p>
+</div>
+<div class="section" id="collector">
+<h2><a class="toc-backref" href="#id22">4.7&nbsp;&nbsp;&nbsp;Collector</a></h2>
+<p>The Collector is a routine ran periodically by the scheduler to inspect the
+content of its spool. It will load files that may have been missed by the file
+notification routine, and delete old files after a grace period.</p>
+<blockquote>
+<pre class="literal-block">
+[collector]
+        ; frequency at which the collector runs
+        freq = &quot;60s&quot;
 
-    ; period during which done actions and commands,
-    ; and invalid actions are kept
-    deleteafter = "72h"</pre>
-            </blockquote>
-        </section>
-        <section id="pgp">
-            <h3>4.8   PGP</h3>
-            <p>The scheduler uses a PGP key to sign agent destruction actions during the agent upgrade protocol. Due to the limited scope of that key, it is stored in the database to facilitate deployment and provisioning of multiple schedulers.</p>
-            <p>Upon startup, the scheduler will look for an investigator named <cite>migscheduler</cite> and retrieve its private key to use it in action signing. If no investigator is found, it generates one and inserts it into the database, such that other schedulers can use it as well.</p>
-            <p>At the time, the scheduler public key must be manually added into the agent configuration. This will be changed in the future when ACLs and investigators can be dynamically distributed to agents.</p>
-            <p>In the ACL of the agent configuration file <cite>conf/mig-agent-conf.go</cite>:</p>
-            <blockquote>
-                <pre>var AGENTACL = [...]string{
+        ; period during which done actions and commands,
+        ; and invalid actions are kept
+        deleteafter = &quot;72h&quot;
+</pre>
+</blockquote>
+</div>
+<div class="section" id="pgp">
+<h2><a class="toc-backref" href="#id23">4.8&nbsp;&nbsp;&nbsp;PGP</a></h2>
+<p>The scheduler uses a PGP key to sign agent destruction actions during the agent
+upgrade protocol. Due to the limited scope of that key, it is stored in the
+database to facilitate deployment and provisioning of multiple schedulers.</p>
+<p>Upon startup, the scheduler will look for an investigator named <cite>migscheduler</cite>
+and retrieve its private key to use it in action signing. If no investigator is
+found, it generates one and inserts it into the database, such that other
+schedulers can use it as well.</p>
+<p>At the time, the scheduler public key must be manually added into the agent
+configuration. This will be changed in the future when ACLs and investigators
+can be dynamically distributed to agents.</p>
+<p>In the ACL of the agent configuration file <cite>conf/mig-agent-conf.go</cite>:</p>
+<blockquote>
+<pre class="literal-block">
+var AGENTACL = [...]string{
 `{
-    "agentdestroy": {
-        "minimumweight": 1,
-        "investigators": {
-            "MIG Scheduler": {
-                "fingerprint": "1E644752FB76B77245B1694E556CDD7B07E9D5D6",
-                "weight": 1
-            }
+        &quot;agentdestroy&quot;: {
+                &quot;minimumweight&quot;: 1,
+                &quot;investigators&quot;: {
+                        &quot;MIG Scheduler&quot;: {
+                                &quot;fingerprint&quot;: &quot;1E644752FB76B77245B1694E556CDD7B07E9D5D6&quot;,
+                                &quot;weight&quot;: 1
+                        }
+                }
         }
-    }
 }`,
-}</pre>
-            </blockquote>
-            <p>And add the public PGP key of the scheduler as well:</p>
-            <blockquote>
-                <pre>// PGP public keys that are authorized to sign actions
+}
+</pre>
+</blockquote>
+<p>And add the public PGP key of the scheduler as well:</p>
+<blockquote>
+<pre class="literal-block">
+// PGP public keys that are authorized to sign actions
 var PUBLICPGPKEYS = [...]string{
 `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -352,305 +734,380 @@ zUklHVZguf2Zv2X9Er8rnlW5xzplsVXNWnVvMDXyzx0ufC00dDbCwahLQnv6Vqq8
 BdUCSrvo/r7oAims8SyWE+ZObC+rw7u01Sut0ctnYrvklaM10+zkwGNOTszrduUy
 .....
 `
-}</pre>
-            </blockquote>
-        </section>
-    </section>
-    <section id="rabbitmq-configuration">
-        <h2>5   RabbitMQ Configuration</h2>
-        <p>All communications between schedulers and agents rely on RabbitMQ's AMQP protocol. While MIG does not rely on the security of RabbitMQ to pass orders to agents, an attacker that gains control to the message broker would be able to listen to all commands passed to the agents (not results). To prevent this, RabbitMQ must provide a reasonable amount of protection, at two levels:</p>
-        <ul>
-            <li>All communications on the public internet are authenticated using client and server certificates. Since all agents share a single client certificate, this provides minimal security, and should only be used to make it harder for attackers to establish an AMQP connection with rabbitmq.</li>
-            <li>Agents can only listen on their own queue and write to the <cite>toschedulers</cite> exchange. This is accomplished by randomizing the agent queue name and adding tight Access Control rules to RabbitMQ.</li>
-        </ul>
-        <p>Note that, even if a random agent manages to connect to the relay, the scheduler will accept its registration only if it is present in the scheduler's whitelist.</p>
-        <section id="installation">
-            <h3>5.1   Installation</h3>
-            <p>Install the RabbitMQ server from your distribution's packaging system. If your distribution does not provide a RabbitMQ package, install <cite>erlang</cite> from yum or apt, and then install RabbitMQ using the packages from rabbitmq.com</p>
-        </section>
-        <section id="id3">
-            <h3>5.2   RabbitMQ Configuration</h3>
-            <ol type="1">
-                <li>On the rabbitmq server, create users:
-                    <ul>
-                        <li><strong>admin</strong>, with the tag 'administrator'</li>
-                        <li><strong>scheduler</strong> , <strong>agent</strong> and <strong>worker</strong> with no tag</li>
-                    </ul>
-                </li>
-            </ol>
-            <p>All users should have strong passwords. The scheduler password goes into the configuration file <cite>conf/mig-scheduler.cfg</cite>, in <cite>[mq] password</cite>. The agent password goes into <cite>conf/mig-agent-conf.go</cite>, in the agent <cite>AMQPBROKER</cite> dial string. The admin password is, of course, for yourself.</p>
-            <pre class="code bash">sudo rabbitmqctl add_user admin SomeRandomPassword
+}
+</pre>
+</blockquote>
+</div>
+</div>
+<div class="section" id="rabbitmq-configuration">
+<h1><a class="toc-backref" href="#id24">5&nbsp;&nbsp;&nbsp;RabbitMQ Configuration</a></h1>
+<p>All communications between schedulers and agents rely on RabbitMQ's AMQP
+protocol. While MIG does not rely on the security of RabbitMQ to pass orders to
+agents, an attacker that gains control to the message broker would be able to
+listen to all commands passed to the agents (not results). To prevent this,
+RabbitMQ must provide a reasonable amount of protection, at two levels:</p>
+<ul class="simple">
+<li>All communications on the public internet are authenticated using client and
+server certificates. Since all agents share a single client certificate, this
+provides minimal security, and should only be used to make it harder for
+attackers to establish an AMQP connection with rabbitmq.</li>
+<li>Agents can only listen on their own queue and write to the <cite>toschedulers</cite>
+exchange. This is accomplished by randomizing the agent queue name and adding
+tight Access Control rules to RabbitMQ.</li>
+</ul>
+<p>Note that, even if a random agent manages to connect to the relay, the scheduler
+will accept its registration only if it is present in the scheduler's whitelist.</p>
+<div class="section" id="installation">
+<h2><a class="toc-backref" href="#id25">5.1&nbsp;&nbsp;&nbsp;Installation</a></h2>
+<p>Install the RabbitMQ server from your distribution's packaging system. If your
+distribution does not provide a RabbitMQ package, install <cite>erlang</cite> from yum or
+apt, and then install RabbitMQ using the packages from rabbitmq.com</p>
+</div>
+<div class="section" id="id3">
+<h2><a class="toc-backref" href="#id26">5.2&nbsp;&nbsp;&nbsp;RabbitMQ Configuration</a></h2>
+<ol class="arabic">
+<li><p class="first">On the rabbitmq server, create users:</p>
+<blockquote>
+<ul class="simple">
+<li><strong>admin</strong>, with the tag 'administrator'</li>
+<li><strong>scheduler</strong> , <strong>agent</strong> and <strong>worker</strong> with no tag</li>
+</ul>
+</blockquote>
+</li>
+</ol>
+<p>All users should have strong passwords. The scheduler password goes into the
+configuration file <cite>conf/mig-scheduler.cfg</cite>, in <cite>[mq] password</cite>. The agent
+password goes into <cite>conf/mig-agent-conf.go</cite>, in the agent <cite>AMQPBROKER</cite> dial
+string. The admin password is, of course, for yourself.</p>
+<pre class="code bash literal-block">
+sudo rabbitmqctl add_user admin SomeRandomPassword
 sudo rabbitmqctl set_user_tags admin administrator
 
 sudo rabbitmqctl add_user scheduler SomeRandomPassword
 
 sudo rabbitmqctl add_user agent SomeRandomPassword
 
-sudo rabbitmqctl add_user worker SomeRandomPassword</pre>
-            <p>You can list the users with the following command:</p>
-            <pre class="code bash">sudo rabbitmqctl list_users</pre>
-            <p>On fresh installation, rabbitmq comes with a <cite>guest</cite> user that as password <cite>guest</cite> and admin privileges. You may you to delete that account.</p>
-            <pre class="code bash">sudo rabbitmqctl delete_user guest</pre>
-            <ol start="2" type="1">
-                <li>Create a 'mig' virtual host.</li>
-            </ol>
-            <pre class="code bash">sudo rabbitmqctl add_vhost mig
-sudo rabbitmqctl list_vhosts</pre>
-            <ol start="3" type="1">
-                <li>
-                    <dl>
-                        <dt>Create permissions for the scheduler user. The scheduler is allowed to:</dt>
-                        <dd>
-                            <ul>
-                                <li>
-                                    <dl>
-                                        <dt>CONFIGURE:</dt>
-                                        <dd>
-                                            <ul>
-                                                <li>declare the exchanges <cite>toagents</cite>, <cite>toschedulers</cite> and <cite>toworkers</cite></li>
-                                                <li>declare and delete queues under <cite>mig.agt.*</cite></li>
-                                            </ul>
-                                        </dd>
-                                    </dl>
-                                </li>
-                                <li>
-                                    <dl>
-                                        <dt>WRITE:</dt>
-                                        <dd>
-                                            <ul>
-                                                <li>publish into the exchanges <cite>toagents</cite> and <cite>toworkers</cite></li>
-                                                <li>consume from queues <cite>mig.agt.heartbeats</cite> and <cite>mig.agt.results</cite></li>
-                                            </ul>
-                                        </dd>
-                                    </dl>
-                                </li>
-                                <li>
-                                    <dl>
-                                        <dt>READ:</dt>
-                                        <dd>
-                                            <ul>
-                                                <li>declare the exchanges <cite>toagents</cite>, <cite>toschedulers</cite> and <cite>toworkers</cite></li>
-                                                <li>consume from queues <cite>mig.agt.heartbeats</cite> and <cite>mig.agt.results</cite> bound to the <cite>toschedulers</cite> exchange</li>
-                                            </ul>
-                                        </dd>
-                                    </dl>
-                                </li>
-                            </ul>
-                        </dd>
-                    </dl>
-                </li>
-            </ol>
-            <pre class="code bash">sudo rabbitmqctl set_permissions -p mig scheduler <span class="se">\
-</span>    <span class="s1">'^(toagents|toschedulers|toworkers|mig\.agt\..*)$'</span> <span class="se">\
-</span>    <span class="s1">'^(toagents|toworkers|mig\.agt\.(heartbeats|results))$'</span> <span class="se">\
-</span>    <span class="s1">'^(toagents|toschedulers|toworkers|mig\.agt\.(heartbeats|results))$'</span></pre>
-            <ol start="4" type="1">
-                <li>
-                    <dl>
-                        <dt>Create permissions for the agent use. The agent is allowed to:</dt>
-                        <dd>
-                            <ul>
-                                <li>
-                                    <dl>
-                                        <dt>CONFIGURE:</dt>
-                                        <dd>
-                                            <ul>
-                                                <li>create any queue under <cite>mig.agt.*</cite></li>
-                                            </ul>
-                                        </dd>
-                                    </dl>
-                                </li>
-                                <li>
-                                    <dl>
-                                        <dt>WRITE:</dt>
-                                        <dd>
-                                            <ul>
-                                                <li>publish to the <cite>toschedulers</cite> exchange</li>
-                                                <li>consume from queues under <cite>mig.agt.*</cite></li>
-                                            </ul>
-                                        </dd>
-                                    </dl>
-                                </li>
-                                <li>
-                                    <dl>
-                                        <dt>READ:</dt>
-                                        <dd>
-                                            <ul>
-                                                <li>consume from queues under <cite>mig.agt.*</cite> bound to the <cite>toagents</cite> exchange</li>
-                                            </ul>
-                                        </dd>
-                                    </dl>
-                                </li>
-                            </ul>
-                        </dd>
-                    </dl>
-                </li>
-            </ol>
-            <pre class="code bash">sudo rabbitmqctl set_permissions -p mig agent <span class="se">\
-</span>    <span class="s1">'^mig\.agt\..*$'</span> <span class="se">\
-</span>    <span class="s1">'^(toschedulers|mig\.agt\..*)$'</span> <span class="se">\
-</span>    <span class="s1">'^(toagents|mig\.agt\..*)$'</span></pre>
-            <ol start="5" type="1">
-                <li>
-                    <dl>
-                        <dt>Create permissions for the event workers. The workers are allowed to:</dt>
-                        <dd>
-                            <ul>
-                                <li>
-                                    <dl>
-                                        <dt>CONFIGURE:</dt>
-                                        <dd>
-                                            <ul>
-                                                <li>declare queues under <cite>migevent.*</cite></li>
-                                            </ul>
-                                        </dd>
-                                    </dl>
-                                </li>
-                                <li>
-                                    <dl>
-                                        <dt>WRITE:</dt>
-                                        <dd>
-                                            <ul>
-                                                <li>consume from queues under <cite>migevent.*</cite></li>
-                                            </ul>
-                                        </dd>
-                                    </dl>
-                                </li>
-                                <li>
-                                    <dl>
-                                        <dt>READ:</dt>
-                                        <dd>
-                                            <ul>
-                                                <li>consume from queues under <cite>migevent.*</cite> bound to the <cite>toworkers</cite> exchange</li>
-                                            </ul>
-                                        </dd>
-                                    </dl>
-                                </li>
-                            </ul>
-                        </dd>
-                    </dl>
-                </li>
-            </ol>
-            <pre class="code bash">sudo rabbitmqctl set_permissions -p mig worker <span class="se">\
-</span><span class="s1">'^migevent\..*$'</span> <span class="se">\
-</span><span class="s1">'^migevent(|\..*)$'</span> <span class="se">\
-</span><span class="s1">'^(toworkers|migevent\..*)$'</span></pre>
-            <ol start="6" type="1">
-                <li>Start the scheduler, it shouldn't return any ACCESS error. You can also list the permissions with the command:</li>
-            </ol>
-            <pre class="code bash"><span class="nv">$ </span>sudo rabbitmqctl list_permissions -p mig | column -t
-Listing permissions in vhost <span class="s2">"mig"</span> ...
-agent      ^mig<span class="se">\\</span>.agt<span class="se">\\</span>..*<span class="nv">$ </span>                                   ^<span class="o">(</span>toschedulers|mig<span class="se">\\</span>.agt<span class="se">\\</span>..*<span class="o">)</span><span class="nv">$ </span>                         ^<span class="o">(</span>toagents|mig<span class="se">\\</span>.agt<span class="se">\\</span>..*<span class="o">)</span><span class="err">$</span>
-scheduler  ^<span class="o">(</span>toagents|toschedulers|toworkers|mig<span class="se">\\</span>.agt<span class="se">\\</span>..*<span class="o">)</span><span class="nv">$ </span> ^<span class="o">(</span>toagents|toworkers|mig<span class="se">\\</span>.agt<span class="se">\\</span>.<span class="o">(</span>heartbeats|results<span class="o">))</span><span class="nv">$ </span> ^<span class="o">(</span>toagents|toschedulers|toworkers|mig<span class="se">\\</span>.agt<span class="se">\\</span>.<span class="o">(</span>heartbeats|results<span class="o">))</span><span class="err">$</span>
-worker     ^migevent<span class="se">\\</span>..*<span class="nv">$ </span>                                    ^migevent<span class="o">(</span>|<span class="se">\\</span>..*<span class="o">)</span><span class="nv">$ </span>                                      ^<span class="o">(</span>toworkers|migevent<span class="se">\\</span>..*<span class="o">)</span><span class="err">$</span></pre>
-        </section>
-        <section id="rabbitmq-tls-configuration">
-            <h3>5.3   RabbitMQ TLS configuration</h3>
-            <p>The documentation from rabbitmq has a thorough explanation of SSL support in rabbit at <a href="http://www.rabbitmq.com/ssl.html">http://www.rabbitmq.com/ssl.html</a> . Without going into too much details, we need three things:</p>
-            <ol type="1">
-                <li>a PKI (and its public cert)</li>
-                <li>a server certificate and private key for rabbitmq itself</li>
-                <li>a client certificate and private key for the agents</li>
-            </ol>
-            <p>You can obtain these three things on you own, or follow the openssl tutorial from the rabbitmq documentation. Come back here when you have all three.</p>
-            <p>On the rabbitmq server, place the certificates under <strong>/etc/rabbitmq/certs/</strong>.</p>
-            <blockquote>
-                <pre>/etc/rabbitmq/certs/
+sudo rabbitmqctl add_user worker SomeRandomPassword
+</pre>
+<p>You can list the users with the following command:</p>
+<pre class="code bash literal-block">
+sudo rabbitmqctl list_users
+</pre>
+<p>On fresh installation, rabbitmq comes with a <cite>guest</cite> user that as password
+<cite>guest</cite> and admin privileges. You may you to delete that account.</p>
+<pre class="code bash literal-block">
+sudo rabbitmqctl delete_user guest
+</pre>
+<ol class="arabic simple" start="2">
+<li>Create a 'mig' virtual host.</li>
+</ol>
+<pre class="code bash literal-block">
+sudo rabbitmqctl add_vhost mig
+sudo rabbitmqctl list_vhosts
+</pre>
+<ol class="arabic" start="3">
+<li><dl class="first docutils">
+<dt>Create permissions for the scheduler user. The scheduler is allowed to:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>CONFIGURE:</dt>
+<dd><ul class="first last simple">
+<li>declare the exchanges <cite>toagents</cite>, <cite>toschedulers</cite> and <cite>toworkers</cite></li>
+<li>declare and delete queues under <cite>mig.agt.*</cite></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>WRITE:</dt>
+<dd><ul class="first last simple">
+<li>publish into the exchanges <cite>toagents</cite> and <cite>toworkers</cite></li>
+<li>consume from queues <cite>mig.agt.heartbeats</cite> and <cite>mig.agt.results</cite></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>READ:</dt>
+<dd><ul class="first last simple">
+<li>declare the exchanges <cite>toagents</cite>, <cite>toschedulers</cite> and <cite>toworkers</cite></li>
+<li>consume from queues <cite>mig.agt.heartbeats</cite> and <cite>mig.agt.results</cite> bound
+to the <cite>toschedulers</cite> exchange</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ol>
+<pre class="code bash literal-block">
+sudo rabbitmqctl set_permissions -p mig scheduler <span class="literal string escape">\
+</span>        <span class="literal string single">'^(toagents|toschedulers|toworkers|mig\.agt\..*)$'</span> <span class="literal string escape">\
+</span>        <span class="literal string single">'^(toagents|toworkers|mig\.agt\.(heartbeats|results))$'</span> <span class="literal string escape">\
+</span>        <span class="literal string single">'^(toagents|toschedulers|toworkers|mig\.agt\.(heartbeats|results))$'</span>
+</pre>
+<ol class="arabic" start="4">
+<li><dl class="first docutils">
+<dt>Create permissions for the agent use. The agent is allowed to:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>CONFIGURE:</dt>
+<dd><ul class="first last simple">
+<li>create any queue under <cite>mig.agt.*</cite></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>WRITE:</dt>
+<dd><ul class="first last simple">
+<li>publish to the <cite>toschedulers</cite> exchange</li>
+<li>consume from queues under <cite>mig.agt.*</cite></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>READ:</dt>
+<dd><ul class="first last simple">
+<li>consume from queues under <cite>mig.agt.*</cite> bound to the <cite>toagents</cite>
+exchange</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ol>
+<pre class="code bash literal-block">
+sudo rabbitmqctl set_permissions -p mig agent <span class="literal string escape">\
+</span>        <span class="literal string single">'^mig\.agt\..*$'</span> <span class="literal string escape">\
+</span>        <span class="literal string single">'^(toschedulers|mig\.agt\..*)$'</span> <span class="literal string escape">\
+</span>        <span class="literal string single">'^(toagents|mig\.agt\..*)$'</span>
+</pre>
+<ol class="arabic" start="5">
+<li><dl class="first docutils">
+<dt>Create permissions for the event workers. The workers are allowed to:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>CONFIGURE:</dt>
+<dd><ul class="first last simple">
+<li>declare queues under <cite>migevent.*</cite></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>WRITE:</dt>
+<dd><ul class="first last simple">
+<li>consume from queues under <cite>migevent.*</cite></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>READ:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>consume from queues under <cite>migevent.*</cite> bound to the <cite>toworkers</cite></dt>
+<dd><p class="first last">exchange</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ol>
+<pre class="code bash literal-block">
+sudo rabbitmqctl set_permissions -p mig worker <span class="literal string escape">\
+</span><span class="literal string single">'^migevent\..*$'</span> <span class="literal string escape">\
+</span><span class="literal string single">'^migevent(|\..*)$'</span> <span class="literal string escape">\
+</span><span class="literal string single">'^(toworkers|migevent\..*)$'</span>
+</pre>
+<ol class="arabic simple" start="6">
+<li>Start the scheduler, it shouldn't return any ACCESS error. You can also list
+the permissions with the command:</li>
+</ol>
+<pre class="code bash literal-block">
+<span class="name variable">$ </span>sudo rabbitmqctl list_permissions -p mig <span class="punctuation">|</span> column -t
+Listing permissions in vhost <span class="literal string double">&quot;mig&quot;</span> ...
+agent      ^mig<span class="literal string escape">\\</span>.agt<span class="literal string escape">\\</span>..*<span class="name variable">$ </span>                                   ^<span class="operator">(</span>toschedulers<span class="punctuation">|</span>mig<span class="literal string escape">\\</span>.agt<span class="literal string escape">\\</span>..*<span class="operator">)</span><span class="name variable">$ </span>                         ^<span class="operator">(</span>toagents<span class="punctuation">|</span>mig<span class="literal string escape">\\</span>.agt<span class="literal string escape">\\</span>..*<span class="operator">)</span><span class="error">$</span>
+scheduler  ^<span class="operator">(</span>toagents<span class="punctuation">|</span>toschedulers<span class="punctuation">|</span>toworkers<span class="punctuation">|</span>mig<span class="literal string escape">\\</span>.agt<span class="literal string escape">\\</span>..*<span class="operator">)</span><span class="name variable">$ </span> ^<span class="operator">(</span>toagents<span class="punctuation">|</span>toworkers<span class="punctuation">|</span>mig<span class="literal string escape">\\</span>.agt<span class="literal string escape">\\</span>.<span class="operator">(</span>heartbeats<span class="punctuation">|</span>results<span class="operator">))</span><span class="name variable">$ </span> ^<span class="operator">(</span>toagents<span class="punctuation">|</span>toschedulers<span class="punctuation">|</span>toworkers<span class="punctuation">|</span>mig<span class="literal string escape">\\</span>.agt<span class="literal string escape">\\</span>.<span class="operator">(</span>heartbeats<span class="punctuation">|</span>results<span class="operator">))</span><span class="error">$</span>
+worker     ^migevent<span class="literal string escape">\\</span>..*<span class="name variable">$ </span>                                    ^migevent<span class="operator">(</span><span class="punctuation">|</span><span class="literal string escape">\\</span>..*<span class="operator">)</span><span class="name variable">$ </span>                                      ^<span class="operator">(</span>toworkers<span class="punctuation">|</span>migevent<span class="literal string escape">\\</span>..*<span class="operator">)</span><span class="error">$</span>
+</pre>
+</div>
+<div class="section" id="rabbitmq-tls-configuration">
+<h2><a class="toc-backref" href="#id27">5.3&nbsp;&nbsp;&nbsp;RabbitMQ TLS configuration</a></h2>
+<p>The documentation from rabbitmq has a thorough explanation of SSL support in
+rabbit at <a class="reference external" href="http://www.rabbitmq.com/ssl.html">http://www.rabbitmq.com/ssl.html</a> . Without going into too much
+details, we need three things:</p>
+<ol class="arabic simple">
+<li>a PKI (and its public cert)</li>
+<li>a server certificate and private key for rabbitmq itself</li>
+<li>a client certificate and private key for the agents</li>
+</ol>
+<p>You can obtain these three things on you own, or follow the openssl tutorial
+from the rabbitmq documentation. Come back here when you have all three.</p>
+<p>On the rabbitmq server, place the certificates under <strong>/etc/rabbitmq/certs/</strong>.</p>
+<blockquote>
+<pre class="literal-block">
+/etc/rabbitmq/certs/
 ├── cacert.pem
 ├── migrelay1.example.net.key
-└── migrelay1.example.net.pem</pre>
-            </blockquote>
-            <p>Edit (or create) the configuration file of rabbitmq to reference the certificates.</p>
-            <blockquote>
-                <pre>[
+└── migrelay1.example.net.pem
+</pre>
+</blockquote>
+<p>Edit (or create) the configuration file of rabbitmq to reference the
+certificates.</p>
+<blockquote>
+<pre class="literal-block">
+[
   {rabbit, [
-     {ssl_listeners, [5671]},
-     {ssl_options, [{cacertfile,"/etc/rabbitmq/certs/cacert.pem"},
-                    {certfile,"/etc/rabbitmq/certs/migrelay1.example.net.pem"},
-                    {keyfile,"/etc/rabbitmq/certs/migrelay1.example.net.key"},
-                    {verify,verify_peer},
-                    {fail_if_no_peer_cert,true},
-                    {ciphers, [{dhe_rsa,aes_128_cbc,sha},
-                               {dhe_rsa,aes_256_cbc,sha},
-                               {dhe_rsa,'3des_ede_cbc',sha},
-                               {rsa,aes_128_cbc,sha},
-                               {rsa,aes_256_cbc,sha},
-                               {rsa,'3des_ede_cbc',sha}]},
-                    {versions, [tlsv1]}
-     ]}
+         {ssl_listeners, [5671]},
+         {ssl_options, [{cacertfile,&quot;/etc/rabbitmq/certs/cacert.pem&quot;},
+                                        {certfile,&quot;/etc/rabbitmq/certs/migrelay1.example.net.pem&quot;},
+                                        {keyfile,&quot;/etc/rabbitmq/certs/migrelay1.example.net.key&quot;},
+                                        {verify,verify_peer},
+                                        {fail_if_no_peer_cert,true},
+                                        {ciphers, [{dhe_rsa,aes_128_cbc,sha},
+                                                           {dhe_rsa,aes_256_cbc,sha},
+                                                           {dhe_rsa,'3des_ede_cbc',sha},
+                                                           {rsa,aes_128_cbc,sha},
+                                                           {rsa,aes_256_cbc,sha},
+                                                           {rsa,'3des_ede_cbc',sha}]},
+                                        {versions, [tlsv1]}
+         ]}
   ]}
-].</pre>
-            </blockquote>
-            <p>Use this command to list the ciphers supported by a rabbitmq server:</p>
-            <pre class="code bash">rabbitmqctl <span class="nb">eval</span> <span class="s1">'ssl:cipher_suites().'</span></pre>
-            <p>Note: erlang r14B doesn't support TLS 1.1 and 1.2, as returned by the command:</p>
-            <pre class="code bash"><span class="c"># rabbitmqctl eval 'ssl:versions().'
-</span><span class="o">[{</span>ssl_app,<span class="s2">"4.1.6"</span><span class="o">}</span>,<span class="o">{</span>supported,<span class="o">[</span>tlsv1,sslv3<span class="o">]}</span>,<span class="o">{</span>available,<span class="o">[</span>tlsv1,sslv3<span class="o">]}]</span>
-...done.</pre>
-            <p>That is it for rabbitmq. Go back to the MIG Agent configuration section of this page in order to add the client certificate into your agents.</p>
-        </section>
-        <section id="queues-mirroring">
-            <h3>5.4   Queues mirroring</h3>
-            <p>By default, queues within a RabbitMQ cluster are located on a single node (the node on which they were first declared). If that node goes down, the queue will become unavailable. To mirror all MIG queues to all nodes of a rabbitmq cluster, use the following policy:</p>
-            <pre class="code bash"><span class="c"># rabbitmqctl -p mig set_policy mig-mirror-all "^mig\." '{"ha-mode":"all"}'
-</span>Setting policy <span class="s2">"mig-mirror-all"</span> <span class="k">for </span>pattern <span class="s2">"^mig\\."</span> to <span class="s2">"{\"ha-mode\":\"all\"}"</span> with priority <span class="s2">"0"</span> ...
-...done.</pre>
-        </section>
-        <section id="cluster-management">
-            <h3>5.5   Cluster management</h3>
-            <p>To create a cluster, all rabbitmq nodes must share a secret called erlang cookie. The erlang cookie is located in <cite>/var/lib/rabbitmq/.erlang.cookie</cite>. Make sure the value of the cookie is identical on all members of the cluster, then tell one node to join another one:</p>
-            <pre class="code bash"><span class="c"># rabbitmqctl stop_app
-</span>Stopping node <span class="s1">'rabbit@ip-172-30-200-73'</span> ...
+].
+</pre>
+</blockquote>
+<p>Use this command to list the ciphers supported by a rabbitmq server:</p>
+<pre class="code bash literal-block">
+rabbitmqctl <span class="name builtin">eval</span> <span class="literal string single">'ssl:cipher_suites().'</span>
+</pre>
+<p>Note: erlang r14B doesn't support TLS 1.1 and 1.2, as returned by the command:</p>
+<pre class="code bash literal-block">
+<span class="comment"># rabbitmqctl eval 'ssl:versions().'
+</span><span class="operator">[{</span>ssl_app,<span class="literal string double">&quot;4.1.6&quot;</span><span class="operator">}</span>,<span class="operator">{</span>supported,<span class="operator">[</span>tlsv1,sslv3<span class="operator">]}</span>,<span class="operator">{</span>available,<span class="operator">[</span>tlsv1,sslv3<span class="operator">]}]</span>
+...done.
+</pre>
+<p>That is it for rabbitmq. Go back to the MIG Agent configuration section of this
+page in order to add the client certificate into your agents.</p>
+</div>
+<div class="section" id="queues-mirroring">
+<h2><a class="toc-backref" href="#id28">5.4&nbsp;&nbsp;&nbsp;Queues mirroring</a></h2>
+<p>By default, queues within a RabbitMQ cluster are located on a single node (the
+node on which they were first declared). If that node goes down, the queue will
+become unavailable. To mirror all MIG queues to all nodes of a rabbitmq cluster,
+use the following policy:</p>
+<pre class="code bash literal-block">
+<span class="comment"># rabbitmqctl -p mig set_policy mig-mirror-all &quot;^mig\.&quot; '{&quot;ha-mode&quot;:&quot;all&quot;}'
+</span>Setting policy <span class="literal string double">&quot;mig-mirror-all&quot;</span> <span class="keyword">for</span> pattern <span class="literal string double">&quot;^mig\\.&quot;</span> to <span class="literal string double">&quot;{\&quot;ha-mode\&quot;:\&quot;all\&quot;}&quot;</span> with priority <span class="literal string double">&quot;0&quot;</span> ...
+...done.
+</pre>
+</div>
+<div class="section" id="cluster-management">
+<h2><a class="toc-backref" href="#id29">5.5&nbsp;&nbsp;&nbsp;Cluster management</a></h2>
+<p>To create a cluster, all rabbitmq nodes must share a secret called erlang
+cookie. The erlang cookie is located in <cite>/var/lib/rabbitmq/.erlang.cookie</cite>.
+Make sure the value of the cookie is identical on all members of the cluster,
+then tell one node to join another one:</p>
+<pre class="code bash literal-block">
+<span class="comment"># rabbitmqctl stop_app
+</span>Stopping node <span class="literal string single">'rabbit&#64;ip-172-30-200-73'</span> ...
 ...done.
 
-<span class="c"># rabbitmqctl join_cluster rabbit@ip-172-30-200-42
-</span>Clustering node <span class="s1">'rabbit@ip-172-30-200-73'</span> with <span class="s1">'rabbit@ip-172-30-200-42'</span> ...
+<span class="comment"># rabbitmqctl join_cluster rabbit&#64;ip-172-30-200-42
+</span>Clustering node <span class="literal string single">'rabbit&#64;ip-172-30-200-73'</span> with <span class="literal string single">'rabbit&#64;ip-172-30-200-42'</span> ...
 ...done.
 
-<span class="c"># rabbitmqctl start_app
-</span>Starting node <span class="s1">'rabbit@ip-172-30-200-73'</span> ...
-...done.</pre>
-            <p>To remove a dead node from the cluster, use the following command from any active node of the running cluster.</p>
-            <pre class="code bash"><span class="c"># rabbitmqctl forget_cluster_node rabbit@ip-172-30-200-84</span></pre>
-            <p>If one node of the cluster goes down, and the agents have trouble reconnecting, they may throw the error <cite>NOT_FOUND - no binding mig.agt....</cite>. That happens when the binding in question exists but the 'home' node of the (durable) queue is not alive. In case of a mirrored queue that would imply that all mirrors are down. Essentially both the queue and associated bindings are in a limbo state at that point - they neither exist nor do they not exist. <a href="http://rabbitmq.1065348.n5.nabble.com/Can-t-Bind-After-Upgrading-from-3-1-1-to-3-1-5-td29793.html">source</a></p>
-            <p>The safest thing to do is to delete all the queues on the cluster, and restart the scheduler. The agents will restart themselves.</p>
-            <pre class="code bash"><span class="c"># for queue in $(rabbitmqctl list_queues -p mig|grep ^mig|awk '{print $1}')
-</span><span class="k">do
-    </span><span class="nb">echo </span>curl -i -u admin:adminpassword -H <span class="s2">"content-type:application/json"</span> <span class="se">\
-</span>    -XDELETE http://localhost:15672/api/queues/mig/<span class="nv">$queue</span>;
-<span class="k">done</span></pre>
-            <p>(remove the <cite>echo</cite> in the command above, it's there as a safety for copy/paste people).</p>
-        </section>
-        <section id="supporting-more-than-1024-connections">
-            <h3>5.6   Supporting more than 1024 connections</h3>
-            <p>If you want more than 1024 clients, you may have to increase the max number of file descriptors that rabbitmq is allowed to hold. On linux, increase <cite>nofile</cite> in <cite>/etc/security/limits.conf</cite> as follow:</p>
-            <pre class="code bash">rabbitmq - nofile 102400</pre>
-            <p>Then, make sure than <cite>pam_limits.so</cite> is included in <cite>/etc/pam.d/common-session</cite>:</p>
-            <pre class="code bash">session    required     pam_limits.so</pre>
-        </section>
-        <section id="serving-amqps-on-port-443">
-            <h3>5.7   Serving AMQPS on port 443</h3>
-            <p>To prevent yours agents from getting blocked by firewalls, it may be a good idea to use port 443 for connections between agents and rabbitmq. However, rabbitmq is not designed to run on a privileged port. The solution, then, is to use iptables to redirect the port on the rabbitmq server.</p>
-            <pre class="code bash">iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 5671 -m comment --comment <span class="s2">"Serve RabbitMQ on HTTPS port"</span></pre>
-        </section>
-    </section>
-    <section id="api-configuration">
-        <h2>6   API configuration</h2>
-        <p>The REST API exposes functions to create, delete and query actions remotely. It is the primary interface to the Scheduler.</p>
-        <section id="location">
-            <h3>6.1   Location</h3>
-            <p>Most likely, the API will be deployed behind some form of reverse proxy. The API doesn't attempt to guess its location. Instead, you can configure it in <cite>mig-api.cfg</cite>, as follow:</p>
-            <blockquote>
-                <pre>[server]
-ip = "127.0.0.1"
+<span class="comment"># rabbitmqctl start_app
+</span>Starting node <span class="literal string single">'rabbit&#64;ip-172-30-200-73'</span> ...
+...done.
+</pre>
+<p>To remove a dead node from the cluster, use the following command from any
+active node of the running cluster.</p>
+<pre class="code bash literal-block">
+<span class="comment"># rabbitmqctl forget_cluster_node rabbit&#64;ip-172-30-200-84</span>
+</pre>
+<p>If one node of the cluster goes down, and the agents have trouble reconnecting,
+they may throw the error <cite>NOT_FOUND - no binding mig.agt....</cite>. That happens when
+the binding in question exists but the 'home' node of the (durable) queue is not
+alive. In case of a mirrored queue that would imply that all mirrors are down.
+Essentially both the queue and associated bindings are in a limbo state at that
+point - they neither exist nor do they not exist. <a class="reference external" href="http://rabbitmq.1065348.n5.nabble.com/Can-t-Bind-After-Upgrading-from-3-1-1-to-3-1-5-td29793.html">source</a></p>
+<p>The safest thing to do is to delete all the queues on the cluster, and restart
+the scheduler. The agents will restart themselves.</p>
+<pre class="code bash literal-block">
+<span class="comment"># for queue in $(rabbitmqctl list_queues -p mig|grep ^mig|awk '{print $1}')
+</span><span class="keyword">do</span>
+        <span class="name builtin">echo </span>curl -i -u admin:adminpassword -H <span class="literal string double">&quot;content-type:application/json&quot;</span> <span class="literal string escape">\
+</span>        -XDELETE http://localhost:15672/api/queues/mig/<span class="name variable">$queue</span><span class="punctuation">;</span>
+<span class="keyword">done</span>
+</pre>
+<p>(remove the <cite>echo</cite> in the command above, it's there as a safety for copy/paste
+people).</p>
+</div>
+<div class="section" id="supporting-more-than-1024-connections">
+<h2><a class="toc-backref" href="#id30">5.6&nbsp;&nbsp;&nbsp;Supporting more than 1024 connections</a></h2>
+<p>If you want more than 1024 clients, you may have to increase the max number of
+file descriptors that rabbitmq is allowed to hold. On linux, increase <cite>nofile</cite>
+in <cite>/etc/security/limits.conf</cite> as follow:</p>
+<pre class="code bash literal-block">
+rabbitmq - nofile 102400
+</pre>
+<p>Then, make sure than <cite>pam_limits.so</cite> is included in <cite>/etc/pam.d/common-session</cite>:</p>
+<pre class="code bash literal-block">
+session    required     pam_limits.so
+</pre>
+</div>
+<div class="section" id="serving-amqps-on-port-443">
+<h2><a class="toc-backref" href="#id31">5.7&nbsp;&nbsp;&nbsp;Serving AMQPS on port 443</a></h2>
+<p>To prevent yours agents from getting blocked by firewalls, it may be a good idea
+to use port 443 for connections between agents and rabbitmq. However, rabbitmq
+is not designed to run on a privileged port. The solution, then, is to use
+iptables to redirect the port on the rabbitmq server.</p>
+<pre class="code bash literal-block">
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport <span class="literal number">443</span> -j REDIRECT --to-port <span class="literal number">5671</span> -m comment --comment <span class="literal string double">&quot;Serve RabbitMQ on HTTPS port&quot;</span>
+</pre>
+</div>
+</div>
+<div class="section" id="api-configuration">
+<h1><a class="toc-backref" href="#id32">6&nbsp;&nbsp;&nbsp;API configuration</a></h1>
+<p>The REST API exposes functions to create, delete and query actions remotely. It
+is the primary interface to the Scheduler.</p>
+<div class="section" id="location">
+<h2><a class="toc-backref" href="#id33">6.1&nbsp;&nbsp;&nbsp;Location</a></h2>
+<p>Most likely, the API will be deployed behind some form of reverse proxy. The
+API doesn't attempt to guess its location. Instead, you can configure it in
+<cite>mig-api.cfg</cite>, as follow:</p>
+<blockquote>
+<pre class="literal-block">
+    [server]
+ip = &quot;127.0.0.1&quot;
 port = 12345
-host = "http://localhost:12345"
-baseroute = "/api/v1"</pre>
-            </blockquote>
-            <p><cite>ip</cite> and <cite>port</cite> define the socket the API will be listening on. <cite>host</cite> is the public URL of the API, that clients will be connecting to. <cite>baseroute</cite> is the location of the base of the API, without the trailing slash.</p>
-            <p>In this example, to reach the home of the API, we would point our browser to <cite>http://localhost:12345/api/v1/</cite>.</p>
-            <p>Note that the API does not support SSL, or authentication (for now). This need to be configured on a reverse proxy in front of it.</p>
-        </section>
-    </section>
+host = &quot;http://localhost:12345&quot;
+baseroute = &quot;/api/v1&quot;
+</pre>
+</blockquote>
+<p><cite>ip</cite> and <cite>port</cite> define the socket the API will be listening on. <cite>host</cite> is the
+public URL of the API, that clients will be connecting to. <cite>baseroute</cite> is the
+location of the base of the API, without the trailing slash.</p>
+<p>In this example, to reach the home of the API, we would point our browser to
+<cite>http://localhost:12345/api/v1/</cite>.</p>
+<p>Note that the API does not support SSL, or authentication (for now). This need
+to be configured on a reverse proxy in front of it.</p>
+</div>
+</div>
+</div>
 </body>
 </html>

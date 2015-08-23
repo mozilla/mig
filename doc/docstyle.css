@@ -179,12 +179,12 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
 
 pre.code .ln { color: grey; } /* line numbers */
 //pre.code, code { background-color: #eeeeee }
-pre.code .comment, code .comment, code .c1 { color: #5C6576 }
-code, pre.code .keyword, code .keyword, pre.code .kd, pre.code .kn, pre.code .k, pre.code .o { color: #3e9101;}
+pre.code .comment, code .comment, code .c1 { color: #FF7428; }
+code, pre.code .keyword, code .keyword, pre.code .kd, pre.code .kn, pre.code .k, pre.code .o { color: #00a5ff; font-weight: bold;}
 pre.code .nb { color: #c45918;}
 pre.code .s {color: #0a77c4;}
 pre.code .punctuation, pre.code .punctuation, pre.code .p { color: white;}
-pre.code .literal.string, pre.code .literal.string { color: #0C5404 }
+pre.code .literal.string, pre.code .literal.string { color: #40BF32; }
 pre.code .name.builtin, pre.code .name.builtin, pre.code .nx { color: white; }
 pre.code .deleted, pre.code .deleted { background-color: #DEB0A1}
 pre.code .inserted, pre.code .inserted { background-color: #A3D289}
@@ -220,7 +220,7 @@ a {
 }
 
 cite {
-  color: #009E2E;
+  color: #00FF4A;
 }
 
 strong {

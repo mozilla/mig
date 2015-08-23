@@ -1,70 +1,320 @@
-<!DOCTYPE html>
-<html>
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-    <title>Mozilla InvestiGator: Agent Intel Worker</title>
-    <meta charset="utf-8" />
-    <link href="docstyle.css" rel="stylesheet" />
-    <meta content="Julien Vehent &lt;jvehent@mozilla.com&gt;" name="author" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
+<title>Mozilla InvestiGator: Agent Intel Worker</title>
+<meta name="author" content="Julien Vehent &lt;jvehent&#64;mozilla.com&gt;" />
+<style type="text/css">
+
+body {
+  width: 95%;
+  max-width: 900px;
+  margin: 20px;
+  padding: 0;
+  background: #151515 url("../images/bkg.png") 0 0;
+  color: #eaeaea;
+  font: 16px;
+  line-height: 1.5;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+}
+
+/* General & 'Reset' Stuff */
+
+.container {
+  width: 95%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+section {
+  display: block;
+  margin: 0 0 20px 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  /*margin: 0 0 20px;*/
+  margin: 0;
+}
+
+li {
+  line-height: 1.4 ;
+}
+
+/* Header, <header>
+ *    header   - container
+ *       h1       - project name
+ *          h2       - project description
+ *          */
+
+header {
+  background: rgba(0, 0, 0, 0.1);
+  width: 100%;
+  border-bottom: 1px dashed #b5e853;
+  /*padding: 20px 0;
+ *   margin: 0 0 40px 0;*/
+  padding: 5px 0;
+  margin: 0 0 10px 0;
+}
+
+header h1 {
+  font-size: 30px;
+  line-height: 1.5;
+  margin: 0 0 0 -40px;
+  font-weight: bold;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  /*color: #b5e853;*/
+  color: #089d00;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
+               0 0 5px rgba(181, 232, 83, 0.1),
+               0 0 10px rgba(181, 232, 83, 0.1);
+  letter-spacing: -1px;
+  -webkit-font-smoothing: antialiased;
+}
+
+header h1:before {
+  content: "./ ";
+  font-size: 24px;
+}
+
+header h2 {
+  font-size: 18px;
+  font-weight: 300;
+  /*color: #666;*/
+  color: #ff7800;
+}
+
+/* Main Content
+ * */
+
+#main_content {
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+section img {
+  max-width: 100%
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: normal;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  /*color: #b5e853;*/
+  color: #8AB638;
+  letter-spacing: -0.03em;
+  /*text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
+               0 0 5px rgba(181, 232, 83, 0.1),
+               0 0 10px rgba(181, 232, 83, 0.1);*/
+}
+
+#main_content h1 {
+  font-size: 30px;
+}
+
+#main_content h2 {
+  font-size: 24px;
+}
+
+#main_content h3 {
+  font-size: 18px;
+}
+
+#main_content h4 {
+  font-size: 14px;
+}
+
+#main_content h5 {
+  font-size: 12px;
+  text-transform: uppercase;
+  margin: 0 0 5px 0;
+}
+
+#main_content h6 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #999;
+  margin: 0 0 5px 0;
+}
+
+dt {
+  font-style: italic;
+  font-weight: bold;
+}
+/*
+ul li {
+  list-style: none;
+}
+*/
+/*
+ul li:before {
+  content: ">>";
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  font-size: 13px;
+  color: #b5e853;
+  margin-left: -37px;
+  margin-right: 21px;
+  line-height: 16px;
+}
+*/
+
+blockquote {
+  color: #aaa;
+  padding-left: 10px;
+  border-left: 1px dotted #666;
+}
+
+
+pre {
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px;
+  font-size: 14px;
+  //color: #b5e853;
+  border-radius: 2px;
+  -moz-border-radius: 2px;
+  -webkit-border-radius: 2px;
+  text-wrap: normal;
+  overflow: auto;
+  overflow-y: hidden;
+}
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+pre.code .ln { color: grey; } /* line numbers */
+//pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment, code .c1 { color: #FF7428; }
+code, pre.code .keyword, code .keyword, pre.code .kd, pre.code .kn, pre.code .k, pre.code .o { color: #00a5ff; font-weight: bold;}
+pre.code .nb { color: #c45918;}
+pre.code .s {color: #0a77c4;}
+pre.code .punctuation, pre.code .punctuation, pre.code .p { color: white;}
+pre.code .literal.string, pre.code .literal.string { color: #40BF32; }
+pre.code .name.builtin, pre.code .name.builtin, pre.code .nx { color: white; }
+pre.code .deleted, pre.code .deleted { background-color: #DEB0A1}
+pre.code .inserted, pre.code .inserted { background-color: #A3D289}
+
+table {
+  width: 100%;
+  margin: 0 0 20px 0;
+}
+
+th {
+  text-align: left;
+  border-bottom: 1px dashed #b5e853;
+  padding: 5px 10px;
+}
+
+td {
+  padding: 5px 10px;
+}
+
+hr {
+  height: 0;
+  border: 0;
+  border-bottom: 1px dashed #b5e853;
+  color: #b5e853;
+}
+/* Links
+ *    a, a:hover, a:visited
+ *    */
+
+a {
+  color: #63c0f5;
+  text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);
+}
+
+cite {
+  color: #00FF4A;
+}
+
+strong {
+  color: #C64216;
+}
+
+</style>
 </head>
 <body>
-    <h1>Mozilla InvestiGator: Agent Intel Worker</h1>
-    <aside class="topic contents" id="table-of-contents">
-        <h1>Table of Contents</h1>
-        <ul class="auto-toc">
-            <li><a href="#configuration">1   Configuration</a>
-                <ul class="auto-toc">
-                    <li><a href="#upstart">1.1   Upstart</a></li>
-                </ul>
-            </li>
-        </ul>
-    </aside>
-    <p>The Agent Intel Worker in a separate program that listens for event about agents that newly joined the platform, and create asset hints that are published to MozDef. This worker serves a very specific purpose in the collection of asset data performed by Mozilla OpSec. It may not be very useful to anyone else.</p>
-    <section id="configuration">
-        <h2>1   Configuration</h2>
-        <p>This worker retrieves agents hearbeats in the MIG Agent format from the MIG Relay, transforms them into Asset Hints, and publishes them to some other rabbitmq endpoint when MozDef will retrieve them.</p>
-        <pre class="code">; mozdef rabbitmq endpoint
+<div class="document" id="mozilla-investigator-agent-intel-worker">
+<h1 class="title">Mozilla InvestiGator: Agent Intel Worker</h1>
+<table class="docinfo" frame="void" rules="none">
+<col class="docinfo-name" />
+<col class="docinfo-content" />
+<tbody valign="top">
+<tr><th class="docinfo-name">Author:</th>
+<td>Julien Vehent &lt;<a class="reference external" href="mailto:jvehent&#64;mozilla.com">jvehent&#64;mozilla.com</a>&gt;</td></tr>
+</tbody>
+</table>
+<div class="contents topic" id="table-of-contents">
+<p class="topic-title first">Table of Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#configuration" id="id1">1&nbsp;&nbsp;&nbsp;Configuration</a><ul class="auto-toc">
+<li><a class="reference internal" href="#upstart" id="id2">1.1&nbsp;&nbsp;&nbsp;Upstart</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>The Agent Intel Worker in a separate program that listens for event about
+agents that newly joined the platform, and create asset hints that are
+published to MozDef. This worker serves a very specific purpose in the
+collection of asset data performed by Mozilla OpSec. It may not be very useful
+to anyone else.</p>
+<div class="section" id="configuration">
+<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Configuration</a></h1>
+<p>This worker retrieves agents hearbeats in the MIG Agent format from the MIG
+Relay, transforms them into Asset Hints, and publishes them to some other
+rabbitmq endpoint when MozDef will retrieve them.</p>
+<pre class="code literal-block">
+; mozdef rabbitmq endpoint
 [mozdef]
-    host = "mozdef.rabbitmq.example.net"
-    port = 5671
-    user = "migassetworker"
-    pass = "secretpassphrase"
-    vhost = "mozdef"
-    exchange = "eventtask"
-    routingkey = "eventtask"
-    usetls  = true
-    cacertpath  = "/etc/certs/ca.crt"
-    clientcertpath = "/etc/certs/migassetworker.crt"
-    clientkeypath  = "/etc/certs/migassetworker.key"
-    timeout = "10s"
+        host = &quot;mozdef.rabbitmq.example.net&quot;
+        port = 5671
+        user = &quot;migassetworker&quot;
+        pass = &quot;secretpassphrase&quot;
+        vhost = &quot;mozdef&quot;
+        exchange = &quot;eventtask&quot;
+        routingkey = &quot;eventtask&quot;
+        usetls  = true
+        cacertpath  = &quot;/etc/certs/ca.crt&quot;
+        clientcertpath = &quot;/etc/certs/migassetworker.crt&quot;
+        clientkeypath  = &quot;/etc/certs/migassetworker.key&quot;
+        timeout = &quot;10s&quot;
 
 ; https://github.com/ameihm0912/vmintgr
 [vmintgr]
-    bin = "/opt/vmintgr/bin/grouptest"
+        bin = &quot;/opt/vmintgr/bin/grouptest&quot;
 
 ; mig rabbitmq endpoint
 [mq]
-    host = "hostname.mig.relay.example.net"
-    port = 5671
-    user = "migworker"
-    pass = "somepassphrase"
-    vhost = "mig"
-    usetls  = true
-    cacert  = "/path/to/ca.crt"
-    tlscert = "/path/to/client.crt"
-    tlskey  = "/path/to/client.key"
-    timeout = "10s"
+        host = &quot;hostname.mig.relay.example.net&quot;
+        port = 5671
+        user = &quot;migworker&quot;
+        pass = &quot;somepassphrase&quot;
+        vhost = &quot;mig&quot;
+        usetls  = true
+        cacert  = &quot;/path/to/ca.crt&quot;
+        tlscert = &quot;/path/to/client.crt&quot;
+        tlskey  = &quot;/path/to/client.key&quot;
+        timeout = &quot;10s&quot;
 
 [logging]
-    mode = "syslog" ; stdout | file | syslog
-    level = "info"  ; debug | info | warning | error | critical
-    host = "localhost"
-    port = 514
-    protocol = "udp"</pre>
-        <section id="upstart">
-            <h3>1.1   Upstart</h3>
-            <pre class="code"># Mozilla InvestiGator Agent Intel Worker
+        mode = &quot;syslog&quot; ; stdout | file | syslog
+        level = &quot;info&quot;  ; debug | info | warning | error | critical
+        host = &quot;localhost&quot;
+        port = 514
+        protocol = &quot;udp&quot;
+</pre>
+<div class="section" id="upstart">
+<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Upstart</a></h2>
+<pre class="code literal-block">
+# Mozilla InvestiGator Agent Intel Worker
 
-description     "MIG Agent Intel Worker"
+description     &quot;MIG Agent Intel Worker&quot;
 
 start on filesystem or runlevel [2345]
 stop on runlevel [!2345]
@@ -79,12 +329,14 @@ umask 022
 console none
 
 pre-start script
-    test /opt/mig_agent_intel_worker || { stop; exit 0; }
+        test /opt/mig_agent_intel_worker || { stop; exit 0; }
 end script
 
 # Start
-exec /opt/mig_agent_intel_worker</pre>
-        </section>
-    </section>
+exec /opt/mig_agent_intel_worker
+</pre>
+</div>
+</div>
+</div>
 </body>
 </html>

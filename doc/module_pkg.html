@@ -4,8 +4,8 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
-<title>Mozilla InvestiGator: MozDef Compliance Item Worker</title>
-<meta name="author" content="Julien Vehent &lt;jvehent&#64;mozilla.com&gt;" />
+<title>Mozilla InvestiGator: Package module</title>
+<meta name="author" content="Aaron Meihm &lt;ameihm&#64;mozilla.com&gt;" />
 <style type="text/css">
 
 body {
@@ -240,105 +240,39 @@ strong {
 </style>
 </head>
 <body>
-<div class="document" id="mozilla-investigator-mozdef-compliance-item-worker">
-<h1 class="title">Mozilla InvestiGator: MozDef Compliance Item Worker</h1>
+<div class="document" id="mozilla-investigator-package-module">
+<h1 class="title">Mozilla InvestiGator: Package module</h1>
 <table class="docinfo" frame="void" rules="none">
 <col class="docinfo-name" />
 <col class="docinfo-content" />
 <tbody valign="top">
 <tr><th class="docinfo-name">Author:</th>
-<td>Julien Vehent &lt;<a class="reference external" href="mailto:jvehent&#64;mozilla.com">jvehent&#64;mozilla.com</a>&gt;</td></tr>
+<td>Aaron Meihm &lt;<a class="reference external" href="mailto:ameihm&#64;mozilla.com">ameihm&#64;mozilla.com</a>&gt;</td></tr>
 </tbody>
 </table>
 <div class="contents topic" id="table-of-contents">
 <p class="topic-title first">Table of Contents</p>
 <ul class="auto-toc simple">
-<li><a class="reference internal" href="#configuration" id="id1">1&nbsp;&nbsp;&nbsp;Configuration</a><ul class="auto-toc">
-<li><a class="reference internal" href="#upstart" id="id2">1.1&nbsp;&nbsp;&nbsp;Upstart</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#usage" id="id1">1&nbsp;&nbsp;&nbsp;Usage</a></li>
 </ul>
 </div>
-<p>The MozDef Compliance Item worker implements a data transformation process that
-converts the results of compliance actions into compliance items, and publishes
-them to a rabbitmq endpoint for consumption by mozdef.
-This worker serves a very specific purpose in the verification of security
-compliance performed byMozilla OpSec. It may not be very useful to anyone else.</p>
-<div class="section" id="configuration">
-<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Configuration</a></h1>
-<p>The configuration needs standard access to MIG's rabbitmq relay, configured in
-the <cite>[mq]</cite> section. Access to MozDef's rabbitmq endpoint is configured in the
-<cite>[mozdef]</cite> section. The <cite>[api]</cite> section must only contain the location of MIG's
-API endpoint, used to build links to commands in compliance items. Standard
-logging can be configured in <cite>[logging]</cite>.</p>
-<pre class="code literal-block">
-[api]
-        host = &quot;https://api.mig.example.net&quot;
-[mozdef]
-        host = &quot;mozdef.rabbitmq.example.net&quot;
-        port = 5671
-        user = &quot;migcomplianceworker&quot;
-        pass = &quot;secretpassphrase&quot;
-        vhost = &quot;mozdef&quot;
-        exchange = &quot;eventtask&quot;
-        routingkey = &quot;eventtask&quot;
-        usetls  = true
-        cacertpath  = &quot;/etc/certs/ca.crt&quot;
-        clientcertpath = &quot;/etc/certs/migcomplianceworker.crt&quot;
-        clientkeypath  = &quot;/etc/certs/migcomplianceworker.key&quot;
-        timeout = &quot;10s&quot;
-
-; https://github.com/ameihm0912/vmintgr
-[vmintgr]
-        bin = &quot;/opt/vmintgr/bin/grouptest&quot;
-
-[mq]
-        host = &quot;relay.mig.example.net&quot;
-        port = 5671
-        user = &quot;worker&quot;
-        pass = &quot;secretpassphrase&quot;
-        vhost = &quot;mig&quot;
-        usetls  = true
-        cacert  = &quot;/etc/certs/ca.crt&quot;
-        tlscert = &quot;/etc/certs/migworker.crt&quot;
-        tlskey  = &quot;/etc/certs/migworker.key&quot;
-        timeout = &quot;10s&quot;
-[logging]
-        mode = &quot;syslog&quot; ; stdout | file | syslog
-        level = &quot;info&quot;
-        host = &quot;localhost&quot;
-        port = 514
-        protocol = &quot;udp&quot;
-</pre>
-<div class="section" id="upstart">
-<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Upstart</a></h2>
-<p>To manage this worker with upstart, use the configuration below, for example in
-<cite>/etc/init/mig-compliance-item-worker.conf</cite>.</p>
-<pre class="code literal-block">
-# Mozilla InvestiGator MozDef Compliance Item Worker
-
-description     &quot;MIG MozDef Compliance Item Worker&quot;
-
-start on filesystem or runlevel [2345]
-stop on runlevel [!2345]
-
-setuid mig
-limit nofile 640000 640000
-
-respawn
-respawn limit 10 5
-umask 022
-
-console none
-
-pre-start script
-        test /opt/mig_compliance_item_worker || { stop; exit 0; }
-end script
-
-# Start
-exec /opt/mig_compliance_item_worker
-</pre>
-</div>
+<p>The package module (pkg) supports querying of the OS package manager
+using the package query functionality of <a class="reference external" href="https://github.com/mozilla/scribe">scribe</a>.
+It can be used to return a list of packages installed on an agent system
+that match supplied regular expressions.</p>
+<div class="section" id="usage">
+<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Usage</a></h1>
+<p>Package query mode can be used by specifying one or more <cite>name</cite> options for
+the pkg module. In this mode, the module will query the OS package manager
+on the agent system, identifying any packages matching the regular expression
+argument to <cite>name</cite>, and returning those packages along with their versions. In
+addition to this, the agent will also return what type of package was identified.</p>
+<p>Currently the following package managers are supported for query on an agent system.</p>
+<ul class="simple">
+<li><strong>RPM</strong>: RPM based package managers, for Red Hat, CentOS, etc</li>
+<li><strong>dpkg</strong>: DPKG based package managers, for Debian, Ubuntu, etc</li>
+</ul>
+<p>Packages managed in other package managers will not be returned by the module.</p>
 </div>
 </div>
 </body>
