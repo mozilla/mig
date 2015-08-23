@@ -114,8 +114,8 @@ go_vendor_dependencies:
 	$(GOGETTER) golang.org/x/net/ipv6
 	$(GOGETTER) gopkg.in/gcfg.v1
 	echo 'removing .git from vendored pkg and moving them to src/mig/vendor'
-	find .tmpdeps -type d -name ".git" -exec rm -rf {} \; || exit 0
-	mv .tmpdeps/src/* src/mig/vendor/
+	find .tmpdeps/src -type d -name ".git" ! -name ".gitignore" -exec rm -rf {} \; || exit 0
+	cp -ar .tmpdeps/src/* src/mig/vendor/
 	rm -rf .tmpdeps
 
 install: mig-agent mig-scheduler
