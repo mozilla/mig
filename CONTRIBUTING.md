@@ -46,8 +46,9 @@ full of interesting information.
   as explicit as possible. For example, a module that inspects files on the file
   system would be called `file`. A module that lists packages is called `pkg`.
 
-* Do not set [GOMAXPROCS](http://golang.org/pkg/runtime/#GOMAXPROCS) ever. It is
-  already set to an appropriate value elsewhere.
+* In modules, you can set GOMAXPROCS to 1, or you can leave it unset and it will
+  be defined somewhere else. Never set GOMAXPROCS to something greater than 1,
+  we care about the impact the agent has on the cpu usage of its host.
 
 * While we do not enforce line size or function length, please be mindful of the
   readability of your code. A single function that is longer than 100 lines, or
