@@ -1,0 +1,27 @@
+{
+	"variables": [
+	{ "key": "root", "value": "REPLACE_IN_MAKEFILE" }
+	],
+
+	"objects": [
+	{
+		"object": "file-hasline",
+		"hasline": {
+			"path": "${root}",
+			"file": ".*\\.txt",
+			"expression": ".*test.*"
+		}
+	}
+	],
+
+	"tests": [
+	{
+		"test": "files-without-line",
+		"expectedresult": true,
+		"object": "file-hasline",
+		"exactmatch": {
+			"value": "false"
+		}
+	}
+	]
+}

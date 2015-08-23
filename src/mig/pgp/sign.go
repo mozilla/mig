@@ -7,12 +7,12 @@ package pgp
 
 import (
 	"bytes"
-	"camlistore.org/pkg/misc/gpgagent"
-	"camlistore.org/pkg/misc/pinentry"
 	"encoding/hex"
 	"fmt"
 	"golang.org/x/crypto/openpgp"
 	"io"
+	"mig/pgp/gpgagent"
+	"mig/pgp/pinentry"
 	"os"
 	"strings"
 )

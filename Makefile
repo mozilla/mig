@@ -36,17 +36,16 @@ GCC			:= gcc
 CFLAGS		:=
 LDFLAGS		:=
 GOOPTS		:=
-GO 			:= GOPATH=$(shell pwd):$(shell go env GOROOT)/bin GOOS=$(OS) GOARCH=$(ARCH) go
-GOGETTER	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go get -u
-GOTEST  	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go test
+GO 			:= GOPATH=$(shell pwd):$(shell go env GOROOT)/bin GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
+GOGETTER	:= GOPATH=$(shell pwd)/.tmpdeps go get -d
+GOTEST  	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go test
 GOLDFLAGS	:= -ldflags "-X main.version=$(BUILDREV)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install
 
 
-all: go_get_deps all-but-deps
-all-but-deps: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
+all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
 
 mig-agent:
 	echo building mig-agent for $(OS)/$(ARCH)
@@ -71,10 +70,6 @@ mig-action-generator:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/client/generator
 
-filechecker-convert:
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/filechecker-convertv1tov2 $(GOLDFLAGS) mig/modules/filechecker/convert
-
 mig-action-verifier:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig/client/verifier
@@ -96,68 +91,32 @@ mig-agent-search:
 	$(MKDIR) -p $(BINDIR)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-search $(GOLDFLAGS) mig/client/agent-search
 
-go_get_common_deps:
-	$(GOGETTER) golang.org/x/crypto/openpgp
-	$(GOGETTER) gopkg.in/gcfg.v1
-
-go_get_agent_deps: go_get_common_deps go_get_ping_deps go_get_memory_deps
-	$(GOGETTER) golang.org/x/crypto/sha3
-	$(GOGETTER) github.com/streadway/amqp
-	$(GOGETTER) github.com/kardianos/osext
+go_vendor_dependencies:
+	GOOS="linux" $(GOGETTER) github.com/bobappleyard/readline
+	GOOS="darwin" $(GOGETTER) github.com/bobappleyard/readline
+	GOOS="windows" $(GOGETTER) github.com/golang/sys/windows/svc/eventlog
+	$(GOGETTER) github.com/gorilla/mux
+	$(GOGETTER) github.com/jvehent/cljs
+	$(GOGETTER) github.com/jvehent/gozdef
 	$(GOGETTER) github.com/jvehent/service-go
-	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
-	$(GOGETTER) camlistore.org/pkg/misc/pinentry
+	$(GOGETTER) github.com/kardianos/osext
+	$(GOGETTER) github.com/lib/pq
+	$(GOGETTER) github.com/mozilla/masche/listlibs
+	$(GOGETTER) github.com/mozilla/masche/memsearch
+	$(GOGETTER) github.com/mozilla/masche/process
 	$(GOGETTER) github.com/mozilla/scribe/src/scribe
-ifeq ($(OS),windows)
-	$(GOGETTER) code.google.com/p/winsvc/eventlog
-endif
-
-go_get_ping_deps:
+	$(GOGETTER) github.com/oschwald/geoip2-golang
+	$(GOGETTER) github.com/streadway/amqp
+	$(GOGETTER) golang.org/x/crypto/openpgp
+	$(GOGETTER) golang.org/x/crypto/sha3
 	$(GOGETTER) golang.org/x/net/icmp
 	$(GOGETTER) golang.org/x/net/ipv4
 	$(GOGETTER) golang.org/x/net/ipv6
-
-go_get_memory_deps:
-	$(GOGETTER) github.com/mozilla/masche/process
-	$(GOGETTER) github.com/mozilla/masche/listlibs
-	$(GOGETTER) github.com/mozilla/masche/memsearch
-
-go_get_platform_deps: go_get_common_deps
-	$(GOGETTER) github.com/streadway/amqp
-	$(GOGETTER) github.com/jvehent/gozdef
-	$(GOGETTER) github.com/lib/pq
-	$(GOGETTER) github.com/howeyc/fsnotify
-	$(GOGETTER) github.com/gorilla/mux
-	$(GOGETTER) github.com/jvehent/cljs
-	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
-	$(GOGETTER) camlistore.org/pkg/misc/pinentry
-	$(GOGETTER) github.com/oschwald/geoip2-golang
-
-go_get_client_deps: go_get_common_deps
-	$(GOGETTER) github.com/jvehent/cljs
-	$(GOGETTER) camlistore.org/pkg/misc/gpgagent
-	$(GOGETTER) camlistore.org/pkg/misc/pinentry
-ifeq ($(OS),darwin)
-	@echo $(GOGETTER) github.com/bobappleyard/readline
-	@if ! $(GOGETTER) github.com/bobappleyard/readline; then \
-		echo 'make sure that you have readline installed via {port,brew} install readline'; \
-		exit 1; \
-	fi
-endif
-ifeq ($(OS),linux)
-	@echo $(GOGETTER) github.com/bobappleyard/readline
-	@if ! $(GOGETTER) github.com/bobappleyard/readline; then \
-		echo 'make sure that you have readline installed via:'; \
-		echo '* yum install readline-devel'; \
-		echo '* apt-get install libreadline-dev'; \
-		exit 1; \
-	fi
-endif
-
-go_get_deps: go_get_common_deps go_get_agent_deps go_get_platform_deps go_get_client_deps
-
-go_get_deps_into_system:
-	make GOGETTER="go get -u" go_get_deps
+	$(GOGETTER) gopkg.in/gcfg.v1
+	echo 'removing .git from vendored pkg and moving them to src/mig/vendor'
+	find .tmpdeps -type d -name ".git" -exec rm -rf {} \; || exit 0
+	mv .tmpdeps/src/* src/mig/vendor/
+	rm -rf .tmpdeps
 
 install: mig-agent mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
@@ -238,7 +197,7 @@ else
 	cp tmp/mig-agent-installer.msi mig-agent-$(BUILDREV).msi
 endif
 
-package-linux-clients: go_get_client_deps rpm-clients deb-clients
+package-linux-clients: rpm-clients deb-clients
 
 rpm-clients: mig-cmd mig-console mig-action-generator
 # --rpm-sign requires installing package `rpm-sign` and configuring this macros in ~/.rpmmacros
@@ -265,7 +224,7 @@ deb-clients: mig-cmd mig-console mig-action-generator
 # require dpkg-sig, it's a perl script, take it from any debian box and copy it in your PATH
 	dpkg-sig -k E60892BB9BD89A69F759A1A0A3D652173B763E8F --sign jvehent -m "Julien Vehent" mig-clients_$(BUILDREV)_$(ARCH).deb
 
-dmg-clients: go_get_client_deps mig-cmd mig-console mig-action-generator
+dmg-clients: mig-cmd mig-console mig-action-generator
 ifneq ($(OS),darwin)
 	echo 'you must be on MacOS and set OS=darwin on the make command line to build an OSX package'
 else
@@ -281,7 +240,7 @@ else
 		-o ./mig-clients-$(BUILDREV)-$(FPMARCH).dmg tmpdmg
 endif
 
-deb-server: go_get_platform_deps mig-scheduler mig-api worker-agent-intel worker-compliance-item
+deb-server: mig-scheduler mig-api worker-agent-intel worker-compliance-item
 	rm -rf tmp
 	# add binaries
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/opt/mig/bin/mig-scheduler
@@ -336,6 +295,5 @@ vet:
 clean: clean-agent
 	rm -rf bin
 	rm -rf tmp
-	find src/ -maxdepth 1 -mindepth 1 ! -name mig -exec rm -rf {} \;
 
-.PHONY: clean clean-agent doc go_get_deps_into_system agent-install-script agent-remove-script
+.PHONY: clean clean-agent doc agent-install-script agent-remove-script
