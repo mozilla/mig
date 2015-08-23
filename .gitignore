@@ -13,9 +13,10 @@ src/mig/*/*/*/available_modules.go
 *.a
 *.so
 *.o
-src/*
 !src/mig
 *.rpm
 *.deb
 packages/
 tmp/
+src/mig/workers/*/*.html
+src/mig/modules/*/*.html
