@@ -6,7 +6,7 @@
 package main
 
 import (
-	"code.google.com/p/gcfg"
+	"gopkg.in/gcfg.v1"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"

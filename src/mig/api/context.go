@@ -6,7 +6,7 @@
 package main
 
 import (
-	"code.google.com/p/gcfg"
+	"gopkg.in/gcfg.v1"
 	"fmt"
 	geo "github.com/oschwald/geoip2-golang"
 	"io"

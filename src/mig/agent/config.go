@@ -12,7 +12,7 @@ import (
 	"mig"
 	"time"
 
-	"code.google.com/p/gcfg"
+	"gopkg.in/gcfg.v1"
 )
 
 type config struct {

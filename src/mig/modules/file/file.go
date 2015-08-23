@@ -13,13 +13,13 @@ package file
 
 import (
 	"bufio"
-	"code.google.com/p/go.crypto/sha3"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/crypto/sha3"
 	"hash"
 	"io"
 	"mig/modules"

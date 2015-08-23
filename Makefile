@@ -39,7 +39,7 @@ GOOPTS		:=
 GO 			:= GOPATH=$(shell pwd):$(shell go env GOROOT)/bin GOOS=$(OS) GOARCH=$(ARCH) go
 GOGETTER	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go get -u
 GOTEST  	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) go test
-GOLDFLAGS	:= -ldflags "-X main.version $(BUILDREV)"
+GOLDFLAGS	:= -ldflags "-X main.version=$(BUILDREV)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install
@@ -97,11 +97,11 @@ mig-agent-search:
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-search $(GOLDFLAGS) mig/client/agent-search
 
 go_get_common_deps:
-	$(GOGETTER) code.google.com/p/go.crypto/openpgp
-	$(GOGETTER) code.google.com/p/gcfg
+	$(GOGETTER) golang.org/x/crypto/openpgp
+	$(GOGETTER) gopkg.in/gcfg.v1
 
 go_get_agent_deps: go_get_common_deps go_get_ping_deps go_get_memory_deps
-	$(GOGETTER) code.google.com/p/go.crypto/sha3
+	$(GOGETTER) golang.org/x/crypto/sha3
 	$(GOGETTER) github.com/streadway/amqp
 	$(GOGETTER) github.com/kardianos/osext
 	$(GOGETTER) github.com/jvehent/service-go

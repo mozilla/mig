@@ -8,11 +8,10 @@ package pgp
 import (
 	"bytes"
 	"fmt"
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/armor"
 	"io"
 	"strings"
-
-	"code.google.com/p/go.crypto/openpgp"
-	"code.google.com/p/go.crypto/openpgp/armor"
 )
 
 // Verify() checks the validity of a signature for some data,
