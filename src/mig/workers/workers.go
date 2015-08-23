@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/streadway/amqp"
 	"io/ioutil"
+	"mig"
 	"net"
 	"time"
 )
@@ -107,7 +108,7 @@ func InitMqWithConsumer(conf MqConf, name, key string) (consumer <-chan amqp.Del
 	if err != nil {
 		panic(err)
 	}
-	err = amqpChan.QueueBind(name, key, "migevent", false, nil)
+	err = amqpChan.QueueBind(name, key, mig.Mq_Ex_ToWorkers, false, nil)
 	if err != nil {
 		panic(err)
 	}

@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"mig"
-	"mig/event"
 	"os"
 	"time"
 )
@@ -186,7 +185,7 @@ func startRoutines(ctx Context) {
 				continue
 			}
 			// publish an event in the command results queue
-			err = sendEvent(event.Q_Cmd_Res, delivery.Body, ctx)
+			err = sendEvent(mig.Ev_Q_Cmd_Res, delivery.Body, ctx)
 			if err != nil {
 				panic(err)
 			}

@@ -21,7 +21,7 @@ func sendEvent(key string, body []byte, ctx Context) error {
 		Expiration:   "6000000", // events expire after 100 minutes if not consumed
 		Body:         body,
 	}
-	err := ctx.MQ.Chan.Publish("migevent", key, false, false, msg)
+	err := ctx.MQ.Chan.Publish(mig.Mq_Ex_ToWorkers, key, false, false, msg)
 	if err != nil {
 		err = fmt.Errorf("event publication failed. err='%v', key='%s', body='%s'", err, key, msg)
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()

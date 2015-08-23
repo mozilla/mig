@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"github.com/jvehent/gozdef"
 	"mig"
-	"mig/event"
 	"mig/workers"
 	"os"
 	"os/exec"
@@ -56,7 +55,7 @@ func main() {
 
 	// bind to the MIG even queue
 	workerQueue := "migevent.worker." + workerName
-	consumerChan, err := workers.InitMqWithConsumer(conf.Mq, workerQueue, event.Q_Agt_New)
+	consumerChan, err := workers.InitMqWithConsumer(conf.Mq, workerQueue, mig.Ev_Q_Agt_New)
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +66,7 @@ func main() {
 		panic(err)
 	}
 
-	mig.ProcessLog(logctx, mig.Log{Desc: "worker started, consuming queue " + workerQueue + " from key " + event.Q_Agt_New})
+	mig.ProcessLog(logctx, mig.Log{Desc: "worker started, consuming queue " + workerQueue + " from key " + mig.Ev_Q_Agt_New})
 	for event := range consumerChan {
 		var agt mig.Agent
 		err = json.Unmarshal(event.Body, &agt)
