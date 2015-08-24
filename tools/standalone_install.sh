@@ -40,7 +40,23 @@ case $distrib in
     ;;
 esac
 
-which go   2>&1 1>/dev/null || pkglist="$pkglist golang"
+echo -e "\n---- Checking the installed version of go\n"
+# Make sure the correct version of go is installed. We need at least version
+# 1.5.
+if [ ! `which go` ]; then
+	echo "go doesn't seem to be installed, or is not in PATH; at least version 1.5 is required"
+	exit 1
+fi
+go_version=`go version`
+# This expression will need to be updated for future releases.
+echo $go_version | grep -q -E 'go version go1\.5'
+if [ $? -ne 0 ]; then
+	echo "installed version of go is ${go_version}"
+	echo "we need at least version 1.5"
+	exit 1
+fi
+echo OK
+
 which git  2>&1 1>/dev/null || pkglist="$pkglist git"
 which hg   2>&1 1>/dev/null || pkglist="$pkglist mercurial"
 which make 2>&1 1>/dev/null || pkglist="$pkglist make"
@@ -83,7 +99,7 @@ else
 fi
 
 echo -e "\n---- Retrieving build dependencies\n"
-make go_get_deps || fail
+make go_vendor_dependencies || fail
 
 echo -e "\n---- Building MIG Scheduler\n"
 make mig-scheduler || fail
