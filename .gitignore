@@ -20,3 +20,4 @@ packages/
 tmp/
 src/mig/workers/*/*.html
 src/mig/modules/*/*.html
+tools/mig
