@@ -6,14 +6,14 @@
 package main
 
 import (
-	_ "mig/modules/agentdestroy"
-	_ "mig/modules/file"
-	_ "mig/modules/memory"
-	_ "mig/modules/netstat"
-	_ "mig/modules/ping"
-	_ "mig/modules/pkg"
-	_ "mig/modules/scribe"
-	_ "mig/modules/timedrift"
+	_ "mig.ninja/mig/modules/agentdestroy"
+	_ "mig.ninja/mig/modules/file"
+	_ "mig.ninja/mig/modules/memory"
+	_ "mig.ninja/mig/modules/netstat"
+	_ "mig.ninja/mig/modules/ping"
+	_ "mig.ninja/mig/modules/pkg"
+	_ "mig.ninja/mig/modules/scribe"
+	_ "mig.ninja/mig/modules/timedrift"
 	//_ "mig/modules/upgrade"
 	//_ "mig/modules/example"
 )
