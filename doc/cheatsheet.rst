@@ -196,3 +196,17 @@ agents that have at least one `foundanything` set to true. Since command
 results are an array, and each entry of the array contains a foundanything
 value, the query iterates through each entry of the array using postgres's
 `json_array_elements` function.
+
+Directly invoking the mig-agent
+-------------------------------
+
+In order to test queries locally, you may want to run them directly against a local agent.
+The agent takes input parameters from a JSON action file or alternatively from stdin.
+
+For example, to match a md5 of inside of /usr/bin, you could run:
+
+.. code:: bash
+
+        mig-agent -m file -d <<<
+        '{"class":"parameters","parameters":{"searches":{"s1":{"paths":["/usr/bin"],"md5":["cf4eb543a119e87cb112785e2b62ccd0"]}}}}'
+        ; echo
