@@ -29,16 +29,14 @@ PREFIX		:= /usr/local/
 DESTDIR		:= /
 BINDIR		:= bin/$(OS)/$(ARCH)
 AGTCONF		:= conf/mig-agent-conf.go.inc
-AVAILMODS	:= conf/available_modules.go
 MSICONF		:= mig-agent-installer.wxs
 
 GCC			:= gcc
 CFLAGS		:=
 LDFLAGS		:=
 GOOPTS		:=
-GO 			:= GOPATH=$(shell pwd):$(shell go env GOROOT)/bin GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
+GO 			:= GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
 GOGETTER	:= GOPATH=$(shell pwd)/.tmpdeps go get -d
-GOTEST  	:= GOPATH=$(shell pwd) GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go test
 GOLDFLAGS	:= -ldflags "-X main.version=$(BUILDREV)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
@@ -47,49 +45,48 @@ INSTALL		:= install
 
 all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
 
-mig-agent:
-	echo building mig-agent for $(OS)/$(ARCH)
-	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
-	cp $(AGTCONF) src/mig/agent/configuration.go
-	if [ ! -r $(AVAILMODS) ]; then echo "$(AVAILMODS) configuration file is missing" ; exit 1; fi
-	cp $(AVAILMODS) src/mig/agent/available_modules.go
+create-bindir:
 	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig/agent
+
+mig-agent: create-bindir
+	echo building mig-agent for $(OS)/$(ARCH)
+	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
+	# test if the agent configuration variable contains something different than the default value
+	# and if so, replace the link to the default configuration with the provided configuration
+	if [ $(AGTCONF) != "conf/mig-agent-conf.go.inc" ]; then rm mig-agent/configuration.go; cp $(AGTCONF) mig-agent/configuration.go; fi
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] && echo SUCCESS && exit 0
 
-mig-scheduler:
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig/scheduler
+mig-scheduler: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig.ninja/mig/mig-scheduler
 
-mig-api:
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-api $(GOLDFLAGS) mig/api
+mig-api: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-api $(GOLDFLAGS) mig.ninja/mig/mig-api
 
-mig-action-generator:
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig/client/generator
+mig-action-generator: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
 
-mig-action-verifier:
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig/client/verifier
+mig-action-verifier: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
 
-mig-console:
-	if [ ! -r $(AVAILMODS) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
-	cp $(AVAILMODS) src/mig/client/console/available_modules.go
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig/client/console
+mig-console: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig.ninja/mig/client/mig-console
 
-mig-cmd:
-	if [ ! -r $(AVAILMODS) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
-	cp $(AVAILMODS) src/mig/client/cmd/available_modules.go
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-$(OS)$(ARCH) $(GOLDFLAGS) mig/client/cmd
-	ln -fs "$$(pwd)/$(BINDIR)/mig-$(OS)$(ARCH)" "$$(pwd)/$(BINDIR)/mig"
+mig-cmd: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig $(GOLDFLAGS) mig.ninja/mig/client/mig
 
-mig-agent-search:
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-search $(GOLDFLAGS) mig/client/agent-search
+mig-agent-search: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-search $(GOLDFLAGS) mig.ninja/mig/client/mig-agent-search
+
+worker-agent-verif: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-worker-agent-verif $(GOLDFLAGS) mig.ninja/mig/workers/mig-worker-agent-verif
+
+worker-agent-intel: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-worker-agent-intel $(GOLDFLAGS) mig.ninja/mig/workers/mig-worker-agent-intel
+
+worker-compliance-item: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-worker-compliance-item $(GOLDFLAGS) mig.ninja/mig/workers/mig-worker-compliance-item
 
 go_vendor_dependencies:
 	GOOS="linux" $(GOGETTER) github.com/bobappleyard/readline
@@ -113,17 +110,10 @@ go_vendor_dependencies:
 	$(GOGETTER) golang.org/x/net/ipv4
 	$(GOGETTER) golang.org/x/net/ipv6
 	$(GOGETTER) gopkg.in/gcfg.v1
-	echo 'removing .git from vendored pkg and moving them to src/mig/vendor'
+	echo 'removing .git from vendored pkg and moving them to vendor'
 	find .tmpdeps/src -type d -name ".git" ! -name ".gitignore" -exec rm -rf {} \; || exit 0
-	cp -ar .tmpdeps/src/* src/mig/vendor/
+	cp -ar .tmpdeps/src/* vendor/
 	rm -rf .tmpdeps
-
-install: mig-agent mig-scheduler
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler $(DESTDIR)$(PREFIX)/sbin/mig-scheduler
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig_action-generator $(DESTDIR)$(PREFIX)/bin/mig_action-generator
-	$(INSTALL) -D -m 0640 mig.cfg $(DESTDIR)$(PREFIX)/etc/mig/mig.cfg
-	$(MKDIR) -p $(DESTDIR)$(PREFIX)/var/cache/mig
 
 rpm: rpm-agent rpm-scheduler
 
@@ -199,25 +189,25 @@ endif
 
 package-linux-clients: rpm-clients deb-clients
 
-rpm-clients: mig-cmd mig-console mig-action-generator
-# --rpm-sign requires installing package `rpm-sign` and configuring this macros in ~/.rpmmacros
-#  %_signature gpg
-#  %_gpg_name  Julien Vehent
+prepare-clients-packaging: mig-cmd mig-console mig-action-generator mig-action-verifier mig-agent-search
 	rm -fr tmp
 	mkdir 'tmp'
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig tmp/usr/local/bin/mig
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-console tmp/usr/local/bin/mig-console
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-action-generator tmp/usr/local/bin/mig-action-generator
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-action-verifier tmp/usr/local/bin/mig-action-verifier
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-search tmp/usr/local/bin/mig-agent-search
+
+rpm-clients: prepare-clients-packaging
+# --rpm-sign requires installing package `rpm-sign` and configuring this macros in ~/.rpmmacros
+#  %_signature gpg
+#  %_gpg_name  Julien Vehent
 	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--rpm-digest sha512 --rpm-sign \
 		-s dir -t rpm .
 
-deb-clients: mig-cmd mig-console mig-action-generator
-	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig tmp/usr/local/bin/mig
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-console tmp/usr/local/bin/mig-console
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-action-generator tmp/usr/local/bin/mig-action-generator
+deb-clients: prepare-clients-packaging
 	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		-s dir -t deb .
@@ -262,27 +252,21 @@ deb-server: mig-scheduler mig-api worker-agent-intel worker-compliance-item
 	fpm -C tmp -n mig-server --license GPL --vendor mozilla --description "Mozilla InvestiGator Server" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
 
-worker-agent-verif:
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_agent_verif_worker $(GOLDFLAGS) mig/workers/agent_verif
-
-worker-agent-intel:
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-intel-worker $(GOLDFLAGS) mig/workers/agent_intel
-
-worker-compliance-item:
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-compliance-item-worker $(GOLDFLAGS) mig/workers/compliance_item
-
 doc:
 	make -C doc doc
 
-test: test-modules
-	#$(GO) test mig/...
+test:  test-modules
+	$(GO) test mig.ninja/mig/mig-agent/...
+	$(GO) test mig.ninja/mig/mig-scheduler/...
+	$(GO) test mig.ninja/mig/mig-api/...
+	$(GO) test mig.ninja/mig/client/...
+	$(GO) test mig.ninja/mig/database/...
+	$(GO) test mig.ninja/mig/workers/...
+	$(GO) test mig.ninja/mig
 
 test-modules:
 	# test all modules
-	$(GOTEST) mig/modules...
+	$(GO) test mig.ninja/mig/modules/...
 
 clean-agent:
 	find bin/ -name mig-agent* -exec rm {} \;
@@ -290,10 +274,18 @@ clean-agent:
 	rm -rf tmp
 
 vet:
-	$(GO) vet mig/...
+	$(GO) vet mig.ninja/mig/agent/...
+	$(GO) vet mig.ninja/mig/scheduler/...
+	$(GO) vet mig.ninja/mig/api/...
+	$(GO) vet mig.ninja/mig/client/...
+	$(GO) vet mig.ninja/mig/modules/...
+	$(GO) vet mig.ninja/mig/database/...
+	$(GO) vet mig.ninja/mig/workers/...
+	$(GO) vet mig.ninja/mig
 
 clean: clean-agent
 	rm -rf bin
 	rm -rf tmp
+	rm -rf .builddir
 
 .PHONY: clean clean-agent doc agent-install-script agent-remove-script

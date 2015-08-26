@@ -4,6 +4,11 @@ MIG: Mozilla InvestiGator
 
 [![Build Status](https://travis-ci.org/mozilla/mig.svg?branch=master)](https://travis-ci.org/mozilla/mig)
 
+Build one-liner:
+```bash
+$ go get mig.ninja/mig && cd $GOPATH/src/mig.ninja/mig && make
+````
+
 MIG is OpSec's platform for investigative surgery of remote endpoints.
 
 MIG is composed of agents installed on all systems of an infrastructure that are

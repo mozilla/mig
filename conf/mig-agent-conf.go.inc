@@ -6,7 +6,7 @@
 package main
 
 import(
-	"mig"
+	"mig.ninja/mig"
 	"time"
 )
 
