@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
-package pgp
+package pgp /* import "mig.ninja/mig/pgp" */
 
 import (
 	"bytes"

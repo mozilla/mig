@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package file
+package file /* import "mig.ninja/mig/modules/file" */
 
 import (
 	"bufio"

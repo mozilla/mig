@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Dustin J. Mitchell <dustin@mozilla.com>
-package agentdestroy
+package agentdestroy /* import "mig.ninja/mig/modules/agentdestroy" */
 
 import (
 	"mig.ninja/mig/testutil"

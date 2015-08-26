@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
-package pkg
+package pkg /* import "mig.ninja/mig/modules/pkg" */
 
 import (
 	"encoding/json"

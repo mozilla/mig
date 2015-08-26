@@ -4,7 +4,7 @@
 //
 // Contributor: Sushant Dinesh <sushant.dinesh94@gmail.com>
 
-package ping
+package ping /* import "mig.ninja/mig/modules/ping" */
 
 import (
 	"bufio"

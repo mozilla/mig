@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Dustin J. Mitchell <dustin@mozilla.com>
-package ping
+package ping /* import "mig.ninja/mig/modules/ping" */
 
 import (
 	"mig.ninja/mig/testutil"

@@ -5,7 +5,7 @@
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
 // scribe module implementation for MIG.
-package scribe
+package scribe /* import "mig.ninja/mig/modules/scribe" */
 
 import (
 	"bytes"

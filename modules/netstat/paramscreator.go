@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package netstat
+package netstat /* import "mig.ninja/mig/modules/netstat" */
 
 import (
 	"bufio"

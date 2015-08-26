@@ -5,7 +5,7 @@
 // Contributor: Dustin J. Mitchell <dustin@mozilla.com>
 //              Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package modules
+package modules /* import "mig.ninja/mig/modules" */
 
 // A mig module implements this interface
 type Moduler interface {

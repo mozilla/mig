@@ -115,13 +115,6 @@ go_vendor_dependencies:
 	cp -ar .tmpdeps/src/* vendor/
 	rm -rf .tmpdeps
 
-install: mig-agent mig-scheduler
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent $(DESTDIR)$(PREFIX)/sbin/mig-agent
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler $(DESTDIR)$(PREFIX)/sbin/mig-scheduler
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig_action-generator $(DESTDIR)$(PREFIX)/bin/mig_action-generator
-	$(INSTALL) -D -m 0640 mig.cfg $(DESTDIR)$(PREFIX)/etc/mig/mig.cfg
-	$(MKDIR) -p $(DESTDIR)$(PREFIX)/var/cache/mig
-
 rpm: rpm-agent rpm-scheduler
 
 rpm-agent: mig-agent
@@ -196,25 +189,25 @@ endif
 
 package-linux-clients: rpm-clients deb-clients
 
-rpm-clients: mig-cmd mig-console mig-action-generator
-# --rpm-sign requires installing package `rpm-sign` and configuring this macros in ~/.rpmmacros
-#  %_signature gpg
-#  %_gpg_name  Julien Vehent
+prepare-clients-packaging: mig-cmd mig-console mig-action-generator mig-action-verifier mig-agent-search
 	rm -fr tmp
 	mkdir 'tmp'
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig tmp/usr/local/bin/mig
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-console tmp/usr/local/bin/mig-console
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-action-generator tmp/usr/local/bin/mig-action-generator
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-action-verifier tmp/usr/local/bin/mig-action-verifier
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-search tmp/usr/local/bin/mig-agent-search
+
+rpm-clients: prepare-clients-packaging
+# --rpm-sign requires installing package `rpm-sign` and configuring this macros in ~/.rpmmacros
+#  %_signature gpg
+#  %_gpg_name  Julien Vehent
 	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--rpm-digest sha512 --rpm-sign \
 		-s dir -t rpm .
 
-deb-clients: mig-cmd mig-console mig-action-generator
-	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig tmp/usr/local/bin/mig
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-console tmp/usr/local/bin/mig-console
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-action-generator tmp/usr/local/bin/mig-action-generator
+deb-clients: prepare-clients-packaging
 	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		-s dir -t deb .
@@ -263,9 +256,9 @@ doc:
 	make -C doc doc
 
 test:  test-modules
-	$(GO) test mig.ninja/mig/agent/...
-	$(GO) test mig.ninja/mig/scheduler/...
-	$(GO) test mig.ninja/mig/api/...
+	$(GO) test mig.ninja/mig/mig-agent/...
+	$(GO) test mig.ninja/mig/mig-scheduler/...
+	$(GO) test mig.ninja/mig/mig-api/...
 	$(GO) test mig.ninja/mig/client/...
 	$(GO) test mig.ninja/mig/database/...
 	$(GO) test mig.ninja/mig/workers/...

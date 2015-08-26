@@ -5,7 +5,7 @@
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 //              Sushant Dinesh sushant.dinesh94@gmail.com [:sushant94]
 
-package memory
+package memory /* import "mig.ninja/mig/modules/memory" */
 
 import (
 	"bytes"

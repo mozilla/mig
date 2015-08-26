@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Dustin J. Mitchell <dustin@mozilla.com>
-package upgrade
+package upgrade /* import "mig.ninja/mig/modules/upgrade" */
 
 import (
 	"mig.ninja/mig/testutil"

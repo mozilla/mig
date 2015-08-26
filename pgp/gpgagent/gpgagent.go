@@ -19,7 +19,7 @@ limitations under the License.
 // Forked from https://camlistore.googlesource.com/camlistore/+/master/pkg/misc/gpgagent/
 
 // Package gpgagent interacts with the local GPG Agent.
-package gpgagent
+package gpgagent /* import "mig.ninja/mig/pgp/gpgagent" */
 
 import (
 	"bufio"

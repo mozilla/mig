@@ -13,7 +13,7 @@
 // and the scheduler will take care of killing one of them. This module does
 // not attempt to kill the current mig-agent, in case the new one does not
 // connect properly.
-package upgrade
+package upgrade /* import "mig.ninja/mig/modules/upgrade" */
 
 import (
 	"crypto/sha256"

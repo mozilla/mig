@@ -1,4 +1,4 @@
-package testutil
+package testutil /* import "mig.ninja/mig/testutil" */
 
 import (
 	"mig.ninja/mig/modules"

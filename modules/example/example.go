@@ -24,7 +24,7 @@
 // lookedup host www.google.com has IP 2607:f8b0:4002:c07::69
 // stat: 3 stuff found
 
-package example
+package example /* import "mig.ninja/mig/modules/example" */
 
 import (
 	"encoding/json"

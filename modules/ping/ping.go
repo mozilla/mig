@@ -8,7 +8,7 @@
 // ping module is used to check the connection between an endpoint
 // and a destination host.
 
-package ping
+package ping /* import "mig.ninja/mig/modules/ping" */
 
 import (
 	"bytes"

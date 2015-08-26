@@ -9,7 +9,7 @@
 // sha256, sha384, sha512, sha3_224, sha3_256, sha3_384 and sha3_512.
 // The filesystem can be searches using pattern, as described in the Parameters
 // documentation.
-package file
+package file /* import "mig.ninja/mig/modules/file" */
 
 import (
 	"bufio"

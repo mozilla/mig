@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package scribe
+package scribe /* import "mig.ninja/mig/modules/scribe" */
 
 import (
 	"bufio"
