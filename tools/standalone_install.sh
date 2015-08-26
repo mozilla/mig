@@ -12,6 +12,32 @@ fi
 echo Standalone MIG demo deployment script
 which sudo 2>&1 1>/dev/null || (echo Install sudo and try again && exit 1)
 
+MAKEGOPATH=false
+if [ "$1" == "makegopath" ]; then
+    MAKEGOPATH=true
+fi
+
+echo -e "\n---- Checking build environment\n"
+if [[ -z $GOPATH && $MAKEGOPATH == "true" ]]; then
+    echo "GOPATH env variable is not set. setting it to '$HOME/go'"
+    export GOPATH="$HOME/go"
+    mkdir -p "$GOPATH/src/mig.ninja/"
+    savepath=$(pwd)
+    cd ..
+    mv "$savepath" "$GOPATH/src/mig.ninja/"
+    cd "$GOPATH/src/mig.ninja/"
+fi
+if [[ -z $GOPATH && $MAKEGOPATH == "false" ]]; then
+    echo "GOPATH env variable is not set. either set it, or ask this script to create it using: $ $0 makegopath"
+    fail
+fi
+if [[ "$GOPATH/src/mig.ninja/mig" != "$(pwd)" ]]; then
+    echo "GOPATH error: This repository needs to be located inside of GOPATH for compilation to work."
+    echo "current GOPATH is '$GOPATH'. current dir is '$(pwd)'."
+    echo "You should run 'go get mig.ninja/mig' and work from '$GOPATH/src/mig.ninja/mig'."
+    fail
+fi
+
 echo -e "\n---- Shutting down existing Scheduler and API tmux sessions\n"
 sudo tmux -S /tmp/tmux-$(id -u mig)/default kill-session -t mig || echo "OK - No running MIG session found"
 
@@ -39,6 +65,23 @@ case $distrib in
         ls /usr/lib/postgresql/*/bin/postgres 2>&1 1>/dev/null || pkglist="$pkglist postgresql"
     ;;
 esac
+
+echo -e "\n---- Checking the installed version of go\n"
+# Make sure the correct version of go is installed. We need at least version
+# 1.5.
+if [ ! $(which go) ]; then
+    echo "go doesn't seem to be installed, or is not in PATH; at least version 1.5 is required"
+    exit 1
+fi
+go_version=$(go version)
+# This expression will need to be updated for future releases.
+echo $go_version | grep -q -E 'go version go1\.5'
+if [ $? -ne 0 ]; then
+    echo "installed version of go is ${go_version}"
+    echo "we need at least version 1.5"
+    exit 1
+fi
+echo OK
 
 which go   2>&1 1>/dev/null || pkglist="$pkglist golang"
 which git  2>&1 1>/dev/null || pkglist="$pkglist git"
@@ -73,18 +116,6 @@ if [ "$isRPM" = true ]; then
     sudo service postgresql restart
 fi
 
-echo -e "\n---- Checking out MIG source code\n"
-if [ -d mig ]; then
-    cd mig
-    git pull origin master || fail
-else
-    git clone https://github.com/mozilla/mig.git || fail
-    cd mig
-fi
-
-echo -e "\n---- Retrieving build dependencies\n"
-make go_get_deps || fail
-
 echo -e "\n---- Building MIG Scheduler\n"
 make mig-scheduler || fail
 id mig || sudo useradd -r mig || fail
@@ -100,9 +131,9 @@ sudo chmod 550 /usr/local/bin/mig-api || fail
 
 echo -e "\n---- Building MIG Worker\n"
 make worker-agent-verif || fail
-sudo cp bin/linux/amd64/mig_agent_verif_worker /usr/local/bin/ || fail
-sudo chown mig /usr/local/bin/mig_agent_verif_worker || fail
-sudo chmod 550 /usr/local/bin/mig_agent_verif_worker || fail
+sudo cp bin/linux/amd64/mig-worker-agent-verif /usr/local/bin/ || fail
+sudo chown mig /usr/local/bin/mig-worker-agent-verif || fail
+sudo chmod 550 /usr/local/bin/mig-worker-agent-verif || fail
 
 echo -e "\n---- Building MIG Clients\n"
 make mig-console || fail
@@ -116,7 +147,7 @@ sudo chown mig /usr/local/bin/mig || fail
 sudo chmod 555 /usr/local/bin/mig || fail
 
 echo -e "\n---- Building Database\n"
-cd src/mig/database/
+cd database/
 dbpass=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
 sudo su - postgres -c "psql -c 'drop database mig'"
 sudo su - postgres -c "psql -c 'drop role migadmin'"
@@ -124,7 +155,7 @@ sudo su - postgres -c "psql -c 'drop role migapi'"
 sudo su - postgres -c "psql -c 'drop role migscheduler'"
 sudo su - postgres -c "psql -c 'drop role migreadonly'"
 bash createlocaldb.sh $dbpass || fail
-cd ../../..
+cd ..
 
 echo -e "\n---- Creating system user and folders\n"
 sudo mkdir -p /var/cache/mig/{action/new,action/done,action/inflight,action/invalid,command/done,command/inflight,command/ready,command/returned} || fail
@@ -258,7 +289,7 @@ echo -e "\n---- Creating agent configuration\n"
 cat > conf/mig-agent-conf.go << EOF
 package main
 import(
-    "mig"
+    "mig.ninja/mig"
     "time"
 )
 var TAGS = struct {

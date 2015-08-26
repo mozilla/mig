@@ -45,57 +45,48 @@ INSTALL		:= install
 
 all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
 
-mig-agent: 
+create-bindir:
+	$(MKDIR) -p $(BINDIR)
+
+mig-agent: create-bindir
 	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
 	# test if the agent configuration variable contains something different than the default value
 	# and if so, replace the link to the default configuration with the provided configuration
-	if [ $(AGTCONF) != "conf/mig-agent-conf.go.inc" ]; then rm agent/configuration.go; cp $(AGTCONF) agent/configuration.go; fi
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/agent
+	if [ $(AGTCONF) != "conf/mig-agent-conf.go.inc" ]; then rm mig-agent/configuration.go; cp $(AGTCONF) mig-agent/configuration.go; fi
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] && echo SUCCESS && exit 0
 
-mig-scheduler: 
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig.ninja/mig/scheduler
+mig-scheduler: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig.ninja/mig/mig-scheduler
 
-mig-api: 
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-api $(GOLDFLAGS) mig.ninja/mig/api
+mig-api: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-api $(GOLDFLAGS) mig.ninja/mig/mig-api
 
-mig-action-generator: 
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/generator
+mig-action-generator: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
 
-mig-action-verifier: 
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/verifier
+mig-action-verifier: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
 
-mig-console: 
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig.ninja/mig/client/console
+mig-console: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig.ninja/mig/client/mig-console
 
-mig-cmd: 
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-$(OS)$(ARCH) $(GOLDFLAGS) mig.ninja/mig/client/cmd
-	ln -fs "$$(pwd)/$(BINDIR)/mig-$(OS)$(ARCH)" "$$(pwd)/$(BINDIR)/mig"
+mig-cmd: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig $(GOLDFLAGS) mig.ninja/mig/client/mig
 
-mig-agent-search: 
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-search $(GOLDFLAGS) mig.ninja/mig/client/agent-search
+mig-agent-search: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-search $(GOLDFLAGS) mig.ninja/mig/client/mig-agent-search
 
-worker-agent-verif: 
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_agent_verif_worker $(GOLDFLAGS) mig.ninja/mig/workers/agent_verif
+worker-agent-verif: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-worker-agent-verif $(GOLDFLAGS) mig.ninja/mig/workers/mig-worker-agent-verif
 
-worker-agent-intel: 
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-intel-worker $(GOLDFLAGS) mig.ninja/mig/workers/agent_intel
+worker-agent-intel: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-worker-agent-intel $(GOLDFLAGS) mig.ninja/mig/workers/mig-worker-agent-intel
 
-worker-compliance-item: 
-	$(MKDIR) -p $(BINDIR)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-compliance-item-worker $(GOLDFLAGS) mig.ninja/mig/workers/compliance_item
+worker-compliance-item: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-worker-compliance-item $(GOLDFLAGS) mig.ninja/mig/workers/mig-worker-compliance-item
 
 go_vendor_dependencies:
 	GOOS="linux" $(GOGETTER) github.com/bobappleyard/readline

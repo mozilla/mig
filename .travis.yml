@@ -13,5 +13,10 @@ notifications:
         on_success: never
         on_failure: always
 script:
-    - make all AGTCONF=conf/mig-agent-conf.go.inc
+    - export OLDPATH=$(pwd)
+    - cd
+    - mkdir -p "$GOPATH/src/mig.ninja/"
+    - mv "$OLDPATH" "$GOPATH/src/mig.ninja/"
+    - cd "$GOPATH/src/mig.ninja/mig"
+    - make
     - yes | bash tools/standalone_install.sh
