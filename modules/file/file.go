@@ -91,6 +91,7 @@ type options struct {
 	MaxDepth   float64 `json:"maxdepth"`
 	RemoteFS   bool    `json:"remotefs,omitempty"`
 	MatchAll   bool    `json:"matchall"`
+	Macroal    bool    `json:"macroal"`
 	MatchLimit float64 `json:"matchlimit"`
 }
 
@@ -1137,7 +1138,9 @@ func (r *run) checkContent(file string) {
 	// skip this check if no search has anything to run
 	// also used to keep track of the checks to run and exit early if possible
 	var checksstatus = make(map[string]map[int]bool)
-	doit := false
+	// keep track of matches lines
+	var macroalstatus = make(map[string]bool)
+	continuereadingfile := false
 	for label, search := range r.Parameters.Searches {
 		if !search.isactive {
 			continue
@@ -1148,10 +1151,10 @@ func (r *run) checkContent(file string) {
 			}
 			// init the map
 			checksstatus[label] = map[int]bool{i: false}
-			doit = true
+			continuereadingfile = true
 		}
 	}
-	if !doit {
+	if !continuereadingfile {
 		return
 	}
 	fd, err = os.Open(file)
@@ -1166,51 +1169,155 @@ func (r *run) checkContent(file string) {
 		if err := scanner.Err(); err != nil {
 			panic(err)
 		}
-		if !doit {
+		if !continuereadingfile {
 			break
 		}
-		doneany := false
+		hasactivechecks := false
 		for label, search := range r.Parameters.Searches {
 			// skip inactive searches or searches that don't have a content check
 			if !search.isactive || (search.checkmask&checkContent == 0) {
 				continue
 			}
+			// macroal is a flag used to keep track of all checks ran against the
+			// current line of the file. if one check fails to match on this line,
+			// the macroal flag is set to false
+			macroalstatus[label] = true
 			// apply the content checks regexes to the current scan
 			for i, c := range search.checks {
 				// skip this check if it's not a content check or if it has already matched
-				if c.code&checkContent == 0 || checksstatus[label][i] {
+				if c.code&checkContent == 0 || (checksstatus[label][i] && !search.Options.Macroal) {
 					continue
 				}
+				hasactivechecks = true
+
+				/* Matching Logic
+				When evaluating a content check against a line in a file, three criteria are considered:
+				1. did the regex match the line?
+				2. is the inversematch flag set on the check?
+				3. is the macroal option set on the search?
+				Based on these, the table below indicates the result of the search.
+
+				 Regex     | Inverse | MACROAL | Result
+				-----------+---------+---------+--------
+				 Match     |  False  |  True   | pass	-> must match all lines and current line matched
+				 Match     |  False  |  False  | pass	-> must match any line and current line matched
+				 Match     |  True   |  True   | fail	-> must match no line but current line matches
+				 Match     |  True   |  False  | fail	-> must not match at least one line but current line matched
+				 Not Match |  True   |  True   | pass	-> must match no line and current line didn't match
+				 Not Match |  True   |  False  | pass	-> must not match at least one line and current line didn't match
+				 Not Match |  False  |  True   | fail	-> much match all lines and current line didn't match
+				 Not Match |  False  |  False  | fail	-> much match any line and current line didn't match
+				*/
 				if c.regex.MatchString(scanner.Text()) {
+					// Regex Match
 					if debug {
 						fmt.Printf("checkContent: regex '%s' match on line '%s'\n", c.value, scanner.Text())
 					}
 					if !c.inversematch {
-						// we have a match, but we only store the filename
-						// if inversematch is not set
-						c.storeMatch(file)
+						if search.Options.Macroal {
+							if debug {
+								fmt.Printf("checkContent: [pass] must match all lines and current line matched. regex='%s', line='%s'\n",
+									c.value, scanner.Text())
+							}
+						} else {
+							if debug {
+								fmt.Printf("checkContent: [pass] must match any line and current line matched. regex='%s', line='%s'\n",
+									c.value, scanner.Text())
+							}
+							c.storeMatch(file)
+						}
+					} else {
+						if search.Options.Macroal {
+							if debug {
+								fmt.Printf("checkContent: [fail] must match no line but current line matched. regex='%s', line='%s'\n",
+									c.value, scanner.Text())
+							}
+							macroalstatus[label] = false
+						} else {
+							if debug {
+								fmt.Printf("checkContent: [fail] must not match at least one line but current line matched. regex='%s', line='%s'\n",
+									c.value, scanner.Text())
+							}
+						}
+						if debug {
+							fmt.Printf("checkContent: regex '%s' is an inverse match and shouldn't have matched on line '%s'\n", c.value, scanner.Text())
+						}
 					}
 					checksstatus[label][i] = true
+				} else {
+					// Regex Not Match
+					if c.inversematch {
+						if search.Options.Macroal {
+							if debug {
+								fmt.Printf("checkContent: [pass] must match no line and current line didn't match. regex='%s', line='%s'\n",
+									c.value, scanner.Text())
+							}
+						} else {
+							if debug {
+								fmt.Printf("checkContent: [pass] must not match at least one line and current line didn't match. regex='%s', line='%s'\n",
+									c.value, scanner.Text())
+							}
+						}
+					} else {
+						if search.Options.Macroal {
+							if debug {
+								fmt.Printf("checkContent: [fail] much match all lines and current line didn't match. regex='%s', line='%s'\n",
+									c.value, scanner.Text())
+							}
+							macroalstatus[label] = false
+						} else {
+							if debug {
+								fmt.Printf("checkContent: [fail] much match any line and current line didn't match. regex='%s', line='%s'\n",
+									c.value, scanner.Text())
+							}
+						}
+					}
 				}
-				doneany = true
 				search.checks[i] = c
 			}
+			if search.Options.Macroal && !macroalstatus[label] {
+				// we have failed to match all content regexes on this line,
+				// no need to continue with this search on this file
+				search.deactivate()
+				r.Parameters.Searches[label] = search
+			}
 		}
-		if !doneany {
-			doit = false
+		if !hasactivechecks {
+			continuereadingfile = false
 		}
 	}
 	// done with file content inspection, loop over the checks one more time
-	// 1. If any check with inversematch=true failed to match, record that as a match.
-	// 2. deactivate searches that have matchall=true, but did not match against
+	// 1. if MACROAL is set and the search succeeded, store the file in each content check
+	// 2. If any check with inversematch=true failed to match, record that as a success
+	// 3. deactivate searches that have matchall=true, but did not match against
 	for label, search := range r.Parameters.Searches {
+		if search.Options.Macroal && macroalstatus[label] {
+			if debug {
+				fmt.Printf("checkContent: macroal is set and search label '%s' passed on file '%s'\n",
+					label, file)
+			}
+			// we match all content regexes on all lines of the file,
+			// as requested via the Macroal flag
+			// now store the filename in all checks
+			for i, c := range search.checks {
+				if c.code&checkContent == 0 {
+					continue
+				}
+				c.storeMatch(file)
+				search.checks[i] = c
+			}
+			// we're done with this search
+			continue
+		}
 		for i, c := range search.checks {
 			if c.code&checkContent == 0 {
 				continue
 			}
 			if !checksstatus[label][i] && c.inversematch {
-				// check has not matched and is set to inversematch, record
-				// this as a positive result
+				if debug {
+					fmt.Printf("in search '%s' on file '%s', check '%s' has not matched and is set to inversematch, record this as a positive result\n",
+						label, file, c.value)
+				}
 				c.storeMatch(file)
 				checksstatus[label][i] = true
 				search.checks[i] = c
@@ -1222,7 +1329,7 @@ func (r *run) checkContent(file string) {
 					continue
 				}
 				// check hasn't matched, or has matched and we didn't want it to, deactivate the search
-				if !checksstatus[label][i] && (checksstatus[label][i] && c.inversematch) {
+				if !checksstatus[label][i] || (checksstatus[label][i] && c.inversematch) {
 					search.deactivate()
 				}
 			}

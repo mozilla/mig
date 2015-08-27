@@ -166,6 +166,20 @@ Several options can be applied to a search:
   `matchall` is not set by default. The MIG command line sets it automatically,
   the console does not.
 
+* **macroal** stands for "Match All Contents Regexes On All Lines". It's a boolean
+  option that requires that all `content` regexes must match on all the lines of
+  a file. By default, content regexes are applied at the file level and will
+  return a match if one line matches one regex, and if another line matches another
+  regex. When the `macroal` option is set, each line in the file must match all
+  content regexes defined in a given search to return a match. It is set to not
+  set by default.
+
+  example: `-path /home -name authorized_keys -content "^(#|\s+|...list of ssh keys...)$" -macroal`
+
+  will list authorized_keys file that have contain either a comment, an empty
+  line or one of the listed ssh keys. If a file has a line that doesn't match
+  the content regex, it will not be returned in the results.
+
 * **matchlimit** controls how many files can be returned by a single search.
   This safeguard prevents a single run of the file module from crashing before
   of the amount of results it is returning. The default value is 1,000, which is
