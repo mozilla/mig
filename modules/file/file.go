@@ -122,6 +122,7 @@ type check struct {
 	regex              *regexp.Regexp
 	minsize, maxsize   uint64
 	minmtime, maxmtime time.Time
+	inversematch       bool
 }
 
 func (s *search) makeChecks() (err error) {
@@ -131,7 +132,7 @@ func (s *search) makeChecks() (err error) {
 		}
 	}()
 	if s.Options.MaxDepth == 0 {
-		s.Options.MaxDepth = float64(^uint64(0) >> 1)
+		s.Options.MaxDepth = 10000
 	}
 	if s.Options.MatchLimit == 0 {
 		s.Options.MatchLimit = 1000
@@ -140,6 +141,10 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkContent
 		c.value = v
+		if len(v) > 1 && v[:1] == "!" {
+			c.inversematch = true
+			v = v[1:]
+		}
 		c.regex = regexp.MustCompile(v)
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
@@ -148,6 +153,10 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkName
 		c.value = v
+		if len(v) > 1 && v[:1] == "!" {
+			c.inversematch = true
+			v = v[1:]
+		}
 		c.regex = regexp.MustCompile(v)
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
@@ -535,6 +544,10 @@ func validateRegex(regex string) error {
 	if len(regex) < 1 {
 		return fmt.Errorf("Empty values are not permitted")
 	}
+	if len(regex) > 1 && regex[:1] == "!" {
+		// remove heading ! before compiling the regex
+		regex = regex[1:]
+	}
 	_, err := regexp.Compile(regex)
 	if err != nil {
 		return fmt.Errorf("Invalid regexp '%s'. Must be a regexp. Compilation failed with '%v'", regex, err)
@@ -605,11 +618,10 @@ func validateHash(hash string, hashType checkType) error {
 }
 
 /* Statistic counters:
-- CheckCount is the total numbers of checklist tested
 - FilesCount is the total number of files inspected
-- Checksmatch is the number of checks that matched at least once
-- YniqueFiles is the number of files that matches at least one Check once
+- Openfailed is the count of files that could not be opened
 - Totalhits is the total number of checklist hits
+- Exectim is the total runtime of all the searches
 */
 type statistics struct {
 	Filescount float64 `json:"filescount"`
@@ -884,6 +896,8 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 		}
 		if linkmode.IsRegular() {
 			path = linkpath
+		} else {
+			walkingErrors = append(walkingErrors, fmt.Sprintf("warning: %s is a link to %s and was not followed", path, linkpath))
 		}
 	}
 
@@ -1024,7 +1038,10 @@ func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
 			if (c.code & checkName) == 0 {
 				continue
 			}
-			if c.regex.MatchString(path.Base(fi.Name())) {
+			ismatch := c.regex.MatchString(path.Base(fi.Name()))
+			// do ways we get a positive result: either the filename is a match against the
+			// regex, or the filename is not a match but inversematch is set to true
+			if (ismatch && !c.inversematch) || (!ismatch && c.inversematch) {
 				if debug {
 					fmt.Printf("file name '%s' matches regex '%s'\n", fi.Name(), c.value)
 				}
@@ -1159,6 +1176,7 @@ func (r *run) checkContent(file string) {
 			}
 			// apply the content checks regexes to the current scan
 			for i, c := range search.checks {
+				// skip this check if it's not a content check or if it has already matched
 				if c.code&checkContent == 0 || checksstatus[label][i] {
 					continue
 				}
@@ -1166,7 +1184,11 @@ func (r *run) checkContent(file string) {
 					if debug {
 						fmt.Printf("checkContent: regex '%s' match on line '%s'\n", c.value, scanner.Text())
 					}
-					c.storeMatch(file)
+					if !c.inversematch {
+						// we have a match, but we only store the filename
+						// if inversematch is not set
+						c.storeMatch(file)
+					}
 					checksstatus[label][i] = true
 				}
 				doneany = true
@@ -1177,16 +1199,29 @@ func (r *run) checkContent(file string) {
 			doit = false
 		}
 	}
-	// done with file content inspection, deactivate searches that have matchall set
-	// to true, but did not match against the current file
+	// done with file content inspection, loop over the checks one more time
+	// 1. If any check with inversematch=true failed to match, record that as a match.
+	// 2. deactivate searches that have matchall=true, but did not match against
 	for label, search := range r.Parameters.Searches {
+		for i, c := range search.checks {
+			if c.code&checkContent == 0 {
+				continue
+			}
+			if !checksstatus[label][i] && c.inversematch {
+				// check has not matched and is set to inversematch, record
+				// this as a positive result
+				c.storeMatch(file)
+				checksstatus[label][i] = true
+				search.checks[i] = c
+			}
+		}
 		if search.isactive && (search.checkmask&checkContent != 0) && search.Options.MatchAll {
 			for i, c := range search.checks {
 				if c.code&checkContent == 0 {
 					continue
 				}
-				if !checksstatus[label][i] {
-					// check has not matched, deactivate
+				// check hasn't matched, or has matched and we didn't want it to, deactivate the search
+				if !checksstatus[label][i] && (checksstatus[label][i] && c.inversematch) {
 					search.deactivate()
 				}
 			}

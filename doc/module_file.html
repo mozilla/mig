@@ -288,7 +288,8 @@ label (key) and search parameters (value).</p>
                                     <span class="literal string double">&quot;/etc/shadow&quot;</span>
                             <span class="punctuation">],</span>
                             <span class="name tag">&quot;contents&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                    <span class="literal string double">&quot;^root&quot;</span>
+                                    <span class="literal string double">&quot;^root&quot;</span><span class="punctuation">,</span>
+                                    <span class="literal string double">&quot;!^root:\\$6&quot;</span>
                             <span class="punctuation">]</span>
                     <span class="punctuation">},</span>
                     <span class="name tag">&quot;another_search&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
@@ -337,7 +338,9 @@ provided by the Go language, which is very similar to Posix. A full description
 of the syntax is available at <a class="reference external" href="http://golang.org/pkg/regexp/syntax/">http://golang.org/pkg/regexp/syntax/</a>.</p>
 <p>Metadata filters:</p>
 <ul class="simple">
-<li><strong>name</strong>: a regular expression that is applying on the base name of a file.</li>
+<li><strong>name</strong>: a regular expression that is applying on the base name of a file.
+If the regex is prefixed with &quot;!&quot;, it will return files that do not match the
+expression.</li>
 <li><strong>size</strong>: a size filter indicates whether we want files that are larger or
 smaller than a given size. The syntax uses a prefix <cite>&lt;</cite> or <cite>&gt;</cite> to indicate
 smaller than and greater than. The file size is assumed to be in bytes, and
@@ -367,7 +370,10 @@ period, and a suffix <cite>d</cite>, <cite>h</cite> or <cite>m</cite> for days, 
 <ul class="simple">
 <li><strong>content</strong>: a regular expression that matches against the content of the
 file. Inspection stops at the first occurence of the regular expression that
-matches on the file.</li>
+matches on the file.
+If the regex is prefixed with &quot;!&quot;, it will return files that do not have the
+content that matches the expression. ex: <cite>!^root:$6</cite> will return files that
+do not contain the string &quot;root:$6&quot;.</li>
 <li><strong>md5</strong>: a md5 checksum</li>
 <li><strong>sha1</strong>: a sha1 checksum</li>
 <li><strong>sha256</strong>: a sha256 checksum</li>

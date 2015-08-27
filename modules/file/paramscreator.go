@@ -28,7 +28,7 @@ func printHelp(isCmd bool) {
 		  ex: if path is set to /sys/bus/usb/devices/, it will not follow symlinks
 		  located in /sys/devices.
 
-%sname <regex>	- regex to match against the name of a file
+%sname <regex>	- regex to match against the name of a file. use !<regex> to inverse it.
 		  ex: name \.sql$
 
 %ssize <size>	- match files with a size smaller or greater that <size>
@@ -44,7 +44,7 @@ func printHelp(isCmd bool) {
 		  suffix with d, h, m for days, hours and minutes
 		  ex: mtime <90d (match files modified since last 90 days)
 
-%scontent <regex> - regex to match against the content of a file
+%scontent <regex> - regex to match against file content. use !<regex> to inverse it.
 		  ex: content ^root:\$1\$10CXRS19\$/h
 
 %smd5 <hash>      .

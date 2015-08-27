@@ -36,7 +36,8 @@ A search must have at least one search path.
 					"/etc/shadow"
 				],
 				"contents": [
-					"^root"
+					"^root",
+					"!^root:\\$6"
 				]
 			},
 			"another_search": {
@@ -93,6 +94,8 @@ of the syntax is available at http://golang.org/pkg/regexp/syntax/.
 Metadata filters:
 
 * **name**: a regular expression that is applying on the base name of a file.
+  If the regex is prefixed with "!", it will return files that do not match the
+  expression.
 
 * **size**: a size filter indicates whether we want files that are larger or
   smaller than a given size. The syntax uses a prefix `<` or `>` to indicate
@@ -126,6 +129,9 @@ Content filters:
 * **content**: a regular expression that matches against the content of the
   file. Inspection stops at the first occurence of the regular expression that
   matches on the file.
+  If the regex is prefixed with "!", it will return files that do not have the
+  content that matches the expression. ex: `!^root:\$6` will return files that
+  do not contain the string "root:$6".
 
 * **md5**: a md5 checksum
 
