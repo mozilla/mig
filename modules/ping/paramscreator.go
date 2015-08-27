@@ -4,6 +4,9 @@
 //
 // Contributor: Sushant Dinesh <sushant.dinesh94@gmail.com>
 
+/* The Ping module implements icmp, tcp and udp pings/
+Usage doc is online at http://mig.mozilla.org/doc/module_ping.html
+*/
 package ping /* import "mig.ninja/mig/modules/ping" */
 
 import (

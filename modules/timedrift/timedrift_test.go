@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Dustin J. Mitchell <dustin@mozilla.com>
+
 package timedrift /* import "mig.ninja/mig/modules/timedrift" */
 
 import (

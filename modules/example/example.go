@@ -4,26 +4,26 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-// This is an example module. It doesn't do anything. It only serves as
-// a template for writing modules.
-// If you run it, it will return a JSON struct with the hostname and IPs
-// of the current endpoint. If you add flag `-p`, it will pretty print the
-// results.
-//
-// $ ./bin/linux/amd64/mig-agent-latest -p -m example <<< '{"class":"parameters", "parameters":{"gethostname": true, "getaddresses": true, "lookuphost": ["www.google.com"]}}'
-// [info] using builtin conf
-// hostname is fedbox2.jaffa.linuxwall.info
-// address is 172.21.0.3/20
-// address is fe80::8e70:5aff:fec8:be50/64
-// lookedup host www.google.com has IP 74.125.196.106
-// lookedup host www.google.com has IP 74.125.196.99
-// lookedup host www.google.com has IP 74.125.196.104
-// lookedup host www.google.com has IP 74.125.196.103
-// lookedup host www.google.com has IP 74.125.196.105
-// lookedup host www.google.com has IP 74.125.196.147
-// lookedup host www.google.com has IP 2607:f8b0:4002:c07::69
-// stat: 3 stuff found
+/* This is an example module. It doesn't do anything. It only serves as
+a template for writing modules.
+If you run it, it will return a JSON struct with the hostname and IPs
+of the current endpoint. If you add flag `-p`, it will pretty print the
+results.
 
+ $ ./bin/linux/amd64/mig-agent-latest -p -m example <<< '{"class":"parameters", "parameters":{"gethostname": true, "getaddresses": true, "lookuphost": ["www.google.com"]}}'
+ [info] using builtin conf
+ hostname is fedbox2.jaffa.linuxwall.info
+ address is 172.21.0.3/20
+ address is fe80::8e70:5aff:fec8:be50/64
+ lookedup host www.google.com has IP 74.125.196.106
+ lookedup host www.google.com has IP 74.125.196.99
+ lookedup host www.google.com has IP 74.125.196.104
+ lookedup host www.google.com has IP 74.125.196.103
+ lookedup host www.google.com has IP 74.125.196.105
+ lookedup host www.google.com has IP 74.125.196.147
+ lookedup host www.google.com has IP 2607:f8b0:4002:c07::69
+ stat: 3 stuff found
+*/
 package example /* import "mig.ninja/mig/modules/example" */
 
 import (

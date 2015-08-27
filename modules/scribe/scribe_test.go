@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
+
 package scribe /* import "mig.ninja/mig/modules/scribe" */
 
 import (

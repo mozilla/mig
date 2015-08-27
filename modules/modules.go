@@ -3,6 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
+
+/* This package implements interfaces to write modules for MIG.
+For a guide on how to write modules, head over to
+http://mig.mozilla.org/doc/modules.rst.html
+*/
 package modules /* import "mig.ninja/mig/modules" */
 
 import (

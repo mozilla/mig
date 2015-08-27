@@ -5,6 +5,10 @@
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 //              Sushant Dinesh sushant.dinesh94@gmail.com [:sushant94]
 
+/* The memory module implements scanning of the memory of processes
+using the Masche memory scanning package.
+Documentation of this module is online at http://mig.mozilla.org/doc/module_memory.html
+*/
 package memory /* import "mig.ninja/mig/modules/memory" */
 
 import (

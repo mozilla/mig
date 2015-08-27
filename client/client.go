@@ -3,18 +3,19 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
+
 package client /* import "mig.ninja/mig/client" */
 
 import (
 	"bufio"
 	"bytes"
-	"gopkg.in/gcfg.v1"
 	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/jvehent/cljs"
 	"golang.org/x/crypto/openpgp"
+	"gopkg.in/gcfg.v1"
 	"io"
 	"io/ioutil"
 	"mig.ninja/mig"

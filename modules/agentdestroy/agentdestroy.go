@@ -4,9 +4,10 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-// agentdestroy is a module used in the upgrade protocol to kill an agent
-// that has been upgraded. This module will refuse to suicide, meaning that
-// an agent will not run this module against itself
+/* agentdestroy is a module used in the upgrade protocol to kill an agent
+that has been upgraded. This module will refuse to suicide, meaning that
+an agent will not run this module against itself
+*/
 package agentdestroy /* import "mig.ninja/mig/modules/agentdestroy" */
 
 import (

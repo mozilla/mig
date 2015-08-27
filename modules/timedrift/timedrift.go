@@ -3,6 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
+
+/* The timedrift module evaluate the local time of a target against
+network time retrieved using NTP.
+
+Usage documentation is online at http://mig.mozilla.org/doc/module_timedrift.html
+*/
 package timedrift /* import "mig.ninja/mig/modules/timedrift" */
 
 import (
