@@ -34,7 +34,13 @@ import (
 	"time"
 )
 
-var debug bool = false
+var debug bool = true
+
+func debugprint(format string, a ...interface{}) {
+	if debug {
+		fmt.Fprintf(os.Stderr, format, a...)
+	}
+}
 
 type module struct {
 }
@@ -337,10 +343,8 @@ func parseMtime(mtime string) (minmtime, maxmtime time.Time, err error) {
 		minmtime = time.Date(1111, time.January, 11, 11, 11, 11, 11, time.UTC)
 		maxmtime = time.Now().Add(-d)
 	}
-	if debug {
-		fmt.Printf("Parsed mtime filter with minmtime '%s' and maxmtime '%s'\n",
-			minmtime.String(), maxmtime.String())
-	}
+	debugprint("Parsed mtime filter with minmtime '%s' and maxmtime '%s'\n",
+		minmtime.String(), maxmtime.String())
 	return
 }
 
@@ -393,134 +397,104 @@ func (r *run) ValidateParameters() (err error) {
 	var labels []string
 	for label, s := range r.Parameters.Searches {
 		labels = append(labels, label)
-		if debug {
-			fmt.Printf("validating label '%s'\n", label)
-		}
+		debugprint("validating label '%s'\n", label)
 		err = validateLabel(label)
 		if err != nil {
 			return
 		}
 		for _, r := range s.Contents {
-			if debug {
-				fmt.Printf("validating content '%s'\n", r)
-			}
+			debugprint("validating content '%s'\n", r)
 			err = validateRegex(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Names {
-			if debug {
-				fmt.Printf("validating name '%s'\n", r)
-			}
+			debugprint("validating name '%s'\n", r)
 			err = validateRegex(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Sizes {
-			if debug {
-				fmt.Printf("validating size '%s'\n", r)
-			}
+			debugprint("validating size '%s'\n", r)
 			err = validateSize(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Modes {
-			if debug {
-				fmt.Printf("validating mode '%s'\n", r)
-			}
+			debugprint("validating mode '%s'\n", r)
 			err = validateRegex(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Mtimes {
-			if debug {
-				fmt.Printf("validating mtime '%s'\n", r)
-			}
+			debugprint("validating mtime '%s'\n", r)
 			err = validateMtime(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.MD5 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkMD5)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA1 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA1)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA256 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA256)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA384 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA384)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA512 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA512)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_224 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA3_224)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_256 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA3_256)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_384 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA3_384)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_512 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA3_512)
 			if err != nil {
 				return
@@ -669,9 +643,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	}
 
 	for label, search := range r.Parameters.Searches {
-		if debug {
-			fmt.Println("making checks for label", label)
-		}
+		debugprint("making checks for label", label)
 		err := search.makeChecks()
 		if err != nil {
 			panic(err)
@@ -688,9 +660,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 				}
 			}
 			if !alreadyPresent {
-				if debug {
-					fmt.Println("adding path", p, "to list of locations to traverse")
-				}
+				debugprint("adding path", p, "to list of locations to traverse")
 				roots = append(roots, p)
 			}
 		}
@@ -712,22 +682,16 @@ func (r *run) Run(in io.Reader) (resStr string) {
 		}
 		for _, p := range traversed {
 			if root == p {
-				if debug {
-					fmt.Println("skipping already traversed root:", root)
-				}
+				debugprint("skipping already traversed root:", root)
 				goto skip
 			}
 		}
-		if debug {
-			fmt.Println("entering root", root)
-		}
+		debugprint("entering root", root)
 		traversed, err = r.pathWalk(root, roots)
 		if err != nil {
 			// log errors and continue
 			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
-			if debug {
-				fmt.Printf("pathWalk failed with error '%v'\n", err)
-			}
+			debugprint("pathWalk failed with error '%v'\n", err)
 		}
 	skip:
 	}
@@ -738,7 +702,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	}
 
 	if debug {
-		fmt.Println("---- results ----")
+		debugprint("---- results ----")
 		var tmpres modules.Result
 		err = json.Unmarshal([]byte(resStr), &tmpres)
 		printedResults, err := r.PrintResults(tmpres, false)
@@ -746,7 +710,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 			panic(err)
 		}
 		for _, res := range printedResults {
-			fmt.Println(res)
+			debugprint(res)
 		}
 	}
 	return
@@ -763,9 +727,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 			err = fmt.Errorf("pathWalk() -> %v", e)
 		}
 	}()
-	if debug {
-		fmt.Printf("pathWalk: walking into '%s'\n", path)
-	}
+	debugprint("pathWalk: walking into '%s'\n", path)
 	// as we traversed the directory structure from the shortest path to the longest, we
 	// may end up traversing directories that are supposed to be processed later on.
 	// when that happens, flag the directory in the traversed list to tell the top-level
@@ -782,9 +744,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 		// the search paths with the current path. if one matches,
 		// then the search is activated.
 		for _, p := range search.Paths {
-			if debug {
-				fmt.Printf("comparing current path '%s' with candidate search '%s'\n", path, p)
-			}
+			debugprint("comparing current path '%s' with candidate search '%s'\n", path, p)
 			if len(path) >= len(p) && p == path[:len(p)] {
 				search.activate()
 				search.markcurrent()
@@ -797,9 +757,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 		// of active searches, and deactivate a search that is too deep
 		if search.isactive {
 			if search.currentdepth > uint64(search.Options.MaxDepth) {
-				if debug {
-					fmt.Printf("deactivating search '%s' because depth %d > %.0f\n", label, search.currentdepth, search.Options.MaxDepth)
-				}
+				debugprint("deactivating search '%s' because depth %d > %.0f\n", label, search.currentdepth, search.Options.MaxDepth)
 				search.deactivate()
 			} else {
 				activesearches++
@@ -814,9 +772,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 		}
 		r.Parameters.Searches[label] = search
 	}
-	if debug {
-		fmt.Printf("pathWalk: %d searches are currently active\n", activesearches)
-	}
+	debugprint("pathWalk: %d searches are currently active\n", activesearches)
 	if activesearches == 0 {
 		goto finish
 	}
@@ -833,9 +789,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 	t, _ = os.Lstat(path)
 	if t.Mode().IsDir() {
 		// target is a directory, process its content
-		if debug {
-			fmt.Printf("'%s' is a directory, processing its content\n", path)
-		}
+		debugprint("'%s' is a directory, processing its content\n", path)
 		dirContent, err := target.Readdir(-1)
 		if err != nil {
 			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
@@ -868,9 +822,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 					walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
 					continue
 				}
-				if debug {
-					fmt.Printf("'%s' links to '%s'\n", entryAbsPath, linkpath)
-				}
+				debugprint("'%s' links to '%s'\n", entryAbsPath, linkpath)
 				if linkmode.IsRegular() {
 					isLinkedFile = true
 				}
@@ -893,9 +845,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
 			goto finish
 		}
-		if debug {
-			fmt.Printf("'%s' links to '%s'\n", path, linkpath)
-		}
+		debugprint("'%s' links to '%s'\n", path, linkpath)
 		if linkmode.IsRegular() {
 			path = linkpath
 		} else {
@@ -927,9 +877,7 @@ finish:
 	for label, search := range r.Parameters.Searches {
 		if search.iscurrent {
 			search.decreasedepth()
-			if debug {
-				fmt.Printf("decreasing search depth for '%s' to '%d'\n", label, search.currentdepth)
-			}
+			debugprint("decreasing search depth for '%s' to '%d'\n", label, search.currentdepth)
 		}
 		r.Parameters.Searches[label] = search
 	}
@@ -975,15 +923,11 @@ func (r *run) evaluateFile(file string) (err error) {
 		}
 	}()
 	stats.Filescount++
-	if debug {
-		fmt.Printf("evaluateFile: evaluating '%s'\n", file)
-	}
+	debugprint("evaluateFile: evaluating '%s'\n", file)
 	// store list of active searches to restore it before leaving
 	for label, search := range r.Parameters.Searches {
 		if search.isactive {
-			if debug {
-				fmt.Printf("evaluateFile: search '%s' is active\n", label)
-			}
+			debugprint("evaluateFile: search '%s' is active\n", label)
 			activeSearches = append(activeSearches, label)
 		}
 	}
@@ -1044,9 +988,7 @@ func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
 			// do ways we get a positive result: either the filename is a match against the
 			// regex, or the filename is not a match but inversematch is set to true
 			if (ismatch && !c.inversematch) || (!ismatch && c.inversematch) {
-				if debug {
-					fmt.Printf("file name '%s' matches regex '%s'\n", fi.Name(), c.value)
-				}
+				debugprint("file name '%s' matches regex '%s'\n", fi.Name(), c.value)
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1065,10 +1007,8 @@ func (s search) checkMode(file string, fi os.FileInfo) (matchedall bool) {
 				continue
 			}
 			if c.regex.MatchString(fi.Mode().String()) {
-				if debug {
-					fmt.Printf("file '%s' mode '%s' matches regex '%s'\n",
-						fi.Name(), fi.Mode().String(), c.value)
-				}
+				debugprint("file '%s' mode '%s' matches regex '%s'\n",
+					fi.Name(), fi.Mode().String(), c.value)
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1087,10 +1027,8 @@ func (s search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
 				continue
 			}
 			if fi.Size() > int64(c.minsize) && fi.Size() < int64(c.maxsize) {
-				if debug {
-					fmt.Printf("file '%s' size '%d' is between %d and %d\n",
-						fi.Name(), fi.Size(), c.minsize, c.maxsize)
-				}
+				debugprint("file '%s' size '%d' is between %d and %d\n",
+					fi.Name(), fi.Size(), c.minsize, c.maxsize)
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1109,11 +1047,9 @@ func (s search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
 				continue
 			}
 			if fi.ModTime().After(c.minmtime) && fi.ModTime().Before(c.maxmtime) {
-				if debug {
-					fmt.Printf("file '%s' mtime '%s' is between %s and %s\n",
-						fi.Name(), fi.ModTime().UTC().String(),
-						c.minmtime.String(), c.maxmtime.String())
-				}
+				debugprint("file '%s' mtime '%s' is between %s and %s\n",
+					fi.Name(), fi.ModTime().UTC().String(),
+					c.minmtime.String(), c.maxmtime.String())
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1210,66 +1146,46 @@ func (r *run) checkContent(file string) {
 				*/
 				if c.regex.MatchString(scanner.Text()) {
 					// Regex Match
-					if debug {
-						fmt.Printf("checkContent: regex '%s' match on line '%s'\n", c.value, scanner.Text())
-					}
+					debugprint("checkContent: regex '%s' match on line '%s'\n", c.value, scanner.Text())
 					if !c.inversematch {
 						if search.Options.Macroal {
-							if debug {
-								fmt.Printf("checkContent: [pass] must match all lines and current line matched. regex='%s', line='%s'\n",
-									c.value, scanner.Text())
-							}
+							debugprint("checkContent: [pass] must match all lines and current line matched. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
 						} else {
-							if debug {
-								fmt.Printf("checkContent: [pass] must match any line and current line matched. regex='%s', line='%s'\n",
-									c.value, scanner.Text())
-							}
+							debugprint("checkContent: [pass] must match any line and current line matched. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
 							c.storeMatch(file)
 						}
 					} else {
 						if search.Options.Macroal {
-							if debug {
-								fmt.Printf("checkContent: [fail] must match no line but current line matched. regex='%s', line='%s'\n",
-									c.value, scanner.Text())
-							}
+							debugprint("checkContent: [fail] must match no line but current line matched. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
 							macroalstatus[label] = false
 						} else {
-							if debug {
-								fmt.Printf("checkContent: [fail] must not match at least one line but current line matched. regex='%s', line='%s'\n",
-									c.value, scanner.Text())
-							}
+							debugprint("checkContent: [fail] must not match at least one line but current line matched. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
 						}
-						if debug {
-							fmt.Printf("checkContent: regex '%s' is an inverse match and shouldn't have matched on line '%s'\n", c.value, scanner.Text())
-						}
+						debugprint("checkContent: regex '%s' is an inverse match and shouldn't have matched on line '%s'\n", c.value, scanner.Text())
 					}
 					checksstatus[label][i] = true
 				} else {
 					// Regex Not Match
 					if c.inversematch {
 						if search.Options.Macroal {
-							if debug {
-								fmt.Printf("checkContent: [pass] must match no line and current line didn't match. regex='%s', line='%s'\n",
-									c.value, scanner.Text())
-							}
+							debugprint("checkContent: [pass] must match no line and current line didn't match. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
 						} else {
-							if debug {
-								fmt.Printf("checkContent: [pass] must not match at least one line and current line didn't match. regex='%s', line='%s'\n",
-									c.value, scanner.Text())
-							}
+							debugprint("checkContent: [pass] must not match at least one line and current line didn't match. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
 						}
 					} else {
 						if search.Options.Macroal {
-							if debug {
-								fmt.Printf("checkContent: [fail] much match all lines and current line didn't match. regex='%s', line='%s'\n",
-									c.value, scanner.Text())
-							}
+							debugprint("checkContent: [fail] much match all lines and current line didn't match. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
 							macroalstatus[label] = false
 						} else {
-							if debug {
-								fmt.Printf("checkContent: [fail] much match any line and current line didn't match. regex='%s', line='%s'\n",
-									c.value, scanner.Text())
-							}
+							debugprint("checkContent: [fail] much match any line and current line didn't match. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
 						}
 					}
 				}
@@ -1292,10 +1208,8 @@ func (r *run) checkContent(file string) {
 	// 3. deactivate searches that have matchall=true, but did not match against
 	for label, search := range r.Parameters.Searches {
 		if search.Options.Macroal && macroalstatus[label] {
-			if debug {
-				fmt.Printf("checkContent: macroal is set and search label '%s' passed on file '%s'\n",
-					label, file)
-			}
+			debugprint("checkContent: macroal is set and search label '%s' passed on file '%s'\n",
+				label, file)
 			// we match all content regexes on all lines of the file,
 			// as requested via the Macroal flag
 			// now store the filename in all checks
@@ -1314,10 +1228,8 @@ func (r *run) checkContent(file string) {
 				continue
 			}
 			if !checksstatus[label][i] && c.inversematch {
-				if debug {
-					fmt.Printf("in search '%s' on file '%s', check '%s' has not matched and is set to inversematch, record this as a positive result\n",
-						label, file, c.value)
-				}
+				debugprint("in search '%s' on file '%s', check '%s' has not matched and is set to inversematch, record this as a positive result\n",
+					label, file, c.value)
 				c.storeMatch(file)
 				checksstatus[label][i] = true
 				search.checks[i] = c
@@ -1370,9 +1282,7 @@ func (r *run) checkHash(file string, hashtype checkType) {
 					continue
 				}
 				if c.value == hash {
-					if debug {
-						fmt.Printf("checkHash: file '%s' matches checksum '%s'\n", file, c.value)
-					}
+					debugprint("checkHash: file '%s' matches checksum '%s'\n", file, c.value)
 					c.storeMatch(file)
 				} else if search.Options.MatchAll {
 					search.deactivate()
@@ -1398,9 +1308,7 @@ func getHash(file string, hashType checkType) (hexhash string, err error) {
 		panic(err)
 	}
 	defer fd.Close()
-	if debug {
-		fmt.Printf("getHash: computing hash for '%s'\n", fd.Name())
-	}
+	debugprint("getHash: computing hash for '%s'\n", fd.Name())
 	var h hash.Hash
 	switch hashType {
 	case checkMD5:
@@ -1494,9 +1402,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 			}
 			// verify that each file has matched on all the checks
 			for _, foundFile := range allFiles {
-				if debug {
-					fmt.Println("checking if file", foundFile, "matched all checks")
-				}
+				debugprint("checking if file", foundFile, "matched all checks")
 				matchedallchecks := true
 				for _, c := range search.checks {
 					found := false
@@ -1506,9 +1412,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 						}
 					}
 					if !found {
-						if debug {
-							fmt.Println("check", c.code, "did not match")
-						}
+						debugprint("check", c.code, "did not match")
 						matchedallchecks = false
 						break
 					}
@@ -1522,8 +1426,6 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 			}
 			// now that we have a clean list of files that matched all checks, store it
 			for _, matchedFile := range matchedFiles {
-				if debug {
-				}
 				var mf matchedfile
 				mf.File = matchedFile
 				if mf.File != "" {
@@ -1624,14 +1526,12 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 	if stats.Totalhits > 0 {
 		res.FoundAnything = true
 	}
-	if debug {
-		fmt.Printf("Tested files:     %.0f\n"+
-			"Open Failed:      %.0f\n"+
-			"Total hits:       %.0f\n"+
-			"Execution time:   %s\n",
-			stats.Filescount, stats.Openfailed,
-			stats.Totalhits, stats.Exectime)
-	}
+	debugprint("Tested files:     %.0f\n"+
+		"Open Failed:      %.0f\n"+
+		"Total hits:       %.0f\n"+
+		"Execution time:   %s\n",
+		stats.Filescount, stats.Openfailed,
+		stats.Totalhits, stats.Exectime)
 	JsonResults, err := json.Marshal(res)
 	if err != nil {
 		panic(err)
