@@ -91,6 +91,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 	for {
 		var label string
 		var search search
+		// sane defaults
+		search.Options.MatchAll = true
+		search.Options.MaxDepth = 1000
+		search.Options.MatchLimit = 1000
 		for {
 			fmt.Println("Give a name to this search, or 'done' to exit")
 			fmt.Printf("label> ")
@@ -396,8 +400,8 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.Var(&sha3_256s, "sha3_256", "see help")
 	fs.Var(&sha3_384s, "sha3_384", "see help")
 	fs.Var(&sha3_512s, "sha3_512", "see help")
-	fs.Float64Var(&maxdepth, "maxdepth", 0, "see help")
-	fs.Float64Var(&matchlimit, "matchlimit", 0, "see help")
+	fs.Float64Var(&maxdepth, "maxdepth", 1000, "see help")
+	fs.Float64Var(&matchlimit, "matchlimit", 1000, "see help")
 	fs.BoolVar(&matchall, "matchall", true, "see help")
 	fs.BoolVar(&matchany, "matchany", false, "see help")
 	fs.BoolVar(&macroal, "macroal", false, "see help")

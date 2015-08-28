@@ -140,7 +140,7 @@ func (s *search) makeChecks() (err error) {
 		}
 	}()
 	if s.Options.MaxDepth == 0 {
-		s.Options.MaxDepth = 10000
+		s.Options.MaxDepth = 1000
 	}
 	if s.Options.MatchLimit == 0 {
 		s.Options.MatchLimit = 1000
