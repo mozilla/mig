@@ -20,10 +20,8 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/crypto/sha3"
 	"hash"
 	"io"
-	"mig.ninja/mig/modules"
 	"os"
 	"path"
 	"path/filepath"
@@ -32,9 +30,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/sha3"
+	"mig.ninja/mig/modules"
 )
 
-var debug bool = true
+var debug bool = false
 
 func debugprint(format string, a ...interface{}) {
 	if debug {
@@ -94,11 +95,12 @@ type search struct {
 }
 
 type options struct {
-	MaxDepth   float64 `json:"maxdepth"`
-	RemoteFS   bool    `json:"remotefs,omitempty"`
-	MatchAll   bool    `json:"matchall"`
-	Macroal    bool    `json:"macroal"`
-	MatchLimit float64 `json:"matchlimit"`
+	MaxDepth   float64  `json:"maxdepth"`
+	RemoteFS   bool     `json:"remotefs,omitempty"`
+	MatchAll   bool     `json:"matchall"`
+	Macroal    bool     `json:"macroal"`
+	Mismatch   []string `json:"mismatch"`
+	MatchLimit float64  `json:"matchlimit"`
 }
 
 type checkType uint64
@@ -123,14 +125,14 @@ const (
 )
 
 type check struct {
-	code               checkType
-	matched            uint64
-	matchedfiles       []string
-	value              string
-	regex              *regexp.Regexp
-	minsize, maxsize   uint64
-	minmtime, maxmtime time.Time
-	inversematch       bool
+	code                   checkType
+	matched                uint64
+	matchedfiles           []string
+	value                  string
+	regex                  *regexp.Regexp
+	minsize, maxsize       uint64
+	minmtime, maxmtime     time.Time
+	inversematch, mismatch bool
 }
 
 func (s *search) makeChecks() (err error) {
@@ -153,6 +155,9 @@ func (s *search) makeChecks() (err error) {
 			c.inversematch = true
 			v = v[1:]
 		}
+		if s.hasMismatch("content") {
+			c.mismatch = true
+		}
 		c.regex = regexp.MustCompile(v)
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
@@ -164,6 +169,9 @@ func (s *search) makeChecks() (err error) {
 		if len(v) > 1 && v[:1] == "!" {
 			c.inversematch = true
 			v = v[1:]
+		}
+		if s.hasMismatch("name") {
+			c.mismatch = true
 		}
 		c.regex = regexp.MustCompile(v)
 		s.checks = append(s.checks, c)
@@ -177,6 +185,9 @@ func (s *search) makeChecks() (err error) {
 		if err != nil {
 			panic(err)
 		}
+		if s.hasMismatch("size") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -184,6 +195,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkMode
 		c.value = v
+		if s.hasMismatch("mode") {
+			c.mismatch = true
+		}
 		c.regex = regexp.MustCompile(v)
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
@@ -192,6 +206,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkMtime
 		c.value = v
+		if s.hasMismatch("mtime") {
+			c.mismatch = true
+		}
 		c.minmtime, c.maxmtime, err = parseMtime(v)
 		if err != nil {
 			panic(err)
@@ -203,6 +220,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkMD5
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("md5") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -210,6 +230,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA1
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha1") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -217,6 +240,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA256
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha256") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -224,6 +250,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA384
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha384") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -231,6 +260,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA512
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha512") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -238,6 +270,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA3_224
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha3_224") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -245,6 +280,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA3_256
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha3_256") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -252,6 +290,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA3_384
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha3_384") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -259,10 +300,22 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA3_512
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha3_512") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
 	return
+}
+
+func (s *search) hasMismatch(filter string) bool {
+	for _, fi := range s.Options.Mismatch {
+		if fi == filter {
+			return true
+		}
+	}
+	return false
 }
 
 func parseSize(size string) (minsize, maxsize uint64, err error) {
@@ -500,6 +553,13 @@ func (r *run) ValidateParameters() (err error) {
 				return
 			}
 		}
+		for _, mismatch := range s.Options.Mismatch {
+			debugprint("validating mismatch '%s'\n", mismatch)
+			err = validateMismatch(mismatch)
+			if err != nil {
+				return
+			}
+		}
 	}
 	return
 }
@@ -589,6 +649,18 @@ func validateHash(hash string, hashType checkType) error {
 	hashre := regexp.MustCompile(re)
 	if !hashre.MatchString(hash) {
 		return fmt.Errorf("Invalid checksum format for hash '%s'. Must match regex %s", hash, re)
+	}
+	return nil
+}
+
+func validateMismatch(filter string) error {
+	if len(filter) < 1 {
+		return fmt.Errorf("empty filters are not permitted")
+	}
+	filterregexp := `^(name|size|mode|mtime|content|md5|sha1|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512)$`
+	re := regexp.MustCompile(filterregexp)
+	if !re.MatchString(filter) {
+		return fmt.Errorf("The syntax of filter '%s' is invalid. Must match regex %s", filter, filterregexp)
 	}
 	return nil
 }
@@ -977,6 +1049,52 @@ func (r *run) evaluateFile(file string) (err error) {
 	return
 }
 
+/* wantThis() implements boolean logic to decide if a given check should be a match or not
+It's just 2 XOR chained one after the other.
+
+ Match | Inverse | Mismatch | Return
+-------+---------+----------+--------
+ true  ^  true   ^  true    = true
+ true  ^  true   ^  false   = false
+ true  ^  false  ^  true    = false
+ true  ^  false  ^  false   = true
+ false ^  true   ^  true    = false
+ false ^  true   ^  false   = true
+ false ^  false  ^  true    = true
+ false ^  false  ^  false   = false
+*/
+func (c check) wantThis(match bool) bool {
+	if match {
+		if c.inversematch {
+			if c.mismatch {
+				return true
+			} else {
+				return false
+			}
+		} else {
+			if c.mismatch {
+				return false
+			} else {
+				return true
+			}
+		}
+	} else {
+		if c.inversematch {
+			if c.mismatch {
+				return false
+			} else {
+				return true
+			}
+		} else {
+			if c.mismatch {
+				return true
+			} else {
+				return false
+			}
+		}
+	}
+}
+
 func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
 	matchedall = true
 	if (s.checkmask & checkName) != 0 {
@@ -984,11 +1102,11 @@ func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
 			if (c.code & checkName) == 0 {
 				continue
 			}
-			ismatch := c.regex.MatchString(path.Base(fi.Name()))
-			// do ways we get a positive result: either the filename is a match against the
-			// regex, or the filename is not a match but inversematch is set to true
-			if (ismatch && !c.inversematch) || (!ismatch && c.inversematch) {
+			match := c.regex.MatchString(path.Base(fi.Name()))
+			if match {
 				debugprint("file name '%s' matches regex '%s'\n", fi.Name(), c.value)
+			}
+			if c.wantThis(match) {
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1006,9 +1124,12 @@ func (s search) checkMode(file string, fi os.FileInfo) (matchedall bool) {
 			if (c.code & checkMode) == 0 {
 				continue
 			}
-			if c.regex.MatchString(fi.Mode().String()) {
+			match := c.regex.MatchString(fi.Mode().String())
+			if match {
 				debugprint("file '%s' mode '%s' matches regex '%s'\n",
 					fi.Name(), fi.Mode().String(), c.value)
+			}
+			if c.wantThis(match) {
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1026,9 +1147,13 @@ func (s search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
 			if (c.code & checkSize) == 0 {
 				continue
 			}
+			match := false
 			if fi.Size() > int64(c.minsize) && fi.Size() < int64(c.maxsize) {
+				match = true
 				debugprint("file '%s' size '%d' is between %d and %d\n",
 					fi.Name(), fi.Size(), c.minsize, c.maxsize)
+			}
+			if c.wantThis(match) {
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1046,10 +1171,14 @@ func (s search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
 			if (c.code & checkMtime) == 0 {
 				continue
 			}
+			match := false
 			if fi.ModTime().After(c.minmtime) && fi.ModTime().Before(c.maxmtime) {
+				match = true
 				debugprint("file '%s' mtime '%s' is between %s and %s\n",
 					fi.Name(), fi.ModTime().UTC().String(),
 					c.minmtime.String(), c.maxmtime.String())
+			}
+			if c.wantThis(match) {
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1154,13 +1283,18 @@ func (r *run) checkContent(file string) {
 						} else {
 							debugprint("checkContent: [pass] must match any line and current line matched. regex='%s', line='%s'\n",
 								c.value, scanner.Text())
-							c.storeMatch(file)
+							if c.wantThis(true) {
+								c.storeMatch(file)
+							}
 						}
 					} else {
 						if search.Options.Macroal {
 							debugprint("checkContent: [fail] must match no line but current line matched. regex='%s', line='%s'\n",
 								c.value, scanner.Text())
 							macroalstatus[label] = false
+							if c.wantThis(false) {
+								c.storeMatch(file)
+							}
 						} else {
 							debugprint("checkContent: [fail] must not match at least one line but current line matched. regex='%s', line='%s'\n",
 								c.value, scanner.Text())
@@ -1183,6 +1317,9 @@ func (r *run) checkContent(file string) {
 							debugprint("checkContent: [fail] much match all lines and current line didn't match. regex='%s', line='%s'\n",
 								c.value, scanner.Text())
 							macroalstatus[label] = false
+							if c.wantThis(false) {
+								c.storeMatch(file)
+							}
 						} else {
 							debugprint("checkContent: [fail] much match any line and current line didn't match. regex='%s', line='%s'\n",
 								c.value, scanner.Text())
@@ -1217,7 +1354,9 @@ func (r *run) checkContent(file string) {
 				if c.code&checkContent == 0 {
 					continue
 				}
-				c.storeMatch(file)
+				if c.wantThis(true) {
+					c.storeMatch(file)
+				}
 				search.checks[i] = c
 			}
 			// we're done with this search
@@ -1230,7 +1369,9 @@ func (r *run) checkContent(file string) {
 			if !checksstatus[label][i] && c.inversematch {
 				debugprint("in search '%s' on file '%s', check '%s' has not matched and is set to inversematch, record this as a positive result\n",
 					label, file, c.value)
-				c.storeMatch(file)
+				if c.wantThis(true) {
+					c.storeMatch(file)
+				}
 				checksstatus[label][i] = true
 				search.checks[i] = c
 			}
@@ -1242,6 +1383,10 @@ func (r *run) checkContent(file string) {
 				}
 				// check hasn't matched, or has matched and we didn't want it to, deactivate the search
 				if !checksstatus[label][i] || (checksstatus[label][i] && c.inversematch) {
+					if c.wantThis(false) {
+						c.storeMatch(file)
+						search.checks[i] = c
+					}
 					search.deactivate()
 				}
 			}
@@ -1281,8 +1426,12 @@ func (r *run) checkHash(file string, hashtype checkType) {
 				if c.code&hashtype == 0 {
 					continue
 				}
+				match := false
 				if c.value == hash {
+					match = true
 					debugprint("checkHash: file '%s' matches checksum '%s'\n", file, c.value)
+				}
+				if c.wantThis(match) {
 					c.storeMatch(file)
 				} else if search.Options.MatchAll {
 					search.deactivate()

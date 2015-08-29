@@ -61,22 +61,28 @@ func printHelp(isCmd bool) {
 
 Options
 -------
-%smaxdepth <int> - limit search to that many subdirectories
-		  ex: maxdepth 3
-%smatchall	- all search parameters must match on a given file for it to
-		  return as a match. off by default. deactivates 'matchany' if set.
-		  ex: matchall
-%smatchany	- any search parameter must match on a given file for it to
-		  return as a match. on by default. deactivates 'matchall' if set.
-		  ex: matchany
-%smacroal	- match all contents regexes on all lines. off by default.
-		  ex: -content "^(#|\s+|...list of ssh keys...)$" -macroal
-%smatchlimit <int> - limit the number of files that can be matched by a search.
-		   the default limit is set to 10000. search will stop once the limit
-		   is reached.
+%smaxdepth <int>	- limit search depth to <int> levels. default to 1000.
+			  ex: %smaxdepth 3
+%smatchall		- all search parameters must match on a given file for it to
+			  return as a match. off by default. deactivates 'matchany' if set.
+			  ex: %smatchall
+%smatchany		- any search parameter must match on a given file for it to
+			  return as a match. on by default. deactivates 'matchall' if set.
+			  ex: %smatchany
+%smacroal		- match all contents regexes on all lines. off by default.
+			  ex: %smacroal
+%smismatch=<filter>	- inverts the results for the given filter, used to list files
+			  that did not match a given expression, instead of the default
+			  instead of files that match it.
+			  ex: %smismatch content
+%smatchlimit <int>	- limit the number of files that can be matched by a search.
+			  the default limit is set to 1000. search will stop once the limit
+			  is reached.
 
-detailled doc at http://mig.mozilla.org/doc/module_file.html
-`, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash)
+Complete documentation at http://mig.mozilla.org/doc/module_file.html
+`, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash,
+		dash, dash, dash, dash, dash, dash, dash, dash, dash,
+		dash, dash, dash, dash, dash, dash, dash, dash)
 
 	return
 }
@@ -343,6 +349,17 @@ func (r *run) ParamsCreator() (interface{}, error) {
 					continue
 				}
 				search.Options.Macroal = true
+			case "mismatch":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
+				err = validateMismatch(checkValue)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Options.Mismatch = append(search.Options.Mismatch, checkValue)
 			case "matchlimit":
 				if checkValue == "" {
 					fmt.Println("Missing parameter, try again")
@@ -375,7 +392,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		err error
 		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha256s,
-		sha384s, sha512s, sha3_224s, sha3_256s, sha3_384s, sha3_512s flagParam
+		sha384s, sha512s, sha3_224s, sha3_256s, sha3_384s, sha3_512s, mismatch flagParam
 		maxdepth, matchlimit        float64
 		matchall, matchany, macroal bool
 		fs                          flag.FlagSet
@@ -400,6 +417,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.Var(&sha3_256s, "sha3_256", "see help")
 	fs.Var(&sha3_384s, "sha3_384", "see help")
 	fs.Var(&sha3_512s, "sha3_512", "see help")
+	fs.Var(&mismatch, "mismatch", "see help")
 	fs.Float64Var(&maxdepth, "maxdepth", 1000, "see help")
 	fs.Float64Var(&matchlimit, "matchlimit", 1000, "see help")
 	fs.BoolVar(&matchall, "matchall", true, "see help")
@@ -428,6 +446,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	s.Options.MaxDepth = maxdepth
 	s.Options.MatchLimit = matchlimit
 	s.Options.Macroal = macroal
+	s.Options.Mismatch = mismatch
 	s.Options.MatchAll = matchall
 	if matchany {
 		s.Options.MatchAll = false
