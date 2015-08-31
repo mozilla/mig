@@ -1,14 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
-<title>Mozilla InvestiGator: File module</title>
-<meta name="author" content="Julien Vehent &lt;jvehent&#64;mozilla.com&gt;" />
-<style type="text/css">
-
-body {
+<!DOCTYPE html><html><head><meta charset="utf-8"><title></title><style type="text/css">body {
   width: 95%;
   max-width: 900px;
   margin: 20px;
@@ -16,8 +6,12 @@ body {
   background: #151515 url("../images/bkg.png") 0 0;
   color: #eaeaea;
   font: 16px;
-  line-height: 1.5;
+  line-height: 1.5em;
   font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+}
+
+#table-of-contents ul {
+    line-height: 1;
 }
 
 /* General & 'Reset' Stuff */
@@ -38,10 +32,6 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0;
 }
 
-li {
-  line-height: 1.4 ;
-}
-
 /* Header, <header>
  *    header   - container
  *       h1       - project name
@@ -51,7 +41,7 @@ li {
 header {
   background: rgba(0, 0, 0, 0.1);
   width: 100%;
-  border-bottom: 1px dashed #b5e853;
+  /*border-bottom: 1px dashed #b5e853;*/
   /*padding: 20px 0;
  *   margin: 0 0 40px 0;*/
   padding: 5px 0;
@@ -81,14 +71,12 @@ header h1:before {
 header h2 {
   font-size: 18px;
   font-weight: 300;
-  /*color: #666;*/
-  color: #ff7800;
 }
 
 /* Main Content
  * */
 
-#main_content {
+body {
   width: 100%;
   -webkit-font-smoothing: antialiased;
 }
@@ -96,40 +84,42 @@ section img {
   max-width: 100%
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-weight: normal;
-  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
-  /*color: #b5e853;*/
+h2 a {
+  font-weight: bold;
   color: #8AB638;
-  letter-spacing: -0.03em;
-  /*text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
-               0 0 5px rgba(181, 232, 83, 0.1),
-               0 0 10px rgba(181, 232, 83, 0.1);*/
+  line-height: 1.4em;
+  font-size: 1.4em;
+}
+h3 a, h4 a, h5 a, h6 a {
+  font-weight: bold;
+  color: #934500;
+  line-height: 1.4em;
 }
 
-#main_content h1 {
+h1 {
   font-size: 30px;
 }
 
-#main_content h2 {
-  font-size: 24px;
+h2 {
+  font-size: 28px;
+  border-bottom: 1px dashed #b5e853;
 }
 
-#main_content h3 {
+h3 {
   font-size: 18px;
 }
 
-#main_content h4 {
+h4 {
   font-size: 14px;
 }
 
-#main_content h5 {
+h5 {
   font-size: 12px;
   text-transform: uppercase;
   margin: 0 0 5px 0;
 }
 
-#main_content h6 {
+h6 {
   font-size: 12px;
   text-transform: uppercase;
   color: #999;
@@ -187,17 +177,17 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { color: grey; } /* line numbers */
-//pre.code, code { background-color: #eeeeee }
-pre.code .comment, code .comment, code .c1 { color: #FF7428; }
-code, pre.code .keyword, code .keyword, pre.code .kd, pre.code .kn, pre.code .k, pre.code .o { color: #00a5ff; font-weight: bold;}
-pre.code .nb { color: #c45918;}
-pre.code .s {color: #0a77c4;}
-pre.code .punctuation, pre.code .punctuation, pre.code .p { color: white;}
-pre.code .literal.string, pre.code .literal.string { color: #40BF32; }
-pre.code .name.builtin, pre.code .name.builtin, pre.code .nx { color: white; }
-pre.code .deleted, pre.code .deleted { background-color: #DEB0A1}
-pre.code .inserted, pre.code .inserted { background-color: #A3D289}
+code .ln { color: grey; } /* line numbers */
+/*code, code { background-color: #eeeeee }*/
+code .comment, code .comment, code .c1 { color: #999; }
+code .keyword, code .keyword, code .kd, code .kn, code .k, code .o { color: #FC8F3F; font-weight: bold;}
+code .nb { color: #c45918;}
+code .s {color: #0a77c4;}
+code .punctuation, code .p { color: white;}
+code .literal.string, code .literal.string { color: #40BF32; }
+code .name, code .name.builtin, code .nx { color: white; }
+code .deleted, code .deleted { background-color: #DEB0A1}
+code .inserted, code .inserted { background-color: #A3D289}
 
 table {
   width: 100%;
@@ -226,7 +216,8 @@ hr {
 
 a {
   color: #63c0f5;
-  text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);
+  /*text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);*/
+  text-decoration: none;
 }
 
 cite {
@@ -236,120 +227,66 @@ cite {
 strong {
   color: #C64216;
 }
-
-</style>
-</head>
-<body>
-<div class="document" id="mozilla-investigator-file-module">
-<h1 class="title">Mozilla InvestiGator: File module</h1>
-<table class="docinfo" frame="void" rules="none">
-<col class="docinfo-name" />
-<col class="docinfo-content" />
-<tbody valign="top">
-<tr><th class="docinfo-name">Author:</th>
-<td>Julien Vehent &lt;<a class="reference external" href="mailto:jvehent&#64;mozilla.com">jvehent&#64;mozilla.com</a>&gt;</td></tr>
-</tbody>
-</table>
-<div class="contents topic" id="table-of-contents">
-<p class="topic-title first">Table of Contents</p>
-<ul class="auto-toc simple">
-<li><a class="reference internal" href="#usage" id="id1">1&nbsp;&nbsp;&nbsp;Usage</a><ul class="auto-toc">
-<li><a class="reference internal" href="#search-paths" id="id2">1.1&nbsp;&nbsp;&nbsp;Search Paths</a></li>
-<li><a class="reference internal" href="#search-filters" id="id3">1.2&nbsp;&nbsp;&nbsp;Search Filters</a></li>
-<li><a class="reference internal" href="#search-options" id="id4">1.3&nbsp;&nbsp;&nbsp;Search Options</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#search-algorithm" id="id5">2&nbsp;&nbsp;&nbsp;Search algorithm</a><ul class="auto-toc">
-<li><a class="reference internal" href="#search-activation-deactivation" id="id6">2.1&nbsp;&nbsp;&nbsp;Search activation &amp; deactivation</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<p>The file module (FM) provides a basic tools to inspect a file system. It is
-inspired by &quot;find&quot; on Unix, and implements a subset of its functionalities
-with a focus on speed of execution.</p>
-<div class="section" id="usage">
-<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Usage</a></h1>
-<p>FM implements searches that are defined by a search label. A search can have a
+</style></head><body><h1>Mozilla InvestiGator: File module</h1><table><tr><td class="field-label">Author</td><td>Julien Vehent &lt;<a class="reference external" href="mailto:jvehent@mozilla.com">jvehent@mozilla.com</a>&gt;</td></tr></table><div class="contents" id="table-of-contents"><h2>Table of Contents</h2><ul class="auto-toc"><li><p><a class="reference internal" href="#usage" id="id1">1   Usage</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#search-paths" id="id2">1.1   Search Paths</a></p></li><li><p><a class="reference internal" href="#search-filters" id="id3">1.2   Search Filters</a></p></li><li><p><a class="reference internal" href="#search-options" id="id4">1.3   Search Options</a></p></li></ul></li><li><p><a class="reference internal" href="#search-algorithm" id="id5">2   Search algorithm</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#search-activation-deactivation" id="id6">2.1   Search activation &amp; deactivation</a></p></li><li><p><a class="reference internal" href="#note-on-symbolic-links" id="id7">2.2   Note on symbolic links</a></p></li></ul></li></ul></div><p>The file module (FM) provides a basic tools to inspect a file system. It is
+inspired by "find" on Unix, and implements a subset of its functionalities
+with a focus on speed of execution.</p><section id="usage"><header><h2><a href="#id1">1   Usage</a></h2></header><p>FM implements searches that are defined by a search label. A search can have a
 number of search parameters and options, defined below. There is no maximum
 number of searches that can be performed by a single invocation of FM. However,
 heavy invocations are frowned upon, because the MIG Agent will most likely kill
-modules that run for more than 5 minutes (configurable).</p>
-<p>In JSON format, searches are defined as a json object where each search has a
-label (key) and search parameters (value).</p>
-<p>A search label is a string between 1 and 64 characters, composed of letter
-[a-zA-z], numbers [0-9], underscore [_] or dashes [-].</p>
-<p>A search must have at least one search path.</p>
-<pre class="code json literal-block">
-    <span class="punctuation">{</span>
-            <span class="name tag">&quot;searches&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                    <span class="name tag">&quot;somesearchlabel&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                            <span class="name tag">&quot;paths&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                    <span class="literal string double">&quot;/etc/shadow&quot;</span>
+modules that run for more than 5 minutes (configurable).</p><p>In JSON format, searches are defined as a json object where each search has a
+label (key) and search parameters (value).</p><p>A search label is a string between 1 and 64 characters, composed of letter
+[a-zA-z], numbers [0-9], underscore [_] or dashes [-].</p><p>A search must have at least one search path.</p><pre><code class="code json">    <span class="punctuation">{</span>
+            <span class="name tag">"searches"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                    <span class="name tag">"somesearchlabel"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                            <span class="name tag">"paths"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                    <span class="literal string double">"/etc/shadow"</span>
                             <span class="punctuation">],</span>
-                            <span class="name tag">&quot;contents&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                    <span class="literal string double">&quot;^root&quot;</span><span class="punctuation">,</span>
-                                    <span class="literal string double">&quot;!^root:\\$6&quot;</span>
+                            <span class="name tag">"contents"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                    <span class="literal string double">"^root"</span><span class="punctuation">,</span>
+                                    <span class="literal string double">"!^root:\\$6"</span>
                             <span class="punctuation">]</span>
                     <span class="punctuation">},</span>
-                    <span class="name tag">&quot;another_search&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                            <span class="name tag">&quot;paths&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                    <span class="literal string double">&quot;/usr&quot;</span>
+                    <span class="name tag">"another_search"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                            <span class="name tag">"paths"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                    <span class="literal string double">"/usr"</span>
                             <span class="punctuation">],</span>
-                            <span class="name tag">&quot;sizes&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                    <span class="literal string double">&quot;&lt;371m&quot;</span>
+                            <span class="name tag">"sizes"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                    <span class="literal string double">"&lt;371m"</span>
                             <span class="punctuation">],</span>
-                            <span class="name tag">&quot;modes&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                    <span class="literal string double">&quot;^-r-xr-x--&quot;</span>
+                            <span class="name tag">"modes"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                    <span class="literal string double">"^-r-xr-x--"</span>
                             <span class="punctuation">]</span>
-                            <span class="literal string double">&quot;sha256&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                    <span class="literal string double">&quot;fff415292dc59cc99d43e70fd69347d09b9bd7a581f4d77b6ec0fa902ebaaec8&quot;</span>
+                            <span class="literal string double">"sha256"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                    <span class="literal string double">"fff415292dc59cc99d43e70fd69347d09b9bd7a581f4d77b6ec0fa902ebaaec8"</span>
                             <span class="punctuation">],</span>
-                            <span class="name tag">&quot;options&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                                    <span class="name tag">&quot;matchall&quot;</span><span class="punctuation">:</span> <span class="keyword constant">true</span><span class="punctuation">,</span>
-                                    <span class="name tag">&quot;maxdepth&quot;</span><span class="punctuation">:</span> <span class="literal number integer">3</span>
+                            <span class="name tag">"options"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                                    <span class="name tag">"matchall"</span><span class="punctuation">:</span> <span class="keyword constant">true</span><span class="punctuation">,</span>
+                                    <span class="name tag">"maxdepth"</span><span class="punctuation">:</span> <span class="literal number integer">3</span>
                             <span class="punctuation">}</span>
                     <span class="punctuation">}</span>
     <span class="punctuation">}</span>
-<span class="punctuation">}</span>
-</pre>
-<div class="section" id="search-paths">
-<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Search Paths</a></h2>
-<p>A search can have an unlimited number of search paths. Each path is treated as
-a string. No path expansion or regular expression is permitted in a path string.</p>
-<p>A path can indicate a directory or a file. In the case of a directory, FM will
+<span class="punctuation">}</span></code></pre><section id="search-paths"><header><h3><a href="#id2">1.1   Search Paths</a></h3></header><p>A search can have an unlimited number of search paths. Each path is treated as
+a string. No path expansion or regular expression is permitted in a path string.</p><p>A path can indicate a directory or a file. In the case of a directory, FM will
 enter the directory structure recursively until its end is reached, or until
-<cite>maxdepth</cite> is exceeded.</p>
-<p>While browsing a path, the module will follow symlinks if they are located
+<cite>maxdepth</cite> is exceeded.</p><p>While browsing a path, the module will follow symlinks if they are located
 within the base search path. For example, if the base path is set to
 '/sys/bus/usb/devices/' and a symlink is found pointing to '/sys/devices', the
 symlink will <strong>not</strong> be followed because it points to a location outside of the
-base search path.</p>
-<p>For each path defined in a search, all search filters will be evaluated.</p>
-</div>
-<div class="section" id="search-filters">
-<h2><a class="toc-backref" href="#id3">1.2&nbsp;&nbsp;&nbsp;Search Filters</a></h2>
-<p>Search filters can be used to locate a file on its metadata (fileinfo) or
+base search path.</p><p>For each path defined in a search, all search filters will be evaluated.</p></section><section id="search-filters"><header><h3><a href="#id3">1.2   Search Filters</a></h3></header><p>Search filters can be used to locate a file on its metadata (fileinfo) or
 content. Filters can be applied in two ways: either <cite>matchall</cite> is set and all
 filters must match on a given file to include it in the results, or <cite>matchall</cite>
-is not set and filters are treated individually.</p>
-<p>Note: all regular expressions used in search filters use the regexp syntax
+is not set and filters are treated individually.</p><p>Note: all regular expressions used in search filters use the regexp syntax
 provided by the Go language, which is very similar to Posix. A full description
-of the syntax is available at <a class="reference external" href="http://golang.org/pkg/regexp/syntax/">http://golang.org/pkg/regexp/syntax/</a>.</p>
-<p>Metadata filters:</p>
-<ul class="simple">
-<li><strong>name</strong>: a regular expression that is applying on the base name of a file.
-If the regex is prefixed with &quot;!&quot;, it will return files that do not match the
-expression.</li>
-<li><strong>size</strong>: a size filter indicates whether we want files that are larger or
+of the syntax is available at <a class="reference external" href="http://golang.org/pkg/regexp/syntax/">http://golang.org/pkg/regexp/syntax/</a>.</p><p>Metadata filters:</p><ul><li><p><strong>name</strong>: a regular expression that is applying on the base name of a file.
+If the regex is prefixed with "!", it will return files that do not match the
+expression.</p></li><li><p><strong>size</strong>: a size filter indicates whether we want files that are larger or
 smaller than a given size. The syntax uses a prefix <cite>&lt;</cite> or <cite>&gt;</cite> to indicate
 smaller than and greater than. The file size is assumed to be in bytes, and
 multipliers can be provided as suffix: <cite>k</cite>, <cite>m</cite>, <cite>g</cite> and <cite>t</cite> for kilobytes,
 megabytes, gigabytes and terabytes. For example, the filter <cite>&lt;10m</cite> will match
 on files that have a size inferior than 10 megabytes. When <cite>matchall</cite> is set,
 several size filters can provide an efficient way to bound the search to a
-given file size window.</li>
-<li><strong>mode</strong>: mode filters on both the type and permission of a file. The filter
+given file size window.</p></li><li><p><strong>mode</strong>: mode filters on both the type and permission of a file. The filter
 uses a regular expression that applies on the stringified filemode returned by
 Go. The mode string first contains the type of the file, followed by the
 permissions of the file.
@@ -357,89 +294,73 @@ For example, a regular file with 640 permissions would return <cite>-rw-r-----</
 and a regular expression on that string can be used to match the file.
 If the file has special attributes, such as setuid or sticky bits, those are
 prepended to the mode string: <cite>gtrwx--x--x</cite>. The meaning of each letter is
-defined in the Go documentation at <a class="reference external" href="http://golang.org/pkg/os/#FileMode">http://golang.org/pkg/os/#FileMode</a>.</li>
-<li><strong>mtime</strong>: mtime filters on the modification time of a file. It takes a
+defined in the Go documentation at <a class="reference external" href="http://golang.org/pkg/os/#FileMode">http://golang.org/pkg/os/#FileMode</a>.</p></li><li><p><strong>mtime</strong>: mtime filters on the modification time of a file. It takes a
 period parameter that checks if the file has been modified since a given
 perior, or before a given period. For example, the mtime filter <cite>&lt;90d</cite> will
 match of files that have been modified over the last nighty days, while the
 filter <cite>&gt;5h</cite> will match modified more than 5 hours ago.
 The mtime syntax takes a prefix <cite>&lt;</cite> or <cite>&gt;</cite>, a integer that represents the
-period, and a suffix <cite>d</cite>, <cite>h</cite> or <cite>m</cite> for days, hours and minutes.</li>
-</ul>
-<p>Content filters:</p>
-<ul class="simple">
-<li><strong>content</strong>: a regular expression that matches against the content of the
+period, and a suffix <cite>d</cite>, <cite>h</cite> or <cite>m</cite> for days, hours and minutes.</p></li></ul><p>Content filters:</p><ul><li><p><strong>content</strong>: a regular expression that matches against the content of the
 file. Inspection stops at the first occurence of the regular expression that
 matches on the file.
-If the regex is prefixed with &quot;!&quot;, it will return files that do not have the
+If the regex is prefixed with "!", it will return files that do not have the
 content that matches the expression. ex: <cite>!^root:$6</cite> will return files that
-do not contain the string &quot;root:$6&quot;.</li>
-<li><strong>md5</strong>: a md5 checksum</li>
-<li><strong>sha1</strong>: a sha1 checksum</li>
-<li><strong>sha256</strong>: a sha256 checksum</li>
-<li><strong>sha384</strong>: a sha384 checksum</li>
-<li><strong>sha512</strong>: a sha512 checksum</li>
-<li><strong>sha3_224</strong>: a sha3_224 checksum</li>
-<li><strong>sha3_256</strong>: a sha3_256 checksum</li>
-<li><strong>sha3_384</strong>: a sha3_384 checksum</li>
-<li><strong>sha3_512</strong>: a sha3_512 checksum</li>
-</ul>
-</div>
-<div class="section" id="search-options">
-<h2><a class="toc-backref" href="#id4">1.3&nbsp;&nbsp;&nbsp;Search Options</a></h2>
-<p>Several options can be applied to a search:</p>
-<ul class="simple">
-<li><strong>maxdepth</strong> controls the maximum number of directories that can be traversed
+do not contain the string "root:$6".</p></li><li><p><strong>md5</strong>: a md5 checksum</p></li><li><p><strong>sha1</strong>: a sha1 checksum</p></li><li><p><strong>sha256</strong>: a sha256 checksum</p></li><li><p><strong>sha384</strong>: a sha384 checksum</p></li><li><p><strong>sha512</strong>: a sha512 checksum</p></li><li><p><strong>sha3_224</strong>: a sha3_224 checksum</p></li><li><p><strong>sha3_256</strong>: a sha3_256 checksum</p></li><li><p><strong>sha3_384</strong>: a sha3_384 checksum</p></li><li><p><strong>sha3_512</strong>: a sha3_512 checksum</p></li></ul></section><section id="search-options"><header><h3><a href="#id4">1.3   Search Options</a></h3></header><p>Several options can be applied to a search:</p><ul><li><p><strong>maxdepth</strong> controls the maximum number of directories that can be traversed
 by a search. For example, is a search has path <cite>/home</cite>, and <cite>maxdepth</cite> is set
 to the value 3, the deepest directory that can be visited is
-<cite>/home/dir1/dir2/dir3</cite>.</li>
-<li><strong>matchall</strong> indicates that within a given search, all search filters must
+<cite>/home/dir1/dir2/dir3</cite>.</p></li><li><p><strong>matchall</strong> indicates that within a given search, all search filters must
 match on one file for it to be included in the results. Being a boolean,
-<cite>matchall</cite> is not set by default. The MIG command line sets it automatically,
-the console does not.</li>
-<li><strong>matchlimit</strong> controls how many files can be returned by a single search.
+<cite>matchall</cite> is not set by default, but the command line and the console set it
+when creating file searches. Use <cite>matchany</cite> to deactivate it. <cite>matchall</cite> has
+a strong impact on search performances. See "Search algorithm".</p><dl><dt>Examples:</dt><dd><ul><li><p><cite>-name vim -sha1 21345asd -matchall</cite> -&gt; (name=vim AND sha1=21345asd)</p></li><li><p><cite>-name vim -sha1 21345asd -matchany</cite> -&gt; (name=vim OR sha1=21345asd)</p></li></ul></dd></dl></li><li><p><strong>macroal</strong> stands for "Match All Contents Regexes On All Lines". It's a boolean
+option that requires that all <cite>content</cite> regexes must match on all the lines of
+a file. By default, content regexes are applied at the file level and will
+return a match if one line matches one regex, and if another line matches another
+regex. When the <cite>macroal</cite> option is set, each line in the file must match all
+content regexes defined in a given search to return a match. It is set to not
+set by default.</p><p>example: <cite>-path /home -name authorized_keys -content "^((#.+)|(s+)|...list of ssh keys...)$" -macroal</cite></p><p>will list authorized_keys file that have contain either a comment, an empty
+line or one of the listed ssh keys. It will only return a file in the results
+if all the lines of the file match the regex.</p></li><li><p><strong>mismatch=&lt;filter&gt;</strong> inverts the results for the given filter. This can be used
+to list files that did not match a given check, instead of the default which
+returns files that match a check.</p><p>For example, the following search will return files where all lines match the
+content regex:</p><p><cite>mig file -path /home -name ^authorized_keys -content "^((#.+)|(s+)|..1stkey..|..2ndkey..)$" -macroal</cite></p><p>But this search cannot list files that fail to match the content regex, which
+could be useful if we're looking for a file that contains a rogue SSH key.
+The mismatch option can be applied to the content filter to achieve this:</p><p><cite>mig file -path /home -name ^authorized_keys -content "^((#.+)|(s+)|..1stkey..|..2ndkey..)$" -macroal -mismatch content</cite></p><p>This search will locate all authorized_keys files and the inspect their
+content. The <cite>macroal</cite> flag indicates that all lines of a file must match the
+content regex. The <cite>mismatch</cite> flag inverses that logic, and thus if a least
+one line does not match the content regex, the file will be returned as a
+match.</p><p>The <cite>mismatch</cite> option can be applied to all check types: name, size, mode,
+mtime, content, md5, sha1, sha256, ... It can be specified multiple times:</p><p>example: <cite>-path /usr -name "^vim$" -content "linux-x86-64.so" -sha1 943633c85bb80d39532450decf1f723735313f1f -sha1 350ac204ac8084590b209c33f39f09986f0ba682 -mismatch=content -mismatch=sha1</cite></p></li><li><p><strong>matchlimit</strong> controls how many files can be returned by a single search.
 This safeguard prevents a single run of the file module from crashing before
 of the amount of results it is returning. The default value is 1,000, which is
 already significant. If you plan on returning more than 1,000 results in a
 single file search, you should probably consider breaking it down into smaller
-searches, or running the search locally instead of through MIG.</li>
-</ul>
-</div>
-</div>
-<div class="section" id="search-algorithm">
-<h1><a class="toc-backref" href="#id5">2&nbsp;&nbsp;&nbsp;Search algorithm</a></h1>
-<p>FM traverse a directory tree starting from a root path and until no search are
+searches, or running the search locally instead of through MIG.</p></li></ul></section></section><section id="search-algorithm"><header><h2><a href="#id5">2   Search algorithm</a></h2></header><p>FM traverse a directory tree starting from a root path and until no search are
 longer active. FM traverses a given path only once, regardless of the number of
 searches that are being performed. When FM enters a directory, it activates
 searches that apply to the directory, and deactivates the ones that don't.
-As soon as no searches are active, FM either tries another root path, or exits.</p>
-<p>Inside a given directory, FM evaluates all files one by one. The filters on
+As soon as no searches are active, FM either tries another root path, or exits.</p><p>Inside a given directory, FM evaluates all files one by one. The filters on
 fileinfo are first applied: name, size, mode and mtime. If the matchall option
 is set, and at least one of the fileinfo filter does not match, the file is
 discarded. If matchall is not set, or if all fileinfo filters match, the
-filters on file content are then evaluated: content regex and checksums.</p>
-<p>The case of content regex is particular, because evaluation of the file stops
+content regexes and hashes are evaluated next. This approach increases the speed
+of a search because fileinfo filters are significantly faster than content
+filters.</p><p>The case of content regex is particular, because evaluation of the file stops
 at the first positive occurence of the regex in a file. This is meant to speed
-up searches on large files that may match a large number of times.</p>
-<p>Once all searches are deactivated, FM builds a result object from the internal
+up searches on large files that may match a large number of times. The <cite>macroal</cite>
+flag changes this behavior by requiring that all lines must match the content
+regexes. When <cite>macroal</cite> is set, content inspection reads the entire file.</p><p>Once all searches are deactivated, FM builds a result object from the internal
 checks results. For each search, each file that matched is included once. If
 the search was set to <cite>matchall</cite>, the search parameters are not included in the
 results (we now that all of them must have matched). If <cite>matchall</cite> was not set,
 then each file returns the list of checks that matched it. It is thus possible
 to have, in one same search, a file match of a file size filter, and another
-one match on a sha256 checksum.</p>
-<div class="section" id="search-activation-deactivation">
-<h2><a class="toc-backref" href="#id6">2.1&nbsp;&nbsp;&nbsp;Search activation &amp; deactivation</a></h2>
-<p>While processing the directory structure, FM compares the current path with the
+one match on a sha256 checksum.</p><section id="search-activation-deactivation"><header><h3><a href="#id6">2.1   Search activation &amp; deactivation</a></h3></header><p>While processing the directory structure, FM compares the current path with the
 search paths of each search. A single search can have multiple paths, and if
-one of them matches the current path, the search is activated.</p>
-<p>For example, if the current path is <cite>/var/lib/postgres</cite>, and a search has a
-path set to <cite>/var</cite>, the search will be activated for the current directory.</p>
-<p>Unless the value of <cite>maxdepth</cite> indicates that the search should not go beyond a
+one of them matches the current path, the search is activated.</p><p>For example, if the current path is <cite>/var/lib/postgres</cite>, and a search has a
+path set to <cite>/var</cite>, the search will be activated for the current directory.</p><p>Unless the value of <cite>maxdepth</cite> indicates that the search should not go beyond a
 certain number of subdirectories, and that number is reached. In which case,
-the search is deactivated.</p>
-</div>
-</div>
-</div>
-</body>
-</html>
+the search is deactivated.</p></section><section id="note-on-symbolic-links"><header><h3><a href="#id7">2.2   Note on symbolic links</a></h3></header><p>FM does not follow directory links but will follow file links. Directory links
+could lead FM to scan a path that is far out of its initial search scope, and
+can also lead to loops. A warning will be stored in the results when a directory
+link was encountered and not followed.</p></section></section></body></html>

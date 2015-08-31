@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -60,20 +61,29 @@ func printHelp(isCmd bool) {
 
 Options
 -------
-%smaxdepth <int> - limit search to that many subdirectories
-		  ex: maxdepth 3
-%smatchall	- all search parameters must match on a given file for it to
-		  return as a match. off by default. deactivates 'matchany' if set.
-		  ex: matchall
-%smatchany	- any search parameter must match on a given file for it to
-		  return as a match. on by default. deactivates 'matchall' if set.
-		  ex: matchany
-%smatchlimit <int> - limit the number of files that can be matched by a search.
-		   the default limit is set to 1000. search will stop once the limit
-		   is reached.
+%smaxdepth <int>	- limit search depth to <int> levels. default to 1000.
+			  ex: %smaxdepth 3
+%smatchall		- all search parameters must match on a given file for it to
+			  return as a match. off by default. deactivates 'matchany' if set.
+			  ex: %smatchall
+%smatchany		- any search parameter must match on a given file for it to
+			  return as a match. on by default. deactivates 'matchall' if set.
+			  ex: %smatchany
+%smacroal		- match all contents regexes on all lines. off by default.
+			  ex: %smacroal
+%smismatch=<filter>	- inverts the results for the given filter, used to list files
+			  that did not match a given expression, instead of the default
+			  instead of files that match it.
+			  ex: %smismatch content
+%smatchlimit <int>	- limit the number of files that can be matched by a search.
+			  the default limit is set to 1000. search will stop once the limit
+			  is reached.
 
-detailled doc at http://mig.mozilla.org/doc/module_file.html
-`, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash)
+Module documentation is at http://mig.mozilla.org/doc/module_file.html
+Cheatsheet and examples are at http://mig.mozilla.org/doc/cheatsheet.rst.html
+`, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash,
+		dash, dash, dash, dash, dash, dash, dash, dash, dash,
+		dash, dash, dash, dash, dash, dash, dash, dash)
 
 	return
 }
@@ -88,6 +98,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 	for {
 		var label string
 		var search search
+		// sane defaults
+		search.Options.MatchAll = true
+		search.Options.MaxDepth = 1000
+		search.Options.MatchLimit = 1000
 		for {
 			fmt.Println("Give a name to this search, or 'done' to exit")
 			fmt.Printf("label> ")
@@ -146,16 +160,23 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				continue
 			}
 			arr := strings.SplitN(input, " ", 2)
-			if len(arr) != 2 {
-				fmt.Printf("Invalid input format!\n")
-				continue
-			}
 			checkType := arr[0]
-			checkValue := arr[1]
+			checkValue := ""
+			if len(arr) > 1 {
+				checkValue = arr[1]
+			}
 			switch checkType {
 			case "path":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				search.Paths = append(search.Paths, checkValue)
 			case "name":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateRegex(checkValue)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -163,6 +184,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.Names = append(search.Names, checkValue)
 			case "size":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateSize(checkValue)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -170,6 +195,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.Sizes = append(search.Sizes, checkValue)
 			case "mode":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateRegex(checkValue)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -177,6 +206,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.Modes = append(search.Modes, checkValue)
 			case "mtime":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateMtime(checkValue)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -184,6 +217,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.Mtimes = append(search.Mtimes, checkValue)
 			case "content":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateRegex(checkValue)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -191,6 +228,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.Contents = append(search.Contents, checkValue)
 			case "md5":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateHash(checkValue, checkMD5)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -198,6 +239,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.MD5 = append(search.MD5, checkValue)
 			case "sha1":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateHash(checkValue, checkSHA1)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -205,6 +250,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.SHA1 = append(search.SHA1, checkValue)
 			case "sha256":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateHash(checkValue, checkSHA256)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -212,6 +261,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.SHA256 = append(search.SHA256, checkValue)
 			case "sha384":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateHash(checkValue, checkSHA384)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -219,6 +272,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.SHA384 = append(search.SHA384, checkValue)
 			case "sha512":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateHash(checkValue, checkSHA512)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -226,6 +283,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.SHA512 = append(search.SHA512, checkValue)
 			case "sha3_224":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateHash(checkValue, checkSHA3_224)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -233,6 +294,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.SHA3_224 = append(search.SHA3_224, checkValue)
 			case "sha3_256":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateHash(checkValue, checkSHA3_256)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -240,6 +305,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.SHA3_256 = append(search.SHA3_256, checkValue)
 			case "sha3_384":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateHash(checkValue, checkSHA3_384)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
@@ -247,12 +316,62 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				}
 				search.SHA3_384 = append(search.SHA3_384, checkValue)
 			case "sha3_512":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
 				err = validateHash(checkValue, checkSHA3_512)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
 					continue
 				}
 				search.SHA3_512 = append(search.SHA3_512, checkValue)
+			case "maxdepth":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
+			case "matchall":
+				if checkValue != "" {
+					fmt.Println("This option doesn't take arguments, try again")
+					continue
+				}
+				search.Options.MatchAll = true
+
+			case "matchany":
+				if checkValue != "" {
+					fmt.Println("This option doesn't take arguments, try again")
+					continue
+				}
+				search.Options.MatchAll = false
+			case "macroal":
+				if checkValue != "" {
+					fmt.Println("This option doesn't take arguments, try again")
+					continue
+				}
+				search.Options.Macroal = true
+			case "mismatch":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
+				err = validateMismatch(checkValue)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Options.Mismatch = append(search.Options.Mismatch, checkValue)
+			case "matchlimit":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
+				v, err := strconv.ParseFloat(checkValue, 64)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Options.MatchLimit = v
 			default:
 				fmt.Printf("Invalid method!\n")
 				continue
@@ -274,10 +393,10 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		err error
 		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha256s,
-		sha384s, sha512s, sha3_224s, sha3_256s, sha3_384s, sha3_512s flagParam
-		maxdepth, matchlimit float64
-		matchall, matchany   bool
-		fs                   flag.FlagSet
+		sha384s, sha512s, sha3_224s, sha3_256s, sha3_384s, sha3_512s, mismatch flagParam
+		maxdepth, matchlimit                 float64
+		matchall, matchany, macroal, verbose bool
+		fs                                   flag.FlagSet
 	)
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
 		printHelp(true)
@@ -299,10 +418,13 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.Var(&sha3_256s, "sha3_256", "see help")
 	fs.Var(&sha3_384s, "sha3_384", "see help")
 	fs.Var(&sha3_512s, "sha3_512", "see help")
-	fs.Float64Var(&maxdepth, "maxdepth", 0, "see help")
-	fs.Float64Var(&matchlimit, "matchlimit", 0, "see help")
+	fs.Var(&mismatch, "mismatch", "see help")
+	fs.Float64Var(&maxdepth, "maxdepth", 1000, "see help")
+	fs.Float64Var(&matchlimit, "matchlimit", 1000, "see help")
 	fs.BoolVar(&matchall, "matchall", true, "see help")
 	fs.BoolVar(&matchany, "matchany", false, "see help")
+	fs.BoolVar(&macroal, "macroal", false, "see help")
+	fs.BoolVar(&debug, "verbose", false, "see help")
 	err = fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -325,9 +447,14 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	s.SHA3_512 = sha3_512s
 	s.Options.MaxDepth = maxdepth
 	s.Options.MatchLimit = matchlimit
+	s.Options.Macroal = macroal
+	s.Options.Mismatch = mismatch
 	s.Options.MatchAll = matchall
 	if matchany {
 		s.Options.MatchAll = false
+	}
+	if verbose {
+		s.Options.Debug = "print"
 	}
 	p := newParameters()
 	p.Searches["s1"] = s

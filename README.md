@@ -80,11 +80,13 @@ the console interface.
 [![MIG youtube video](http://img.youtube.com/vi/wJwj5YB6FFA/0.jpg)](http://www.youtube.com/watch?v=wJwj5YB6FFA)
 
 MIG was recently presented at the SANS DFIR Summit in Austin, Tx. You can watch the recording below:
+
 [![MIG @ DFIR Summit 2015](http://img.youtube.com/vi/pLyKPf3VsxM/0.jpg)](http://www.youtube.com/watch?v=pLyKPf3VsxM)
 
 Discussion
 ----------
-Join **#mig** on [irc.mozilla.org](https://wiki.mozilla.org/IRC)
+Join **#mig** on [irc.mozilla.org](https://wiki.mozilla.org/IRC) (use a web
+client such as [mibbit](https://chat.mibbit.com) ).
 
 Documentation
 -------------

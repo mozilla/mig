@@ -1,18 +1,21 @@
 ================================
 Mozilla InvestiGator Cheat Sheet
 ================================
-:Author: Guillaume Destuynder <kang@mozilla.com>
 
 .. sectnum::
 .. contents:: Table of Contents
 
 This is a list of common operations you may want to run with MIG.
 
+All examples use the MIG command line cli. You can run the examples on your
+local machine by specifying `-t local`. The `local` target invokes MIG modules
+in the cli instead of calling mig-agent like a normal investigation would.
+
 File module
 -----------
 
 You can find detailled documentation by running `mig file help` or in the
-online doc at `doc/module_file.html`.
+online doc at `doc/module_file.html`_.
 
 .. _`doc/module_file.html`: http://mig.mozilla.org/doc/module_file.html
 
@@ -75,6 +78,44 @@ You can find more device id's with the command `lsusb`.
 .. code:: bash
 
 	mig file -matchany -path /sys/devices/ -name "^uevent$" -content "PRODUCT=20a0/4107"
+
+Find "authorized_keys" files with unknown pubkeys
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you know which keys should be present in an authorized_keys file, the `file`
+module can be used to find file that have extra, unknown, keys.
+
+The first thing needed is a regex with the list of valid public keys. The regex
+will also accept any line that starts with a comment character `#` or empty
+lines.
+
+One important thing to note is that public keys are base64 encoded and contain
+slashes "/" and pluses "+" that conflict with Go's regex format. Those need to
+be escaped prior to being passed to MIG.
+
+.. code:: bash
+
+	echo $PUBKEY | sed "s;\/;\\\/;" | sed "s;\+;\\\+;"
+
+A valid pubkey regex could be:
+
+.. code:: bash
+
+	"^((#.+)|(\s+)?|(ssh-rsa AAAAB3NznoMzq\+2r2Vx2bhFWMU3Uuid 1061157)|(ssh-rsa AAYWH\+0XAASw== ffxbld_rsa))$"
+
+We can require that this regex must match **every** line of a file using the
+`-macroal` parameter, which stand for "Match All Content Regexes On All Lines".
+
+Then, using the `-mismatch content` option, we can ask the file module to return
+the files that **don't** conform to the regex. The combination of the content
+regex, the `macroal` option and the `-mismatch content` option together will
+return files that have unknown keys.
+
+.. code:: bash
+
+	mig file -path /home -path /root -name "^authorized_keys" \
+	-content "^((#.+)|(\s+)?|(ssh-rsa AAAAB3NznoMzq\+2r2Vx2bhFWMU3Uuid 1061157)|(ssh-rsa AAYWH\+0XAASw== ffxbld_rsa))$" \
+	-macroal -mismatch content
 
 Netstat module
 --------------

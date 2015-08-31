@@ -163,8 +163,53 @@ Several options can be applied to a search:
 
 * **matchall** indicates that within a given search, all search filters must
   match on one file for it to be included in the results. Being a boolean,
-  `matchall` is not set by default. The MIG command line sets it automatically,
-  the console does not.
+  `matchall` is not set by default, but the command line and the console set it
+  when creating file searches. Use `matchany` to deactivate it. `matchall` has
+  a strong impact on search performances. See "Search algorithm".
+
+  Examples:
+	* `-name vim -sha1 21345asd -matchall` -> (name=vim AND sha1=21345asd)
+	* `-name vim -sha1 21345asd -matchany` -> (name=vim OR sha1=21345asd)
+
+* **macroal** stands for "Match All Contents Regexes On All Lines". It's a boolean
+  option that requires that all `content` regexes must match on all the lines of
+  a file. By default, content regexes are applied at the file level and will
+  return a match if one line matches one regex, and if another line matches another
+  regex. When the `macroal` option is set, each line in the file must match all
+  content regexes defined in a given search to return a match. It is set to not
+  set by default.
+
+  example: `-path /home -name authorized_keys -content "^((#.+)|(\s+)|...list of ssh keys...)$" -macroal`
+
+  will list authorized_keys file that have contain either a comment, an empty
+  line or one of the listed ssh keys. It will only return a file in the results
+  if all the lines of the file match the regex.
+
+* **mismatch=<filter>** inverts the results for the given filter. This can be used
+  to list files that did not match a given check, instead of the default which
+  returns files that match a check.
+
+  For example, the following search will return files where all lines match the
+  content regex:
+
+  `mig file -path /home -name ^authorized_keys -content "^((#.+)|(\s+)|..1stkey..|..2ndkey..)$" -macroal`
+
+  But this search cannot list files that fail to match the content regex, which
+  could be useful if we're looking for a file that contains a rogue SSH key.
+  The mismatch option can be applied to the content filter to achieve this:
+
+  `mig file -path /home -name ^authorized_keys -content "^((#.+)|(\s+)|..1stkey..|..2ndkey..)$" -macroal -mismatch content`
+
+  This search will locate all authorized_keys files and the inspect their
+  content. The `macroal` flag indicates that all lines of a file must match the
+  content regex. The `mismatch` flag inverses that logic, and thus if a least
+  one line does not match the content regex, the file will be returned as a
+  match.
+
+  The `mismatch` option can be applied to all check types: name, size, mode,
+  mtime, content, md5, sha1, sha256, ... It can be specified multiple times:
+
+  example: `-path /usr -name "^vim$" -content "linux-x86-64\.so" -sha1 943633c85bb80d39532450decf1f723735313f1f -sha1 350ac204ac8084590b209c33f39f09986f0ba682 -mismatch=content -mismatch=sha1`
 
 * **matchlimit** controls how many files can be returned by a single search.
   This safeguard prevents a single run of the file module from crashing before
@@ -186,11 +231,15 @@ Inside a given directory, FM evaluates all files one by one. The filters on
 fileinfo are first applied: name, size, mode and mtime. If the matchall option
 is set, and at least one of the fileinfo filter does not match, the file is
 discarded. If matchall is not set, or if all fileinfo filters match, the
-filters on file content are then evaluated: content regex and checksums.
+content regexes and hashes are evaluated next. This approach increases the speed
+of a search because fileinfo filters are significantly faster than content
+filters.
 
 The case of content regex is particular, because evaluation of the file stops
 at the first positive occurence of the regex in a file. This is meant to speed
-up searches on large files that may match a large number of times.
+up searches on large files that may match a large number of times. The `macroal`
+flag changes this behavior by requiring that all lines must match the content
+regexes. When `macroal` is set, content inspection reads the entire file.
 
 Once all searches are deactivated, FM builds a result object from the internal
 checks results. For each search, each file that matched is included once. If
@@ -213,3 +262,11 @@ path set to `/var`, the search will be activated for the current directory.
 Unless the value of `maxdepth` indicates that the search should not go beyond a
 certain number of subdirectories, and that number is reached. In which case,
 the search is deactivated.
+
+Note on symbolic links
+~~~~~~~~~~~~~~~~~~~~~~
+
+FM does not follow directory links but will follow file links. Directory links
+could lead FM to scan a path that is far out of its initial search scope, and
+can also lead to loops. A warning will be stored in the results when a directory
+link was encountered and not followed.

@@ -20,10 +20,8 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/crypto/sha3"
 	"hash"
 	"io"
-	"mig.ninja/mig/modules"
 	"os"
 	"path"
 	"path/filepath"
@@ -32,9 +30,18 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/sha3"
+	"mig.ninja/mig/modules"
 )
 
 var debug bool = false
+
+func debugprint(format string, a ...interface{}) {
+	if debug {
+		fmt.Fprintf(os.Stderr, format, a...)
+	}
+}
 
 type module struct {
 }
@@ -88,10 +95,13 @@ type search struct {
 }
 
 type options struct {
-	MaxDepth   float64 `json:"maxdepth"`
-	RemoteFS   bool    `json:"remotefs,omitempty"`
-	MatchAll   bool    `json:"matchall"`
-	MatchLimit float64 `json:"matchlimit"`
+	MaxDepth   float64  `json:"maxdepth"`
+	RemoteFS   bool     `json:"remotefs,omitempty"`
+	MatchAll   bool     `json:"matchall"`
+	Macroal    bool     `json:"macroal"`
+	Mismatch   []string `json:"mismatch"`
+	MatchLimit float64  `json:"matchlimit"`
+	Debug      string   `json:"debug,omitempty"`
 }
 
 type checkType uint64
@@ -116,14 +126,14 @@ const (
 )
 
 type check struct {
-	code               checkType
-	matched            uint64
-	matchedfiles       []string
-	value              string
-	regex              *regexp.Regexp
-	minsize, maxsize   uint64
-	minmtime, maxmtime time.Time
-	inversematch       bool
+	code                   checkType
+	matched                uint64
+	matchedfiles           []string
+	value                  string
+	regex                  *regexp.Regexp
+	minsize, maxsize       uint64
+	minmtime, maxmtime     time.Time
+	inversematch, mismatch bool
 }
 
 func (s *search) makeChecks() (err error) {
@@ -132,8 +142,11 @@ func (s *search) makeChecks() (err error) {
 			err = fmt.Errorf("makeChecks() -> %v", e)
 		}
 	}()
+	if s.Options.Debug == "print" {
+		debug = true
+	}
 	if s.Options.MaxDepth == 0 {
-		s.Options.MaxDepth = 10000
+		s.Options.MaxDepth = 1000
 	}
 	if s.Options.MatchLimit == 0 {
 		s.Options.MatchLimit = 1000
@@ -145,6 +158,9 @@ func (s *search) makeChecks() (err error) {
 		if len(v) > 1 && v[:1] == "!" {
 			c.inversematch = true
 			v = v[1:]
+		}
+		if s.hasMismatch("content") {
+			c.mismatch = true
 		}
 		c.regex = regexp.MustCompile(v)
 		s.checks = append(s.checks, c)
@@ -158,6 +174,9 @@ func (s *search) makeChecks() (err error) {
 			c.inversematch = true
 			v = v[1:]
 		}
+		if s.hasMismatch("name") {
+			c.mismatch = true
+		}
 		c.regex = regexp.MustCompile(v)
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
@@ -170,6 +189,9 @@ func (s *search) makeChecks() (err error) {
 		if err != nil {
 			panic(err)
 		}
+		if s.hasMismatch("size") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -177,6 +199,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkMode
 		c.value = v
+		if s.hasMismatch("mode") {
+			c.mismatch = true
+		}
 		c.regex = regexp.MustCompile(v)
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
@@ -185,6 +210,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkMtime
 		c.value = v
+		if s.hasMismatch("mtime") {
+			c.mismatch = true
+		}
 		c.minmtime, c.maxmtime, err = parseMtime(v)
 		if err != nil {
 			panic(err)
@@ -196,6 +224,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkMD5
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("md5") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -203,6 +234,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA1
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha1") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -210,6 +244,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA256
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha256") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -217,6 +254,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA384
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha384") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -224,6 +264,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA512
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha512") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -231,6 +274,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA3_224
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha3_224") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -238,6 +284,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA3_256
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha3_256") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -245,6 +294,9 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA3_384
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha3_384") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
@@ -252,10 +304,22 @@ func (s *search) makeChecks() (err error) {
 		var c check
 		c.code = checkSHA3_512
 		c.value = strings.ToUpper(v)
+		if s.hasMismatch("sha3_512") {
+			c.mismatch = true
+		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
 	return
+}
+
+func (s *search) hasMismatch(filter string) bool {
+	for _, fi := range s.Options.Mismatch {
+		if fi == filter {
+			return true
+		}
+	}
+	return false
 }
 
 func parseSize(size string) (minsize, maxsize uint64, err error) {
@@ -336,10 +400,8 @@ func parseMtime(mtime string) (minmtime, maxmtime time.Time, err error) {
 		minmtime = time.Date(1111, time.January, 11, 11, 11, 11, 11, time.UTC)
 		maxmtime = time.Now().Add(-d)
 	}
-	if debug {
-		fmt.Printf("Parsed mtime filter with minmtime '%s' and maxmtime '%s'\n",
-			minmtime.String(), maxmtime.String())
-	}
+	debugprint("Parsed mtime filter with minmtime '%s' and maxmtime '%s'\n",
+		minmtime.String(), maxmtime.String())
 	return
 }
 
@@ -392,135 +454,115 @@ func (r *run) ValidateParameters() (err error) {
 	var labels []string
 	for label, s := range r.Parameters.Searches {
 		labels = append(labels, label)
-		if debug {
-			fmt.Printf("validating label '%s'\n", label)
-		}
+		debugprint("validating label '%s'\n", label)
 		err = validateLabel(label)
 		if err != nil {
 			return
 		}
+		if len(s.Paths) == 0 {
+			return fmt.Errorf("invalid empty search path, must have at least one search path")
+		}
 		for _, r := range s.Contents {
-			if debug {
-				fmt.Printf("validating content '%s'\n", r)
-			}
+			debugprint("validating content '%s'\n", r)
 			err = validateRegex(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Names {
-			if debug {
-				fmt.Printf("validating name '%s'\n", r)
-			}
+			debugprint("validating name '%s'\n", r)
 			err = validateRegex(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Sizes {
-			if debug {
-				fmt.Printf("validating size '%s'\n", r)
-			}
+			debugprint("validating size '%s'\n", r)
 			err = validateSize(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Modes {
-			if debug {
-				fmt.Printf("validating mode '%s'\n", r)
-			}
+			debugprint("validating mode '%s'\n", r)
 			err = validateRegex(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, r := range s.Mtimes {
-			if debug {
-				fmt.Printf("validating mtime '%s'\n", r)
-			}
+			debugprint("validating mtime '%s'\n", r)
 			err = validateMtime(r)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.MD5 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkMD5)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA1 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA1)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA256 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA256)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA384 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA384)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA512 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA512)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_224 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA3_224)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_256 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA3_256)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_384 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA3_384)
 			if err != nil {
 				return
 			}
 		}
 		for _, hash := range s.SHA3_512 {
-			if debug {
-				fmt.Printf("validating hash '%s'\n", hash)
-			}
+			debugprint("validating hash '%s'\n", hash)
 			err = validateHash(hash, checkSHA3_512)
+			if err != nil {
+				return
+			}
+		}
+		for _, mismatch := range s.Options.Mismatch {
+			debugprint("validating mismatch '%s'\n", mismatch)
+			err = validateMismatch(mismatch)
 			if err != nil {
 				return
 			}
@@ -618,6 +660,18 @@ func validateHash(hash string, hashType checkType) error {
 	return nil
 }
 
+func validateMismatch(filter string) error {
+	if len(filter) < 1 {
+		return fmt.Errorf("empty filters are not permitted")
+	}
+	filterregexp := `^(name|size|mode|mtime|content|md5|sha1|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512)$`
+	re := regexp.MustCompile(filterregexp)
+	if !re.MatchString(filter) {
+		return fmt.Errorf("The syntax of filter '%s' is invalid. Must match regex %s", filter, filterregexp)
+	}
+	return nil
+}
+
 /* Statistic counters:
 - FilesCount is the total number of files inspected
 - Openfailed is the count of files that could not be opened
@@ -668,9 +722,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	}
 
 	for label, search := range r.Parameters.Searches {
-		if debug {
-			fmt.Println("making checks for label", label)
-		}
+		debugprint("making checks for label %s\n", label)
 		err := search.makeChecks()
 		if err != nil {
 			panic(err)
@@ -687,9 +739,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 				}
 			}
 			if !alreadyPresent {
-				if debug {
-					fmt.Println("adding path", p, "to list of locations to traverse")
-				}
+				debugprint("adding path %s to list of locations to traverse\n", p)
 				roots = append(roots, p)
 			}
 		}
@@ -711,22 +761,16 @@ func (r *run) Run(in io.Reader) (resStr string) {
 		}
 		for _, p := range traversed {
 			if root == p {
-				if debug {
-					fmt.Println("skipping already traversed root:", root)
-				}
+				debugprint("skipping already traversed root: %s\n", root)
 				goto skip
 			}
 		}
-		if debug {
-			fmt.Println("entering root", root)
-		}
+		debugprint("entering root %s\n", root)
 		traversed, err = r.pathWalk(root, roots)
 		if err != nil {
 			// log errors and continue
 			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
-			if debug {
-				fmt.Printf("pathWalk failed with error '%v'\n", err)
-			}
+			debugprint("pathWalk failed with error '%v'\n", err)
 		}
 	skip:
 	}
@@ -737,7 +781,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	}
 
 	if debug {
-		fmt.Println("---- results ----")
+		debugprint("---- results ----")
 		var tmpres modules.Result
 		err = json.Unmarshal([]byte(resStr), &tmpres)
 		printedResults, err := r.PrintResults(tmpres, false)
@@ -745,7 +789,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 			panic(err)
 		}
 		for _, res := range printedResults {
-			fmt.Println(res)
+			debugprint(res)
 		}
 	}
 	return
@@ -762,9 +806,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 			err = fmt.Errorf("pathWalk() -> %v", e)
 		}
 	}()
-	if debug {
-		fmt.Printf("pathWalk: walking into '%s'\n", path)
-	}
+	debugprint("pathWalk: walking into '%s'\n", path)
 	// as we traversed the directory structure from the shortest path to the longest, we
 	// may end up traversing directories that are supposed to be processed later on.
 	// when that happens, flag the directory in the traversed list to tell the top-level
@@ -781,9 +823,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 		// the search paths with the current path. if one matches,
 		// then the search is activated.
 		for _, p := range search.Paths {
-			if debug {
-				fmt.Printf("comparing current path '%s' with candidate search '%s'\n", path, p)
-			}
+			debugprint("comparing current path '%s' with candidate search '%s'\n", path, p)
 			if len(path) >= len(p) && p == path[:len(p)] {
 				search.activate()
 				search.markcurrent()
@@ -796,9 +836,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 		// of active searches, and deactivate a search that is too deep
 		if search.isactive {
 			if search.currentdepth > uint64(search.Options.MaxDepth) {
-				if debug {
-					fmt.Printf("deactivating search '%s' because depth %d > %.0f\n", label, search.currentdepth, search.Options.MaxDepth)
-				}
+				debugprint("deactivating search '%s' because depth %d > %.0f\n", label, search.currentdepth, search.Options.MaxDepth)
 				search.deactivate()
 			} else {
 				activesearches++
@@ -813,9 +851,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 		}
 		r.Parameters.Searches[label] = search
 	}
-	if debug {
-		fmt.Printf("pathWalk: %d searches are currently active\n", activesearches)
-	}
+	debugprint("pathWalk: %d searches are currently active\n", activesearches)
 	if activesearches == 0 {
 		goto finish
 	}
@@ -832,9 +868,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 	t, _ = os.Lstat(path)
 	if t.Mode().IsDir() {
 		// target is a directory, process its content
-		if debug {
-			fmt.Printf("'%s' is a directory, processing its content\n", path)
-		}
+		debugprint("'%s' is a directory, processing its content\n", path)
 		dirContent, err := target.Readdir(-1)
 		if err != nil {
 			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
@@ -867,9 +901,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 					walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
 					continue
 				}
-				if debug {
-					fmt.Printf("'%s' links to '%s'\n", entryAbsPath, linkpath)
-				}
+				debugprint("'%s' links to '%s'\n", entryAbsPath, linkpath)
 				if linkmode.IsRegular() {
 					isLinkedFile = true
 				}
@@ -892,9 +924,7 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 			walkingErrors = append(walkingErrors, fmt.Sprintf("ERROR: %v", err))
 			goto finish
 		}
-		if debug {
-			fmt.Printf("'%s' links to '%s'\n", path, linkpath)
-		}
+		debugprint("'%s' links to '%s'\n", path, linkpath)
 		if linkmode.IsRegular() {
 			path = linkpath
 		} else {
@@ -926,9 +956,7 @@ finish:
 	for label, search := range r.Parameters.Searches {
 		if search.iscurrent {
 			search.decreasedepth()
-			if debug {
-				fmt.Printf("decreasing search depth for '%s' to '%d'\n", label, search.currentdepth)
-			}
+			debugprint("decreasing search depth for '%s' to '%d'\n", label, search.currentdepth)
 		}
 		r.Parameters.Searches[label] = search
 	}
@@ -974,15 +1002,11 @@ func (r *run) evaluateFile(file string) (err error) {
 		}
 	}()
 	stats.Filescount++
-	if debug {
-		fmt.Printf("evaluateFile: evaluating '%s'\n", file)
-	}
+	debugprint("evaluateFile: evaluating '%s'\n", file)
 	// store list of active searches to restore it before leaving
 	for label, search := range r.Parameters.Searches {
 		if search.isactive {
-			if debug {
-				fmt.Printf("evaluateFile: search '%s' is active\n", label)
-			}
+			debugprint("evaluateFile: search '%s' is active\n", label)
 			activeSearches = append(activeSearches, label)
 		}
 	}
@@ -1032,6 +1056,60 @@ func (r *run) evaluateFile(file string) (err error) {
 	return
 }
 
+/* wantThis() implements boolean logic to decide if a given check should be a match or not
+It's just 2 XOR chained one after the other.
+
+ Match | Inverse | Mismatch | Return
+-------+---------+----------+--------
+ true  ^  true   ^  true    = true
+ true  ^  true   ^  false   = false
+ true  ^  false  ^  true    = false
+ true  ^  false  ^  false   = true
+ false ^  true   ^  true    = false
+ false ^  true   ^  false   = true
+ false ^  false  ^  true    = true
+ false ^  false  ^  false   = false
+*/
+func (c check) wantThis(match bool) bool {
+	if match {
+		if c.inversematch {
+			if c.mismatch {
+				debugprint("wantThis=true\n")
+				return true
+			} else {
+				debugprint("wantThis=false\n")
+				return false
+			}
+		} else {
+			if c.mismatch {
+				debugprint("wantThis=false\n")
+				return false
+			} else {
+				debugprint("wantThis=true\n")
+				return true
+			}
+		}
+	} else {
+		if c.inversematch {
+			if c.mismatch {
+				debugprint("wantThis=false\n")
+				return false
+			} else {
+				debugprint("wantThis=true\n")
+				return true
+			}
+		} else {
+			if c.mismatch {
+				debugprint("wantThis=true\n")
+				return true
+			} else {
+				debugprint("wantThis=false\n")
+				return false
+			}
+		}
+	}
+}
+
 func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
 	matchedall = true
 	if (s.checkmask & checkName) != 0 {
@@ -1039,13 +1117,11 @@ func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
 			if (c.code & checkName) == 0 {
 				continue
 			}
-			ismatch := c.regex.MatchString(path.Base(fi.Name()))
-			// do ways we get a positive result: either the filename is a match against the
-			// regex, or the filename is not a match but inversematch is set to true
-			if (ismatch && !c.inversematch) || (!ismatch && c.inversematch) {
-				if debug {
-					fmt.Printf("file name '%s' matches regex '%s'\n", fi.Name(), c.value)
-				}
+			match := c.regex.MatchString(path.Base(fi.Name()))
+			if match {
+				debugprint("file name '%s' matches regex '%s'\n", fi.Name(), c.value)
+			}
+			if c.wantThis(match) {
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1063,11 +1139,12 @@ func (s search) checkMode(file string, fi os.FileInfo) (matchedall bool) {
 			if (c.code & checkMode) == 0 {
 				continue
 			}
-			if c.regex.MatchString(fi.Mode().String()) {
-				if debug {
-					fmt.Printf("file '%s' mode '%s' matches regex '%s'\n",
-						fi.Name(), fi.Mode().String(), c.value)
-				}
+			match := c.regex.MatchString(fi.Mode().String())
+			if match {
+				debugprint("file '%s' mode '%s' matches regex '%s'\n",
+					fi.Name(), fi.Mode().String(), c.value)
+			}
+			if c.wantThis(match) {
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1085,11 +1162,13 @@ func (s search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
 			if (c.code & checkSize) == 0 {
 				continue
 			}
-			if fi.Size() > int64(c.minsize) && fi.Size() < int64(c.maxsize) {
-				if debug {
-					fmt.Printf("file '%s' size '%d' is between %d and %d\n",
-						fi.Name(), fi.Size(), c.minsize, c.maxsize)
-				}
+			match := false
+			if fi.Size() >= int64(c.minsize) && fi.Size() <= int64(c.maxsize) {
+				match = true
+				debugprint("file '%s' size '%d' is between %d and %d\n",
+					fi.Name(), fi.Size(), c.minsize, c.maxsize)
+			}
+			if c.wantThis(match) {
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1107,12 +1186,14 @@ func (s search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
 			if (c.code & checkMtime) == 0 {
 				continue
 			}
+			match := false
 			if fi.ModTime().After(c.minmtime) && fi.ModTime().Before(c.maxmtime) {
-				if debug {
-					fmt.Printf("file '%s' mtime '%s' is between %s and %s\n",
-						fi.Name(), fi.ModTime().UTC().String(),
-						c.minmtime.String(), c.maxmtime.String())
-				}
+				match = true
+				debugprint("file '%s' mtime '%s' is between %s and %s\n",
+					fi.Name(), fi.ModTime().UTC().String(),
+					c.minmtime.String(), c.maxmtime.String())
+			}
+			if c.wantThis(match) {
 				c.storeMatch(file)
 			} else {
 				matchedall = false
@@ -1137,7 +1218,9 @@ func (r *run) checkContent(file string) {
 	// skip this check if no search has anything to run
 	// also used to keep track of the checks to run and exit early if possible
 	var checksstatus = make(map[string]map[int]bool)
-	doit := false
+	// keep track of matches lines
+	var macroalstatus = make(map[string]bool)
+	continuereadingfile := false
 	for label, search := range r.Parameters.Searches {
 		if !search.isactive {
 			continue
@@ -1148,10 +1231,10 @@ func (r *run) checkContent(file string) {
 			}
 			// init the map
 			checksstatus[label] = map[int]bool{i: false}
-			doit = true
+			continuereadingfile = true
 		}
 	}
-	if !doit {
+	if !continuereadingfile {
 		return
 	}
 	fd, err = os.Open(file)
@@ -1166,63 +1249,163 @@ func (r *run) checkContent(file string) {
 		if err := scanner.Err(); err != nil {
 			panic(err)
 		}
-		if !doit {
+		if !continuereadingfile {
 			break
 		}
-		doneany := false
+		hasactivechecks := false
 		for label, search := range r.Parameters.Searches {
 			// skip inactive searches or searches that don't have a content check
 			if !search.isactive || (search.checkmask&checkContent == 0) {
 				continue
 			}
+			// macroal is a flag used to keep track of all checks ran against the
+			// current line of the file. if one check fails to match on this line,
+			// the macroal flag is set to false
+			macroalstatus[label] = true
 			// apply the content checks regexes to the current scan
 			for i, c := range search.checks {
 				// skip this check if it's not a content check or if it has already matched
-				if c.code&checkContent == 0 || checksstatus[label][i] {
+				if c.code&checkContent == 0 || (checksstatus[label][i] && !search.Options.Macroal) {
 					continue
 				}
+				hasactivechecks = true
+
+				/* Matching Logic
+				When evaluating a content check against a line in a file, three criteria are considered:
+				1. did the regex match the line?
+				2. is the inversematch flag set on the check?
+				3. is the macroal option set on the search?
+				Based on these, the table below indicates the result of the search.
+
+				 Regex     | Inverse | MACROAL | Result
+				-----------+---------+---------+--------
+				 Match     |  False  |  True   | pass	-> must match all lines and current line matched
+				 Match     |  False  |  False  | pass	-> must match any line and current line matched
+				 Match     |  True   |  True   | fail	-> must match no line but current line matches
+				 Match     |  True   |  False  | fail	-> must not match at least one line but current line matched
+				 Not Match |  True   |  True   | pass	-> must match no line and current line didn't match
+				 Not Match |  True   |  False  | pass	-> must not match at least one line and current line didn't match
+				 Not Match |  False  |  True   | fail	-> much match all lines and current line didn't match
+				 Not Match |  False  |  False  | fail	-> much match any line and current line didn't match
+				*/
 				if c.regex.MatchString(scanner.Text()) {
-					if debug {
-						fmt.Printf("checkContent: regex '%s' match on line '%s'\n", c.value, scanner.Text())
-					}
+					// Regex Match
+					debugprint("checkContent: regex '%s' match on line '%s'\n", c.value, scanner.Text())
 					if !c.inversematch {
-						// we have a match, but we only store the filename
-						// if inversematch is not set
-						c.storeMatch(file)
+						if search.Options.Macroal {
+							debugprint("checkContent: [pass] must match all lines and current line matched. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
+						} else {
+							debugprint("checkContent: [pass] must match any line and current line matched. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
+							if c.wantThis(true) {
+								c.storeMatch(file)
+							}
+						}
+					} else {
+						if search.Options.Macroal {
+							debugprint("checkContent: [fail] must match no line but current line matched. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
+							macroalstatus[label] = false
+							if c.wantThis(true) {
+								c.storeMatch(file)
+							}
+						} else {
+							debugprint("checkContent: [fail] must not match at least one line but current line matched. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
+						}
+						debugprint("checkContent: regex '%s' is an inverse match and shouldn't have matched on line '%s'\n", c.value, scanner.Text())
 					}
 					checksstatus[label][i] = true
+				} else {
+					// Regex Not Match
+					if c.inversematch {
+						if search.Options.Macroal {
+							debugprint("checkContent: [pass] must match no line and current line didn't match. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
+						} else {
+							debugprint("checkContent: [pass] must not match at least one line and current line didn't match. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
+						}
+					} else {
+						if search.Options.Macroal {
+							debugprint("checkContent: [fail] much match all lines and current line didn't match. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
+							macroalstatus[label] = false
+							if c.wantThis(false) {
+								c.storeMatch(file)
+							}
+						} else {
+							debugprint("checkContent: [fail] much match any line and current line didn't match. regex='%s', line='%s'\n",
+								c.value, scanner.Text())
+						}
+					}
 				}
-				doneany = true
 				search.checks[i] = c
 			}
+			if search.Options.Macroal && !macroalstatus[label] {
+				// we have failed to match all content regexes on this line,
+				// no need to continue with this search on this file
+				search.deactivate()
+				r.Parameters.Searches[label] = search
+			}
 		}
-		if !doneany {
-			doit = false
+		if !hasactivechecks {
+			continuereadingfile = false
 		}
 	}
 	// done with file content inspection, loop over the checks one more time
-	// 1. If any check with inversematch=true failed to match, record that as a match.
-	// 2. deactivate searches that have matchall=true, but did not match against
+	// 1. if MACROAL is set and the search succeeded, store the file in each content check
+	// 2. If any check with inversematch=true failed to match, record that as a success
+	// 3. deactivate searches that have matchall=true, but did not match against
 	for label, search := range r.Parameters.Searches {
+		// 1. if MACROAL is set and the search succeeded, store the file in each content check
+		if search.Options.Macroal && macroalstatus[label] {
+			debugprint("checkContent: macroal is set and search label '%s' passed on file '%s'\n",
+				label, file)
+			// we match all content regexes on all lines of the file,
+			// as requested via the Macroal flag
+			// now store the filename in all checks
+			for i, c := range search.checks {
+				if c.code&checkContent == 0 {
+					continue
+				}
+				if c.wantThis(checksstatus[label][i]) {
+					c.storeMatch(file)
+				}
+				search.checks[i] = c
+			}
+			// we're done with this search
+			continue
+		}
+		// 2. If any check with inversematch=true failed to match, record that as a success
 		for i, c := range search.checks {
 			if c.code&checkContent == 0 {
 				continue
 			}
 			if !checksstatus[label][i] && c.inversematch {
-				// check has not matched and is set to inversematch, record
-				// this as a positive result
-				c.storeMatch(file)
+				debugprint("in search '%s' on file '%s', check '%s' has not matched and is set to inversematch, record this as a positive result\n",
+					label, file, c.value)
+				if c.wantThis(checksstatus[label][i]) {
+					c.storeMatch(file)
+				}
+				// adjust check status to true because the check did in fact match as an inverse
 				checksstatus[label][i] = true
 				search.checks[i] = c
 			}
 		}
+		// 3. deactivate searches that have matchall=true, but did not match against
 		if search.isactive && (search.checkmask&checkContent != 0) && search.Options.MatchAll {
 			for i, c := range search.checks {
 				if c.code&checkContent == 0 {
 					continue
 				}
 				// check hasn't matched, or has matched and we didn't want it to, deactivate the search
-				if !checksstatus[label][i] && (checksstatus[label][i] && c.inversematch) {
+				if !checksstatus[label][i] || (checksstatus[label][i] && c.inversematch) {
+					if c.wantThis(checksstatus[label][i]) {
+						c.storeMatch(file)
+						search.checks[i] = c
+					}
 					search.deactivate()
 				}
 			}
@@ -1262,10 +1445,12 @@ func (r *run) checkHash(file string, hashtype checkType) {
 				if c.code&hashtype == 0 {
 					continue
 				}
+				match := false
 				if c.value == hash {
-					if debug {
-						fmt.Printf("checkHash: file '%s' matches checksum '%s'\n", file, c.value)
-					}
+					match = true
+					debugprint("checkHash: file '%s' matches checksum '%s'\n", file, c.value)
+				}
+				if c.wantThis(match) {
 					c.storeMatch(file)
 				} else if search.Options.MatchAll {
 					search.deactivate()
@@ -1291,9 +1476,7 @@ func getHash(file string, hashType checkType) (hexhash string, err error) {
 		panic(err)
 	}
 	defer fd.Close()
-	if debug {
-		fmt.Printf("getHash: computing hash for '%s'\n", fd.Name())
-	}
+	debugprint("getHash: computing hash for '%s'\n", fd.Name())
 	var h hash.Hash
 	switch hashType {
 	case checkMD5:
@@ -1387,9 +1570,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 			}
 			// verify that each file has matched on all the checks
 			for _, foundFile := range allFiles {
-				if debug {
-					fmt.Println("checking if file", foundFile, "matched all checks")
-				}
+				debugprint("checking if file %s matched all checks\n", foundFile)
 				matchedallchecks := true
 				for _, c := range search.checks {
 					found := false
@@ -1399,9 +1580,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 						}
 					}
 					if !found {
-						if debug {
-							fmt.Println("check", c.code, "did not match")
-						}
+						debugprint("check %d did not match\n", c.code)
 						matchedallchecks = false
 						break
 					}
@@ -1415,8 +1594,6 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 			}
 			// now that we have a clean list of files that matched all checks, store it
 			for _, matchedFile := range matchedFiles {
-				if debug {
-				}
 				var mf matchedfile
 				mf.File = matchedFile
 				if mf.File != "" {
@@ -1517,14 +1694,12 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 	if stats.Totalhits > 0 {
 		res.FoundAnything = true
 	}
-	if debug {
-		fmt.Printf("Tested files:     %.0f\n"+
-			"Open Failed:      %.0f\n"+
-			"Total hits:       %.0f\n"+
-			"Execution time:   %s\n",
-			stats.Filescount, stats.Openfailed,
-			stats.Totalhits, stats.Exectime)
-	}
+	debugprint("Tested files:     %.0f\n"+
+		"Open Failed:      %.0f\n"+
+		"Total hits:       %.0f\n"+
+		"Execution time:   %s\n",
+		stats.Filescount, stats.Openfailed,
+		stats.Totalhits, stats.Exectime)
 	JsonResults, err := json.Marshal(res)
 	if err != nil {
 		panic(err)
