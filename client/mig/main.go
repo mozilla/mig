@@ -6,14 +6,17 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
-	"mig.ninja/mig/modules"
 	"os"
 	"os/signal"
 	"time"
+
+	"mig.ninja/mig"
+	"mig.ninja/mig/client"
+	"mig.ninja/mig/modules"
 )
 
 // build version
@@ -36,13 +39,14 @@ usage: %s <module> <global options> <module parameters>
 -render <mode>	defines how results should be rendered:
 		* text (default):	results are printed to the console
 		* map:			results are geolocated and a google map is generated
--t <target>	target to launch the action on. The default targets all online
-		agents (idle and offline agents are ignored).
+-t <target>	target to launch the action on. The default targets all online agents.
+		(idle and offline agents are ignored).
 		examples:
 		* linux agents:          -t "queueloc LIKE 'linux.%%'"
 		* agents named *mysql*:  -t "name like '%%mysql%%'"
 		* proxied linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
 		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
+		* run locally		 -t local
 -v		verbose output, includes debug information and raw queries
 
 Progress information is sent to stderr, silence it with "2>/dev/null".
@@ -167,6 +171,36 @@ func main() {
 	if err != nil || op.Parameters == nil {
 		panic(err)
 	}
+	// If running against the local target, don't post the action to the MIG API
+	// but run it locally instead.
+	if target == "local" {
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, op.Parameters)
+		if err != nil {
+			panic(err)
+		}
+		out := run.(modules.Runner).Run(bytes.NewBuffer(msg))
+		if len(out) == 0 {
+			panic("got empty results, run failed")
+		}
+		if _, ok := run.(modules.HasResultsPrinter); ok {
+			var modres modules.Result
+			err := json.Unmarshal([]byte(out), &modres)
+			if err != nil {
+				panic(err)
+			}
+			outRes, err := run.(modules.HasResultsPrinter).PrintResults(modres, true)
+			if err != nil {
+				panic(err)
+			}
+			for _, resLine := range outRes {
+				fmt.Println(resLine)
+			}
+		} else {
+			out = fmt.Sprintf("%s\n", out)
+		}
+		os.Exit(0)
+	}
+
 	a.Operations = append(a.Operations, op)
 
 	for _, arg := range os.Args[1:] {
