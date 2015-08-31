@@ -8,7 +8,7 @@
     <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
     <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
 
-    <title>MIG: Mozilla InvestiGator by mozilla</title>
+    <title>MIG: Mozilla InvestiGator</title>
   </head>
 
   <body>
@@ -16,7 +16,7 @@
     <header>
       <div class="container">
         <h1>MIG: Mozilla InvestiGator</h1>
-        <h2>Mozilla OpSec&#39;s for real-time digital forensics and incident response of modern infrastructures</h2>
+        <h2>Mozilla's real-time digital forensics and investigation platform.</h2>
         <section id="downloads">
           <table><tr>
             <td>
@@ -35,35 +35,144 @@
 
     <div class="container">
       <section id="main_content">
-        <h1>MIG Cheat Sheet</h1>
-        <p>A collection a examples for the MIG command line can be found here: <a href="doc/cheatsheet.rst.html">MIG Cheat Sheet</a></p>
+          <h2><span style="color: #FF7800;">Start Here -&gt;</span> <a href="doc/cheatsheet.rst.html">MIG Cheat Sheet</a></h2>
         <h1>Documentation</h1>
         <p>The pages below explain MIG in details.</p>
         <a href="doc/concepts.rst.html"><h2>Concepts & Internal Components</h2></a>
-        <p>The essential documentation to understand the architecture of MIG and the role of its various parts.</p>
+        <p>
+        The essential documentation to understand the architecture of MIG
+        and the role of its various parts.
+        </p>
         <a href="doc/configuration.rst.html"><h2>Configuration Guide</h2></a>
-        <p>A step by step guide to deploy a MIG platform, from the agent to the database.</p>
+        <p>
+        A step by step guide to deploy a MIG platform, from the agent to
+        the database.
+        </p>
         <a href="doc/data.rst.html"><h2>Data documentation</h2></a>
-        <p>MIG stores data in Postgresql. This page explains the database structure as well as some example queries.</p>
+        <p>
+        MIG stores data in Postgresql. This page explains the database
+        structure as well as some example queries.
+        </p>
         <a href="doc/api.rst.html"><h2>API endpoints</h2></a>
-        <p>Interactions between an investigator's console and the MIG platform is done through a REST api. This page describe its various endpoints.</p>
+        <p>
+        Interactions between an investigator's console and the MIG
+        platform is done through a REST api. This page describe its various
+        endpoints.
+        </p>
         <a href="doc/modules.rst.html"><h2>Modules writing</h2></a>
-        <p>At the core of MIG are modules that perform the investigation actions inside the agent. Writing your own modules is described in this document.</p>
+        <p>
+        At the core of MIG are modules that perform the investigation actions
+        inside the agent. Writing your own modules is described in this document.
+        </p>
         <h2>Modules documentation</h2>
         <table>
-        <tr><td><a href="doc/module_file.html"><h3>File</h3></a></td><td><p>The file module provides a basic tools to inspect a file system.
-        It is inspired by "find" on Unix, and implements a subset of its functionalities with a focus on speed of execution.</p></td></tr>
-        <tr><td><a href="doc/module_memory.html"><h3>Memory</h3></a></td><td><p>The memory module provides introspection into the memory of running processes.
-                It is based on the <a href="https://github.com/mozilla/masche">Masche</a> library and supports scanning of userland processes on Linux, MacOS and Windows.</p></td></tr>
-        <tr><td><h3>Netstat</h3></td><td><p>The netstat module exposes the ARP, IP, TCP and UDP status of a live system to investigators.</p></td></tr>
-        <tr><td><a href="doc/module_ping.html"><h3>Ping</h3></a></td><td><p>A module to perform ICMP, TCP and UDP pings from endpoints.</p></td></tr>
-        <tr><td><a href="doc/module_timedrift.html"><h3>Timedrift</h3></a></td><td><p>Timedrift checks endpoints local times against NTP servers, useful to find endpoints that are not in sync.</p></td></tr>
+        <tr>
+            <td>
+                <a href="doc/module_file.html"><h3>File</h3></a>
+            </td>
+            <td>
+                <p>The file module provides a basic tools to inspect a file system.
+                It is inspired by "find" on Unix, and implements a subset of its
+                functionalities with a focus on speed of execution.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <a href="doc/module_memory.html"><h3>Memory</h3></a>
+            </td>
+            <td>
+                <p>
+                The memory module provides introspection into the memory of running
+                processes. It is based on the 
+                <a href="https://github.com/mozilla/masche">Masche</a> library and
+                supports scanning of userland processes on Linux, MacOS and Windows.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <h3>Netstat</h3>
+            </td>
+            <td>
+                <p>
+                The netstat module exposes the ARP, IP, TCP and UDP status of a live
+                system to investigators.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <a href="doc/module_pkg.html"><h3>Package</h3></a>
+            </td>
+            <td>
+                <p>
+                The pkg module searches packages installed on an agent system that match
+                supplied regular expressions.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <a href="doc/module_scribe.html"><h3>Scribe</h3></a>
+            </td>
+            <td>
+                <p>
+                The scribe module provides host-based analysis based on a JSON document
+                containing a series of tests. The scribe module is intended to help with:
+                <ul>
+                    <li>Executing policy checks on systems, for example as part of using
+                        MIG for vulnerability management
+                    </li>
+                    <li>Execute more advanced file content tests involving dependencies.
+                    </li>
+                </ul>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <a href="doc/module_ping.html"><h3>Ping</h3></a>
+            </td>
+            <td>
+                <p>
+                A module to perform ICMP, TCP and UDP pings from endpoints.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <a href="doc/module_timedrift.html"><h3>Timedrift</h3></a>
+            </td>
+            <td>
+                <p>
+                Timedrift checks endpoints local times against NTP servers, useful to
+                find endpoints that are not in sync.
+                </p>
+            </td>
+        </tr>
         </table>
         <h2>Workers documentation</h2>
         <table>
-        <tr><td><a href="doc/worker_compliance_item.html"><h3>Compliance Item</h3></a></td><td><p>A data transformation worker that publishes compliance items
-        to MozDef.</p></td></tr>
-        <tr><td><a href="doc/worker_agent_intel.html"><h3>Agent Intel</h3></a></td><td><p>A worker that publishes details about endpoints to MozDef.</p></td></tr>
+        <tr>
+            <td>
+                <a href="doc/worker_compliance_item.html"><h3>Compliance Item</h3></a>
+            </td>
+            <td>
+                <p>
+                A data transformation worker that publishes compliance items to MozDef.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <a href="doc/worker_agent_intel.html"><h3>Agent Intel</h3></a></td>
+            <td>
+                <p>
+                A worker that publishes details about endpoints to MozDef.
+                </p>
+            </td>
+        </tr>
         </table>
       </section>
     </div>

@@ -1,146 +1,291 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Mozilla InvestiGator Cheat Sheet</title>
-    <meta charset="utf-8" />
-    <link href="docstyle.css" rel="stylesheet" />
-    <meta content="Guillaume Destuynder &lt;kang@mozilla.com&gt;" name="author" />
-</head>
-<body>
-    <h1>Mozilla InvestiGator Cheat Sheet</h1>
-    <aside class="topic contents" id="table-of-contents">
-        <h1>Table of Contents</h1>
-        <ul class="auto-toc">
-            <li><a href="#file-module">1   File module</a>
-                <ul class="auto-toc">
-                    <li><a href="#find-files-in-etc-cron-d-that-contain-mysql-on-hosts-buildbot">1.1   Find files in /etc/cron.d that contain "mysql://" on hosts "<em>buildbot</em>"</a></li>
-                    <li><a href="#find-files-etc-passwd-that-have-been-modified-in-the-past-2-days">1.2   Find files /etc/passwd that have been modified in the past 2 days</a></li>
-                    <li><a href="#find-endpoints-with-high-uptime">1.3   Find endpoints with high uptime</a></li>
-                    <li><a href="#find-endpoints-running-process-sbin-auditd">1.4   Find endpoints running process "/sbin/auditd"</a></li>
-                    <li><a href="#find-which-machines-have-a-specific-usb-device-connected">1.5   Find which machines have a specific USB device connected</a></li>
-                </ul>
-            </li>
-            <li><a href="#netstat-module">2   Netstat module</a>
-                <ul class="auto-toc">
-                    <li><a href="#searching-for-a-fraudulent-ip">2.1   Searching for a fraudulent IP</a></li>
-                    <li><a href="#locating-a-device-by-its-mac-address">2.2   Locating a device by its mac address</a></li>
-                    <li><a href="#listing-endpoints-that-have-active-connections-to-the-internet">2.3   Listing endpoints that have active connections to the Internet</a></li>
-                </ul>
-            </li>
-            <li><a href="#ping-module">3   Ping module</a>
-                <ul class="auto-toc">
-                    <li><a href="#test-web-connectivity-to-google">3.1   Test web connectivity to google</a></li>
-                    <li><a href="#list-endpoints-that-cannot-ping-a-destination">3.2   List endpoints that cannot ping a destination</a></li>
-                </ul>
-            </li>
-            <li><a href="#timedrift-module">4   Timedrift module</a></li>
-            <li><a href="#advanced-targetting">5   Advanced targetting</a>
-                <ul class="auto-toc">
-                    <li><a href="#target-agents-that-found-results-in-a-previous-action">5.1   Target agents that found results in a previous action</a></li>
-                </ul>
-            </li>
-        </ul>
-    </aside>
-    <p>This is a list of common operations you may want to run with MIG.</p>
-    <section id="file-module">
-        <h2>1   File module</h2>
-        <p>You can find detailled documentation by running <cite>mig file help</cite> or in the online doc at <cite>doc/module_file.html</cite>.</p>
-        <section id="find-files-in-etc-cron-d-that-contain-mysql-on-hosts-buildbot">
-            <h3>1.1   Find files in /etc/cron.d that contain "mysql://" on hosts "<em>buildbot</em>"</h3>
-            <p>This is a simple file content check that looks into all the files contained in <cite>/etc/cron.d</cite> for a string that matched <cite>mysql://</cite>.</p>
-            <pre class="code bash">mig file -t <span class="s2">"environment-&gt;&gt;'os'='linux' AND name LIKE '%buildbot%'"</span> -path /etc/cron.d/ -content <span class="s2">"mysql://"</span></pre>
-        </section>
-        <section id="find-files-etc-passwd-that-have-been-modified-in-the-past-2-days">
-            <h3>1.2   Find files /etc/passwd that have been modified in the past 2 days</h3>
-            <p>The <cite>mtime</cite> check of the file module matches against the last modified timestamp of a file.</p>
-            <pre class="code bash">mig file -t <span class="s2">"environment-&gt;&gt;'os'='linux'"</span> -path /etc/passwd -mtime &lt;2d</pre>
-        </section>
-        <section id="find-endpoints-with-high-uptime">
-            <h3>1.3   Find endpoints with high uptime</h3>
-            <p>On Linux and MacOS, the uptime of a host is kept in <cite>/proc/uptime</cite>. We can apply a regex on that file to list hosts with an uptime larger or lower than any amount.</p>
-            <p>Note the search target that uses postgres's regex format <cite>~*</cite>.</p>
-            <pre class="code bash">mig file -t <span class="s2">"environment-&gt;&gt;'os' IN ('linux', 'darwin')"</span> -path /proc/uptime -content <span class="s2">"^[5-9]{1}[0-9]{7,}\\."</span></pre>
-        </section>
-        <section id="find-endpoints-running-process-sbin-auditd">
-            <h3>1.4   Find endpoints running process "/sbin/auditd"</h3>
-            <p>Here, the '^' in the content regex is important to prevent mig from listing itself while searching for the command line.</p>
-            <pre class="code bash">mig file -path /proc/ -name cmdline -content <span class="s2">"^/sbin/auditd"</span></pre>
-            <p>Another option, if using '^' is not possible, is to enclose one of the letter of the process name into brackets:</p>
-            <pre class="code bash"><span class="nv">$ </span>mig file -t <span class="s2">"tags-&gt;&gt;'operator'='IT'"</span> -path /proc -name <span class="s2">"^cmdline$"</span> -maxdepth 2 -content <span class="s2">"[a]rcsight"</span></pre>
-        </section>
-        <section id="find-which-machines-have-a-specific-usb-device-connected">
-            <h3>1.5   Find which machines have a specific USB device connected</h3>
-            <p>In this example, we'll look for the CryptoStick USB device (vendor:product 20a0:4107). You can find more device id's with the command <cite>lsusb</cite>.</p>
-            <pre class="code bash">mig file -matchany -path /sys/devices/ -name <span class="s2">"^uevent$"</span> -content <span class="s2">"PRODUCT=20a0/4107"</span></pre>
-        </section>
-    </section>
-    <section id="netstat-module">
-        <h2>2   Netstat module</h2>
-        <p>You can find detailled documentation by running <cite>mig netstat help</cite>.</p>
-        <section id="searching-for-a-fraudulent-ip">
-            <h3>2.1   Searching for a fraudulent IP</h3>
-            <p>Given an ip 1.2.3.4 associated with fraudulent traffic, we can use the netstat module to verify that the IP isn't currently connected to any endpoint.</p>
-            <pre class="code bash">mig netstat -ci 1.2.3.4</pre>
-            <p><cite>-ci</cite> stands for connected IP, and accepts an IP or a CIDR, in v4 or v6.</p>
-        </section>
-        <section id="locating-a-device-by-its-mac-address">
-            <h3>2.2   Locating a device by its mac address</h3>
-            <p>MIG <cite>netstat</cite> can be used to find endpoints that have a given mac address in their arp tables, which helps geographically locating an endpoint.</p>
-            <pre class="code bash">mig netstat -nm 8c:70:5a:c8:be:50</pre>
-            <p><cite>-nm</cite> stands for neighbor mac and takes a regex (ex: <cite>^8c:70:[0-9a-f]</cite>).</p>
-        </section>
-        <section id="listing-endpoints-that-have-active-connections-to-the-internet">
-            <h3>2.3   Listing endpoints that have active connections to the Internet</h3>
-            <p>The search below tells the <cite>netstat</cite> module to capture all connections with one IP in a public CIDR. The list of CIDR is rather long, because it avoid private CIDR (the netstat module doesn't have an <cite>exclude</cite> option).</p>
-            <pre class="code bash">mig netstat -e 60s  -ci 1.0.0.0/8       -ci 2.0.0.0/7       -ci 4.0.0.0/6   -ci 8.0.0.0/7 <span class="se">\
-</span>-ci 11.0.0.0/8      -ci 12.0.0.0/6      -ci 16.0.0.0/4      -ci 32.0.0.0/3  -ci 64.0.0.0/3 <span class="se">\
-</span>-ci 96.0.0.0/4      -ci 112.0.0.0/5     -ci 120.0.0.0/6     -ci 124.0.0.0/7 -ci 126.0.0.0/8 <span class="se">\
-</span>-ci 128.0.0.0/3     -ci 160.0.0.0/5     -ci 168.0.0.0/6     -ci 172.0.0.0/12 <span class="se">\
-</span>-ci 172.32.0.0/11   -ci 172.64.0.0/10   -ci 172.128.0.0/9   -ci 173.0.0.0/8 <span class="se">\
-</span>-ci 174.0.0.0/7     -ci 176.0.0.0/4     -ci 192.0.0.0/9     -ci 192.128.0.0/11 <span class="se">\
-</span>-ci 192.160.0.0/13  -ci 192.169.0.0/16  -ci 192.170.0.0/15  -ci 192.172.0.0/14 <span class="se">\
-</span>-ci 192.176.0.0/12  -ci 192.192.0.0/10  -ci 193.0.0.0/8     -ci 194.0.0.0/7 <span class="se">\
-</span>-ci 196.0.0.0/6     -ci 200.0.0.0/5     -ci 208.0.0.0/4</pre>
-        </section>
-    </section>
-    <section id="ping-module">
-        <h2>3   Ping module</h2>
-        <section id="test-web-connectivity-to-google">
-            <h3>3.1   Test web connectivity to google</h3>
-            <p>Testing reachability of google.com over HTTP can be done using the ping module.</p>
-            <pre class="code bash"><span class="nv">$ </span>mig ping -t <span class="s2">"name LIKE '%phx1%'"</span> -d google.com -dp 80 -p tcp</pre>
-        </section>
-        <section id="list-endpoints-that-cannot-ping-a-destination">
-            <h3>3.2   List endpoints that cannot ping a destination</h3>
-            <p>Need to find which endpoints cannot connect to some destination? ICMP Ping is a pretty good way to get that data. Make sure to adapt the <cite>show</cite> parameter to list endpoints that have failed the ping.</p>
-            <pre class="code bash"><span class="nv">$ </span>mig ping -t <span class="s2">"name LIKE '%scl3%'"</span> -show notfound -d 10.22.75.57 -p icmp</pre>
-        </section>
-    </section>
-    <section id="timedrift-module">
-        <h2>4   Timedrift module</h2>
-        <p>The timedrift module is fairly basic: it retrieves localtime and compares it to NTP time if asked to check for drift. As such, it only takes a single parameter to evaluate drift from network time.</p>
-        <pre class="code bash"><span class="nv">$ </span>mig timedrift -drift 60s
-1402 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
+<!DOCTYPE html><html><head><meta charset="utf-8"><title></title><style type="text/css">body {
+  width: 95%;
+  max-width: 900px;
+  margin: 20px;
+  padding: 0;
+  background: #151515 url("../images/bkg.png") 0 0;
+  color: #eaeaea;
+  font: 16px;
+  line-height: 1.5em;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+}
+
+#table-of-contents ul {
+    line-height: 1;
+}
+
+/* General & 'Reset' Stuff */
+
+.container {
+  width: 95%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+section {
+  display: block;
+  margin: 0 0 20px 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  /*margin: 0 0 20px;*/
+  margin: 0;
+}
+
+/* Header, <header>
+ *    header   - container
+ *       h1       - project name
+ *          h2       - project description
+ *          */
+
+header {
+  background: rgba(0, 0, 0, 0.1);
+  width: 100%;
+  /*border-bottom: 1px dashed #b5e853;*/
+  /*padding: 20px 0;
+ *   margin: 0 0 40px 0;*/
+  padding: 5px 0;
+  margin: 0 0 10px 0;
+}
+
+header h1 {
+  font-size: 30px;
+  line-height: 1.5;
+  margin: 0 0 0 -40px;
+  font-weight: bold;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  /*color: #b5e853;*/
+  color: #089d00;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
+               0 0 5px rgba(181, 232, 83, 0.1),
+               0 0 10px rgba(181, 232, 83, 0.1);
+  letter-spacing: -1px;
+  -webkit-font-smoothing: antialiased;
+}
+
+header h1:before {
+  content: "./ ";
+  font-size: 24px;
+}
+
+header h2 {
+  font-size: 18px;
+  font-weight: 300;
+}
+
+/* Main Content
+ * */
+
+body {
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+section img {
+  max-width: 100%
+}
+
+h2 a {
+  font-weight: bold;
+  color: #8AB638;
+  line-height: 1.4em;
+  font-size: 1.4em;
+}
+h3 a, h4 a, h5 a, h6 a {
+  font-weight: bold;
+  color: #934500;
+  line-height: 1.4em;
+}
+
+h1 {
+  font-size: 30px;
+}
+
+h2 {
+  font-size: 28px;
+  border-bottom: 1px dashed #b5e853;
+}
+
+h3 {
+  font-size: 18px;
+}
+
+h4 {
+  font-size: 14px;
+}
+
+h5 {
+  font-size: 12px;
+  text-transform: uppercase;
+  margin: 0 0 5px 0;
+}
+
+h6 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #999;
+  margin: 0 0 5px 0;
+}
+
+dt {
+  font-style: italic;
+  font-weight: bold;
+}
+/*
+ul li {
+  list-style: none;
+}
+*/
+/*
+ul li:before {
+  content: ">>";
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  font-size: 13px;
+  color: #b5e853;
+  margin-left: -37px;
+  margin-right: 21px;
+  line-height: 16px;
+}
+*/
+
+blockquote {
+  color: #aaa;
+  padding-left: 10px;
+  border-left: 1px dotted #666;
+}
+
+
+pre {
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px;
+  font-size: 14px;
+  //color: #b5e853;
+  border-radius: 2px;
+  -moz-border-radius: 2px;
+  -webkit-border-radius: 2px;
+  text-wrap: normal;
+  overflow: auto;
+  overflow-y: hidden;
+}
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+code .ln { color: grey; } /* line numbers */
+/*code, code { background-color: #eeeeee }*/
+code .comment, code .comment, code .c1 { color: #999; }
+code .keyword, code .keyword, code .kd, code .kn, code .k, code .o { color: #FC8F3F; font-weight: bold;}
+code .nb { color: #c45918;}
+code .s {color: #0a77c4;}
+code .punctuation, code .p { color: white;}
+code .literal.string, code .literal.string { color: #40BF32; }
+code .name, code .name.builtin, code .nx { color: white; }
+code .deleted, code .deleted { background-color: #DEB0A1}
+code .inserted, code .inserted { background-color: #A3D289}
+
+table {
+  width: 100%;
+  margin: 0 0 20px 0;
+}
+
+th {
+  text-align: left;
+  border-bottom: 1px dashed #b5e853;
+  padding: 5px 10px;
+}
+
+td {
+  padding: 5px 10px;
+}
+
+hr {
+  height: 0;
+  border: 0;
+  border-bottom: 1px dashed #b5e853;
+  color: #b5e853;
+}
+/* Links
+ *    a, a:hover, a:visited
+ *    */
+
+a {
+  color: #63c0f5;
+  /*text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);*/
+  text-decoration: none;
+}
+
+cite {
+  color: #00FF4A;
+}
+
+strong {
+  color: #C64216;
+}
+</style></head><body><h1>Mozilla InvestiGator Cheat Sheet</h1><div class="contents" id="table-of-contents"><h2>Table of Contents</h2><ul class="auto-toc"><li><p><a class="reference internal" href="#file-module" id="id1">1   File module</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#find-files-in-etc-cron-d-that-contain-mysql-on-hosts-buildbot" id="id2">1.1   Find files in /etc/cron.d that contain "mysql://" on hosts "<em>buildbot</em>"</a></p></li><li><p><a class="reference internal" href="#find-files-etc-passwd-that-have-been-modified-in-the-past-2-days" id="id3">1.2   Find files /etc/passwd that have been modified in the past 2 days</a></p></li><li><p><a class="reference internal" href="#find-endpoints-with-high-uptime" id="id4">1.3   Find endpoints with high uptime</a></p></li><li><p><a class="reference internal" href="#find-endpoints-running-process-sbin-auditd" id="id5">1.4   Find endpoints running process "/sbin/auditd"</a></p></li><li><p><a class="reference internal" href="#find-which-machines-have-a-specific-usb-device-connected" id="id6">1.5   Find which machines have a specific USB device connected</a></p></li><li><p><a class="reference internal" href="#find-authorized-keys-files-with-unknown-pubkeys" id="id7">1.6   Find "authorized_keys" files with unknown pubkeys</a></p></li></ul></li><li><p><a class="reference internal" href="#netstat-module" id="id8">2   Netstat module</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#searching-for-a-fraudulent-ip" id="id9">2.1   Searching for a fraudulent IP</a></p></li><li><p><a class="reference internal" href="#locating-a-device-by-its-mac-address" id="id10">2.2   Locating a device by its mac address</a></p></li><li><p><a class="reference internal" href="#listing-endpoints-that-have-active-connections-to-the-internet" id="id11">2.3   Listing endpoints that have active connections to the Internet</a></p></li></ul></li><li><p><a class="reference internal" href="#ping-module" id="id12">3   Ping module</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#test-web-connectivity-to-google" id="id13">3.1   Test web connectivity to google</a></p></li><li><p><a class="reference internal" href="#list-endpoints-that-cannot-ping-a-destination" id="id14">3.2   List endpoints that cannot ping a destination</a></p></li></ul></li><li><p><a class="reference internal" href="#timedrift-module" id="id15">4   Timedrift module</a></p></li><li><p><a class="reference internal" href="#advanced-targetting" id="id16">5   Advanced targetting</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#target-agents-that-found-results-in-a-previous-action" id="id17">5.1   Target agents that found results in a previous action</a></p></li></ul></li><li><p><a class="reference internal" href="#directly-invoking-the-mig-agent" id="id18">6   Directly invoking the mig-agent</a></p></li></ul></div><p>This is a list of common operations you may want to run with MIG.</p><p>All examples use the MIG command line cli. You can run the examples on your
+local machine by specifying <cite>-t local</cite>. The <cite>local</cite> target invokes MIG modules
+in the cli instead of calling mig-agent like a normal investigation would.</p><section id="file-module"><header><h2><a href="#id1">1   File module</a></h2></header><p>You can find detailled documentation by running <cite>mig file help</cite> or in the
+online doc at <a class="reference external" href="http://mig.mozilla.org/doc/module_file.html">doc/module_file.html</a>.</p><section id="find-files-in-etc-cron-d-that-contain-mysql-on-hosts-buildbot"><header><h3><a href="#id2">1.1   Find files in /etc/cron.d that contain "mysql://" on hosts "<em>buildbot</em>"</a></h3></header><p>This is a simple file content check that looks into all the files contained in
+<cite>/etc/cron.d</cite> for a string that matched <cite>mysql://</cite>.</p><pre><code class="code bash">mig file -t <span class="literal string double">"environment-&gt;&gt;'os'='linux' AND name LIKE '%buildbot%'"</span> -path /etc/cron.d/ -content <span class="literal string double">"mysql://"</span></code></pre></section><section id="find-files-etc-passwd-that-have-been-modified-in-the-past-2-days"><header><h3><a href="#id3">1.2   Find files /etc/passwd that have been modified in the past 2 days</a></h3></header><p>The <cite>mtime</cite> check of the file module matches against the last modified
+timestamp of a file.</p><pre><code class="code bash">mig file -t <span class="literal string double">"environment-&gt;&gt;'os'='linux'"</span> -path /etc/passwd -mtime &lt;2d</code></pre></section><section id="find-endpoints-with-high-uptime"><header><h3><a href="#id4">1.3   Find endpoints with high uptime</a></h3></header><p>On Linux and MacOS, the uptime of a host is kept in <cite>/proc/uptime</cite>. We can
+apply a regex on that file to list hosts with an uptime larger or lower than
+any amount.</p><p>Note the search target that uses postgres's regex format <cite>~*</cite>.</p><pre><code class="code bash">mig file -t <span class="literal string double">"environment-&gt;&gt;'os' IN ('linux', 'darwin')"</span> -path /proc/uptime -content <span class="literal string double">"^[5-9]{1}[0-9]{7,}\\."</span></code></pre></section><section id="find-endpoints-running-process-sbin-auditd"><header><h3><a href="#id5">1.4   Find endpoints running process "/sbin/auditd"</a></h3></header><p>Here, the '^' in the content regex is important to prevent mig from listing
+itself while searching for the command line.</p><pre><code class="code bash">mig file -path /proc/ -name cmdline -content <span class="literal string double">"^/sbin/auditd"</span></code></pre><p>Another option, if using '^' is not possible, is to enclose one of the letter
+of the process name into brackets:</p><pre><code class="code bash"><span class="name variable">$ </span>mig file -t <span class="literal string double">"tags-&gt;&gt;'operator'='IT'"</span> -path /proc -name <span class="literal string double">"^cmdline</span><span class="name variable">$"</span><span class="literal string double"> -maxdepth 2 -content "</span><span class="operator">[</span>a<span class="operator">]</span>rcsight<span class="literal string double">"</span></code></pre></section><section id="find-which-machines-have-a-specific-usb-device-connected"><header><h3><a href="#id6">1.5   Find which machines have a specific USB device connected</a></h3></header><p>In this example, we'll look for the CryptoStick USB device (vendor:product 20a0:4107).
+You can find more device id's with the command <cite>lsusb</cite>.</p><pre><code class="code bash">mig file -matchany -path /sys/devices/ -name <span class="literal string double">"^uevent</span><span class="name variable">$"</span><span class="literal string double"> -content "</span><span class="name variable">PRODUCT</span><span class="operator">=</span>20a0/4107<span class="literal string double">"</span></code></pre></section><section id="find-authorized-keys-files-with-unknown-pubkeys"><header><h3><a href="#id7">1.6   Find "authorized_keys" files with unknown pubkeys</a></h3></header><p>If you know which keys should be present in an authorized_keys file, the <cite>file</cite>
+module can be used to find file that have extra, unknown, keys.</p><p>The first thing needed is a regex with the list of valid public keys. The regex
+will also accept any line that starts with a comment character <cite>#</cite> or empty
+lines.</p><p>One important thing to note is that public keys are base64 encoded and contain
+slashes "/" and pluses "+" that conflict with Go's regex format. Those need to
+be escaped prior to being passed to MIG.</p><pre><code class="code bash"><span class="name builtin">echo</span> <span class="name variable">$PUBKEY</span> <span class="punctuation">|</span> sed <span class="literal string double">"s;\/;\\\/;"</span> <span class="punctuation">|</span> sed <span class="literal string double">"s;\+;\\\+;"</span></code></pre><p>A valid pubkey regex could be:</p><pre><code class="code bash"><span class="literal string double">"^((#.+)|(\s+)?|(ssh-rsa AAAAB3NznoMzq\+2r2Vx2bhFWMU3Uuid 1061157)|(ssh-rsa AAYWH\+0XAASw== ffxbld_rsa))</span><span class="name variable">$"</span></code></pre><p>We can require that this regex must match <strong>every</strong> line of a file using the
+<cite>-macroal</cite> parameter, which stand for "Match All Content Regexes On All Lines".</p><p>Then, using the <cite>-mismatch content</cite> option, we can ask the file module to return
+the files that <strong>don't</strong> conform to the regex. The combination of the content
+regex, the <cite>macroal</cite> option and the <cite>-mismatch content</cite> option together will
+return files that have unknown keys.</p><pre><code class="code bash">mig file -path /home -path /root -name <span class="literal string double">"^authorized_keys"</span> <span class="literal string escape">\
+</span>-content <span class="literal string double">"^((#.+)|(\s+)?|(ssh-rsa AAAAB3NznoMzq\+2r2Vx2bhFWMU3Uuid 1061157)|(ssh-rsa AAYWH\+0XAASw== ffxbld_rsa))</span><span class="name variable">$"</span><span class="literal string double"> \
+-macroal -mismatch content</span></code></pre></section></section><section id="netstat-module"><header><h2><a href="#id8">2   Netstat module</a></h2></header><p>You can find detailled documentation by running <cite>mig netstat help</cite>.</p><section id="searching-for-a-fraudulent-ip"><header><h3><a href="#id9">2.1   Searching for a fraudulent IP</a></h3></header><p>Given an ip 1.2.3.4 associated with fraudulent traffic, we can use the netstat
+module to verify that the IP isn't currently connected to any endpoint.</p><pre><code class="code bash">mig netstat -ci 1.2.3.4</code></pre><p><cite>-ci</cite> stands for connected IP, and accepts an IP or a CIDR, in v4 or v6.</p></section><section id="locating-a-device-by-its-mac-address"><header><h3><a href="#id10">2.2   Locating a device by its mac address</a></h3></header><p>MIG <cite>netstat</cite> can be used to find endpoints that have a given mac address in
+their arp tables, which helps geographically locating an endpoint.</p><pre><code class="code bash">mig netstat -nm 8c:70:5a:c8:be:50</code></pre><p><cite>-nm</cite> stands for neighbor mac and takes a regex (ex: <cite>^8c:70:[0-9a-f]</cite>).</p></section><section id="listing-endpoints-that-have-active-connections-to-the-internet"><header><h3><a href="#id11">2.3   Listing endpoints that have active connections to the Internet</a></h3></header><p>The search below tells the <cite>netstat</cite> module to capture all connections with one
+IP in a public CIDR. The list of CIDR is rather long, because it avoid private
+CIDR (the netstat module doesn't have an <cite>exclude</cite> option).</p><pre><code class="code bash">mig netstat -e 60s      -ci 1.0.0.0/8           -ci 2.0.0.0/7           -ci 4.0.0.0/6   -ci 8.0.0.0/7 <span class="literal string escape">\
+</span>-ci 11.0.0.0/8          -ci 12.0.0.0/6          -ci 16.0.0.0/4          -ci 32.0.0.0/3  -ci 64.0.0.0/3 <span class="literal string escape">\
+</span>-ci 96.0.0.0/4          -ci 112.0.0.0/5         -ci 120.0.0.0/6         -ci 124.0.0.0/7 -ci 126.0.0.0/8 <span class="literal string escape">\
+</span>-ci 128.0.0.0/3         -ci 160.0.0.0/5         -ci 168.0.0.0/6         -ci 172.0.0.0/12 <span class="literal string escape">\
+</span>-ci 172.32.0.0/11       -ci 172.64.0.0/10       -ci 172.128.0.0/9       -ci 173.0.0.0/8 <span class="literal string escape">\
+</span>-ci 174.0.0.0/7         -ci 176.0.0.0/4         -ci 192.0.0.0/9         -ci 192.128.0.0/11 <span class="literal string escape">\
+</span>-ci 192.160.0.0/13      -ci 192.169.0.0/16      -ci 192.170.0.0/15      -ci 192.172.0.0/14 <span class="literal string escape">\
+</span>-ci 192.176.0.0/12      -ci 192.192.0.0/10      -ci 193.0.0.0/8         -ci 194.0.0.0/7 <span class="literal string escape">\
+</span>-ci 196.0.0.0/6         -ci 200.0.0.0/5         -ci 208.0.0.0/4</code></pre></section></section><section id="ping-module"><header><h2><a href="#id12">3   Ping module</a></h2></header><section id="test-web-connectivity-to-google"><header><h3><a href="#id13">3.1   Test web connectivity to google</a></h3></header><p>Testing reachability of google.com over HTTP can be done using the ping module.</p><pre><code class="code bash"><span class="name variable">$ </span>mig ping -t <span class="literal string double">"name LIKE '%phx1%'"</span> -d google.com -dp <span class="literal number">80</span> -p tcp</code></pre></section><section id="list-endpoints-that-cannot-ping-a-destination"><header><h3><a href="#id14">3.2   List endpoints that cannot ping a destination</a></h3></header><p>Need to find which endpoints cannot connect to some destination? ICMP Ping is a
+pretty good way to get that data. Make sure to adapt the <cite>show</cite> parameter to
+list endpoints that have failed the ping.</p><pre><code class="code bash"><span class="name variable">$ </span>mig ping -t <span class="literal string double">"name LIKE '%scl3%'"</span> -show notfound -d 10.22.75.57 -p icmp</code></pre></section></section><section id="timedrift-module"><header><h2><a href="#id15">4   Timedrift module</a></h2></header><p>The timedrift module is fairly basic: it retrieves localtime and compares it to
+NTP time if asked to check for drift. As such, it only takes a single parameter
+to evaluate drift from network time.</p><pre><code class="code bash"><span class="name variable">$ </span>mig timedrift -drift 60s
+<span class="literal number">1402</span> agents will be targeted. ctrl+c to cancel. launching in <span class="literal number">5</span> <span class="literal number">4</span> <span class="literal number">3</span> <span class="literal number">2</span> <span class="literal number">1</span> GO
 Following action ID 1428420741979034880.
-<span class="nv">status</span><span class="o">=</span>inflight...55% ...66% ...67% ......89% ..89% ...89% ......90% ..90% ......90% ...90% ..90% ...^Cstop following action. agents may still be running. printing available results:
-host1.dc2.example.net <span class="nb">local time </span>is 2015-04-07T15:35:00.768951216Z
-host1.dc2.example.net <span class="nb">local time </span>is out of sync from NTP servers
-host1.dc2.example.net Local <span class="nb">time </span>is ahead of ntp host time.nist.gov by 3m2.660981781s
-1 agents have found results</pre>
-    </section>
-    <section id="advanced-targetting">
-        <h2>5   Advanced targetting</h2>
-        <p>MIG can use complex queries to target specific agents. The following examples outline some of the capabilities. At the core, the <cite>target</cite> parameter is just a WHERE condition executed against the agent table of the MIG database, so if you know the DB schema, you can craft any targetting you want.</p>
-        <section id="target-agents-that-found-results-in-a-previous-action">
-            <h3>5.1   Target agents that found results in a previous action</h3>
-            <p>Useful to run a second action on the agents that returned positive results in a first one. The query is a bit complex because it uses Postgres JSON array processing.</p>
-            <p>Given an action with ID 12345 that was run and returned results, we want to run a new action on the agents that matched action 12345. To do so, use the target that follows:</p>
-            <pre class="code bash">mig file -t <span class="s2">"id IN ( \
-    SELECT agentid FROM commands, json_array_elements(commands.results) AS r \
-    WHERE commands.actionid = 12345 AND r#&gt;&gt;'{foundanything}' = 'true')"</span> <span class="se">\
-</span>-path /etc/passwd -content <span class="s2">"^spongebob"</span></pre>
-            <p>The subquery select command results for action 12345 and return the ID of agents that have at least one <cite>foundanything</cite> set to true. Since command results are an array, and each entry of the array contains a foundanything value, the query iterates through each entry of the array using postgres's <cite>json_array_elements</cite> function.</p>
-        </section>
-    </section>
-</body>
-</html>
+<span class="name variable">status</span><span class="operator">=</span>inflight...55% ...66% ...67% ......89% ..89% ...89% ......90% ..90% ......90% ...90% ..90% ...^Cstop following action. agents may still be running. printing available results:
+host1.dc2.example.net <span class="name builtin">local time </span>is 2015-04-07T15:35:00.768951216Z
+host1.dc2.example.net <span class="name builtin">local time </span>is out of sync from NTP servers
+host1.dc2.example.net Local <span class="name builtin">time </span>is ahead of ntp host time.nist.gov by 3m2.660981781s
+<span class="literal number">1</span> agents have found results</code></pre></section><section id="advanced-targetting"><header><h2><a href="#id16">5   Advanced targetting</a></h2></header><p>MIG can use complex queries to target specific agents. The following examples
+outline some of the capabilities. At the core, the <cite>target</cite> parameter is just a
+WHERE condition executed against the agent table of the MIG database, so if you
+know the DB schema, you can craft any targetting you want.</p><section id="target-agents-that-found-results-in-a-previous-action"><header><h3><a href="#id17">5.1   Target agents that found results in a previous action</a></h3></header><p>Useful to run a second action on the agents that returned positive results in a
+first one. The query is a bit complex because it uses Postgres JSON array
+processing.</p><p>Given an action with ID 12345 that was run and returned results, we want to run
+a new action on the agents that matched action 12345. To do so, use the target
+that follows:</p><pre><code class="code bash">mig file -t <span class="literal string double">"id IN ( \
+        SELECT agentid FROM commands, json_array_elements(commands.results) AS r \
+        WHERE commands.actionid = 12345 AND r#&gt;&gt;'{foundanything}' = 'true')"</span> <span class="literal string escape">\
+</span>-path /etc/passwd -content <span class="literal string double">"^spongebob"</span></code></pre><p>The subquery select command results for action 12345 and return the ID of
+agents that have at least one <cite>foundanything</cite> set to true. Since command
+results are an array, and each entry of the array contains a foundanything
+value, the query iterates through each entry of the array using postgres's
+<cite>json_array_elements</cite> function.</p></section></section><section id="directly-invoking-the-mig-agent"><header><h2><a href="#id18">6   Directly invoking the mig-agent</a></h2></header><p>In order to test queries locally, you may want to run them directly against a local agent.
+The agent takes input parameters from a JSON action file or alternatively from stdin.</p><p>For example, to match a md5 of inside of /usr/bin, you could run:</p><pre><code class="code bash">mig-agent -m file -d <span class="operator">&lt;&lt;&lt;</span>
+<span class="literal string single">'{"class":"parameters","parameters":{"searches":{"s1":{"paths":["/usr/bin"],"md5":["cf4eb543a119e87cb112785e2b62ccd0"]}}}}'</span>
+<span class="punctuation">;</span> <span class="name builtin">echo</span></code></pre></section></body></html>

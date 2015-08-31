@@ -1,4 +1,4 @@
-body {
+<!DOCTYPE html><html><head><meta charset="utf-8"><title></title><style type="text/css">body {
   width: 95%;
   max-width: 900px;
   margin: 20px;
@@ -227,3 +227,20 @@ cite {
 strong {
   color: #C64216;
 }
+</style></head><body><h1>Agent</h1><p>The agent accepts different classes of inputs on stdin, as one-line JSON objects. The most common one is the
+<code>parameters</code> class, but it could also receive a <code>stop</code> input that
+indicates that the module should stop its execution immediately. The format of
+module input messages is defined by <code>modules.Message</code>.</p><pre><code class="code go"><span class="comment single">// Message defines the input messages received by modules.
+</span><span class="keyword declaration">type</span> <span class="name other">Message</span> <span class="keyword declaration">struct</span> <span class="punctuation">{</span>
+        <span class="name other">Class</span>      <span class="keyword type">string</span>      <span class="comment single">// represent the type of message being passed to the module
+</span>        <span class="name other">Parameters</span> <span class="keyword declaration">interface</span><span class="punctuation">{}</span> <span class="comment single">// for `parameters` class, this interface contains the module parameters
+</span><span class="punctuation">}</span>
+
+<span class="keyword declaration">const</span> <span class="punctuation">(</span>
+        <span class="name other">MsgClassParameters</span> <span class="keyword type">string</span> <span class="punctuation">=</span> <span class="literal string">"parameters"</span>
+        <span class="name other">MsgClassStop</span>       <span class="keyword type">string</span> <span class="punctuation">=</span> <span class="literal string">"stop"</span>
+<span class="punctuation">)</span></code></pre><p>When the agent receives a command to pass to a module for execution, it
+extracts the operation parameters from <code>Command.Action.Operations[N].Parameters</code>
+and copies them into <code>Message.Parameters</code>. It then sets <code>Message.Class</code> to
+<code>modules.MsgClassParameters</code>, marshals the struct into JSON, and pass the
+resulting <code>[]byte</code> to the module as an IO stream.</p></body></html>

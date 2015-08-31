@@ -1,82 +1,249 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Mozilla InvestiGator: Ping module</title>
-    <meta charset="utf-8" />
-    <link href="docstyle.css" rel="stylesheet" />
-    <meta content="Sushant Dinesh &lt;sushant.dinesh94@gmail.com&gt;" name="author" />
-</head>
-<body>
-    <h1>Mozilla InvestiGator: Ping module</h1>
-    <aside class="topic contents" id="table-of-contents">
-        <h1>Table of Contents</h1>
-        <ul class="auto-toc">
-            <li><a href="#usage">1   Usage</a>
-                <ul class="auto-toc">
-                    <li><a href="#parameters">1.1   Parameters</a></li>
-                    <li><a href="#note-on-scans">1.2   Note on scans</a></li>
-                </ul>
-            </li>
-            <li><a href="#examples">2   Examples</a>
-                <ul class="auto-toc">
-                    <li><a href="#basic-icmp-ping">2.1   Basic ICMP ping</a></li>
-                    <li><a href="#single-tcp-ping-of-twitter-com-443">2.2   Single TCP ping of twitter.com:443</a></li>
-                    <li><a href="#udp-ping-of-google-s-dns">2.3   UDP Ping of Google's DNS</a></li>
-                </ul>
-            </li>
-        </ul>
-    </aside>
-    <p>The ping module (PM) allows a user to check connection of an endpoint to another host. PM supports ICMP, TCP and UDP pings to a remote host. The response returned by the ping module is similar to ping utility in UNIX systems.</p>
-    <section id="usage">
-        <h2>1   Usage</h2>
-        <p>PM supports ICMP, TCP and UDP pings. PM requires that destination is a valid ipv4, ipv6 address or a Fully Qualified Domain name (FQDN).</p>
-        <pre class="code json"><span class="p">{</span>
-      <span class="nt">"count"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
-      <span class="nt">"destination"</span><span class="p">:</span> <span class="s2">"www.google.com"</span><span class="p">,</span>
-      <span class="nt">"destinationport"</span><span class="p">:</span> <span class="mi">80</span><span class="p">,</span>
-      <span class="nt">"protocol"</span><span class="p">:</span> <span class="s2">"tcp"</span><span class="p">,</span>
-      <span class="nt">"timeout"</span><span class="p">:</span> <span class="mi">5</span>
-<span class="p">}</span></pre>
-        <section id="parameters">
-            <h3>1.1   Parameters</h3>
-            <ul>
-                <li><strong>protocol:</strong> Specifies the protocol to be used for the ping test. Valid protocols are icmp, tcp and udp.</li>
-                <li><strong>destination</strong>: ipv4, ipv6 address or FQDN of the destination host to be checked.</li>
-                <li><strong>destinationport</strong>: port number on the destination host to be checked for connectivity. this option is to be left blank when protocol is icmp. For tcp and udp, the destination port defaults to 80 when not specified.</li>
-                <li><strong>count</strong>: Number of times the destination has to be pinged. optional. defaults to 3.</li>
-                <li><strong>timeout</strong>: Seconds to wait for response before timing out. optional. defaults to 5s.</li>
-            </ul>
-        </section>
-        <section id="note-on-scans">
-            <h3>1.2   Note on scans</h3>
-            <ul>
-                <li>Selecting protocol as TCP performs a TCP Connect scan. This means that a full connection is established (and broken down) when a tcp ping is performed. This might leave records in the destination systems logs.</li>
-                <li>A timeout on udp ping indicates that the port checked for <strong>maybe</strong> open. Hence the module returns reachable as true (and latency as timeout). However, if the port is closed, the module returns "Connection Refused" indicating that the port is closed.</li>
-            </ul>
-        </section>
-    </section>
-    <section id="examples">
-        <h2>2   Examples</h2>
-        <section id="basic-icmp-ping">
-            <h3>2.1   Basic ICMP ping</h3>
-            <pre class="code">$ mig ping -t "name='somehost.example.net'" -show all -d 8.8.8.8
+<!DOCTYPE html><html><head><meta charset="utf-8"><title></title><style type="text/css">body {
+  width: 95%;
+  max-width: 900px;
+  margin: 20px;
+  padding: 0;
+  background: #151515 url("../images/bkg.png") 0 0;
+  color: #eaeaea;
+  font: 16px;
+  line-height: 1.5em;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+}
+
+#table-of-contents ul {
+    line-height: 1;
+}
+
+/* General & 'Reset' Stuff */
+
+.container {
+  width: 95%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+section {
+  display: block;
+  margin: 0 0 20px 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  /*margin: 0 0 20px;*/
+  margin: 0;
+}
+
+/* Header, <header>
+ *    header   - container
+ *       h1       - project name
+ *          h2       - project description
+ *          */
+
+header {
+  background: rgba(0, 0, 0, 0.1);
+  width: 100%;
+  /*border-bottom: 1px dashed #b5e853;*/
+  /*padding: 20px 0;
+ *   margin: 0 0 40px 0;*/
+  padding: 5px 0;
+  margin: 0 0 10px 0;
+}
+
+header h1 {
+  font-size: 30px;
+  line-height: 1.5;
+  margin: 0 0 0 -40px;
+  font-weight: bold;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  /*color: #b5e853;*/
+  color: #089d00;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
+               0 0 5px rgba(181, 232, 83, 0.1),
+               0 0 10px rgba(181, 232, 83, 0.1);
+  letter-spacing: -1px;
+  -webkit-font-smoothing: antialiased;
+}
+
+header h1:before {
+  content: "./ ";
+  font-size: 24px;
+}
+
+header h2 {
+  font-size: 18px;
+  font-weight: 300;
+}
+
+/* Main Content
+ * */
+
+body {
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+section img {
+  max-width: 100%
+}
+
+h2 a {
+  font-weight: bold;
+  color: #8AB638;
+  line-height: 1.4em;
+  font-size: 1.4em;
+}
+h3 a, h4 a, h5 a, h6 a {
+  font-weight: bold;
+  color: #934500;
+  line-height: 1.4em;
+}
+
+h1 {
+  font-size: 30px;
+}
+
+h2 {
+  font-size: 28px;
+  border-bottom: 1px dashed #b5e853;
+}
+
+h3 {
+  font-size: 18px;
+}
+
+h4 {
+  font-size: 14px;
+}
+
+h5 {
+  font-size: 12px;
+  text-transform: uppercase;
+  margin: 0 0 5px 0;
+}
+
+h6 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #999;
+  margin: 0 0 5px 0;
+}
+
+dt {
+  font-style: italic;
+  font-weight: bold;
+}
+/*
+ul li {
+  list-style: none;
+}
+*/
+/*
+ul li:before {
+  content: ">>";
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  font-size: 13px;
+  color: #b5e853;
+  margin-left: -37px;
+  margin-right: 21px;
+  line-height: 16px;
+}
+*/
+
+blockquote {
+  color: #aaa;
+  padding-left: 10px;
+  border-left: 1px dotted #666;
+}
+
+
+pre {
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px;
+  font-size: 14px;
+  //color: #b5e853;
+  border-radius: 2px;
+  -moz-border-radius: 2px;
+  -webkit-border-radius: 2px;
+  text-wrap: normal;
+  overflow: auto;
+  overflow-y: hidden;
+}
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+code .ln { color: grey; } /* line numbers */
+/*code, code { background-color: #eeeeee }*/
+code .comment, code .comment, code .c1 { color: #999; }
+code .keyword, code .keyword, code .kd, code .kn, code .k, code .o { color: #FC8F3F; font-weight: bold;}
+code .nb { color: #c45918;}
+code .s {color: #0a77c4;}
+code .punctuation, code .p { color: white;}
+code .literal.string, code .literal.string { color: #40BF32; }
+code .name, code .name.builtin, code .nx { color: white; }
+code .deleted, code .deleted { background-color: #DEB0A1}
+code .inserted, code .inserted { background-color: #A3D289}
+
+table {
+  width: 100%;
+  margin: 0 0 20px 0;
+}
+
+th {
+  text-align: left;
+  border-bottom: 1px dashed #b5e853;
+  padding: 5px 10px;
+}
+
+td {
+  padding: 5px 10px;
+}
+
+hr {
+  height: 0;
+  border: 0;
+  border-bottom: 1px dashed #b5e853;
+  color: #b5e853;
+}
+/* Links
+ *    a, a:hover, a:visited
+ *    */
+
+a {
+  color: #63c0f5;
+  /*text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);*/
+  text-decoration: none;
+}
+
+cite {
+  color: #00FF4A;
+}
+
+strong {
+  color: #C64216;
+}
+</style></head><body><h1>Mozilla InvestiGator: Ping module</h1><table><tr><td class="field-label">Author</td><td>Sushant Dinesh &lt;<a class="reference external" href="mailto:sushant.dinesh94@gmail.com">sushant.dinesh94@gmail.com</a>&gt;</td></tr></table><div class="contents" id="table-of-contents"><h2>Table of Contents</h2><ul class="auto-toc"><li><p><a class="reference internal" href="#usage" id="id1">1   Usage</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#parameters" id="id2">1.1   Parameters</a></p></li><li><p><a class="reference internal" href="#note-on-scans" id="id3">1.2   Note on scans</a></p></li></ul></li><li><p><a class="reference internal" href="#examples" id="id4">2   Examples</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#basic-icmp-ping" id="id5">2.1   Basic ICMP ping</a></p></li><li><p><a class="reference internal" href="#single-tcp-ping-of-twitter-com-443" id="id6">2.2   Single TCP ping of twitter.com:443</a></p></li><li><p><a class="reference internal" href="#udp-ping-of-google-s-dns" id="id7">2.3   UDP Ping of Google's DNS</a></p></li></ul></li></ul></div><p>The ping module (PM) allows a user to check connection of an endpoint to another host. PM supports ICMP, TCP and UDP pings to a remote host. The response returned by the ping module is similar to ping utility in UNIX systems.</p><section id="usage"><header><h2><a href="#id1">1   Usage</a></h2></header><p>PM supports ICMP, TCP and UDP pings. PM requires that destination is a valid ipv4, ipv6 address or a Fully Qualified Domain name (FQDN).</p><pre><code class="code json"><span class="punctuation">{</span>
+      <span class="name tag">"count"</span><span class="punctuation">:</span> <span class="literal number integer">3</span><span class="punctuation">,</span>
+      <span class="name tag">"destination"</span><span class="punctuation">:</span> <span class="literal string double">"www.google.com"</span><span class="punctuation">,</span>
+      <span class="name tag">"destinationport"</span><span class="punctuation">:</span> <span class="literal number integer">80</span><span class="punctuation">,</span>
+      <span class="name tag">"protocol"</span><span class="punctuation">:</span> <span class="literal string double">"tcp"</span><span class="punctuation">,</span>
+      <span class="name tag">"timeout"</span><span class="punctuation">:</span> <span class="literal number integer">5</span>
+<span class="punctuation">}</span></code></pre><section id="parameters"><header><h3><a href="#id2">1.1   Parameters</a></h3></header><ul><li><p><strong>protocol:</strong> Specifies the protocol to be used for the ping test. Valid protocols are icmp, tcp and udp.</p></li><li><p><strong>destination</strong>: ipv4, ipv6 address or FQDN of the destination host to be checked.</p></li><li><p><strong>destinationport</strong>: port number on the destination host to be checked for connectivity. this option is to be left blank when  protocol is icmp. For tcp and udp, the destination port defaults to 80 when not specified.</p></li><li><p><strong>count</strong>: Number of times the destination has to be pinged. optional. defaults to 3.</p></li><li><p><strong>timeout</strong>: Seconds to wait for response before timing out. optional. defaults to 5s.</p></li></ul></section><section id="note-on-scans"><header><h3><a href="#id3">1.2   Note on scans</a></h3></header><ul><li><p>Selecting protocol as TCP performs a TCP Connect scan. This means that a full connection is established (and broken down) when a tcp ping is performed. This might leave records in the destination systems logs.</p></li><li><p>A timeout on udp ping indicates that the port checked for <strong>maybe</strong> open. Hence the module returns reachable as true (and latency as timeout). However, if the port is closed, the module returns "Connection Refused" indicating that the port is closed.</p></li></ul></section></section><section id="examples"><header><h2><a href="#id4">2   Examples</a></h2></header><section id="basic-icmp-ping"><header><h3><a href="#id5">2.1   Basic ICMP ping</a></h3></header><pre><code class="code">$ mig ping -t "name='somehost.example.net'" -show all -d 8.8.8.8
 somehost.example.net icmp ping of 8.8.8.8 (8.8.8.8) succeeded. Target is reachable.
 somehost.example.net ping #1 succeeded in 36ms
 somehost.example.net ping #2 succeeded in 21ms
 somehost.example.net ping #3 succeeded in 31ms
-somehost.example.net command success</pre>
-        </section>
-        <section id="single-tcp-ping-of-twitter-com-443">
-            <h3>2.2   Single TCP ping of twitter.com:443</h3>
-            <pre class="code">$ mig ping -t "name='somehost.example.net'" -show all -d twitter.com -dp 443 -p tcp -c 1 -t 5
+somehost.example.net command success</code></pre></section><section id="single-tcp-ping-of-twitter-com-443"><header><h3><a href="#id6">2.2   Single TCP ping of twitter.com:443</a></h3></header><pre><code class="code">$ mig ping -t "name='somehost.example.net'" -show all -d twitter.com -dp 443 -p tcp -c 1 -t 5
 somehost.example.net tcp ping of twitter.com:443 (199.16.156.102) succeeded. Target is reachable.
 somehost.example.net ping #1 succeeded in 27ms
-somehost.example.net command success</pre>
-        </section>
-        <section id="udp-ping-of-google-s-dns">
-            <h3>2.3   UDP Ping of Google's DNS</h3>
-            <p>UDP ping is less deterministic because no response is returned from the target if the ping succeeded. A lack of response is considered a success, and no latency is returned.</p>
-            <pre class="code">$ mig ping -t "name='somehost.example.net'" -show all -d 8.8.8.8 -dp 53 -p udp -c 10 -t 5
+somehost.example.net command success</code></pre></section><section id="udp-ping-of-google-s-dns"><header><h3><a href="#id7">2.3   UDP Ping of Google's DNS</a></h3></header><p>UDP ping is less deterministic because no response is returned from the target
+if the ping succeeded. A lack of response is considered a success, and no
+latency is returned.</p><pre><code class="code">$ mig ping -t "name='somehost.example.net'" -show all -d 8.8.8.8 -dp 53 -p udp -c 10 -t 5
 somehost.example.net udp ping of 8.8.8.8:53 (8.8.8.8) succeeded. Target is reachable.
 somehost.example.net ping #1 may have succeeded (no udp response)
 somehost.example.net ping #2 may have succeeded (no udp response)
@@ -88,8 +255,4 @@ somehost.example.net ping #7 may have succeeded (no udp response)
 somehost.example.net ping #8 may have succeeded (no udp response)
 somehost.example.net ping #9 may have succeeded (no udp response)
 somehost.example.net ping #10 may have succeeded (no udp response)
-somehost.example.net command success</pre>
-        </section>
-    </section>
-</body>
-</html>
+somehost.example.net command success</code></pre></section></section></body></html>
