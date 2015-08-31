@@ -79,7 +79,7 @@ Options
 			  the default limit is set to 1000. search will stop once the limit
 			  is reached.
 
-Complete documentation at http://mig.mozilla.org/doc/module_file.html
+Complete documentation and examples at http://mig.mozilla.org/doc/module_file.html
 `, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash,
 		dash, dash, dash, dash, dash, dash, dash, dash, dash,
 		dash, dash, dash, dash, dash, dash, dash, dash)
@@ -393,9 +393,9 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 		err error
 		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha256s,
 		sha384s, sha512s, sha3_224s, sha3_256s, sha3_384s, sha3_512s, mismatch flagParam
-		maxdepth, matchlimit        float64
-		matchall, matchany, macroal bool
-		fs                          flag.FlagSet
+		maxdepth, matchlimit                 float64
+		matchall, matchany, macroal, verbose bool
+		fs                                   flag.FlagSet
 	)
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
 		printHelp(true)
@@ -423,6 +423,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.BoolVar(&matchall, "matchall", true, "see help")
 	fs.BoolVar(&matchany, "matchany", false, "see help")
 	fs.BoolVar(&macroal, "macroal", false, "see help")
+	fs.BoolVar(&debug, "verbose", false, "see help")
 	err = fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -450,6 +451,9 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	s.Options.MatchAll = matchall
 	if matchany {
 		s.Options.MatchAll = false
+	}
+	if verbose {
+		s.Options.Debug = "print"
 	}
 	p := newParameters()
 	p.Searches["s1"] = s

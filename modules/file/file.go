@@ -101,6 +101,7 @@ type options struct {
 	Macroal    bool     `json:"macroal"`
 	Mismatch   []string `json:"mismatch"`
 	MatchLimit float64  `json:"matchlimit"`
+	Debug      string   `json:"debug,omitempty"`
 }
 
 type checkType uint64
@@ -141,6 +142,9 @@ func (s *search) makeChecks() (err error) {
 			err = fmt.Errorf("makeChecks() -> %v", e)
 		}
 	}()
+	if s.Options.Debug == "print" {
+		debug = true
+	}
 	if s.Options.MaxDepth == 0 {
 		s.Options.MaxDepth = 1000
 	}
@@ -455,6 +459,9 @@ func (r *run) ValidateParameters() (err error) {
 		if err != nil {
 			return
 		}
+		if len(s.Paths) == 0 {
+			return fmt.Errorf("invalid empty search path, must have at least one search path")
+		}
 		for _, r := range s.Contents {
 			debugprint("validating content '%s'\n", r)
 			err = validateRegex(r)
@@ -715,7 +722,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	}
 
 	for label, search := range r.Parameters.Searches {
-		debugprint("making checks for label", label)
+		debugprint("making checks for label %s\n", label)
 		err := search.makeChecks()
 		if err != nil {
 			panic(err)
@@ -732,7 +739,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 				}
 			}
 			if !alreadyPresent {
-				debugprint("adding path", p, "to list of locations to traverse")
+				debugprint("adding path %s to list of locations to traverse\n", p)
 				roots = append(roots, p)
 			}
 		}
@@ -754,11 +761,11 @@ func (r *run) Run(in io.Reader) (resStr string) {
 		}
 		for _, p := range traversed {
 			if root == p {
-				debugprint("skipping already traversed root:", root)
+				debugprint("skipping already traversed root: %s\n", root)
 				goto skip
 			}
 		}
-		debugprint("entering root", root)
+		debugprint("entering root %s\n", root)
 		traversed, err = r.pathWalk(root, roots)
 		if err != nil {
 			// log errors and continue
@@ -1067,28 +1074,36 @@ func (c check) wantThis(match bool) bool {
 	if match {
 		if c.inversematch {
 			if c.mismatch {
+				debugprint("wantThis=true\n")
 				return true
 			} else {
+				debugprint("wantThis=false\n")
 				return false
 			}
 		} else {
 			if c.mismatch {
+				debugprint("wantThis=false\n")
 				return false
 			} else {
+				debugprint("wantThis=true\n")
 				return true
 			}
 		}
 	} else {
 		if c.inversematch {
 			if c.mismatch {
+				debugprint("wantThis=false\n")
 				return false
 			} else {
+				debugprint("wantThis=true\n")
 				return true
 			}
 		} else {
 			if c.mismatch {
+				debugprint("wantThis=true\n")
 				return true
 			} else {
+				debugprint("wantThis=false\n")
 				return false
 			}
 		}
@@ -1148,7 +1163,7 @@ func (s search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
 				continue
 			}
 			match := false
-			if fi.Size() > int64(c.minsize) && fi.Size() < int64(c.maxsize) {
+			if fi.Size() >= int64(c.minsize) && fi.Size() <= int64(c.maxsize) {
 				match = true
 				debugprint("file '%s' size '%d' is between %d and %d\n",
 					fi.Name(), fi.Size(), c.minsize, c.maxsize)
@@ -1292,7 +1307,7 @@ func (r *run) checkContent(file string) {
 							debugprint("checkContent: [fail] must match no line but current line matched. regex='%s', line='%s'\n",
 								c.value, scanner.Text())
 							macroalstatus[label] = false
-							if c.wantThis(false) {
+							if c.wantThis(true) {
 								c.storeMatch(file)
 							}
 						} else {
@@ -1344,6 +1359,7 @@ func (r *run) checkContent(file string) {
 	// 2. If any check with inversematch=true failed to match, record that as a success
 	// 3. deactivate searches that have matchall=true, but did not match against
 	for label, search := range r.Parameters.Searches {
+		// 1. if MACROAL is set and the search succeeded, store the file in each content check
 		if search.Options.Macroal && macroalstatus[label] {
 			debugprint("checkContent: macroal is set and search label '%s' passed on file '%s'\n",
 				label, file)
@@ -1354,7 +1370,7 @@ func (r *run) checkContent(file string) {
 				if c.code&checkContent == 0 {
 					continue
 				}
-				if c.wantThis(true) {
+				if c.wantThis(checksstatus[label][i]) {
 					c.storeMatch(file)
 				}
 				search.checks[i] = c
@@ -1362,6 +1378,7 @@ func (r *run) checkContent(file string) {
 			// we're done with this search
 			continue
 		}
+		// 2. If any check with inversematch=true failed to match, record that as a success
 		for i, c := range search.checks {
 			if c.code&checkContent == 0 {
 				continue
@@ -1369,13 +1386,15 @@ func (r *run) checkContent(file string) {
 			if !checksstatus[label][i] && c.inversematch {
 				debugprint("in search '%s' on file '%s', check '%s' has not matched and is set to inversematch, record this as a positive result\n",
 					label, file, c.value)
-				if c.wantThis(true) {
+				if c.wantThis(checksstatus[label][i]) {
 					c.storeMatch(file)
 				}
+				// adjust check status to true because the check did in fact match as an inverse
 				checksstatus[label][i] = true
 				search.checks[i] = c
 			}
 		}
+		// 3. deactivate searches that have matchall=true, but did not match against
 		if search.isactive && (search.checkmask&checkContent != 0) && search.Options.MatchAll {
 			for i, c := range search.checks {
 				if c.code&checkContent == 0 {
@@ -1383,7 +1402,7 @@ func (r *run) checkContent(file string) {
 				}
 				// check hasn't matched, or has matched and we didn't want it to, deactivate the search
 				if !checksstatus[label][i] || (checksstatus[label][i] && c.inversematch) {
-					if c.wantThis(false) {
+					if c.wantThis(checksstatus[label][i]) {
 						c.storeMatch(file)
 						search.checks[i] = c
 					}
@@ -1551,7 +1570,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 			}
 			// verify that each file has matched on all the checks
 			for _, foundFile := range allFiles {
-				debugprint("checking if file", foundFile, "matched all checks")
+				debugprint("checking if file %s matched all checks\n", foundFile)
 				matchedallchecks := true
 				for _, c := range search.checks {
 					found := false
@@ -1561,7 +1580,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 						}
 					}
 					if !found {
-						debugprint("check", c.code, "did not match")
+						debugprint("check %d did not match\n", c.code)
 						matchedallchecks = false
 						break
 					}
