@@ -1,14 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
-<title>Mozilla InvestiGator: Package module</title>
-<meta name="author" content="Aaron Meihm &lt;ameihm&#64;mozilla.com&gt;" />
-<style type="text/css">
-
-body {
+<!DOCTYPE html><html><head><meta charset="utf-8"><title></title><style type="text/css">body {
   width: 95%;
   max-width: 900px;
   margin: 20px;
@@ -16,8 +6,12 @@ body {
   background: #151515 url("../images/bkg.png") 0 0;
   color: #eaeaea;
   font: 16px;
-  line-height: 1.5;
+  line-height: 1.5em;
   font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+}
+
+#table-of-contents ul {
+    line-height: 1;
 }
 
 /* General & 'Reset' Stuff */
@@ -38,10 +32,6 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0;
 }
 
-li {
-  line-height: 1.4 ;
-}
-
 /* Header, <header>
  *    header   - container
  *       h1       - project name
@@ -51,7 +41,7 @@ li {
 header {
   background: rgba(0, 0, 0, 0.1);
   width: 100%;
-  border-bottom: 1px dashed #b5e853;
+  /*border-bottom: 1px dashed #b5e853;*/
   /*padding: 20px 0;
  *   margin: 0 0 40px 0;*/
   padding: 5px 0;
@@ -81,14 +71,12 @@ header h1:before {
 header h2 {
   font-size: 18px;
   font-weight: 300;
-  /*color: #666;*/
-  color: #ff7800;
 }
 
 /* Main Content
  * */
 
-#main_content {
+body {
   width: 100%;
   -webkit-font-smoothing: antialiased;
 }
@@ -96,40 +84,42 @@ section img {
   max-width: 100%
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-weight: normal;
-  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
-  /*color: #b5e853;*/
+h2 a {
+  font-weight: bold;
   color: #8AB638;
-  letter-spacing: -0.03em;
-  /*text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
-               0 0 5px rgba(181, 232, 83, 0.1),
-               0 0 10px rgba(181, 232, 83, 0.1);*/
+  line-height: 1.4em;
+  font-size: 1.4em;
+}
+h3 a, h4 a, h5 a, h6 a {
+  font-weight: bold;
+  color: #934500;
+  line-height: 1.4em;
 }
 
-#main_content h1 {
+h1 {
   font-size: 30px;
 }
 
-#main_content h2 {
-  font-size: 24px;
+h2 {
+  font-size: 28px;
+  border-bottom: 1px dashed #b5e853;
 }
 
-#main_content h3 {
+h3 {
   font-size: 18px;
 }
 
-#main_content h4 {
+h4 {
   font-size: 14px;
 }
 
-#main_content h5 {
+h5 {
   font-size: 12px;
   text-transform: uppercase;
   margin: 0 0 5px 0;
 }
 
-#main_content h6 {
+h6 {
   font-size: 12px;
   text-transform: uppercase;
   color: #999;
@@ -187,17 +177,17 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { color: grey; } /* line numbers */
-//pre.code, code { background-color: #eeeeee }
-pre.code .comment, code .comment, code .c1 { color: #FF7428; }
-code, pre.code .keyword, code .keyword, pre.code .kd, pre.code .kn, pre.code .k, pre.code .o { color: #00a5ff; font-weight: bold;}
-pre.code .nb { color: #c45918;}
-pre.code .s {color: #0a77c4;}
-pre.code .punctuation, pre.code .punctuation, pre.code .p { color: white;}
-pre.code .literal.string, pre.code .literal.string { color: #40BF32; }
-pre.code .name.builtin, pre.code .name.builtin, pre.code .nx { color: white; }
-pre.code .deleted, pre.code .deleted { background-color: #DEB0A1}
-pre.code .inserted, pre.code .inserted { background-color: #A3D289}
+code .ln { color: grey; } /* line numbers */
+/*code, code { background-color: #eeeeee }*/
+code .comment, code .comment, code .c1 { color: #999; }
+code .keyword, code .keyword, code .kd, code .kn, code .k, code .o { color: #FC8F3F; font-weight: bold;}
+code .nb { color: #c45918;}
+code .s {color: #0a77c4;}
+code .punctuation, code .p { color: white;}
+code .literal.string, code .literal.string { color: #40BF32; }
+code .name, code .name.builtin, code .nx { color: white; }
+code .deleted, code .deleted { background-color: #DEB0A1}
+code .inserted, code .inserted { background-color: #A3D289}
 
 table {
   width: 100%;
@@ -226,7 +216,8 @@ hr {
 
 a {
   color: #63c0f5;
-  text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);
+  /*text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);*/
+  text-decoration: none;
 }
 
 cite {
@@ -236,44 +227,11 @@ cite {
 strong {
   color: #C64216;
 }
-
-</style>
-</head>
-<body>
-<div class="document" id="mozilla-investigator-package-module">
-<h1 class="title">Mozilla InvestiGator: Package module</h1>
-<table class="docinfo" frame="void" rules="none">
-<col class="docinfo-name" />
-<col class="docinfo-content" />
-<tbody valign="top">
-<tr><th class="docinfo-name">Author:</th>
-<td>Aaron Meihm &lt;<a class="reference external" href="mailto:ameihm&#64;mozilla.com">ameihm&#64;mozilla.com</a>&gt;</td></tr>
-</tbody>
-</table>
-<div class="contents topic" id="table-of-contents">
-<p class="topic-title first">Table of Contents</p>
-<ul class="auto-toc simple">
-<li><a class="reference internal" href="#usage" id="id1">1&nbsp;&nbsp;&nbsp;Usage</a></li>
-</ul>
-</div>
-<p>The package module (pkg) supports querying of the OS package manager
+</style></head><body><h1>Mozilla InvestiGator: Package module</h1><table><tr><td class="field-label">Author</td><td>Aaron Meihm &lt;<a class="reference external" href="mailto:ameihm@mozilla.com">ameihm@mozilla.com</a>&gt;</td></tr></table><div class="contents" id="table-of-contents"><h2>Table of Contents</h2><ul class="auto-toc"><li><p><a class="reference internal" href="#usage" id="id1">1   Usage</a></p></li></ul></div><p>The package module (pkg) supports querying of the OS package manager
 using the package query functionality of <a class="reference external" href="https://github.com/mozilla/scribe">scribe</a>.
 It can be used to return a list of packages installed on an agent system
-that match supplied regular expressions.</p>
-<div class="section" id="usage">
-<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Usage</a></h1>
-<p>Package query mode can be used by specifying one or more <cite>name</cite> options for
+that match supplied regular expressions.</p><section id="usage"><header><h2><a href="#id1">1   Usage</a></h2></header><p>Package query mode can be used by specifying one or more <cite>name</cite> options for
 the pkg module. In this mode, the module will query the OS package manager
 on the agent system, identifying any packages matching the regular expression
 argument to <cite>name</cite>, and returning those packages along with their versions. In
-addition to this, the agent will also return what type of package was identified.</p>
-<p>Currently the following package managers are supported for query on an agent system.</p>
-<ul class="simple">
-<li><strong>RPM</strong>: RPM based package managers, for Red Hat, CentOS, etc</li>
-<li><strong>dpkg</strong>: DPKG based package managers, for Debian, Ubuntu, etc</li>
-</ul>
-<p>Packages managed in other package managers will not be returned by the module.</p>
-</div>
-</div>
-</body>
-</html>
+addition to this, the agent will also return what type of package was identified.</p><p>Currently the following package managers are supported for query on an agent system.</p><ul><li><p><strong>RPM</strong>: RPM based package managers, for Red Hat, CentOS, etc</p></li><li><p><strong>dpkg</strong>: DPKG based package managers, for Debian, Ubuntu, etc</p></li></ul><p>Packages managed in other package managers will not be returned by the module.</p></section></body></html>

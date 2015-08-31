@@ -1,14 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
-<title>Mozilla InvestiGator: scribe module</title>
-<meta name="author" content="Aaron Meihm &lt;ameihm&#64;mozilla.com&gt;" />
-<style type="text/css">
-
-body {
+<!DOCTYPE html><html><head><meta charset="utf-8"><title></title><style type="text/css">body {
   width: 95%;
   max-width: 900px;
   margin: 20px;
@@ -16,8 +6,12 @@ body {
   background: #151515 url("../images/bkg.png") 0 0;
   color: #eaeaea;
   font: 16px;
-  line-height: 1.5;
+  line-height: 1.5em;
   font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+}
+
+#table-of-contents ul {
+    line-height: 1;
 }
 
 /* General & 'Reset' Stuff */
@@ -38,10 +32,6 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0;
 }
 
-li {
-  line-height: 1.4 ;
-}
-
 /* Header, <header>
  *    header   - container
  *       h1       - project name
@@ -51,7 +41,7 @@ li {
 header {
   background: rgba(0, 0, 0, 0.1);
   width: 100%;
-  border-bottom: 1px dashed #b5e853;
+  /*border-bottom: 1px dashed #b5e853;*/
   /*padding: 20px 0;
  *   margin: 0 0 40px 0;*/
   padding: 5px 0;
@@ -81,14 +71,12 @@ header h1:before {
 header h2 {
   font-size: 18px;
   font-weight: 300;
-  /*color: #666;*/
-  color: #ff7800;
 }
 
 /* Main Content
  * */
 
-#main_content {
+body {
   width: 100%;
   -webkit-font-smoothing: antialiased;
 }
@@ -96,40 +84,42 @@ section img {
   max-width: 100%
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-weight: normal;
-  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
-  /*color: #b5e853;*/
+h2 a {
+  font-weight: bold;
   color: #8AB638;
-  letter-spacing: -0.03em;
-  /*text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
-               0 0 5px rgba(181, 232, 83, 0.1),
-               0 0 10px rgba(181, 232, 83, 0.1);*/
+  line-height: 1.4em;
+  font-size: 1.4em;
+}
+h3 a, h4 a, h5 a, h6 a {
+  font-weight: bold;
+  color: #934500;
+  line-height: 1.4em;
 }
 
-#main_content h1 {
+h1 {
   font-size: 30px;
 }
 
-#main_content h2 {
-  font-size: 24px;
+h2 {
+  font-size: 28px;
+  border-bottom: 1px dashed #b5e853;
 }
 
-#main_content h3 {
+h3 {
   font-size: 18px;
 }
 
-#main_content h4 {
+h4 {
   font-size: 14px;
 }
 
-#main_content h5 {
+h5 {
   font-size: 12px;
   text-transform: uppercase;
   margin: 0 0 5px 0;
 }
 
-#main_content h6 {
+h6 {
   font-size: 12px;
   text-transform: uppercase;
   color: #999;
@@ -187,17 +177,17 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { color: grey; } /* line numbers */
-//pre.code, code { background-color: #eeeeee }
-pre.code .comment, code .comment, code .c1 { color: #FF7428; }
-code, pre.code .keyword, code .keyword, pre.code .kd, pre.code .kn, pre.code .k, pre.code .o { color: #00a5ff; font-weight: bold;}
-pre.code .nb { color: #c45918;}
-pre.code .s {color: #0a77c4;}
-pre.code .punctuation, pre.code .punctuation, pre.code .p { color: white;}
-pre.code .literal.string, pre.code .literal.string { color: #40BF32; }
-pre.code .name.builtin, pre.code .name.builtin, pre.code .nx { color: white; }
-pre.code .deleted, pre.code .deleted { background-color: #DEB0A1}
-pre.code .inserted, pre.code .inserted { background-color: #A3D289}
+code .ln { color: grey; } /* line numbers */
+/*code, code { background-color: #eeeeee }*/
+code .comment, code .comment, code .c1 { color: #999; }
+code .keyword, code .keyword, code .kd, code .kn, code .k, code .o { color: #FC8F3F; font-weight: bold;}
+code .nb { color: #c45918;}
+code .s {color: #0a77c4;}
+code .punctuation, code .p { color: white;}
+code .literal.string, code .literal.string { color: #40BF32; }
+code .name, code .name.builtin, code .nx { color: white; }
+code .deleted, code .deleted { background-color: #DEB0A1}
+code .inserted, code .inserted { background-color: #A3D289}
 
 table {
   width: 100%;
@@ -226,7 +216,8 @@ hr {
 
 a {
   color: #63c0f5;
-  text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);
+  /*text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);*/
+  text-decoration: none;
 }
 
 cite {
@@ -236,141 +227,85 @@ cite {
 strong {
   color: #C64216;
 }
-
-</style>
-</head>
-<body>
-<div class="document" id="mozilla-investigator-scribe-module">
-<h1 class="title">Mozilla InvestiGator: scribe module</h1>
-<table class="docinfo" frame="void" rules="none">
-<col class="docinfo-name" />
-<col class="docinfo-content" />
-<tbody valign="top">
-<tr><th class="docinfo-name">Author:</th>
-<td>Aaron Meihm &lt;<a class="reference external" href="mailto:ameihm&#64;mozilla.com">ameihm&#64;mozilla.com</a>&gt;</td></tr>
-</tbody>
-</table>
-<div class="contents topic" id="table-of-contents">
-<p class="topic-title first">Table of Contents</p>
-<ul class="auto-toc simple">
-<li><a class="reference internal" href="#usage" id="id1">1&nbsp;&nbsp;&nbsp;Usage</a><ul class="auto-toc">
-<li><a class="reference internal" href="#document-analysis-mode" id="id2">1.1&nbsp;&nbsp;&nbsp;Document analysis mode</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<p>The scribe module provides host-based analysis based on a JSON document
+</style></head><body><h1>Mozilla InvestiGator: scribe module</h1><table><tr><td class="field-label">Author</td><td>Aaron Meihm &lt;<a class="reference external" href="mailto:ameihm@mozilla.com">ameihm@mozilla.com</a>&gt;</td></tr></table><div class="contents" id="table-of-contents"><h2>Table of Contents</h2><ul class="auto-toc"><li><p><a class="reference internal" href="#usage" id="id1">1   Usage</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#document-analysis-mode" id="id2">1.1   Document analysis mode</a></p></li></ul></li></ul></div><p>The scribe module provides host-based analysis based on a JSON document
 containing a series of tests. The module is based on the scribe engine;
-scribe can be found <a class="reference external" href="https://github.com/mozilla/scribe">here</a>.</p>
-<p>The scribe module is intended to help support:</p>
-<ul class="simple">
-<li>Executing policy checks on systems, for example as part of using MIG for vulnerability management</li>
-<li>Execute more advanced file content tests involving dependencies</li>
-</ul>
-<p>This document does not discuss the details around writing scribe tests, the
+scribe can be found <a class="reference external" href="https://github.com/mozilla/scribe">here</a>.</p><p>The scribe module is intended to help support:</p><ul><li><p>Executing policy checks on systems, for example as part of using MIG for vulnerability management</p></li><li><p>Execute more advanced file content tests involving dependencies</p></li></ul><p>This document does not discuss the details around writing scribe tests, the
 scribe project documentation should be reviewed for that. This document focuses
-on usage of the scribe module within MIG and provides some examples.</p>
-<div class="section" id="usage">
-<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Usage</a></h1>
-<p>Document analysis mode can be used by specifying a document to analyze with
+on usage of the scribe module within MIG and provides some examples.</p><section id="usage"><header><h2><a href="#id1">1   Usage</a></h2></header><p>Document analysis mode can be used by specifying a document to analyze with
 with <cite>path</cite> option. By default, all tests are returned with a result. To
-return only tests that evaluate to true, the <cite>onlytrue</cite> option can be used.</p>
-<p>By default, results are returned in line mode (one result per line). The
+return only tests that evaluate to true, the <cite>onlytrue</cite> option can be used.</p><p>By default, results are returned in line mode (one result per line). The
 <cite>human</cite> flag can be used to output extended results, and the <cite>json</cite> flag
-can be used to output each result as a JSON document.</p>
-<div class="section" id="document-analysis-mode">
-<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Document analysis mode</a></h2>
-<p>In document analysis mode, a JSON document is supplied containing a valid
-scribe document.</p>
-<p>A scribe document contains a series of objects and tests. Objects obtain
+can be used to output each result as a JSON document.</p><section id="document-analysis-mode"><header><h3><a href="#id2">1.1   Document analysis mode</a></h3></header><p>In document analysis mode, a JSON document is supplied containing a valid
+scribe document.</p><p>A scribe document contains a series of objects and tests. Objects obtain
 information from the system, and tests evaluate this information against
 specified criteria. An object can return more than one candidate, for example
 if multiple files are identified on a system that match certain criteria. In
 this case, the test will evaluate each candidate, and return a result for
-each one.</p>
-<p>The following is a simple document example that validates OpenSSL is at least
-version 1.0.1e. If the criteria in the test matches, it will return true.</p>
-<pre class="code json literal-block">
-<span class="punctuation">{</span>
-    <span class="name tag">&quot;objects&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+each one.</p><p>The following is a simple document example that validates OpenSSL is at least
+version 1.0.1e. If the criteria in the test matches, it will return true.</p><pre><code class="code json"><span class="punctuation">{</span>
+    <span class="name tag">"objects"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
     <span class="punctuation">{</span>
-        <span class="name tag">&quot;object&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;openssl-package&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;package&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-            <span class="name tag">&quot;name&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;openssl&quot;</span>
+        <span class="name tag">"object"</span><span class="punctuation">:</span> <span class="literal string double">"openssl-package"</span><span class="punctuation">,</span>
+        <span class="name tag">"package"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+            <span class="name tag">"name"</span><span class="punctuation">:</span> <span class="literal string double">"openssl"</span>
         <span class="punctuation">}</span>
     <span class="punctuation">}</span>
     <span class="punctuation">],</span>
-    <span class="name tag">&quot;tests&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+    <span class="name tag">"tests"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
     <span class="punctuation">{</span>
-        <span class="name tag">&quot;test&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;openssl test&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;object&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;openssl-package&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;evr&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-            <span class="name tag">&quot;operation&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;&lt;&quot;</span><span class="punctuation">,</span>
-            <span class="name tag">&quot;value&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;1.0.1e&quot;</span>
+        <span class="name tag">"test"</span><span class="punctuation">:</span> <span class="literal string double">"openssl test"</span><span class="punctuation">,</span>
+        <span class="name tag">"object"</span><span class="punctuation">:</span> <span class="literal string double">"openssl-package"</span><span class="punctuation">,</span>
+        <span class="name tag">"evr"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+            <span class="name tag">"operation"</span><span class="punctuation">:</span> <span class="literal string double">"&lt;"</span><span class="punctuation">,</span>
+            <span class="name tag">"value"</span><span class="punctuation">:</span> <span class="literal string double">"1.0.1e"</span>
         <span class="punctuation">}</span>
     <span class="punctuation">}</span>
     <span class="punctuation">]</span>
-<span class="punctuation">}</span>
-</pre>
-<p>Passing this to the module will return the test status.</p>
-<pre class="literal-block">
-1 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
+<span class="punctuation">}</span></code></pre><p>Passing this to the module will return the test status.</p><pre>1 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
 Following action ID 4580457251059.status=inflight.
 - 100.0% done in 3.16738436s
 1 sent, 1 done, 1 succeeded
-ubuntu-dev master [false] name:&quot;openssl test&quot; hastrue:false error:&quot;&quot;
-ubuntu-dev sub [false] name:&quot;openssl test&quot; identifier:&quot;openssl&quot;
-1 agent has found results
-</pre>
-<p>In this case, the test returns false. The master result for the test indicates
+ubuntu-dev master [false] name:"openssl test" hastrue:false error:""
+ubuntu-dev sub [false] name:"openssl test" identifier:"openssl"
+1 agent has found results</pre><p>In this case, the test returns false. The master result for the test indicates
 false, as the sub result was false. A single test can have multiple sub-results
 if the object identified more then one object on the system. In this case, the
 evaluator will be applied to each object identifier. If at least one evaluation
-is true, the master result for the test will be true.</p>
-<p>A more advanced test, returning true if, in this example Django is identified
+is true, the master result for the test will be true.</p><p>A more advanced test, returning true if, in this example Django is identified
 on the system and the version is less than 1.4.5, and /etc/testfile also exists
-on the system.</p>
-<pre class="code json literal-block">
-<span class="punctuation">{</span>
-    <span class="name tag">&quot;objects&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+on the system.</p><pre><code class="code json"><span class="punctuation">{</span>
+    <span class="name tag">"objects"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
     <span class="punctuation">{</span>
-        <span class="name tag">&quot;object&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;djangoinit&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;filecontent&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-            <span class="name tag">&quot;path&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;/&quot;</span><span class="punctuation">,</span>
-            <span class="name tag">&quot;file&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;__init__\\.py&quot;</span><span class="punctuation">,</span>
-            <span class="name tag">&quot;expression&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;^VERSION = \\((\\S+), (\\S+), (\\S+),&quot;</span><span class="punctuation">,</span>
-            <span class="name tag">&quot;concat&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;.&quot;</span>
+        <span class="name tag">"object"</span><span class="punctuation">:</span> <span class="literal string double">"djangoinit"</span><span class="punctuation">,</span>
+        <span class="name tag">"filecontent"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+            <span class="name tag">"path"</span><span class="punctuation">:</span> <span class="literal string double">"/"</span><span class="punctuation">,</span>
+            <span class="name tag">"file"</span><span class="punctuation">:</span> <span class="literal string double">"__init__\\.py"</span><span class="punctuation">,</span>
+            <span class="name tag">"expression"</span><span class="punctuation">:</span> <span class="literal string double">"^VERSION = \\((\\S+), (\\S+), (\\S+),"</span><span class="punctuation">,</span>
+            <span class="name tag">"concat"</span><span class="punctuation">:</span> <span class="literal string double">"."</span>
         <span class="punctuation">}</span>
     <span class="punctuation">},</span>
     <span class="punctuation">{</span>
-        <span class="name tag">&quot;object&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;testfile&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;filename&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-            <span class="name tag">&quot;path&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;/etc&quot;</span><span class="punctuation">,</span>
-            <span class="name tag">&quot;file&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;(testfile)&quot;</span>
+        <span class="name tag">"object"</span><span class="punctuation">:</span> <span class="literal string double">"testfile"</span><span class="punctuation">,</span>
+        <span class="name tag">"filename"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+            <span class="name tag">"path"</span><span class="punctuation">:</span> <span class="literal string double">"/etc"</span><span class="punctuation">,</span>
+            <span class="name tag">"file"</span><span class="punctuation">:</span> <span class="literal string double">"(testfile)"</span>
         <span class="punctuation">}</span>
     <span class="punctuation">}</span>
     <span class="punctuation">],</span>
-    <span class="name tag">&quot;tests&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+    <span class="name tag">"tests"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
     <span class="punctuation">{</span>
-        <span class="name tag">&quot;test&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;django and test file&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;object&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;djangoinit&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;evr&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-            <span class="name tag">&quot;operation&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;&lt;&quot;</span><span class="punctuation">,</span>
-            <span class="name tag">&quot;value&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;1.4.5&quot;</span>
+        <span class="name tag">"test"</span><span class="punctuation">:</span> <span class="literal string double">"django and test file"</span><span class="punctuation">,</span>
+        <span class="name tag">"object"</span><span class="punctuation">:</span> <span class="literal string double">"djangoinit"</span><span class="punctuation">,</span>
+        <span class="name tag">"evr"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+            <span class="name tag">"operation"</span><span class="punctuation">:</span> <span class="literal string double">"&lt;"</span><span class="punctuation">,</span>
+            <span class="name tag">"value"</span><span class="punctuation">:</span> <span class="literal string double">"1.4.5"</span>
         <span class="punctuation">},</span>
-        <span class="name tag">&quot;if&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span> <span class="literal string double">&quot;testfile exists&quot;</span> <span class="punctuation">]</span>
+        <span class="name tag">"if"</span><span class="punctuation">:</span> <span class="punctuation">[</span> <span class="literal string double">"testfile exists"</span> <span class="punctuation">]</span>
     <span class="punctuation">},</span>
     <span class="punctuation">{</span>
-        <span class="name tag">&quot;test&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;testfile exists&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;object&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;testfile&quot;</span>
+        <span class="name tag">"test"</span><span class="punctuation">:</span> <span class="literal string double">"testfile exists"</span><span class="punctuation">,</span>
+        <span class="name tag">"object"</span><span class="punctuation">:</span> <span class="literal string double">"testfile"</span>
     <span class="punctuation">}</span>
     <span class="punctuation">]</span>
-<span class="punctuation">}</span>
-</pre>
-<p>The module is designed to only return a true or a false for tests; file content
-from the file system is never returned from the agent.</p>
-</div>
-</div>
-</div>
-</body>
-</html>
+<span class="punctuation">}</span></code></pre><p>The module is designed to only return a true or a false for tests; file content
+from the file system is never returned from the agent.</p></section></section></body></html>

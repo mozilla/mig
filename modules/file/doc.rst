@@ -179,15 +179,15 @@ Several options can be applied to a search:
   content regexes defined in a given search to return a match. It is set to not
   set by default.
 
-  example: `-path /home -name authorized_keys -content "^(#|\s+|...list of ssh keys...)$" -macroal`
+  example: `-path /home -name authorized_keys -content "^((#.+)|(\s+)|...list of ssh keys...)$" -macroal`
 
   will list authorized_keys file that have contain either a comment, an empty
-  line or one of the listed ssh keys. If a file has a line that doesn't match
-  the content regex, it will not be returned in the results.
+  line or one of the listed ssh keys. It will only return a file in the results
+  if all the lines of the file match the regex.
 
 * **mismatch=<filter>** inverts the results for the given filter. This can be used
-  to list files that did not match a given expression, instead of the default
-  behavior which returns files that match an expression.
+  to list files that did not match a given check, instead of the default which
+  returns files that match a check.
 
   For example, the following search will return files where all lines match the
   content regex:
@@ -198,14 +198,15 @@ Several options can be applied to a search:
   could be useful if we're looking for a file that contains a rogue SSH key.
   The mismatch option can be applied to the content filter to achieve this:
 
-  `-path /home -name ^authorized_keys -content "^(#|\s+|...list of ssh keys...)$" -macroal -mismatch=content`
+  `mig file -path /home -name ^authorized_keys -content "^((#.+)|(\s+)|..1stkey..|..2ndkey..)$" -macroal -mismatch content`
 
-  This search will locate the authorized_keys files that have at least one line
-  that does not match the content regular expression provided in the content
-  parameter ("at least one line" is provided by the `macroal` parameter that
-  requires every line to match the regex).
+  This search will locate all authorized_keys files and the inspect their
+  content. The `macroal` flag indicates that all lines of a file must match the
+  content regex. The `mismatch` flag inverses that logic, and thus if a least
+  one line does not match the content regex, the file will be returned as a
+  match.
 
-  The `mismatch` option can take any filter as a parameter: name, size, mode,
+  The `mismatch` option can be applied to all check types: name, size, mode,
   mtime, content, md5, sha1, sha256, ... It can be specified multiple times:
 
   example: `-path /usr -name "^vim$" -content "linux-x86-64\.so" -sha1 943633c85bb80d39532450decf1f723735313f1f -sha1 350ac204ac8084590b209c33f39f09986f0ba682 -mismatch=content -mismatch=sha1`

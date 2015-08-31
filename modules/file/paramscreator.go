@@ -79,7 +79,8 @@ Options
 			  the default limit is set to 1000. search will stop once the limit
 			  is reached.
 
-Complete documentation and examples at http://mig.mozilla.org/doc/module_file.html
+Module documentation is at http://mig.mozilla.org/doc/module_file.html
+Cheatsheet and examples are at http://mig.mozilla.org/doc/cheatsheet.rst.html
 `, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash,
 		dash, dash, dash, dash, dash, dash, dash, dash, dash,
 		dash, dash, dash, dash, dash, dash, dash, dash)

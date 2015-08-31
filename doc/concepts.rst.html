@@ -1,14 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
-<title>Mozilla InvestiGator Concepts &amp; Internal Components</title>
-<meta name="author" content="Julien Vehent &lt;jvehent&#64;mozilla.com&gt;" />
-<style type="text/css">
-
-body {
+<!DOCTYPE html><html><head><meta charset="utf-8"><title></title><style type="text/css">body {
   width: 95%;
   max-width: 900px;
   margin: 20px;
@@ -16,8 +6,12 @@ body {
   background: #151515 url("../images/bkg.png") 0 0;
   color: #eaeaea;
   font: 16px;
-  line-height: 1.5;
+  line-height: 1.5em;
   font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+}
+
+#table-of-contents ul {
+    line-height: 1;
 }
 
 /* General & 'Reset' Stuff */
@@ -38,10 +32,6 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0;
 }
 
-li {
-  line-height: 1.4 ;
-}
-
 /* Header, <header>
  *    header   - container
  *       h1       - project name
@@ -51,7 +41,7 @@ li {
 header {
   background: rgba(0, 0, 0, 0.1);
   width: 100%;
-  border-bottom: 1px dashed #b5e853;
+  /*border-bottom: 1px dashed #b5e853;*/
   /*padding: 20px 0;
  *   margin: 0 0 40px 0;*/
   padding: 5px 0;
@@ -81,14 +71,12 @@ header h1:before {
 header h2 {
   font-size: 18px;
   font-weight: 300;
-  /*color: #666;*/
-  color: #ff7800;
 }
 
 /* Main Content
  * */
 
-#main_content {
+body {
   width: 100%;
   -webkit-font-smoothing: antialiased;
 }
@@ -96,40 +84,42 @@ section img {
   max-width: 100%
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-weight: normal;
-  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
-  /*color: #b5e853;*/
+h2 a {
+  font-weight: bold;
   color: #8AB638;
-  letter-spacing: -0.03em;
-  /*text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
-               0 0 5px rgba(181, 232, 83, 0.1),
-               0 0 10px rgba(181, 232, 83, 0.1);*/
+  line-height: 1.4em;
+  font-size: 1.4em;
+}
+h3 a, h4 a, h5 a, h6 a {
+  font-weight: bold;
+  color: #934500;
+  line-height: 1.4em;
 }
 
-#main_content h1 {
+h1 {
   font-size: 30px;
 }
 
-#main_content h2 {
-  font-size: 24px;
+h2 {
+  font-size: 28px;
+  border-bottom: 1px dashed #b5e853;
 }
 
-#main_content h3 {
+h3 {
   font-size: 18px;
 }
 
-#main_content h4 {
+h4 {
   font-size: 14px;
 }
 
-#main_content h5 {
+h5 {
   font-size: 12px;
   text-transform: uppercase;
   margin: 0 0 5px 0;
 }
 
-#main_content h6 {
+h6 {
   font-size: 12px;
   text-transform: uppercase;
   color: #999;
@@ -187,17 +177,17 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { color: grey; } /* line numbers */
-//pre.code, code { background-color: #eeeeee }
-pre.code .comment, code .comment, code .c1 { color: #FF7428; }
-code, pre.code .keyword, code .keyword, pre.code .kd, pre.code .kn, pre.code .k, pre.code .o { color: #00a5ff; font-weight: bold;}
-pre.code .nb { color: #c45918;}
-pre.code .s {color: #0a77c4;}
-pre.code .punctuation, pre.code .punctuation, pre.code .p { color: white;}
-pre.code .literal.string, pre.code .literal.string { color: #40BF32; }
-pre.code .name.builtin, pre.code .name.builtin, pre.code .nx { color: white; }
-pre.code .deleted, pre.code .deleted { background-color: #DEB0A1}
-pre.code .inserted, pre.code .inserted { background-color: #A3D289}
+code .ln { color: grey; } /* line numbers */
+/*code, code { background-color: #eeeeee }*/
+code .comment, code .comment, code .c1 { color: #999; }
+code .keyword, code .keyword, code .kd, code .kn, code .k, code .o { color: #FC8F3F; font-weight: bold;}
+code .nb { color: #c45918;}
+code .s {color: #0a77c4;}
+code .punctuation, code .p { color: white;}
+code .literal.string, code .literal.string { color: #40BF32; }
+code .name, code .name.builtin, code .nx { color: white; }
+code .deleted, code .deleted { background-color: #DEB0A1}
+code .inserted, code .inserted { background-color: #A3D289}
 
 table {
   width: 100%;
@@ -226,7 +216,8 @@ hr {
 
 a {
   color: #63c0f5;
-  text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);
+  /*text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);*/
+  text-decoration: none;
 }
 
 cite {
@@ -236,94 +227,28 @@ cite {
 strong {
   color: #C64216;
 }
-
-</style>
-</head>
-<body>
-<div class="document" id="mozilla-investigator-concepts-internal-components">
-<h1 class="title">Mozilla InvestiGator Concepts &amp; Internal Components</h1>
-<table class="docinfo" frame="void" rules="none">
-<col class="docinfo-name" />
-<col class="docinfo-content" />
-<tbody valign="top">
-<tr><th class="docinfo-name">Author:</th>
-<td>Julien Vehent &lt;<a class="reference external" href="mailto:jvehent&#64;mozilla.com">jvehent&#64;mozilla.com</a>&gt;</td></tr>
-</tbody>
-</table>
-<div class="contents topic" id="table-of-contents">
-<p class="topic-title first">Table of Contents</p>
-<ul class="auto-toc simple">
-<li><a class="reference internal" href="#actions-and-commands" id="id1">1&nbsp;&nbsp;&nbsp;Actions and Commands</a><ul class="auto-toc">
-<li><a class="reference internal" href="#actions" id="id2">1.1&nbsp;&nbsp;&nbsp;Actions</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#action-commands-workflow" id="id3">2&nbsp;&nbsp;&nbsp;Action/Commands workflow</a><ul class="auto-toc">
-<li><a class="reference internal" href="#command-execution-flow-in-agent-and-modules" id="id4">2.1&nbsp;&nbsp;&nbsp;Command execution flow in Agent and Modules</a></li>
-<li><a class="reference internal" href="#command-expiration-timeouts" id="id5">2.2&nbsp;&nbsp;&nbsp;Command expiration &amp; timeouts</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#access-control-lists" id="id6">3&nbsp;&nbsp;&nbsp;Access Control Lists</a></li>
-<li><a class="reference internal" href="#agent-initialization-process" id="id7">4&nbsp;&nbsp;&nbsp;Agent initialization process</a><ul class="auto-toc">
-<li><a class="reference internal" href="#registration-process" id="id8">4.1&nbsp;&nbsp;&nbsp;Registration process</a></li>
-<li><a class="reference internal" href="#check-in-mode" id="id9">4.2&nbsp;&nbsp;&nbsp;Check-In mode</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#agent-upgrade-process" id="id10">5&nbsp;&nbsp;&nbsp;Agent upgrade process</a></li>
-<li><a class="reference internal" href="#threat-model" id="id11">6&nbsp;&nbsp;&nbsp;Threat Model</a><ul class="auto-toc">
-<li><a class="reference internal" href="#strong-gpg-security-model" id="id12">6.1&nbsp;&nbsp;&nbsp;Strong GPG security model</a></li>
-<li><a class="reference internal" href="#infrastructure-resiliency" id="id13">6.2&nbsp;&nbsp;&nbsp;Infrastructure resiliency</a></li>
-<li><a class="reference internal" href="#no-port-listening" id="id14">6.3&nbsp;&nbsp;&nbsp;No port listening</a></li>
-<li><a class="reference internal" href="#protection-of-connections-to-the-relays" id="id15">6.4&nbsp;&nbsp;&nbsp;Protection of connections to the relays</a></li>
-<li><a class="reference internal" href="#randomization-of-the-queue-names" id="id16">6.5&nbsp;&nbsp;&nbsp;Randomization of the queue names</a></li>
-<li><a class="reference internal" href="#whitelisting-of-agents" id="id17">6.6&nbsp;&nbsp;&nbsp;Whitelisting of agents</a></li>
-<li><a class="reference internal" href="#limit-data-extraction-to-a-minimum" id="id18">6.7&nbsp;&nbsp;&nbsp;Limit data extraction to a minimum</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<p>MIG is a platform to perform investigative surgery on remote endpoints.
+</style></head><body><h1>Mozilla InvestiGator Concepts &amp; Internal Components</h1><table><tr><td class="field-label">Author</td><td>Julien Vehent &lt;<a class="reference external" href="mailto:jvehent@mozilla.com">jvehent@mozilla.com</a>&gt;</td></tr></table><div class="contents" id="table-of-contents"><h2>Table of Contents</h2><ul class="auto-toc"><li><p><a class="reference internal" href="#actions-and-commands" id="id1">1   Actions and Commands</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#actions" id="id2">1.1   Actions</a></p></li></ul></li><li><p><a class="reference internal" href="#action-commands-workflow" id="id3">2   Action/Commands workflow</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#command-execution-flow-in-agent-and-modules" id="id4">2.1   Command execution flow in Agent and Modules</a></p></li><li><p><a class="reference internal" href="#command-expiration-timeouts" id="id5">2.2   Command expiration &amp; timeouts</a></p></li></ul></li><li><p><a class="reference internal" href="#access-control-lists" id="id6">3   Access Control Lists</a></p></li><li><p><a class="reference internal" href="#agent-initialization-process" id="id7">4   Agent initialization process</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#registration-process" id="id8">4.1   Registration process</a></p></li><li><p><a class="reference internal" href="#check-in-mode" id="id9">4.2   Check-In mode</a></p></li></ul></li><li><p><a class="reference internal" href="#agent-upgrade-process" id="id10">5   Agent upgrade process</a></p></li><li><p><a class="reference internal" href="#threat-model" id="id11">6   Threat Model</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#strong-gpg-security-model" id="id12">6.1   Strong GPG security model</a></p></li><li><p><a class="reference internal" href="#infrastructure-resiliency" id="id13">6.2   Infrastructure resiliency</a></p></li><li><p><a class="reference internal" href="#no-port-listening" id="id14">6.3   No port listening</a></p></li><li><p><a class="reference internal" href="#protection-of-connections-to-the-relays" id="id15">6.4   Protection of connections to the relays</a></p></li><li><p><a class="reference internal" href="#randomization-of-the-queue-names" id="id16">6.5   Randomization of the queue names</a></p></li><li><p><a class="reference internal" href="#whitelisting-of-agents" id="id17">6.6   Whitelisting of agents</a></p></li><li><p><a class="reference internal" href="#limit-data-extraction-to-a-minimum" id="id18">6.7   Limit data extraction to a minimum</a></p></li></ul></li></ul></div><p>MIG is a platform to perform investigative surgery on remote endpoints.
 It enables investigators to obtain information from large numbers of systems
-in parallel, thus accelerating investigation of incidents.</p>
-<p>Besides scalability, MIG is designed to provide strong security primitives:</p>
-<ul class="simple">
-<li><strong>Access control</strong> is ensured by requiring GPG signatures on all actions. Sensitive
+in parallel, thus accelerating investigation of incidents.</p><p>Besides scalability, MIG is designed to provide strong security primitives:</p><ul><li><p><strong>Access control</strong> is ensured by requiring GPG signatures on all actions. Sensitive
 actions can also request signatures from multiple investigators. An attacker
 who takes over the central server will be able to read non-sensitive data,
 but will not be able to send actions to agents. The GPG keys are securely
-kept by their investigators.</li>
-<li><strong>Privacy</strong> is respected by never retrieving raw data from endpoints. When MIG is
+kept by their investigators.</p></li><li><p><strong>Privacy</strong> is respected by never retrieving raw data from endpoints. When MIG is
 ran on laptops or phones, end-users can request reports on the operations
 performed on their devices. The 2-man-rule for sensitive actions also protect
-from rogue investigators invading privacy.</li>
-<li><strong>Reliability</strong> is built in. No component is critical. If an agent crashes, it
+from rogue investigators invading privacy.</p></li><li><p><strong>Reliability</strong> is built in. No component is critical. If an agent crashes, it
 will attempt to recover and reconnect to the platform indefinitely. If the
-platform crashes, a new platform can be rebuilt rapidly without backups.</li>
-</ul>
-<p>MIG privileges a model where requesting information from endpoints is fast and
+platform crashes, a new platform can be rebuilt rapidly without backups.</p></li></ul><p>MIG privileges a model where requesting information from endpoints is fast and
 simple. It does not attempt to record everything all the time. Instead, it
-assumes that when an information will be needed, it will be easy to retrieve it.</p>
-<p>It's an army of Sherlock Holmes, ready to interrogate your network within
-milliseconds.</p>
-<p>Terminology:</p>
-<ul class="simple">
-<li><strong>Investigators</strong>: humans who use clients to investigate things on agents</li>
-<li><strong>Agent</strong>: a small program that runs on a remote endpoint. It receives commands
+assumes that when an information will be needed, it will be easy to retrieve it.</p><p>It's an army of Sherlock Holmes, ready to interrogate your network within
+milliseconds.</p><p>Terminology:</p><ul><li><p><strong>Investigators</strong>: humans who use clients to investigate things on agents</p></li><li><p><strong>Agent</strong>: a small program that runs on a remote endpoint. It receives commands
 from the scheduler through the relays, execute those commands using modules,
-and sends the results back to the relays.</li>
-<li><strong>Module</strong>: single feature Go program that does stuff, like inspecting a file
+and sends the results back to the relays.</p></li><li><p><strong>Module</strong>: single feature Go program that does stuff, like inspecting a file
 system, listing connected IP addresses, creating user accounts or adding
-firewall rules</li>
-<li><strong>Scheduler</strong>: a messenging daemon that routes actions and commands to and from
-agents.</li>
-<li><strong>Relay</strong>: a RabbitMQ server that queues messages between schedulers and agents.</li>
-<li><strong>Database</strong>: a storage backend used by the scheduler and the api</li>
-<li><strong>API</strong>: a REST api that exposes the MIG platform to clients</li>
-<li><strong>Client</strong>: a program used by an investigator to interface with MIG (like the
-MIG Console, or the action generator)</li>
-<li><strong>Worker</strong>: a worker is a small extension to the scheduler and api that
-performs very specific tasks based on events received via the relay.</li>
-</ul>
-<p>An investigator uses a client (such as the MIG Console) to communicate with
+firewall rules</p></li><li><p><strong>Scheduler</strong>: a messenging daemon that routes actions and commands to and from
+agents.</p></li><li><p><strong>Relay</strong>: a RabbitMQ server that queues messages between schedulers and agents.</p></li><li><p><strong>Database</strong>: a storage backend used by the scheduler and the api</p></li><li><p><strong>API</strong>: a REST api that exposes the MIG platform to clients</p></li><li><p><strong>Client</strong>: a program used by an investigator to interface with MIG (like the
+MIG Console, or the action generator)</p></li><li><p><strong>Worker</strong>: a worker is a small extension to the scheduler and api that
+performs very specific tasks based on events received via the relay.</p></li></ul><p>An investigator uses a client (such as the MIG Console) to communicate with
 the API. The API interfaces with the Database and the Scheduler.
 When an action is created by an investigator, the API receives it and writes
 it into the spool of the scheduler (they share it via NFS). The scheduler picks
@@ -333,120 +258,67 @@ The agents execute their commands, and return the results through the same
 relays (same exchange, different queues). The scheduler writes the results into
 the database, where the investigator can access them through the API.
 The agents also use the relays to send heartbeat at regular intervals, such that
-the scheduler always knows how many agents are alive at a given time.</p>
-<p>The end-to-end workflow is:</p>
-<blockquote>
-<pre class="literal-block">
-{investigator} -https-&gt; {API}        {Scheduler} -amqps-&gt; {Relays} -amqps-&gt; {Agents}
+the scheduler always knows how many agents are alive at a given time.</p><p>The end-to-end workflow is:</p><blockquote><pre>{investigator} -https-&gt; {API}        {Scheduler} -amqps-&gt; {Relays} -amqps-&gt; {Agents}
                             \           /
                           sql\         /sql
-                             {DATABASE}
-</pre>
-</blockquote>
-<p>Below is a high-level view of the architecture:</p>
-<img alt=".files/MIG-Arch-Diagram.png" src=".files/MIG-Arch-Diagram.png" />
-<div class="section" id="actions-and-commands">
-<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Actions and Commands</a></h1>
-<div class="section" id="actions">
-<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Actions</a></h2>
-<p>Actions are JSON files created by investigator to perform tasks on agents.</p>
-<p>For example, an investigator who wants to verify than root passwords are hashed
-and salted on linux systems, would use the following action:</p>
-<pre class="code json literal-block">
-<span class="punctuation">{</span>
-        <span class="name tag">&quot;name&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;verify root password storage method&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;target&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;agents.queueloc like 'linux.%'&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;threat&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                <span class="name tag">&quot;family&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;compliance&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;level&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;low&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;ref&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;syslowauth3&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;type&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;system&quot;</span>
+                             {DATABASE}</pre></blockquote><p>Below is a high-level view of the architecture:</p><img alt=".files/MIG-Arch-Diagram.png" src=".files/MIG-Arch-Diagram.png"><section id="actions-and-commands"><header><h2><a href="#id1">1   Actions and Commands</a></h2></header><section id="actions"><header><h3><a href="#id2">1.1   Actions</a></h3></header><p>Actions are JSON files created by investigator to perform tasks on agents.</p><p>For example, an investigator who wants to verify than root passwords are hashed
+and salted on linux systems, would use the following action:</p><pre><code class="code json"><span class="punctuation">{</span>
+        <span class="name tag">"name"</span><span class="punctuation">:</span> <span class="literal string double">"verify root password storage method"</span><span class="punctuation">,</span>
+        <span class="name tag">"target"</span><span class="punctuation">:</span> <span class="literal string double">"agents.queueloc like 'linux.%'"</span><span class="punctuation">,</span>
+        <span class="name tag">"threat"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"family"</span><span class="punctuation">:</span> <span class="literal string double">"compliance"</span><span class="punctuation">,</span>
+                <span class="name tag">"level"</span><span class="punctuation">:</span> <span class="literal string double">"low"</span><span class="punctuation">,</span>
+                <span class="name tag">"ref"</span><span class="punctuation">:</span> <span class="literal string double">"syslowauth3"</span><span class="punctuation">,</span>
+                <span class="name tag">"type"</span><span class="punctuation">:</span> <span class="literal string double">"system"</span>
         <span class="punctuation">},</span>
-        <span class="name tag">&quot;description&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                <span class="name tag">&quot;author&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;Julien Vehent&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;email&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;ulfr&#64;mozilla.com&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;revision&quot;</span><span class="punctuation">:</span> <span class="literal number integer">201503121200</span>
+        <span class="name tag">"description"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"author"</span><span class="punctuation">:</span> <span class="literal string double">"Julien Vehent"</span><span class="punctuation">,</span>
+                <span class="name tag">"email"</span><span class="punctuation">:</span> <span class="literal string double">"ulfr@mozilla.com"</span><span class="punctuation">,</span>
+                <span class="name tag">"revision"</span><span class="punctuation">:</span> <span class="literal number integer">201503121200</span>
         <span class="punctuation">},</span>
-        <span class="name tag">&quot;operations&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+        <span class="name tag">"operations"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
                 <span class="punctuation">{</span>
-                        <span class="name tag">&quot;module&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;file&quot;</span><span class="punctuation">,</span>
-                        <span class="name tag">&quot;parameters&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                                <span class="name tag">&quot;searches&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                                        <span class="name tag">&quot;root_passwd_hashed_or_disabled&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                                                <span class="name tag">&quot;paths&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                                        <span class="literal string double">&quot;/etc/shadow&quot;</span>
+                        <span class="name tag">"module"</span><span class="punctuation">:</span> <span class="literal string double">"file"</span><span class="punctuation">,</span>
+                        <span class="name tag">"parameters"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                                <span class="name tag">"searches"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                                        <span class="name tag">"root_passwd_hashed_or_disabled"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                                                <span class="name tag">"paths"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                                        <span class="literal string double">"/etc/shadow"</span>
                                                 <span class="punctuation">],</span>
-                                                <span class="name tag">&quot;contents&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                                        <span class="literal string double">&quot;root:(\\*|!|\\$(1|2a|5|6)\\$).+&quot;</span>
+                                                <span class="name tag">"contents"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                                        <span class="literal string double">"root:(\\*|!|\\$(1|2a|5|6)\\$).+"</span>
                                                 <span class="punctuation">]</span>
                                         <span class="punctuation">}</span>
                                 <span class="punctuation">}</span>
                         <span class="punctuation">}</span>
                 <span class="punctuation">}</span>
         <span class="punctuation">],</span>
-        <span class="name tag">&quot;syntaxversion&quot;</span><span class="punctuation">:</span> <span class="literal number integer">2</span>
-<span class="punctuation">}</span>
-</pre>
-<p>The parameters are:</p>
-<ul>
-<li><p class="first"><strong>name</strong>: a string that represents the action.</p>
-</li>
-<li><p class="first"><strong>target</strong>: a search string used by the scheduler to find agents to run the
+        <span class="name tag">"syntaxversion"</span><span class="punctuation">:</span> <span class="literal number integer">2</span>
+<span class="punctuation">}</span></code></pre><p>The parameters are:</p><ul><li><p><strong>name</strong>: a string that represents the action.</p></li><li><p><strong>target</strong>: a search string used by the scheduler to find agents to run the
 action on. The target format uses Postgresql's WHERE condition format against
 the <a class="reference external" href="data.rst.html#entity-relationship-diagram">agents</a> table of the database. This method allows for complex target
 queries, like running an action against a specific operating system, or
-against an endpoint that has a given public IP, etc...</p>
-<p>The most simple query that targets all agents is <cite>name like '%'</cite> (the <cite>%</cite>
+against an endpoint that has a given public IP, etc...</p><p>The most simple query that targets all agents is <cite>name like '%'</cite> (the <cite>%</cite>
 character is a wildcard in SQL pattern matching). Targetting by OS family can
-be done on the <cite>os</cite> parameters such as <cite>os='linux'</cite> or <cite>os='darwin'</cite>.</p>
-<p>Combining conditions is also trivial: <cite>version='201409171023+c4d6f50.prod'
+be done on the <cite>os</cite> parameters such as <cite>os='linux'</cite> or <cite>os='darwin'</cite>.</p><p>Combining conditions is also trivial: <cite>version='201409171023+c4d6f50.prod'
 and heartbeattime &gt; NOW() - interval '1 minute'</cite> will only target agents that
-run a specific version and have sent a heartbeat during the last minute.</p>
-<p>Complex queries are also possible.
+run a specific version and have sent a heartbeat during the last minute.</p><p>Complex queries are also possible.
 For example: imagine an action with ID 1 launched against 10,000 endpoints,
 which returned 300 endpoints with positive results. We want to launch action
 2 on those 300 endpoints only. It can be accomplished with the following
 <cite>target</cite> condition. (note: you can reuse this condition by simply changing
-the value of <cite>actionid</cite>)</p>
-</li>
-</ul>
-<pre class="code sql literal-block">
-<span class="name">id</span> <span class="keyword">IN</span> <span class="punctuation">(</span><span class="keyword">select</span> <span class="name">agentid</span> <span class="keyword">from</span> <span class="name">commands</span><span class="punctuation">,</span> <span class="name">json_array_elements</span><span class="punctuation">(</span><span class="name">commands</span><span class="punctuation">.</span><span class="name">results</span><span class="punctuation">)</span> <span class="keyword">as</span> <span class="name">r</span> <span class="keyword">where</span> <span class="name">actionid</span><span class="operator">=</span><span class="literal number integer">1</span> <span class="keyword">and</span> <span class="name">r</span><span class="operator">#&gt;&gt;</span><span class="literal string single">'{foundanything}'</span> <span class="operator">=</span> <span class="literal string single">'true'</span><span class="punctuation">)</span>
-</pre>
-<ul class="simple">
-<li><strong>description</strong> and <strong>threat</strong>: additional fields to describe the action</li>
-<li><strong>operations</strong>: an array of operations, each operation calls a module with a set
-of parameters. The parameters syntax are specific to the module.</li>
-<li><strong>syntaxversion</strong>: indicator of the action format used. Should be set to 2</li>
-</ul>
-<p>Upon generation, additional fields are appended to the action:</p>
-<ul class="simple">
-<li><strong>pgpsignatures</strong>: all of the parameters above are concatenated into a string and
+the value of <cite>actionid</cite>)</p></li></ul><pre><code class="code sql"><span class="name">id</span> <span class="keyword">IN</span> <span class="punctuation">(</span><span class="keyword">select</span> <span class="name">agentid</span> <span class="keyword">from</span> <span class="name">commands</span><span class="punctuation">,</span> <span class="name">json_array_elements</span><span class="punctuation">(</span><span class="name">commands</span><span class="punctuation">.</span><span class="name">results</span><span class="punctuation">)</span> <span class="keyword">as</span> <span class="name">r</span> <span class="keyword">where</span> <span class="name">actionid</span><span class="operator">=</span><span class="literal number integer">1</span> <span class="keyword">and</span> <span class="name">r</span><span class="operator">#&gt;&gt;</span><span class="literal string single">'{foundanything}'</span> <span class="operator">=</span> <span class="literal string single">'true'</span><span class="punctuation">)</span></code></pre><ul><li><p><strong>description</strong> and <strong>threat</strong>: additional fields to describe the action</p></li><li><p><strong>operations</strong>: an array of operations, each operation calls a module with a set
+of parameters. The parameters syntax are specific to the module.</p></li><li><p><strong>syntaxversion</strong>: indicator of the action format used. Should be set to 2</p></li></ul><p>Upon generation, additional fields are appended to the action:</p><ul><li><p><strong>pgpsignatures</strong>: all of the parameters above are concatenated into a string and
 signed with the investigator's private GPG key. The signature is part of the
 action, and used by agents to verify that an action comes from a trusted
 investigator. <cite>PGPSignatures</cite> is an array that contains one or more signature
-from authorized investigators.</li>
-<li><strong>validfrom</strong> and <strong>expireafter</strong>: two dates that constrains the validity of the
-action to a UTC time window.</li>
-</ul>
-</div>
-</div>
-<div class="section" id="action-commands-workflow">
-<h1><a class="toc-backref" href="#id3">2&nbsp;&nbsp;&nbsp;Action/Commands workflow</a></h1>
-<p>The diagram below represents the full workflow from the launch of an action by
+from authorized investigators.</p></li><li><p><strong>validfrom</strong> and <strong>expireafter</strong>: two dates that constrains the validity of the
+action to a UTC time window.</p></li></ul></section></section><section id="action-commands-workflow"><header><h2><a href="#id3">2   Action/Commands workflow</a></h2></header><p>The diagram below represents the full workflow from the launch of an action by
 an investigation, to the retrieval of results from the database. The steps are
-explained in the legend of the diagram, and map to various components of MIG.</p>
-<p>Actions are submitted to the API by trusted investigators. PGPSignatures are
-verified by the API and each agent prior to running any command.</p>
-<p>View <a class="reference external" href=".files/action_command_flow.svg">full size diagram</a>.</p>
-<object data=".files/action_command_flow.svg" type="image/svg+xml">
-.files/action_command_flow.svg</object>
-<div class="section" id="command-execution-flow-in-agent-and-modules">
-<h2><a class="toc-backref" href="#id4">2.1&nbsp;&nbsp;&nbsp;Command execution flow in Agent and Modules</a></h2>
-<p>Upon processing of an action, the scheduler will retrieve a list of agents to
+explained in the legend of the diagram, and map to various components of MIG.</p><p>Actions are submitted to the API by trusted investigators. PGPSignatures are
+verified by the API and each agent prior to running any command.</p><p>View <a class="reference external" href=".files/action_command_flow.svg">full size diagram</a>.</p><object data=".files/action_command_flow.svg" type="image/svg+xml">.files/action_command_flow.svg</object><section id="command-execution-flow-in-agent-and-modules"><header><h3><a href="#id4">2.1   Command execution flow in Agent and Modules</a></h3></header><p>Upon processing of an action, the scheduler will retrieve a list of agents to
 send the action to. One action is then derived into multiple commands and sent
-to agents.</p>
-<p>An agent receives a command from the scheduler on its personal AMQP queue (1).
+to agents.</p><p>An agent receives a command from the scheduler on its personal AMQP queue (1).
 It parses the command (2) and extracts all of the operations to perform.
 Operations are passed to modules and executed in parallel (3). Rather than
 maintaining a state of the running command, the agent create a goroutine and a
@@ -454,12 +326,8 @@ channel tasked with receiving the results from the modules. Each modules
 published its results inside that channel (4). The result parsing goroutine
 receives them, and when it has received all of them, populates the <cite>results</cite> (5)
 array of the command with the results from each module, and send the command
-back to the scheduler(6).</p>
-<p>When the agent is done running the command, both the channel and the goroutine
-are destroyed.</p>
-<blockquote>
-<pre class="literal-block">
-             +-------+   [ - - - - - - A G E N T - - - - - - - - - - - - ]
+back to the scheduler(6).</p><p>When the agent is done running the command, both the channel and the goroutine
+are destroyed.</p><blockquote><pre>             +-------+   [ - - - - - - A G E N T - - - - - - - - - - - - ]
              |command|+----&gt;(listener)
              +-------+          |(2)
                ^                V
@@ -476,240 +344,170 @@ are destroyed.</p>
                +                                             (publisher)
              +-------+                                           /
              |results|&lt;-----------------------------------------'
-             +-------+
-</pre>
-</blockquote>
-<p>The command received by the agent is composed of a copy of the action described
+             +-------+</pre></blockquote><p>The command received by the agent is composed of a copy of the action described
 previously, but signed with the private key of a trusted investigator. It also
 contains additional parameters that are specific to the targetted agent, such as
 command processing timestamps, name of the agent queue on the message broker,
 action and command unique IDs and status and results of the command. Below is an
 command derived from the root password checking action, and ran on the host named
-'host1.example.net'.</p>
-<pre class="code json literal-block">
-<span class="punctuation">{</span>
-  <span class="name tag">&quot;id&quot;</span><span class="punctuation">:</span> <span class="literal number float">1.427392971126604e+18</span><span class="punctuation">,</span>
-  <span class="name tag">&quot;action&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span> <span class="error">...</span> <span class="error">SIGNED</span> <span class="error">COPY</span> <span class="error">OF</span> <span class="error">THE</span> <span class="error">ACTION</span> <span class="error">...</span> <span class="punctuation">},</span>
-  <span class="name tag">&quot;agent&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-        <span class="name tag">&quot;id&quot;</span><span class="punctuation">:</span> <span class="literal number float">1.4271760437936648e+18</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;name&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;host1.example.net&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;queueloc&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;linux.host1.example.net.981alsd19aos1984&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;mode&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;daemon&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;version&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;20150324+0d0f88c.prod&quot;</span>
+'host1.example.net'.</p><pre><code class="code json"><span class="punctuation">{</span>
+  <span class="name tag">"id"</span><span class="punctuation">:</span> <span class="literal number float">1.427392971126604e+18</span><span class="punctuation">,</span>
+  <span class="name tag">"action"</span><span class="punctuation">:</span> <span class="punctuation">{</span> <span class="error">...</span> <span class="error">SIGNED</span> <span class="error">COPY</span> <span class="error">OF</span> <span class="error">THE</span> <span class="error">ACTION</span> <span class="error">...</span> <span class="punctuation">},</span>
+  <span class="name tag">"agent"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+        <span class="name tag">"id"</span><span class="punctuation">:</span> <span class="literal number float">1.4271760437936648e+18</span><span class="punctuation">,</span>
+        <span class="name tag">"name"</span><span class="punctuation">:</span> <span class="literal string double">"host1.example.net"</span><span class="punctuation">,</span>
+        <span class="name tag">"queueloc"</span><span class="punctuation">:</span> <span class="literal string double">"linux.host1.example.net.981alsd19aos1984"</span><span class="punctuation">,</span>
+        <span class="name tag">"mode"</span><span class="punctuation">:</span> <span class="literal string double">"daemon"</span><span class="punctuation">,</span>
+        <span class="name tag">"version"</span><span class="punctuation">:</span> <span class="literal string double">"20150324+0d0f88c.prod"</span>
   <span class="punctuation">},</span>
-  <span class="name tag">&quot;status&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;success&quot;</span><span class="punctuation">,</span>
-  <span class="name tag">&quot;results&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+  <span class="name tag">"status"</span><span class="punctuation">:</span> <span class="literal string double">"success"</span><span class="punctuation">,</span>
+  <span class="name tag">"results"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
         <span class="punctuation">{</span>
-          <span class="name tag">&quot;foundanything&quot;</span><span class="punctuation">:</span> <span class="keyword constant">true</span><span class="punctuation">,</span>
-          <span class="name tag">&quot;success&quot;</span><span class="punctuation">:</span> <span class="keyword constant">true</span><span class="punctuation">,</span>
-          <span class="name tag">&quot;elements&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                <span class="name tag">&quot;root_passwd_hashed_or_disabled&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+          <span class="name tag">"foundanything"</span><span class="punctuation">:</span> <span class="keyword constant">true</span><span class="punctuation">,</span>
+          <span class="name tag">"success"</span><span class="punctuation">:</span> <span class="keyword constant">true</span><span class="punctuation">,</span>
+          <span class="name tag">"elements"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"root_passwd_hashed_or_disabled"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
                   <span class="punctuation">{</span>
-                        <span class="name tag">&quot;file&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;/etc/shadow&quot;</span><span class="punctuation">,</span>
-                        <span class="name tag">&quot;fileinfo&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                          <span class="name tag">&quot;lastmodified&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;2015-02-07 01:51:07.17850601 +0000 UTC&quot;</span><span class="punctuation">,</span>
-                          <span class="name tag">&quot;mode&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;----------&quot;</span><span class="punctuation">,</span>
-                          <span class="name tag">&quot;size&quot;</span><span class="punctuation">:</span> <span class="literal number integer">1684</span>
+                        <span class="name tag">"file"</span><span class="punctuation">:</span> <span class="literal string double">"/etc/shadow"</span><span class="punctuation">,</span>
+                        <span class="name tag">"fileinfo"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                          <span class="name tag">"lastmodified"</span><span class="punctuation">:</span> <span class="literal string double">"2015-02-07 01:51:07.17850601 +0000 UTC"</span><span class="punctuation">,</span>
+                          <span class="name tag">"mode"</span><span class="punctuation">:</span> <span class="literal string double">"----------"</span><span class="punctuation">,</span>
+                          <span class="name tag">"size"</span><span class="punctuation">:</span> <span class="literal number integer">1684</span>
                         <span class="punctuation">},</span>
-                        <span class="name tag">&quot;search&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                          <span class="name tag">&quot;contents&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                <span class="literal string double">&quot;root:(\\*|!|\\$(1|2a|5|6)\\$).+&quot;</span>
+                        <span class="name tag">"search"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                          <span class="name tag">"contents"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                <span class="literal string double">"root:(\\*|!|\\$(1|2a|5|6)\\$).+"</span>
                           <span class="punctuation">],</span>
-                          <span class="name tag">&quot;options&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                                <span class="name tag">&quot;matchall&quot;</span><span class="punctuation">:</span> <span class="keyword constant">false</span><span class="punctuation">,</span>
-                                <span class="name tag">&quot;matchlimit&quot;</span><span class="punctuation">:</span> <span class="literal number integer">0</span><span class="punctuation">,</span>
-                                <span class="name tag">&quot;maxdepth&quot;</span><span class="punctuation">:</span> <span class="literal number integer">0</span>
+                          <span class="name tag">"options"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                                <span class="name tag">"matchall"</span><span class="punctuation">:</span> <span class="keyword constant">false</span><span class="punctuation">,</span>
+                                <span class="name tag">"matchlimit"</span><span class="punctuation">:</span> <span class="literal number integer">0</span><span class="punctuation">,</span>
+                                <span class="name tag">"maxdepth"</span><span class="punctuation">:</span> <span class="literal number integer">0</span>
                           <span class="punctuation">},</span>
-                          <span class="name tag">&quot;paths&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-                                <span class="literal string double">&quot;/etc&quot;</span>
+                          <span class="name tag">"paths"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                <span class="literal string double">"/etc"</span>
                           <span class="punctuation">]</span>
                         <span class="punctuation">}</span>
                   <span class="punctuation">}</span>
                 <span class="punctuation">]</span>
           <span class="punctuation">},</span>
-          <span class="name tag">&quot;statistics&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                <span class="name tag">&quot;exectime&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;2.017849ms&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;filescount&quot;</span><span class="punctuation">:</span> <span class="literal number integer">1</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;openfailed&quot;</span><span class="punctuation">:</span> <span class="literal number integer">0</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;totalhits&quot;</span><span class="punctuation">:</span> <span class="literal number integer">1</span>
+          <span class="name tag">"statistics"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"exectime"</span><span class="punctuation">:</span> <span class="literal string double">"2.017849ms"</span><span class="punctuation">,</span>
+                <span class="name tag">"filescount"</span><span class="punctuation">:</span> <span class="literal number integer">1</span><span class="punctuation">,</span>
+                <span class="name tag">"openfailed"</span><span class="punctuation">:</span> <span class="literal number integer">0</span><span class="punctuation">,</span>
+                <span class="name tag">"totalhits"</span><span class="punctuation">:</span> <span class="literal number integer">1</span>
           <span class="punctuation">},</span>
-          <span class="name tag">&quot;errors&quot;</span><span class="punctuation">:</span> <span class="keyword constant">null</span>
+          <span class="name tag">"errors"</span><span class="punctuation">:</span> <span class="keyword constant">null</span>
         <span class="punctuation">}</span>
   <span class="punctuation">],</span>
-  <span class="name tag">&quot;starttime&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;2015-03-26T18:02:51.126605Z&quot;</span><span class="punctuation">,</span>
-  <span class="name tag">&quot;finishtime&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;2015-03-26T18:03:00.671232Z&quot;</span>
-<span class="punctuation">}</span>
-</pre>
-<p>The results of the command show that the file '/etc/shadow' has matched, and
-thus &quot;FoundAnything&quot; returned &quot;True&quot;.</p>
-<p>The invocation of the file module has completed successfully, which is
+  <span class="name tag">"starttime"</span><span class="punctuation">:</span> <span class="literal string double">"2015-03-26T18:02:51.126605Z"</span><span class="punctuation">,</span>
+  <span class="name tag">"finishtime"</span><span class="punctuation">:</span> <span class="literal string double">"2015-03-26T18:03:00.671232Z"</span>
+<span class="punctuation">}</span></code></pre><p>The results of the command show that the file '/etc/shadow' has matched, and
+thus "FoundAnything" returned "True".</p><p>The invocation of the file module has completed successfully, which is
 represented by <strong>results-&gt;0-&gt;success=true</strong>. In our example, there is only one
 operation in the <strong>action-&gt;operations</strong> array, so only one result is present.
 When multiple operations are performed, each has its results listed in a
 corresponding entry of the results array (operations[0] is in results[0],
-operations[1] in results[1], etc...).</p>
-<p>Finally, the agent has performed all operations in the operations array
+operations[1] in results[1], etc...).</p><p>Finally, the agent has performed all operations in the operations array
 successfully, and returned <strong>status=success</strong>. Had a failure happened on the
-agent, the returned status would be one of &quot;failed&quot;, &quot;timeout&quot; or &quot;cancelled&quot;.</p>
-</div>
-<div class="section" id="command-expiration-timeouts">
-<h2><a class="toc-backref" href="#id5">2.2&nbsp;&nbsp;&nbsp;Command expiration &amp; timeouts</a></h2>
-<p>To prevent abuse of resources, agents will kill long-running modules after a
+agent, the returned status would be one of "failed", "timeout" or "cancelled".</p></section><section id="command-expiration-timeouts"><header><h3><a href="#id5">2.2   Command expiration &amp; timeouts</a></h3></header><p>To prevent abuse of resources, agents will kill long-running modules after a
 given period of time. That timeout is hardcoded in the agent configuration
-at compile time and defaults to 5 minutes.</p>
-<pre class="code go literal-block">
-<span class="comment single">// timeout after which a module run is killed
-</span><span class="keyword declaration">var</span> <span class="name other">MODULETIMEOUT</span> <span class="name other">time</span><span class="punctuation">.</span><span class="name other">Duration</span> <span class="punctuation">=</span> <span class="literal number integer">300</span> <span class="operator">*</span> <span class="name other">time</span><span class="punctuation">.</span><span class="name other">Second</span>
-</pre>
-<p>That timeout represents the <strong>maximum</strong> execution time of a single operation. If
+at compile time and defaults to 5 minutes.</p><pre><code class="code go"><span class="comment single">// timeout after which a module run is killed
+</span><span class="keyword declaration">var</span> <span class="name other">MODULETIMEOUT</span> <span class="name other">time</span><span class="punctuation">.</span><span class="name other">Duration</span> <span class="punctuation">=</span> <span class="literal number integer">300</span> <span class="operator">*</span> <span class="name other">time</span><span class="punctuation">.</span><span class="name other">Second</span></code></pre><p>That timeout represents the <strong>maximum</strong> execution time of a single operation. If
 an action contains 3 operations, each operation gets its own timeout. But because
 operations run in parallel in the agent, the maximum runtime of an action should
-be very close to the value of MODULETIMEOUT.</p>
-<p>In a typical deployment, it is safe to increase MODULETIMEOUT to allow for
+be very close to the value of MODULETIMEOUT.</p><p>In a typical deployment, it is safe to increase MODULETIMEOUT to allow for
 longer operations. A value of 20 minutes is usual. Make sure to fine tune this
 to your environment, and get the approval of your ops team because mig-agent
 may end up consuming resources (but never more than 50% of the cpu available on
-a system).</p>
-<p>Oftentimes, an investigator will want a timeout that is much shorter than the value
+a system).</p><p>Oftentimes, an investigator will want a timeout that is much shorter than the value
 of MODULETIMEOUT. In the MIG command line, the flag <cite>-e</cite> controls the
 expiration. It defaults to 5 minutes but can be set to 30 seconds for simple
 investigations. When that happens, the agent will calculate an appropriate expiration
 for the operations being run. If the expiration set on the action is set to 30 seconds,
-the agent will kill operations that run for more than 30 seconds.</p>
-<p>If the expiration is larger than the value of MODULETIMEOUT (for example, 2
+the agent will kill operations that run for more than 30 seconds.</p><p>If the expiration is larger than the value of MODULETIMEOUT (for example, 2
 hours), then MODULETIMEOUT is used. Setting a long expiration may be useful to
 allow agents that only check in periodically to pick up actions long after they
-are launched.</p>
-</div>
-</div>
-<div class="section" id="access-control-lists">
-<h1><a class="toc-backref" href="#id6">3&nbsp;&nbsp;&nbsp;Access Control Lists</a></h1>
-<p>Not all keys can perform all actions. The scheduler, for example, sometimes need
+are launched.</p></section></section><section id="access-control-lists"><header><h2><a href="#id6">3   Access Control Lists</a></h2></header><p>Not all keys can perform all actions. The scheduler, for example, sometimes need
 to issue specific actions to agents (such as during the upgrade protocol) but
 shouldn't be able to perform more dangerous actions. This is enforced by
 an Access Control List, or ACL, stored on the agents. An ACL describes who can
 access what function of which module. It can be used to require multiple
 signatures on specific actions, and limit the list of investigators allowed to
-perform an action.</p>
-<p>An ACL is composed of permissions, which are JSON documents hardwired into
+perform an action.</p><p>An ACL is composed of permissions, which are JSON documents hardwired into
 the agent configuration. In the future, MIG will dynamically ship permissions
-to agents.</p>
-<p>Below is an example of a permission for the <cite>filechecker</cite> module:</p>
-<pre class="code json literal-block">
-<span class="punctuation">{</span>
-    <span class="name tag">&quot;filechecker&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-        <span class="name tag">&quot;minimumweight&quot;</span><span class="punctuation">:</span> <span class="literal number integer">2</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;investigators&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-            <span class="name tag">&quot;Bob Kelso&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                <span class="name tag">&quot;fingerprint&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;E60892BB9BD...&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;weight&quot;</span><span class="punctuation">:</span> <span class="literal number integer">2</span>
+to agents.</p><p>Below is an example of a permission for the <cite>filechecker</cite> module:</p><pre><code class="code json"><span class="punctuation">{</span>
+    <span class="name tag">"filechecker"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+        <span class="name tag">"minimumweight"</span><span class="punctuation">:</span> <span class="literal number integer">2</span><span class="punctuation">,</span>
+        <span class="name tag">"investigators"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+            <span class="name tag">"Bob Kelso"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"fingerprint"</span><span class="punctuation">:</span> <span class="literal string double">"E60892BB9BD..."</span><span class="punctuation">,</span>
+                <span class="name tag">"weight"</span><span class="punctuation">:</span> <span class="literal number integer">2</span>
             <span class="punctuation">},</span>
-            <span class="name tag">&quot;John Smith&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                <span class="name tag">&quot;fingerprint&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;9F759A1A0A3...&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;weight&quot;</span><span class="punctuation">:</span> <span class="literal number integer">1</span>
+            <span class="name tag">"John Smith"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"fingerprint"</span><span class="punctuation">:</span> <span class="literal string double">"9F759A1A0A3..."</span><span class="punctuation">,</span>
+                <span class="name tag">"weight"</span><span class="punctuation">:</span> <span class="literal number integer">1</span>
             <span class="punctuation">}</span>
         <span class="punctuation">}</span>
     <span class="punctuation">}</span>
-<span class="punctuation">}</span>
-</pre>
-<p><cite>investigators</cite> contains a list of users with their PGP fingerprints, and their
+<span class="punctuation">}</span></code></pre><p><cite>investigators</cite> contains a list of users with their PGP fingerprints, and their
 weight, an integer that represents their access level.
 When an agent receives an action that calls the filechecker module, it will
 first verify the signatures of the action, and then validates that the signers
 are authorized to perform the action. This is done by summing up the weights of
 the signatures, and verifying that they equal or exceed the minimum required
-weight.</p>
-<p>Thus, in the example above, investigator John Smith cannot issue a filechecker
+weight.</p><p>Thus, in the example above, investigator John Smith cannot issue a filechecker
 action alone. His weight of 1 doesn't satisfy the minimum weight of 2 required
 by the filechecker permission. Therefore, John will need to ask investigator Bob
 Kelso to sign his action as well. The weight of both investigators are then
-added, giving a total of 3, which satisfies the minimum weight of 2.</p>
-<p>This method gives ample flexibility to require multiple signatures on modules,
+added, giving a total of 3, which satisfies the minimum weight of 2.</p><p>This method gives ample flexibility to require multiple signatures on modules,
 and ensure that one investigator cannot perform sensitive actions on remote
-endpoints without the permissions of others.</p>
-<p>The default permission <cite>default</cite> can be used as a default for all modules. It
-has the following syntax:</p>
-<pre class="code json literal-block">
-<span class="punctuation">{</span>
-        <span class="name tag">&quot;default&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                <span class="name tag">&quot;minimumweight&quot;</span><span class="punctuation">:</span> <span class="literal number integer">2</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;investigators&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span> <span class="error">...</span> <span class="punctuation">}</span>
+endpoints without the permissions of others.</p><p>The default permission <cite>default</cite> can be used as a default for all modules. It
+has the following syntax:</p><pre><code class="code json"><span class="punctuation">{</span>
+        <span class="name tag">"default"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"minimumweight"</span><span class="punctuation">:</span> <span class="literal number integer">2</span><span class="punctuation">,</span>
+                <span class="name tag">"investigators"</span><span class="punctuation">:</span> <span class="punctuation">{</span> <span class="error">...</span> <span class="punctuation">}</span>
                 <span class="error">]</span>
         <span class="punctuation">}</span>
-<span class="punctuation">}</span>
-</pre>
-<p>The <cite>default</cite> permission is overridden by module specific permissions.</p>
-<p>The ACL is currently applied to modules. In the future, ACL will have finer
+<span class="punctuation">}</span></code></pre><p>The <cite>default</cite> permission is overridden by module specific permissions.</p><p>The ACL is currently applied to modules. In the future, ACL will have finer
 control to authorize access to specific functions of modules. For example, an
 investigator could be authorized to call the <cite>regex</cite> function of filechecker
-module, but only in <cite>/etc</cite>. This functionality is not implemented yet.</p>
-</div>
-<div class="section" id="agent-initialization-process">
-<h1><a class="toc-backref" href="#id7">4&nbsp;&nbsp;&nbsp;Agent initialization process</a></h1>
-<p>The agent tries to be as autonomous as possible. One of the goal is to ship
+module, but only in <cite>/etc</cite>. This functionality is not implemented yet.</p></section><section id="agent-initialization-process"><header><h2><a href="#id7">4   Agent initialization process</a></h2></header><p>The agent tries to be as autonomous as possible. One of the goal is to ship
 agents without requiring external provisioning tools, such as Chef or Puppet.
 Therefore, the agent attempts to install itself as a service, and also supports
-a builtin upgrade protocol (described in the next section).</p>
-<p>As a portable binary, the agent needs to detect the type of operating system
+a builtin upgrade protocol (described in the next section).</p><p>As a portable binary, the agent needs to detect the type of operating system
 and init method that is used by an endpoint. Depending on the endpoint,
 different initialization methods are used. The diagram below explains the
-decision process followed by the agent.</p>
-<img alt=".files/mig-agent-initialization-process.png" src=".files/mig-agent-initialization-process.png" />
-<p>Go does not provide support for running programs in the backgroud. On endpoints
+decision process followed by the agent.</p><img alt=".files/mig-agent-initialization-process.png" src=".files/mig-agent-initialization-process.png"><p>Go does not provide support for running programs in the backgroud. On endpoints
 that run upstart, systemd (linux) or launchd (darwin), this is not an issue
 because the init daemon takes care of running the agent in the background,
 rerouting its file descriptors and restarting on crash. On Windows and System-V,
 however, the agent daemonizes by forking itself into <cite>foreground</cite> mode, and
 re-forking itself on error (such as loss of connectivity to the relay).
 On Windows and System-V, if the agent is killed, it will not be restarted
-automatically.</p>
-<div class="section" id="registration-process">
-<h2><a class="toc-backref" href="#id8">4.1&nbsp;&nbsp;&nbsp;Registration process</a></h2>
-<p>The initialization process goes through several environment detection steps
+automatically.</p><section id="registration-process"><header><h3><a href="#id8">4.1   Registration process</a></h3></header><p>The initialization process goes through several environment detection steps
 which are used to select the proper init method. Once started, the agent will
 send a heartbeat to the public relay, and also store that heartbeat in its
-<cite>run</cite> directory. The location of the <cite>run</cite> directory is platform specific.</p>
-<ul class="simple">
-<li>windows: C:Windows</li>
-<li>darwin: /Library/Preferences/mig/</li>
-<li>linux: /var/run/mig/</li>
-</ul>
-<p>Below is a sample heartbeat message from a linux agent stored in
-<cite>/var/run/mig/mig-agent.ok</cite>.</p>
-<pre class="code json literal-block">
-<span class="punctuation">{</span>
-        <span class="name tag">&quot;destructiontime&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;0001-01-01T00:00:00Z&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;environment&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                <span class="name tag">&quot;arch&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;amd64&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;ident&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;Red Hat Enterprise Linux Server release 6.5 (Santiago)&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;init&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;upstart&quot;</span>
+<cite>run</cite> directory. The location of the <cite>run</cite> directory is platform specific.</p><ul><li><p>windows: C:Windows</p></li><li><p>darwin: /Library/Preferences/mig/</p></li><li><p>linux: /var/run/mig/</p></li></ul><p>Below is a sample heartbeat message from a linux agent stored in
+<cite>/var/run/mig/mig-agent.ok</cite>.</p><pre><code class="code json"><span class="punctuation">{</span>
+        <span class="name tag">"destructiontime"</span><span class="punctuation">:</span> <span class="literal string double">"0001-01-01T00:00:00Z"</span><span class="punctuation">,</span>
+        <span class="name tag">"environment"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"arch"</span><span class="punctuation">:</span> <span class="literal string double">"amd64"</span><span class="punctuation">,</span>
+                <span class="name tag">"ident"</span><span class="punctuation">:</span> <span class="literal string double">"Red Hat Enterprise Linux Server release 6.5 (Santiago)"</span><span class="punctuation">,</span>
+                <span class="name tag">"init"</span><span class="punctuation">:</span> <span class="literal string double">"upstart"</span>
         <span class="punctuation">},</span>
-        <span class="name tag">&quot;heartbeatts&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;2014-07-31T14:00:20.00442837-07:00&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;name&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;someserver.example.net&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;os&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;linux&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;pid&quot;</span><span class="punctuation">:</span> <span class="literal number integer">26256</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;queueloc&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;linux.someserver.example.net.5hsa811oda&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;starttime&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;2014-07-30T21:34:48.525449401-07:00&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;version&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;201407310027+bcbdd94.prod&quot;</span>
-<span class="punctuation">}</span>
-</pre>
-</div>
-<div class="section" id="check-in-mode">
-<h2><a class="toc-backref" href="#id9">4.2&nbsp;&nbsp;&nbsp;Check-In mode</a></h2>
-<p>In infrastructure where running the agent as a permanent process is not
+        <span class="name tag">"heartbeatts"</span><span class="punctuation">:</span> <span class="literal string double">"2014-07-31T14:00:20.00442837-07:00"</span><span class="punctuation">,</span>
+        <span class="name tag">"name"</span><span class="punctuation">:</span> <span class="literal string double">"someserver.example.net"</span><span class="punctuation">,</span>
+        <span class="name tag">"os"</span><span class="punctuation">:</span> <span class="literal string double">"linux"</span><span class="punctuation">,</span>
+        <span class="name tag">"pid"</span><span class="punctuation">:</span> <span class="literal number integer">26256</span><span class="punctuation">,</span>
+        <span class="name tag">"queueloc"</span><span class="punctuation">:</span> <span class="literal string double">"linux.someserver.example.net.5hsa811oda"</span><span class="punctuation">,</span>
+        <span class="name tag">"starttime"</span><span class="punctuation">:</span> <span class="literal string double">"2014-07-30T21:34:48.525449401-07:00"</span><span class="punctuation">,</span>
+        <span class="name tag">"version"</span><span class="punctuation">:</span> <span class="literal string double">"201407310027+bcbdd94.prod"</span>
+<span class="punctuation">}</span></code></pre></section><section id="check-in-mode"><header><h3><a href="#id9">4.2   Check-In mode</a></h3></header><p>In infrastructure where running the agent as a permanent process is not
 acceptable, it is possible to run the agent as a cron job. By starting the
 agent with the flag <strong>-m agent-checkin</strong>, the agent will connect to the
 configured relay, retrieve and run outstanding commands, and exit after 10
-seconds of inactivity.</p>
-</div>
-</div>
-<div class="section" id="agent-upgrade-process">
-<h1><a class="toc-backref" href="#id10">5&nbsp;&nbsp;&nbsp;Agent upgrade process</a></h1>
-<p>MIG supports upgrading agents in the wild. The upgrade protocol is designed with
-security in mind. The flow diagram below presents a high-level view:</p>
-<blockquote>
-<pre class="literal-block">
-Investigator          Scheduler             Agent             NewAgent           FileServer
+seconds of inactivity.</p></section></section><section id="agent-upgrade-process"><header><h2><a href="#id10">5   Agent upgrade process</a></h2></header><p>MIG supports upgrading agents in the wild. The upgrade protocol is designed with
+security in mind. The flow diagram below presents a high-level view:</p><blockquote><pre>Investigator          Scheduler             Agent             NewAgent           FileServer
 +-----------+         +-------+             +---+             +------+           +--------+
           |                   |                   |                   |                   |
           |    1.initiate     |                   |                   |                   |
@@ -752,41 +550,25 @@ Investigator          Scheduler             Agent             NewAgent          
           |                   |--------------------------------------&gt;|                   |
           |                   |                   |                   |                   |
           |                   |  12.acknowledge   |                   |                   |
-          |                   |&lt;--------------------------------------|                   |
-</pre>
-</blockquote>
-<p>All upgrade operations are initiated by an investigator (1). The upgrade is
-triggered by an action to the upgrade module with the following parameters:</p>
-<pre class="code json literal-block">
-<span class="literal string double">&quot;Operations&quot;</span><span class="error">:</span> <span class="punctuation">[</span>
+          |                   |&lt;--------------------------------------|                   |</pre></blockquote><p>All upgrade operations are initiated by an investigator (1). The upgrade is
+triggered by an action to the upgrade module with the following parameters:</p><pre><code class="code json"><span class="literal string double">"Operations"</span><span class="error">:</span> <span class="punctuation">[</span>
     <span class="punctuation">{</span>
-        <span class="name tag">&quot;Module&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;upgrade&quot;</span><span class="punctuation">,</span>
-        <span class="name tag">&quot;Parameters&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-            <span class="name tag">&quot;linux/amd64&quot;</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-                <span class="name tag">&quot;to_version&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;16eb58b-201404021544&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;location&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;http://localhost/mig/bin/linux/amd64/mig-agent&quot;</span><span class="punctuation">,</span>
-                <span class="name tag">&quot;checksum&quot;</span><span class="punctuation">:</span> <span class="literal string double">&quot;31fccc576635a29e0a27bbf7416d4f32a0ebaee892475e14708641c0a3620b03&quot;</span>
+        <span class="name tag">"Module"</span><span class="punctuation">:</span> <span class="literal string double">"upgrade"</span><span class="punctuation">,</span>
+        <span class="name tag">"Parameters"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+            <span class="name tag">"linux/amd64"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"to_version"</span><span class="punctuation">:</span> <span class="literal string double">"16eb58b-201404021544"</span><span class="punctuation">,</span>
+                <span class="name tag">"location"</span><span class="punctuation">:</span> <span class="literal string double">"http://localhost/mig/bin/linux/amd64/mig-agent"</span><span class="punctuation">,</span>
+                <span class="name tag">"checksum"</span><span class="punctuation">:</span> <span class="literal string double">"31fccc576635a29e0a27bbf7416d4f32a0ebaee892475e14708641c0a3620b03"</span>
             <span class="punctuation">}</span>
         <span class="punctuation">}</span>
     <span class="punctuation">}</span>
-<span class="punctuation">]</span><span class="error">,</span>
-</pre>
-<ul class="simple">
-<li>Each OS family and architecture have their own parameters (ex: &quot;linux/amd64&quot;,
-&quot;darwin/amd64&quot;, &quot;windows/386&quot;, ...). Then, in each OS/Arch group, we have:</li>
-<li>to_version is the version an agent should upgrade to</li>
-<li>location points to a HTTPS address that contains the agent binary</li>
-<li>checksum is a SHA256 hash of the agent binary to be verified after download</li>
-</ul>
-<p>The parameters above are signed using a standard PGP action signature.</p>
-<p>The upgrade action is forwarded to agents (2) like any other action. The action
+<span class="punctuation">]</span><span class="error">,</span></code></pre><ul><li><p>Each OS family and architecture have their own parameters (ex: "linux/amd64",
+"darwin/amd64", "windows/386", ...). Then, in each OS/Arch group, we have:</p></li><li><p>to_version is the version an agent should upgrade to</p></li><li><p>location points to a HTTPS address that contains the agent binary</p></li><li><p>checksum is a SHA256 hash of the agent binary to be verified after download</p></li></ul><p>The parameters above are signed using a standard PGP action signature.</p><p>The upgrade action is forwarded to agents (2) like any other action. The action
 signature is verified by the agent (3), and the upgrade module is called. The
 module downloads the new binary (4), verifies the version and checksum (5) and
-installs itself on the system.</p>
-<p>Assuming everything checks in, the old agent executes the binary of the new
+installs itself on the system.</p><p>Assuming everything checks in, the old agent executes the binary of the new
 agent (6). At that point, two agents are running on the same machine, and the
-rest of the protocol is designed to shut down the old agent, and clean up.</p>
-<p>After executing the new agent, the old agent returns a successful result to the
+rest of the protocol is designed to shut down the old agent, and clean up.</p><p>After executing the new agent, the old agent returns a successful result to the
 scheduler, and includes its own PID in the results.
 The new agent starts by registering with the scheduler (7). This tells the
 scheduler that two agents are running on the same node, and one of them must
@@ -795,109 +577,61 @@ old agent (8). The kill action may be executed twice, but that doesn't matter.
 When the scheduler receives the kill results (9), it sends a new action to check
 for <cite>mig-agent</cite> processes (10). Only one should be found in the results (11),
 and if that is the case, the scheduler tells the agent to remove the binary of
-the old agent (12). When the agent returns (13), the upgrade protocol is done.</p>
-<p>If the PID of the old agent lingers on the system, an error is logged for the
+the old agent (12). When the agent returns (13), the upgrade protocol is done.</p><p>If the PID of the old agent lingers on the system, an error is logged for the
 investigator to decide what to do next. The scheduler does not attempt to clean
-up the situation.</p>
-</div>
-<div class="section" id="threat-model">
-<h1><a class="toc-backref" href="#id11">6&nbsp;&nbsp;&nbsp;Threat Model</a></h1>
-<p>Running an agent as root on a large number of endpoints means that Mozilla
+up the situation.</p></section><section id="threat-model"><header><h2><a href="#id11">6   Threat Model</a></h2></header><p>Running an agent as root on a large number of endpoints means that Mozilla
 InvestiGator is a target of choice to compromise an infrastructure.
 Without proper protections, a vulnerability in the agent or in the platform
-could lead to a compromission of the endpoints.</p>
-<p>The architectural choices made in MIG diminish the exposure of the endpoints to
+could lead to a compromission of the endpoints.</p><p>The architectural choices made in MIG diminish the exposure of the endpoints to
 a compromise. And while the risk cannot be reduced to zero entirely, it would
 take an attacker direct control on the investigators key material, or be root
-on the infrastructure in order to take control of MIG.</p>
-<p>MIG's security controls include:</p>
-<ul class="simple">
-<li>Strong GPG security model</li>
-<li>Infrastructure resiliency</li>
-<li>No port listening</li>
-<li>Protection of connections to the relays</li>
-<li>Randomization of the queue names</li>
-<li>Whitelisting of agents</li>
-<li>Limit data extraction to a minimum</li>
-</ul>
-<div class="section" id="strong-gpg-security-model">
-<h2><a class="toc-backref" href="#id12">6.1&nbsp;&nbsp;&nbsp;Strong GPG security model</a></h2>
-<p>All actions that are passed to the MIG platform and to the agents require
+on the infrastructure in order to take control of MIG.</p><p>MIG's security controls include:</p><ul><li><p>Strong GPG security model</p></li><li><p>Infrastructure resiliency</p></li><li><p>No port listening</p></li><li><p>Protection of connections to the relays</p></li><li><p>Randomization of the queue names</p></li><li><p>Whitelisting of agents</p></li><li><p>Limit data extraction to a minimum</p></li></ul><section id="strong-gpg-security-model"><header><h3><a href="#id12">6.1   Strong GPG security model</a></h3></header><p>All actions that are passed to the MIG platform and to the agents require
 valid GPG signatures from one or more trusted investigators. The public keys of
 trusted investigators are hardcoded in the agents, making it almost impossible
 to override without root access to the endpoints, or access to an investigator's
 private key. The GPG private keys are never seen by the MIG platform (API,
 Scheduler, Database or Relays). A compromise of the platform would not lead to
-an attacker taking control of the agents and compromising the endpoints.</p>
-</div>
-<div class="section" id="infrastructure-resiliency">
-<h2><a class="toc-backref" href="#id13">6.2&nbsp;&nbsp;&nbsp;Infrastructure resiliency</a></h2>
-<p>One of the design goal of MIG is to make each components as stateless as
+an attacker taking control of the agents and compromising the endpoints.</p></section><section id="infrastructure-resiliency"><header><h3><a href="#id13">6.2   Infrastructure resiliency</a></h3></header><p>One of the design goal of MIG is to make each components as stateless as
 possible. The database is used as a primary data store, and the schedulers and
 relays keep data in transit in their respective cache. But any of these
 components can go down and be rebuilt without compromising the resiliency of
 the platform. As a matter of fact, it is strongly recommended to rebuilt each
 of the platform component from scratch on a regular basis, and only keep the
-database as a persistent storage.</p>
-<p>Unlike other systems that require constant network connectivity between the
+database as a persistent storage.</p><p>Unlike other systems that require constant network connectivity between the
 agents and the platform, MIG is designed to work with intermittent or unreliable
 connectivity with the agents. The rabbitmq relays will cache commands that are
 not consumed immediately by offline agents. These agents can connect to the
-relay whenever they chose to, and pick up outstanding tasks.</p>
-<p>If the relays go down for any period of time, the agents will attempt to
+relay whenever they chose to, and pick up outstanding tasks.</p><p>If the relays go down for any period of time, the agents will attempt to
 reconnect at regular intervals continuously. It is trivial to rebuild
 a fresh rabbitmq cluster, even on a new IP space, as long as the FQDN of the
 cluster, and the TLS cert/key and credentials of the AMQPS access point
-remain the same.</p>
-</div>
-<div class="section" id="no-port-listening">
-<h2><a class="toc-backref" href="#id14">6.3&nbsp;&nbsp;&nbsp;No port listening</a></h2>
-<p>The agents do not accept incoming connections. There is no listening port that
+remain the same.</p></section><section id="no-port-listening"><header><h3><a href="#id14">6.3   No port listening</a></h3></header><p>The agents do not accept incoming connections. There is no listening port that
 an attacker could use to exploit a vulnerability in the agent. Instead, the
 agent connects to the platform by establishing an outbound connection to the
 relays. The connection uses TLS, making it theorically impossible for an
 attacker to MITM without access to the PKI and DNS, both of which are not
-part of the MIG platform.</p>
-</div>
-<div class="section" id="protection-of-connections-to-the-relays">
-<h2><a class="toc-backref" href="#id15">6.4&nbsp;&nbsp;&nbsp;Protection of connections to the relays</a></h2>
-<p>The rabbitmq relay of a MIG infrastructure may very well be listening on the
+part of the MIG platform.</p></section><section id="protection-of-connections-to-the-relays"><header><h3><a href="#id15">6.4   Protection of connections to the relays</a></h3></header><p>The rabbitmq relay of a MIG infrastructure may very well be listening on the
 public internet. This is used when MIG agents are distributed into various
 environments, as opposed to concentrated on a single network location. RabbitMQ
 and Erlang provide a stable network stack, but are not shielded from a network
 attack that would take down the cluster. To reduce the exposure of the AMQP
 endpoints, the relays use AMQP over TLS and require the agents to present a
-client certificate before accepting the connection.</p>
-<p>The client certificate is shared across all the agents. <strong>It is not used as an
+client certificate before accepting the connection.</p><p>The client certificate is shared across all the agents. <strong>It is not used as an
 authentication mechanism.</strong> Its sole purpose is to limit the exposure of a public
-AMQP endpoint. Consider it a network filter.</p>
-<p>Once the TLS connection between the agent and the relay is established, the
+AMQP endpoint. Consider it a network filter.</p><p>Once the TLS connection between the agent and the relay is established, the
 agent will present a username and password to open the AMQP connection. Again,
 these credentials are shared across all agents, and are not used to authenticate
 individual agents. Their role is to assign an ACL to the agent.
 The ACL limits the AMQP action an agent can perform on the cluster.
-See <a class="reference external" href="configuration.rst">rabbitmq configuration</a> for more information.</p>
-</div>
-<div class="section" id="randomization-of-the-queue-names">
-<h2><a class="toc-backref" href="#id16">6.5&nbsp;&nbsp;&nbsp;Randomization of the queue names</a></h2>
-<p>The protections above limit the exposure of the AMQP endpoint, but since the
+See <a class="reference external" href="configuration.rst">rabbitmq configuration</a> for more information.</p></section><section id="randomization-of-the-queue-names"><header><h3><a href="#id16">6.5   Randomization of the queue names</a></h3></header><p>The protections above limit the exposure of the AMQP endpoint, but since the
 secrets are shared across all agents, the possibility still exists that an
-attacker gains access to the secrets, and establish a connection to the relays.</p>
-<p>Such access would have very limited capabilities. It cannot be used to publish
+attacker gains access to the secrets, and establish a connection to the relays.</p><p>Such access would have very limited capabilities. It cannot be used to publish
 commands to the agents, because publication is ACL-limited to the scheduler.
 It can be used to publish fake results to the scheduler, or listen on the
-agent queue for incoming commands.</p>
-<p>Both are made difficult by prepending a random number to the name of an agent
-queue. An agent queue is named using the following scheme:</p>
-<blockquote>
-<cite>mig.agt.&lt;OS family&gt;.&lt;Hostname&gt;.&lt;uid&gt;</cite></blockquote>
-<p>The OS and hostname of a given agent are easy to guess, but the uid isn't.
+agent queue for incoming commands.</p><p>Both are made difficult by prepending a random number to the name of an agent
+queue. An agent queue is named using the following scheme:</p><blockquote><p><cite>mig.agt.&lt;OS family&gt;.&lt;Hostname&gt;.&lt;uid&gt;</cite></p></blockquote><p>The OS and hostname of a given agent are easy to guess, but the uid isn't.
 The UID is a 64 bits integer composed of nanosecond timestamps and a random 32
-bits integer, chosen by the agent on first start. It is specific to an endpoint.</p>
-</div>
-<div class="section" id="whitelisting-of-agents">
-<h2><a class="toc-backref" href="#id17">6.6&nbsp;&nbsp;&nbsp;Whitelisting of agents</a></h2>
-<p>At the moment, MIG does not provide a strong mechanism to authenticate agents.
+bits integer, chosen by the agent on first start. It is specific to an endpoint.</p></section><section id="whitelisting-of-agents"><header><h3><a href="#id17">6.6   Whitelisting of agents</a></h3></header><p>At the moment, MIG does not provide a strong mechanism to authenticate agents.
 It is a work in progress, but for now agents are whitelisted in the scheduler
 using the queuelocs that are advertised in the heartbeat messages. Spoofing the
 queueloc string is difficult, because it contains a random value that is
@@ -906,26 +640,14 @@ order to spoof an agent's identity. This method provides a basic access control
 mechanism. The long term goal is to allow the scheduler to call an external database
 to authorize agents. In AWS, the scheduler could call the AWS API to verify that
 a given agent does indeed exist in the infrastructure. In a traditional datacenter,
-this could be an inventory database.</p>
-</div>
-<div class="section" id="limit-data-extraction-to-a-minimum">
-<h2><a class="toc-backref" href="#id18">6.7&nbsp;&nbsp;&nbsp;Limit data extraction to a minimum</a></h2>
-<p>Agents are not <cite>meant</cite> to retrieve raw data from their endpoints. This is more
+this could be an inventory database.</p></section><section id="limit-data-extraction-to-a-minimum"><header><h3><a href="#id18">6.7   Limit data extraction to a minimum</a></h3></header><p>Agents are not <cite>meant</cite> to retrieve raw data from their endpoints. This is more
 of a good practice rather than a technical limitation. The modules shipped with
-the agent are meant to return boolean answers of the type &quot;match&quot; or &quot;no match&quot;.</p>
-<p>It could be argued that answering &quot;match&quot; on sensitive requests is similar to
+the agent are meant to return boolean answers of the type "match" or "no match".</p><p>It could be argued that answering "match" on sensitive requests is similar to
 extracting data from the agents. MIG does not solve this issue.. It is the
 responsibility of the investigators to limit the scope of their queries (ie, do
 not search for a root password by sending an action with the password in the
-regex).</p>
-<p>The goal here is to prevent a rogue investigator from dumping large amount of
+regex).</p><p>The goal here is to prevent a rogue investigator from dumping large amount of
 data from an endpoint. MIG could trigger a memory dump of a process, but
-retrieve that data will require direct access to the endpoint.</p>
-<p>Note that MIG's database keeps records of all actions, commands and results. If
+retrieve that data will require direct access to the endpoint.</p><p>Note that MIG's database keeps records of all actions, commands and results. If
 sensitive data were to be collected by MIG, that data would be available in the
-database.</p>
-</div>
-</div>
-</div>
-</body>
-</html>
+database.</p></section></section></body></html>

@@ -46,7 +46,7 @@ usage: %s <module> <global options> <module parameters>
 		* agents named *mysql*:  -t "name like '%%mysql%%'"
 		* proxied linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
 		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
-		* run locally		 -t local
+		* run on local system:	 -t local
 -v		verbose output, includes debug information and raw queries
 
 Progress information is sent to stderr, silence it with "2>/dev/null".
