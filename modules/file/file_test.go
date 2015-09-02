@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -606,7 +607,7 @@ func evalResults(jsonresults []byte, expectedfiles []string) error {
 	}
 	for _, found := range sr["s1"] {
 		for i, expectedfile := range expectedfiles {
-			if found.File == expectedfile {
+			if filepath.Clean(found.File) == filepath.Clean(expectedfile) {
 				// good result, remove expected file from list of expected files
 				expectedfiles = expectedfiles[:i+copy(expectedfiles[i:], expectedfiles[i+1:])]
 			}
