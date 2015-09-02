@@ -266,18 +266,7 @@ test:  test-modules
 
 test-modules:
 	# test all modules
-	$(GO) test mig.ninja/mig/modules
-	$(GO) test mig.ninja/mig/modules/agentdestroy
-	$(GO) test mig.ninja/mig/modules/example
-	$(GO) test mig.ninja/mig/modules/file
-	# https://github.com/mozilla/masche/issues/31
-	# $(GO) test mig.ninja/mig/modules/memory
-	$(GO) test mig.ninja/mig/modules/netstat
-	$(GO) test mig.ninja/mig/modules/ping
-	$(GO) test mig.ninja/mig/modules/pkg
-	$(GO) test mig.ninja/mig/modules/scribe
-	$(GO) test mig.ninja/mig/modules/timedrift
-	$(GO) test mig.ninja/mig/modules/upgrade
+	$(GO) test mig.ninja/mig/modules/...
 
 clean-agent:
 	find bin/ -name mig-agent* -exec rm {} \;

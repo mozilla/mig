@@ -8,8 +8,7 @@ package main
 import (
 	_ "mig.ninja/mig/modules/agentdestroy"
 	_ "mig.ninja/mig/modules/file"
-	// https://github.com/mozilla/masche/issues/31
-	//_ "mig.ninja/mig/modules/memory"
+	_ "mig.ninja/mig/modules/memory"
 	_ "mig.ninja/mig/modules/netstat"
 	_ "mig.ninja/mig/modules/ping"
 	_ "mig.ninja/mig/modules/pkg"
