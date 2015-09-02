@@ -15,3 +15,5 @@ install:
 script:
   - go test
   - go test -tags appengine
+
+sudo: false

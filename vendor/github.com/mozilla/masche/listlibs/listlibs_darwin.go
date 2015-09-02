@@ -16,11 +16,11 @@ func listLoadedLibraries(p process.Process) (libraries []string, harderror error
 	var sizeT C.size_t
 	clibs := (***C.char)(C.malloc(C.size_t(unsafe.Sizeof(ptr))))
 	count := (*C.size_t)(C.malloc(C.size_t(unsafe.Sizeof(sizeT))))
-	defer C.free_loaded_libraries_list(*clibs, *count)
 	defer C.free(unsafe.Pointer(clibs))
 	defer C.free(unsafe.Pointer(count))
 
 	response := C.list_loaded_libraries((C.process_handle_t)(p.Handle()), clibs, count)
+	defer C.free_loaded_libraries_list(*clibs, *count)
 	harderror, softerrors = cresponse.GetResponsesErrors(unsafe.Pointer(response))
 	C.response_free(response)
 
