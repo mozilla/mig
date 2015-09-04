@@ -330,3 +330,13 @@ func (a Action) PrintCounters() {
 	}
 	fmt.Fprintf(os.Stderr, "%s\n", out)
 }
+
+// Return the an indented JSON string representing the action suitable for
+// display
+func (a Action) IndentedString() (string, error) {
+	buf, err := json.MarshalIndent(a, "", "    ")
+	if err != nil {
+		return "", err
+	}
+	return string(buf), nil
+}
