@@ -269,7 +269,9 @@ test-modules:
 	$(GO) test mig.ninja/mig/modules/...
 
 clean-agent:
-	find bin/ -name mig-agent* -exec rm {} \;
+	if [ -d bin/ ]; then \
+		find bin/ -name 'mig-agent*' -exec rm {} \;; \
+	fi
 	rm -rf packages
 	rm -rf tmp
 
