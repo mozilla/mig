@@ -235,8 +235,8 @@ deb-server: mig-scheduler mig-api worker-agent-intel worker-compliance-item
 	# add binaries
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/opt/mig/bin/mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-api tmp/opt/mig/bin/mig-api
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-intel-worker tmp/opt/mig/bin//mig-agent-intel-worker
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-compliance-item-worker tmp/opt/mig/bin/mig-compliance-item-worker
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-worker-agent-intel tmp/opt/mig/bin/mig-worker-agent-intel
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-worker-compliance-item tmp/opt/mig/bin/mig-worker-compliance-item
 	$(INSTALL) -D -m 0755 tools/list_new_agents.sh tmp/opt/mig/bin/list_new_agents.sh
 	# add configuration templates
 	$(INSTALL) -D -m 0640 conf/scheduler.cfg.inc tmp/etc/mig/scheduler.cfg
