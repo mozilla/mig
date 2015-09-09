@@ -5,7 +5,7 @@ bin/*
 conf/*
 !conf/*.inc
 !conf/mig-agent-installer.wxs
-agent/configuration.go
+mig-agent/configuration.go
 */available_modules.go
 */*/available_modules.go
 */*/*/available_modules.go
