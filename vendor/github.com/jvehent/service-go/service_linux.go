@@ -2,14 +2,16 @@ package service
 
 import (
 	"fmt"
-	"github.com/kardianos/osext"
 	"io/ioutil"
 	"log/syslog"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/kardianos/osext"
 )
 
 const (
@@ -20,23 +22,29 @@ const (
 
 // the default flavor is initSystemV. we lookup the command line of
 // process 1 to detect systemd or upstart
-func getFlavor() (flavor initFlavor, err error) {
+func getFlavor() (initFlavor, error) {
 	initCmd, err := ioutil.ReadFile("/proc/1/cmdline")
 	if err != nil {
-		return
+		return initSystemV, err
 	}
-	init := fmt.Sprintf("%s", initCmd)
+	init := fmt.Sprintf("%s", initCmd[:len(initCmd)-1])
 	if strings.Contains(init, "init [") {
-		flavor = initSystemV
-	} else if strings.Contains(init, "systemd") {
-		flavor = initSystemd
-	} else if strings.Contains(init, "init") {
-		flavor = initUpstart
-	} else {
-		// failed to detect init system, falling back to sysvinit
-		flavor = initSystemV
+		return initSystemV, nil
 	}
-	return
+	if strings.Contains(init, "systemd") {
+		return initSystemd, nil
+	}
+	if strings.Contains(init, "init") {
+		// not so fast! you may think this is upstart, but it may be
+		// a symlink to systemd... yeah, debian does that... ( x )
+		target, err := filepath.EvalSymlinks(init)
+		if err == nil && strings.Contains(target, "systemd") {
+			return initSystemd, nil
+		}
+		return initUpstart, nil
+	}
+	// failed to detect init system, falling back to sysvinit
+	return initSystemV, nil
 }
 
 func newService(c *Config) (Service, error) {
