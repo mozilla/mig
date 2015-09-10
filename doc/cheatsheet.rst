@@ -95,7 +95,7 @@ be escaped prior to being passed to MIG.
 
 .. code:: bash
 
-	echo $PUBKEY | sed "s;\/;\\\/;" | sed "s;\+;\\\+;"
+	echo $PUBKEY | sed "s;\/;\\\/;g" | sed "s;\+;\\\+;g"
 
 A valid pubkey regex could be:
 
