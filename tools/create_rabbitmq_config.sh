@@ -53,7 +53,7 @@ echo '[
 sudo mv $mqconf /etc/rabbitmq/rabbitmq.config
 
 echo "set mirroring policy"
-sudo rabbitmqctl -p mig set_policy mig-mirror-all "^mig\." '{"ha-mode":"all"}'
+sudo rabbitmqctl -p mig set_policy mig-mirror-all "^(toschedulers|toagents|toworkers|mig(|event))\." '{"ha-mode":"all"}'
 
 sudo chown rabbitmq /etc/rabbitmq/*
 echo
