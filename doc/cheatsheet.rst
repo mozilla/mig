@@ -214,6 +214,91 @@ outline some of the capabilities. At the core, the `target` parameter is just a
 WHERE condition executed against the agent table of the MIG database, so if you
 know the DB schema, you can craft any targetting you want.
 
+.. code::
+
+	mig=> \d agents
+					 Table "public.agents"
+		 Column      |           Type           | Modifiers 
+	-----------------+--------------------------+-----------
+	 id              | numeric                  | not null
+	 name            | character varying(2048)  | not null
+	 queueloc        | character varying(2048)  | not null
+	 mode            | character varying(2048)  | not null
+	 version         | character varying(2048)  | not null
+	 pid             | integer                  | not null
+	 status          | character varying(255)   | 
+	 environment     | json                     | 
+	 tags            | json                     |
+	 starttime       | timestamp with time zone | not null
+	 destructiontime | timestamp with time zone | 
+	 heartbeattime   | timestamp with time zone | not null
+
+* **id** is the numerical unique ID of the agent
+* **name** is a string containing the agent hostname (fqdn)
+* **queueloc** is the name of the agent queue on rabbitmq
+* **mode** is either `daemon` or `checkin` and represents the mode the agent
+  runs as
+* **version** is the agent version in the form `<YYYY-MM-DD>-<commit hash>`
+* **pid** is the PID of the agent's main process
+* **status** is one of `online`, `idle` or `offline`
+* **environment** is a JSON document that contains information about the
+  system the agent runs on. See below.
+* **tags** is a JSON document that contains specific tags defined by the MIG
+  platform administrator. This can be used to identify the business unit an
+  agent runs on, or anything that helps targetting. It need to be defined at
+  agent's compile time.
+* **starttime**, **heartbeattime** and **destructiontime** are timestamps
+
+Environments
+~~~~~~~~~~~~
+
+During startup, the agent retrieves some amount of information about the
+host it runs on. That information is stored in the `environment` column
+of the agent table, and can be used to target specific agents. Below is a
+typical environment set by a Linux agent:
+
+.. code:: json
+
+	{
+		"init": "upstart",
+		"ident": "Debian testing-updates sid",
+		"os": "linux",
+		"arch": "amd64",
+		"isproxied": false,
+		"addresses": [
+			"172.21.0.2/20",
+			"172.21.0.3/20",
+			"fe80::56ee:75ff:fe4b:d625/64",
+			"fe80::3602:86ff:fe2b:6fdd/64"
+		],
+		"publicip": "172.21.0.2"
+	}
+
+Using `Postgres's JSON`_ querying support, we can build targets using specific
+fields of the environment columns. For example, this is how we target Linux
+systems only:
+
+.. _`Postgres's JSON`: http://www.postgresql.org/docs/9.4/static/datatype-json.html
+
+.. code:: bash
+
+	$ mig file -t "environment->>'os'='linux'" ...
+
+mig-agent-search
+~~~~~~~~~~~~~~~~
+
+`mig-agent-search` is a small client that lists agents based on a query. It is
+useful to test target queries before using them live. You can obtain it via `go
+get mig.ninja/mig/client/mig-agent-search`.
+
+.. code:: bash
+
+	$ mig-agent-search "tags->>'operator'='opsec' AND environment->>'os'='linux' AND mode='daemon' AND status='online' AND name like 'mig-api%'"                                                                                  
+	name; id; status; version; mode; os; arch; pid; starttime; heartbeattime; operator; ident; publicip; addresses
+	"mig-api3.use1.opsec.mozilla.com"; "4892412351434"; "online"; "20150910+3cf667c.prod"; "daemon"; "linux"; "amd64"; "20024"; "2015-09-10T19:00:05Z"; "2015-09-10T21:17:05Z"; "opsec"; "Ubuntu 14.04 trusty"; "52.1.207.252"; "[172.19.1.171/26 fe80::c6d:44ff:fead:edd9/64]"
+	"mig-api4.use1.opsec.mozilla.com"; "4892412350962"; "online"; "20150910+3cf667c.prod"; "daemon"; "linux"; "amd64"; "17967"; "2015-09-10T19:00:03Z"; "2015-09-10T21:18:03Z"; "opsec"; "Ubuntu 14.04 trusty"; "52.1.207.252"; "[172.19.1.13/26 fe80::107e:4fff:fe5c:97e5/64]"
+
+
 Target agents that found results in a previous action
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
