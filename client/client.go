@@ -774,6 +774,58 @@ finish:
 	return
 }
 
+// FetchActionResults retrieves mig command results associated with a
+// particular action. This function differs from PrintActionResults in
+// that it returns a slice of mig.Command structs, rather then printing
+// results to stdout.
+//
+// XXX Note in the future it may be worth refactoring the action print
+// functions to make use of this, but it would require additional work.
+func (cli Client) FetchActionResults(a mig.Action) (ret []mig.Command, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("FetchActionResults() -> %v", e)
+		}
+	}()
+
+	limit := 37
+	offset := 0
+	ret = make([]mig.Command, 0)
+
+	for {
+		target := fmt.Sprintf("search?type=command&limit=%d&offset=%d", limit, offset)
+		target = target + fmt.Sprintf("&actionid=%.0f", a.ID)
+
+		resource, err := cli.GetAPIResource(target)
+		if resource.Collection.Error.Message == "no results found" {
+			err = nil
+			break
+		} else if err != nil {
+			panic(err)
+		}
+		count := 0
+		for _, item := range resource.Collection.Items {
+			for _, data := range item.Data {
+				if data.Name != "command" {
+					continue
+				}
+				cmd, err := ValueToCommand(data.Value)
+				if err != nil {
+					panic(err)
+				}
+				ret = append(ret, cmd)
+				count++
+			}
+		}
+		if count == 0 {
+			break
+		}
+		offset += limit
+	}
+
+	return ret, nil
+}
+
 func (cli Client) PrintActionResults(a mig.Action, show, render string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
