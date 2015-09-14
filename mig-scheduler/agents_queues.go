@@ -8,8 +8,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"mig.ninja/mig"
 	"time"
+
+	"mig.ninja/mig"
 
 	"github.com/streadway/amqp"
 )
@@ -82,6 +83,9 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Notice()
 		return
 	}
+	// replace the heartbeat with current time
+	agt.HeartBeatTS = time.Now()
+	// do some sanity checking
 	if agt.Mode != "" && agt.Mode != "daemon" && agt.Mode != "checkin" {
 		panic(fmt.Sprintf("invalid mode '%s' received from agent '%s'", agt.Mode, agt.QueueLoc))
 	}
@@ -116,7 +120,8 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 		if err != nil {
 			agt.DestructionTime = time.Date(9998, time.January, 11, 11, 11, 11, 11, time.UTC)
 			agt.Status = mig.AgtStatusOnline
-			// create a new agent
+			// create a new agent, set starttime to now
+			agt.StartTime = time.Now()
 			err = ctx.DB.InsertAgent(agt)
 			if err != nil {
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Heartbeat DB insertion failed with error '%v' for agent '%s'", err, agt.Name)}.Err()
