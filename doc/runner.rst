@@ -67,7 +67,7 @@ the job should be run.
 
 The plugin is optional.  If set, the value will be interpreted as an
 executable in the plugins directory. The results of the job will be piped
-into stdin of this executable in JSON format (mig-runner ResultEntry). The
+into stdin of this executable in JSON format (mig.RunnerResult). The
 plugin can then parse and forward the data as needed.
 
 The results are also written into a `results/` subdirectory under the
@@ -84,7 +84,7 @@ Output plugins
 
 The runner writes JSON output to stdin of any configured output plugin. This
 is intended to provide flexibility, allowing plugins to be developed in
-any language. If a plugin is being developed in go, the runner ResultEntry
+any language. If a plugin is being developed in go, the mig.RunnerResult
 type can be used to parse incoming data. In other languages the JSON can
 be parsed as desired.
 
