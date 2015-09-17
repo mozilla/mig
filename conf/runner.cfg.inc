@@ -10,3 +10,6 @@
 
 [client]
     clientconfpath = "default" ; Path to client conf, default for $HOME/.migrc
+    ; If the private key has a passphrase associated with it, this must be
+    ; set to the correct value.
+    passphrase = "passphrase" ; Private key passphrase

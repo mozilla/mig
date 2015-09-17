@@ -59,6 +59,18 @@ type GpgConf struct {
 	Keyserver string
 }
 
+// Can store the passphrase used to decrypt a GPG private key so the client
+// does not attempt to prompt for it. We do not store it in the client
+// configuration, as under normal usage passphrases for MIG should not be
+// stored in cleartext. However in some cases such as with mig-runner this
+// behavior is required for automated operation.
+var clientPassphrase string
+
+// Set the GPG passphrase to be used by the client for secret key operations.
+func ClientPassphrase(s string) {
+	clientPassphrase = s
+}
+
 // NewClient initiates a new instance of a Client
 func NewClient(conf Configuration, version string) (cli Client, err error) {
 	cli.Version = version
@@ -90,6 +102,9 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 			// socket was found, set it
 			os.Setenv("GPG_AGENT_INFO", conf.GPG.Home+"/S.gpg-agent")
 		}
+	}
+	if clientPassphrase != "" {
+		pgp.CachePassphrase(clientPassphrase)
 	}
 	// try to make a signed token, just to check that we can access the private key
 	_, err = cli.MakeSignedToken()

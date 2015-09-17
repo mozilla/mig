@@ -27,6 +27,7 @@ type Context struct {
 	}
 	Client struct {
 		ClientConfPath string
+		Passphrase     string
 	}
 	Logging mig.Logging
 
@@ -61,6 +62,10 @@ func initContext(config string) (ctx Context, err error) {
 	ctx.ClientConf, err = client.ReadConfiguration(ctx.Client.ClientConfPath)
 	if err != nil {
 		panic(err)
+	}
+
+	if ctx.Client.Passphrase != "" {
+		client.ClientPassphrase(ctx.Client.Passphrase)
 	}
 
 	ctx.Logging, err = mig.InitLogger(ctx.Logging, "mig-runner")
