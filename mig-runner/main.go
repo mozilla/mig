@@ -69,6 +69,7 @@ func procDir(dirpath string) (err error) {
 		mlog("%v: %v", ename, err)
 		return nil
 	}
+	ent.deadChan = make(chan bool, 1)
 	ctx.Entities[ename] = ent
 	mlog("added entity %v", ename)
 	go ent.start()
@@ -76,7 +77,8 @@ func procDir(dirpath string) (err error) {
 	return nil
 }
 
-// Remove entities that are no longer present in the runner directory
+// Remove entities that are no longer present in the runner directory, or are
+// stale
 func procReap(ents []string) error {
 	for k := range ctx.Entities {
 		found := false
@@ -89,6 +91,20 @@ func procReap(ents []string) error {
 			ctx.Entities[k].stop()
 			delete(ctx.Entities, k)
 			mlog("removed entity %v", k)
+		}
+	}
+	// Also remove stale entities that are still present in the runner
+	// directory but have encountered an error.
+	for k := range ctx.Entities {
+		dead := false
+		select {
+		case <-ctx.Entities[k].deadChan:
+			dead = true
+		default:
+		}
+		if dead {
+			delete(ctx.Entities, k)
+			mlog("removed stale entity %v", k)
 		}
 	}
 	return nil
