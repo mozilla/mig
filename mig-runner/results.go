@@ -54,6 +54,7 @@ func getResults(r mig.RunnerResult) (err error) {
 	if err != nil {
 		panic(err)
 	}
+	mlog("%v/%.0f: fetched results, %v commands returned", r.EntityName, r.Action.ID, len(results))
 
 	// Store the results
 	outpath, err := getResultsStoragePath(r.EntityName)
