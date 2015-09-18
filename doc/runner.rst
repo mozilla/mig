@@ -35,6 +35,10 @@ An example configuration file for use by mig-runner is shown below.
         [client]
         clientconfpath = "default" ; Path to client conf, default for $HOME/.migrc
 
+If the GPG key used by mig-runner is protected by a passphrase, the
+`passphrase` option can be included under the client section. If this is
+specified this passphrase will be used to access the private key.
+
 The `directory` option specifies the root directory that stores all the
 mig-runner related control information. A typical runner directory may look
 something like this.
@@ -69,6 +73,10 @@ The plugin is optional.  If set, the value will be interpreted as an
 executable in the plugins directory. The results of the job will be piped
 into stdin of this executable in JSON format (mig.RunnerResult). The
 plugin can then parse and forward the data as needed.
+
+Optionally the `expiry` setting can be set to a go Duration string to use
+for action expiry (for example 10m for 10 minutes). If this is not set
+in the job configuration, a default of 5 minutes will be used.
 
 The results are also written into a `results/` subdirectory under the
 runner directory, using the action ID as a file name. This happens
