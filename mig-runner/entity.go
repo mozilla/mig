@@ -35,6 +35,7 @@ type entityConfig struct {
 		Schedule string
 		Plugin   string
 		Expiry   string
+		SendOnly bool
 	}
 }
 
@@ -95,6 +96,11 @@ func (e *entity) launchAction() (err error) {
 		panic(err)
 	}
 	mlog("%v: launched action %.0f", e.name, res.ID)
+
+	// If we only dispatch this action we are done here.
+	if e.cfg.Configuration.SendOnly {
+		return nil
+	}
 
 	// Notify the results processor an action is in-flight
 	re := mig.RunnerResult{}
