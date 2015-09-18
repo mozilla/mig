@@ -61,6 +61,7 @@ func (e *entity) launchAction() (err error) {
 	if err != nil {
 		panic(err)
 	}
+	act.Name = fmt.Sprintf("mig-runner: %v", e.name)
 
 	cli, err := client.NewClient(ctx.ClientConf, "mig-runner")
 	if err != nil {
