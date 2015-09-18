@@ -28,6 +28,7 @@ type Context struct {
 	Client struct {
 		ClientConfPath string
 		Passphrase     string
+		DelayResults   string
 	}
 	Logging mig.Logging
 

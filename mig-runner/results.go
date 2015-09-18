@@ -112,11 +112,23 @@ func processResults() {
 			continue
 		}
 
+		resDelay := ctx.Client.DelayResults
+
 		// See if any actions have expired, if so grab the results
 		oldres := reslist
 		reslist = reslist[:0]
 		for _, x := range oldres {
-			if time.Now().After(x.Action.ExpireAfter) {
+			extime := x.Action.ExpireAfter
+			if resDelay != "" {
+				d, err := time.ParseDuration(resDelay)
+				if err != nil {
+					mlog("results error for %v: %v", x.EntityName, err)
+					mlog("%v: ignoring specified results delay", x.EntityName)
+				} else {
+					extime = extime.Add(d)
+				}
+			}
+			if time.Now().After(extime) {
 				err := getResults(x)
 				if err != nil {
 					mlog("results error for %v: %v", x.EntityName, err)

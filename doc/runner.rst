@@ -36,10 +36,17 @@ An example configuration file for use by mig-runner is shown below.
 
         [client]
         clientconfpath = "default" ; Path to client conf, default for $HOME/.migrc
+        delayresults = "30s"; Duration after action expiry to fetch results
 
 If the GPG key used by mig-runner is protected by a passphrase, the
 `passphrase` option can be included under the client section. If this is
 specified this passphrase will be used to access the private key.
+
+The `delayresults` value is optional. If not set, the runner will attempt
+to fetch action results when the action has expired. If this is set to a
+duration string value, the runner will wait the specified duration after
+action expiry before fetching results (for example to ensure all results
+are written to the database by the scheduler).
 
 The `directory` option specifies the root directory that stores all the
 mig-runner related control information. A typical runner directory may look

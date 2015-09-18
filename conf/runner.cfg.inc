@@ -13,3 +13,4 @@
     ; If the private key has a passphrase associated with it, this must be
     ; set to the correct value.
     passphrase = "passphrase" ; Private key passphrase
+    delayresults = "30s" ; Duration after action expiry to fetch action results
