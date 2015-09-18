@@ -8,6 +8,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"mig.ninja/mig"
 	"mig.ninja/mig/client"
 	"os"
@@ -93,6 +94,97 @@ func getResults(r mig.RunnerResult) (err error) {
 	return nil
 }
 
+func flightPath(rr mig.RunnerResult) string {
+	aid := fmt.Sprintf("%.0f", rr.Action.ID)
+	return path.Join(ctx.Runner.RunDirectory, rr.EntityName, "inflight", aid)
+}
+
+func actionInFlight(rr mig.RunnerResult) error {
+	fpath := flightPath(rr)
+	dn, _ := path.Split(fpath)
+	err := os.MkdirAll(dn, 0755)
+	if err != nil {
+		return err
+	}
+	fd, err := os.Create(fpath)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	buf, err := json.Marshal(rr)
+	if err != nil {
+		return err
+	}
+	_, err = fd.Write(buf)
+	if err != nil {
+		return err
+	}
+	mlog("%v: action marked as inflight: %v", rr.EntityName, fpath)
+	return nil
+}
+
+func actionComplete(rr mig.RunnerResult) error {
+	fpath := flightPath(rr)
+	err := os.Remove(fpath)
+	if err != nil {
+		return err
+	}
+	mlog("%v: action marked as complete, removed %v", rr.EntityName, fpath)
+	return nil
+}
+
+func scanInFlight(reslist []mig.RunnerResult) ([]mig.RunnerResult, error) {
+	rdir := ctx.Runner.RunDirectory
+	rents, err := ioutil.ReadDir(rdir)
+	if err != nil {
+		return reslist, err
+	}
+	for _, x := range rents {
+		if !x.IsDir() {
+			continue
+		}
+		fdir := path.Join(rdir, x.Name(), "inflight")
+		fents, err := ioutil.ReadDir(fdir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return reslist, err
+		}
+		for _, y := range fents {
+			fpath := path.Join(fdir, y.Name())
+			fd, err := os.Open(fpath)
+			if err != nil {
+				return reslist, err
+			}
+			buf, err := ioutil.ReadAll(fd)
+			if err != nil {
+				fd.Close()
+				return reslist, err
+			}
+			var rr mig.RunnerResult
+			err = json.Unmarshal(buf, &rr)
+			found := false
+			for _, x := range reslist {
+				if x.Action.ID == rr.Action.ID {
+					found = true
+				}
+			}
+			if !found {
+				// This is an action we do not know about,
+				// potentially because the runner was restarted
+				// after action dispath before the results were
+				// fetched.
+				mlog("appending unknown cached action %.0f", rr.Action.ID)
+				reslist = append(reslist, rr)
+			}
+			fd.Close()
+		}
+	}
+
+	return reslist, nil
+}
+
 func processResults() {
 	mlog("results processing routine started")
 
@@ -103,6 +195,11 @@ func processResults() {
 		select {
 		case nr := <-ctx.Channels.Results:
 			mlog("monitoring result for %v/%.0f", nr.EntityName, nr.Action.ID)
+			err := actionInFlight(nr)
+			if err != nil {
+				mlog("%v: unable to mark in flight: %v", nr.EntityName, err)
+				continue
+			}
 			reslist = append(reslist, nr)
 		case <-time.After(time.Duration(5) * time.Second):
 			timeout = true
@@ -110,6 +207,12 @@ func processResults() {
 		if !timeout {
 			// Only attempt action results fetch if we are idle
 			continue
+		}
+
+		var err error
+		reslist, err = scanInFlight(reslist)
+		if err != nil {
+			mlog("error scanning for cached inflight requests: %v", err)
 		}
 
 		resDelay := ctx.Client.DelayResults
@@ -132,6 +235,13 @@ func processResults() {
 				err := getResults(x)
 				if err != nil {
 					mlog("results error for %v: %v", x.EntityName, err)
+				}
+				err = actionComplete(x)
+				if err != nil {
+					// This is fatal; if this happens it
+					// will result in the results being
+					// fetched again.
+					panic(err)
 				}
 				continue
 			}
