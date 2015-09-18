@@ -13,7 +13,9 @@ The runner interacts directly with the MIG API in the same manner as a client
 would. When an action is scheduled to run, the runner will deploy the action
 and schedule a time to gather results (shortly after the action has expired).
 Once the action has expired, the runner will retrieve results from the API
-and store these results in the runner directory.
+and store these results in the runner directory. The runner can also send the
+results from MIG to an external program for automatic parsing or formatting,
+for example to create events for MozDef and send them.
 
 Runner configuration file
 -------------------------
