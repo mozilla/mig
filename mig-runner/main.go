@@ -38,7 +38,10 @@ func procDir(dirpath string) (err error) {
 	confpath := path.Join(dirpath, "entity.cfg")
 	finfo, err := os.Stat(confpath)
 	if err != nil {
-		panic(err)
+		// Don't treat this as fatal; we will just try to load it again
+		// next time.
+		mlog("%v: %v", ename, err)
+		return nil
 	}
 
 	var ent *entity
