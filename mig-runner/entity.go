@@ -15,6 +15,10 @@ import (
 	"time"
 )
 
+// The default expiry time for an action launched by the runner if the
+// entity configuration does not include an expiry.
+var defaultExpiry = "5m"
+
 type entity struct {
 	name     string
 	baseDir  string
@@ -30,6 +34,7 @@ type entityConfig struct {
 	Configuration struct {
 		Schedule string
 		Plugin   string
+		Expiry   string
 	}
 }
 
@@ -62,12 +67,21 @@ func (e *entity) launchAction() (err error) {
 		panic(err)
 	}
 
-	// Borrow some logic from the action generator.
-	act.ValidFrom = time.Now().Add(-60 * time.Second).UTC()
-	period, err := time.ParseDuration("2m")
+	// Borrow some logic from the action generator. Set a validation
+	// period starting in the past so our action starts immediately.
+	window := time.Duration(-60 * time.Second)
+	act.ValidFrom = time.Now().Add(window).UTC()
+	exstring := defaultExpiry
+	if e.cfg.Configuration.Expiry != "" {
+		exstring = e.cfg.Configuration.Expiry
+	}
+	period, err := time.ParseDuration(exstring)
 	if err != nil {
 		panic(err)
 	}
+	// Add the window period to the desired expiry since our start
+	// time begins in the past.
+	period += -window
 	act.ExpireAfter = act.ValidFrom.Add(period)
 	asig, err := cli.SignAction(act)
 	if err != nil {
