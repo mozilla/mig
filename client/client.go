@@ -309,6 +309,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 	}
 	hasResource := false
 	if resp.Body != nil {
+		defer resp.Body.Close()
 		// unmarshal the body. don't attempt to interpret it, as long as it
 		// fits into a cljs.Resource, it's acceptable
 		body, err := ioutil.ReadAll(resp.Body)
