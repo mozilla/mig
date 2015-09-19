@@ -10,8 +10,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"mig.ninja/mig"
 	"time"
+
+	"mig.ninja/mig"
 
 	_ "github.com/lib/pq"
 )
@@ -22,8 +23,10 @@ func (db *DB) LastActions(limit int) (actions []mig.Action, err error) {
 		validfrom, expireafter, starttime, finishtime, lastupdatetime,
 		status, pgpsignatures, syntaxversion
 		FROM actions ORDER BY starttime DESC LIMIT $1`, limit)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil && err != sql.ErrNoRows {
-		rows.Close()
 		err = fmt.Errorf("Error while listing actions: '%v'", err)
 		return
 	}
@@ -34,31 +37,26 @@ func (db *DB) LastActions(limit int) (actions []mig.Action, err error) {
 			&jDesc, &jThreat, &jOps, &a.ValidFrom, &a.ExpireAfter,
 			&a.StartTime, &a.FinishTime, &a.LastUpdateTime, &a.Status, &jSig, &a.SyntaxVersion)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Error while retrieving action: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jDesc, &a.Description)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jThreat, &a.Threat)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOps, &a.Operations)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jSig, &a.PGPSignatures)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
 			return
 		}
@@ -235,8 +233,10 @@ func (db *DB) InsertSignature(aid, iid float64, sig string) (err error) {
 func (db *DB) GetActionCounters(aid float64) (counters mig.ActionCounters, err error) {
 	rows, err := db.c.Query(`SELECT DISTINCT(status), COUNT(id) FROM commands
 		WHERE actionid = $1 GROUP BY status`, aid)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil && err != sql.ErrNoRows {
-		rows.Close()
 		err = fmt.Errorf("Error while retrieving counters: '%v'", err)
 		return
 	}
@@ -245,7 +245,6 @@ func (db *DB) GetActionCounters(aid float64) (counters mig.ActionCounters, err e
 		var status string
 		err = rows.Scan(&status, &count)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Error while retrieving counter: '%v'", err)
 		}
 		switch status {
@@ -288,8 +287,10 @@ func (db *DB) SetupRunnableActions() (actions []mig.Action, err error) {
 		WHERE status='pending' AND validfrom < NOW() AND expireafter > NOW()
 		RETURNING id, name, target, description, threat, operations,
 		validfrom, expireafter, status, pgpsignatures, syntaxversion`)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil && err != sql.ErrNoRows {
-		rows.Close()
 		err = fmt.Errorf("Error while setting up runnable actions: '%v'", err)
 		return
 	}
@@ -299,31 +300,26 @@ func (db *DB) SetupRunnableActions() (actions []mig.Action, err error) {
 		err = rows.Scan(&a.ID, &a.Name, &a.Target, &jDesc, &jThreat, &jOps,
 			&a.ValidFrom, &a.ExpireAfter, &a.Status, &jSig, &a.SyntaxVersion)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Error while retrieving action: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jDesc, &a.Description)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jThreat, &a.Threat)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOps, &a.Operations)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jSig, &a.PGPSignatures)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
 			return
 		}

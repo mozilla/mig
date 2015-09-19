@@ -10,8 +10,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"mig.ninja/mig"
 	"time"
+
+	"mig.ninja/mig"
 
 	_ "github.com/lib/pq"
 )
@@ -74,6 +75,9 @@ func (db *DB) CommandsByActionID(actionid float64) (commands []mig.Command, err 
 		agents.id, agents.name, agents.version
 		FROM commands, actions, agents
 		WHERE commands.actionid=actions.id AND commands.agentid=agents.id AND actions.id=$1`, actionid)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while finding commands: '%v'", err)
 		return
@@ -86,37 +90,31 @@ func (db *DB) CommandsByActionID(actionid float64) (commands []mig.Command, err 
 			&cmd.Action.ValidFrom, &cmd.Action.ExpireAfter, &jSig, &cmd.Action.SyntaxVersion,
 			&cmd.Agent.ID, &cmd.Agent.Name, &cmd.Agent.Version)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to retrieve command: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jRes, &cmd.Results)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal command results: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jDesc, &cmd.Action.Description)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jThreat, &cmd.Action.Threat)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOps, &cmd.Action.Operations)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jSig, &cmd.Action.PGPSignatures)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
 			return
 		}
@@ -164,6 +162,7 @@ func (db *DB) InsertCommands(cmds []mig.Command) (insertCount int64, err error) 
 		step += 6
 	}
 	stmt, err := db.c.Prepare(sql)
+	defer stmt.Close()
 	if err != nil {
 		err = fmt.Errorf("Error while preparing insertion statement: '%v' in '%s'", err, sql)
 		return
