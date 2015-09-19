@@ -9,16 +9,17 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/bobappleyard/readline"
 	"io"
 	"io/ioutil"
 	"log"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/bobappleyard/readline"
+	"mig.ninja/mig"
+	"mig.ninja/mig/client"
 )
 
 // build version
@@ -242,7 +243,7 @@ func printStatus(cli client.Client) (err error) {
 	var onlineagt, idleagt []string
 	actout := make([]string, 2)
 	actout[0] = "Latest Actions:"
-	actout[1] = "----    ID      ---- + ----         Name         ---- + -Sent- + ----    Date     ---- + ---- Investigators ----"
+	actout[1] = "----  ID  ---- + ----         Name         ---- + -Sent- + ----    Date    ---- + ---- Investigators ----"
 	var onlineagents, onlineendpoints, idleagents, idleendpoints, newendpoints, doubleagents, disappearedendpoints, flappingendpoints float64
 	for _, item := range st.Collection.Items {
 		for _, data := range item.Data {

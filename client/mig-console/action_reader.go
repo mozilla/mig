@@ -8,12 +8,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bobappleyard/readline"
 	"io"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/bobappleyard/readline"
+	"mig.ninja/mig"
+	"mig.ninja/mig/client"
 )
 
 // actionReader retrieves an action from the API using its numerical ID
@@ -199,8 +201,8 @@ func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, sent
 	invs = investigatorsStringFromAction(a.Investigators, 23)
 
 	idstr = fmt.Sprintf("%.0f", a.ID)
-	if len(idstr) < 20 {
-		for i := len(idstr); i < 20; i++ {
+	if len(idstr) < 14 {
+		for i := len(idstr); i < 14; i++ {
 			idstr += " "
 		}
 	}
@@ -215,7 +217,7 @@ func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, sent
 		name = name[0:27] + "..."
 	}
 
-	datestr = a.LastUpdateTime.Format("Mon Jan 2 3:04pm MST")
+	datestr = a.LastUpdateTime.Format(time.RFC3339)
 	if len(datestr) > 21 {
 		datestr = datestr[0:21]
 	}

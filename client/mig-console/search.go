@@ -41,7 +41,7 @@ func search(input string, cli client.Client) (err error) {
 		fmt.Printf(`usage: search <action|agent|command|investigator> where <key>=<value> [and <key>=<value>...]
 
 Example:
-mig> search command where agentname=%khazad% and investigatorname=%vehent% and actionname=%memory% and after=2015-09-09T17:00:00Z
+mig> search command where agentname=%%khazad%% and investigatorname=%%vehent%% and actionname=%%memory%% and after=2015-09-09T17:00:00Z
 	----    ID      ---- + ----         Name         ---- + --- Last Updated ---
 	       4886304327951   memory -c /home/ulfr/.migrc...   2015-09-09T13:01:03-04:00
 
@@ -140,7 +140,7 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 			fmt.Printf("%20.0f   %s   %s   %s\n", agt.ID, name, status, agt.HeartBeatTS.Format(time.RFC3339))
 		}
 	case "action", "command":
-		fmt.Println("----    ID      ---- + ----         Name         ---- + --- Last Updated ---")
+		fmt.Println("----  ID  ---- + ----         Name         ---- + --- Last Updated ---")
 		for _, item := range items {
 			for _, data := range item.Data {
 				if data.Name != sType {

@@ -7,15 +7,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/bobappleyard/readline"
 	"io"
 	"io/ioutil"
-	"mig.ninja/mig/client"
-	"mig.ninja/mig/pgp"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bobappleyard/readline"
+	"mig.ninja/mig/client"
+	"mig.ninja/mig/pgp"
 )
 
 // investigatorReader retrieves an agent from the api
@@ -63,7 +64,7 @@ func investigatorReader(input string, cli client.Client) (err error) {
 			fmt.Println("error: ", err)
 			break
 		}
-		orders := strings.Split(input, " ")
+		orders := strings.Split(strings.TrimSpace(input), " ")
 		switch orders[0] {
 		case "details":
 			fmt.Printf("Investigator ID %.0f\nname     %s\nstatus   %s\nkey id   %s\ncreated  %s\nmodified %s\n",
@@ -117,6 +118,10 @@ setstatus <status>	changes the status of the investigator to <status> (can be 'a
 			} else {
 				fmt.Println("Investigator status set to", newstatus)
 			}
+			inv, err = cli.GetInvestigator(iid)
+			if err != nil {
+				panic(err)
+			}
 		case "":
 			break
 		default:
@@ -140,7 +145,7 @@ func printInvestigatorLastActions(iid float64, limit int, cli client.Client) (er
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("-------  ID  ------- + --------    Action Name ------- + ----------- Target   ---------- + ----    Date    ---- +  -- Status --\n")
+	fmt.Printf("----- ID ----- + --------    Action Name ------- + ----------- Target   ---------- + ----    Date    ---- +  -- Status --\n")
 	for _, item := range resource.Collection.Items {
 		for _, data := range item.Data {
 			if data.Name != "action" {
