@@ -40,8 +40,8 @@ type SearchParameters struct {
 
 // NewSearchParameters initializes search parameters
 func NewSearchParameters() (p SearchParameters) {
-	p.Before = time.Now().UTC()
-	p.After = time.Now().Add(-168 * time.Hour).UTC()
+	p.Before = time.Now().Add(39600 * time.Hour).UTC()
+	p.After = time.Now().Add(-39600 * time.Hour).UTC()
 	p.AgentName = "%"
 	p.AgentID = "∞"
 	p.ActionName = "%"
@@ -49,7 +49,7 @@ func NewSearchParameters() (p SearchParameters) {
 	p.CommandID = "∞"
 	p.ThreatFamily = "%"
 	p.Status = "%"
-	p.Limit = 10000
+	p.Limit = 100
 	p.Offset = 0
 	p.InvestigatorID = "∞"
 	p.InvestigatorName = "%"
@@ -87,9 +87,7 @@ func (p SearchParameters) String() (query string) {
 	if p.Status != "%" {
 		query += fmt.Sprintf("&status=%s", p.Status)
 	}
-	if p.Limit != 10000 {
-		query += fmt.Sprintf("&limit=%.0f", p.Limit)
-	}
+	query += fmt.Sprintf("&limit=%.0f", p.Limit)
 	if p.Offset != 0 {
 		query += fmt.Sprintf("&offset=%.0f", p.Offset)
 	}

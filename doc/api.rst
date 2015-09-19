@@ -944,23 +944,22 @@ GET /api/v1/search
 
 	- `actionname`: filter results on string action name, accept `ILIKE` pattern
 
-	- `after`: return results recorded after this RFC3339 date, depends on type:
+	- `after`: return results recorded after this RFC3339 date. If not set,
+	  return results for last 10 years. Impact on search depends on the type:
 
-		- `action`: select actions with a `validfrom` date greater than
-		  `after`. Default is last 7 days.
+		- `action`: select actions with a `validfrom` date greater than `after`.
 		- `agent`: select agents that have sent a heartbeat since `after`.
-		  Default is last 7 days.
-		- `command`: select commands with a `starttime` date greated than
-		  `after`. Default is last 7 days.
+		- `command`: select commands with a `starttime` date greated than `after`.
 		- `investigator`: select investigators with a `createdat` date greater
-		  than `after`. Default is last 1,000 years.
+		  than `after`.
 
 	- `agentid`: filter results on the agent ID
 
 	- `agentname`: filter results on string agent name, accept `ILIKE` pattern
 
-	- `before`: return results recorded before this RFC3339 date. If not defined,
-	  default is to retrieve results until now.
+	- `before`: return results recorded before this RFC3339 date. If not set,
+	  return results for the next 10 years. Impact on search depends on the
+	  type:
 
 		- `action`: select actions with a `expireafter` date lower than `before`
 		- `agent`: select agents that have sent a heartbeat priot to `before`
@@ -978,7 +977,7 @@ GET /api/v1/search
 	- `investigatorname`: filter results on string investigator name, accept
 	  `ILIKE` pattern
 
-	- `limit`: limit the number of results to 10,000 by default
+	- `limit`: limit the number of results, default is set to 100
 
 	- `offset`: discard the X first results, defaults to 0. Used in conjunction
 	  with `limit`, offset can be used to paginate search results.
