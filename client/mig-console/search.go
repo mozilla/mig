@@ -7,12 +7,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/jvehent/cljs"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/jvehent/cljs"
+	"mig.ninja/mig"
+	"mig.ninja/mig/client"
 )
 
 type searchParameters struct {
@@ -37,8 +38,63 @@ func search(input string, cli client.Client) (err error) {
 	case "action", "agent", "command", "investigator":
 		sType = orders[1]
 	case "", "help":
-		fmt.Printf(`usage: search <action|agent|command|investigator> where <parameters> [<and|or> <parameters>]
-The following search parameters are available:
+		fmt.Printf(`usage: search <action|agent|command|investigator> where <key>=<value> [and <key>=<value>...]
+
+Example:
+mig> search command where agentname=%khazad% and investigatorname=%vehent% and actionname=%memory% and after=2015-09-09T17:00:00Z
+	----    ID      ---- + ----         Name         ---- + --- Last Updated ---
+	       4886304327951   memory -c /home/ulfr/.migrc...   2015-09-09T13:01:03-04:00
+
+The following search parameters are available, per search type:
+* action:
+	- name=<str>		search actions by name <str>
+	- before=<rfc3339>	search actions that expired before <rfc3339 date>
+	- after=<rfc3339>	search actions were valid after <rfc3339 date>
+	- commandid=<id>	search action that spawned a given command
+	- agentid=<id>		search actions that ran on a given agent
+	- agentname=<str>	search actions that ran on an agent named <str>
+	- investigatorid=<id>	search actions signed by a given investigator
+	- investigatorname=<str>search actions signed by investigator named <str>
+	- status=<str>		search actions with a given status amongst:
+				pending, scheduled, preparing, invalid, inflight, completed
+* command:
+	- name=<str>		search commands by action name <str>
+	- before=<rfc3339>	search commands that started before <rfc3339 date>
+	- after=<rfc3339>	search commands that started after <rfc3339 date>
+	- actionid=<id>		search commands spawned action <id>
+	- actionname=<str>	search commands spawned by an action named <str>
+	- agentname=<str>	search commands that ran on an agent named <str>
+	- agentid=<id>		search commands that ran on a given agent
+	- investigatorid=<id>	search commands signed by investigator <id>
+	- investigatorname=<str>search commands signed by investigator named <str>
+	- status=<str>		search commands with a given status amongst:
+				prepared, sent, success, timeout, cancelled, expired, failed
+* agent:
+	- name=<str>		search agents by hostname
+	- before=<rfc3339>	search agents that have sent a heartbeat before <rfc3339 date>
+	- after=<rfc3339>	search agents that have sent a heartbeat after <rfc3339 date>
+	- actionid=<id>		search agents that ran action <id>
+	- actionname=<str>	search agents that ran action named <str>
+	- commandid=<id>	search agents that ran command <id>
+	- investigatorid=<id>	search agents that ran an action signed by investigator <id>
+	- investigatorname=<str>search agents that ran an action signed by investigator named <str>
+	- version=<str>		search agents by version <str>
+	- status=<str>		search agents with a given status amongst:
+				online, upgraded, destroyed, offline, idle
+* investigator:
+	- name=<str>		search investigators by name
+	- before=<rfc3339>	search investigators created or modified before <rfc3339 date>
+	- after=<rfc3339>	search investigators created or modified after <rfc3339 date>
+	- actionid=<id>		search investigators that signed action <id>
+	- actionname=<str>	search investigators that signed action named <str>
+	- commandid=<id>	search investigators that ran command <id>
+	- agentid=<id>		search investigators that ran a command on a given agent
+	- agentname=<str>	search investigators that ran actions on an agent named <str>,
+	- status=<str>		search investigators by status amongst: active, disabled
+
+All searches accept the 'limit=<num>' parameter to limits the number of results returned by a search, defaults to 100
+Parameters that accept a <str> can use wildcards * and % (ex: name=jul%veh% ).
+No spaces are permitted within parameters. Spaces are used to separate search parameters.
 `)
 		return nil
 	default:
@@ -50,6 +106,9 @@ The following search parameters are available:
 	}
 	items, err := runSearchQuery(sp, cli)
 	if err != nil {
+		if strings.Contains(fmt.Sprintf("%v", err), "HTTP 404") {
+			panic("No results found for search query: " + sp.query)
+		}
 		panic(err)
 	}
 	switch sType {
@@ -158,24 +217,19 @@ func parseSearchQuery(orders []string) (sp searchParameters, err error) {
 		panic(fmt.Sprintf("Expected keyword 'where' after search type. Got '%s'", orders[2]))
 	}
 	for _, order := range orders[3:len(orders)] {
-		if order == "and" || order == "or" {
+		if order == "and" {
 			continue
 		}
 		params := strings.Split(order, "=")
 		if len(params) != 2 {
-			panic(fmt.Sprintf("Invalid `key=value` for in parameter '%s'", order))
+			panic(fmt.Sprintf("Invalid `key=value` in search parameter '%s'", order))
 		}
 		key := params[0]
 		// if the string contains % characters, used in postgres's pattern matching,
 		// escape them properly
 		value := strings.Replace(params[1], "%", "%25", -1)
-		// wildcards are converted to postgres's % pattern matching
 		value = strings.Replace(value, "*", "%25", -1)
 		switch key {
-		case "and", "or":
-			continue
-		case "agentname":
-			query += "&agentname=" + value
 		case "after":
 			query += "&after=" + value
 		case "before":
@@ -184,24 +238,29 @@ func parseSearchQuery(orders []string) (sp searchParameters, err error) {
 			panic("If you already know the ID, don't use the search. Use (action|command|agent) <id> directly")
 		case "actionid":
 			query += "&actionid=" + value
+		case "actionname":
+			query += "&actionname=" + value
 		case "commandid":
 			query += "&commandid=" + value
 		case "agentid":
 			query += "&agentid=" + value
+		case "agentname":
+			query += "&agentname=" + value
+		case "investigatorid":
+			query += "&investigatorid=" + value
+		case "investigatorname":
+			query += "&investigatorname=" + value
 		case "name":
 			switch sType {
 			case "action", "command":
 				query += "&actionname=" + value
 			case "agent":
 				query += "&agentname=" + value
+			case "investigator":
+				query += "&investigatorname=" + value
 			}
 		case "status":
-			switch sType {
-			case "action":
-				panic("'status' is not a valid action search parameter")
-			case "command", "agent":
-				query += "&status=" + value
-			}
+			query += "&status=" + value
 		case "limit":
 			query += "&limit=" + value
 		case "version":
@@ -225,7 +284,6 @@ func runSearchQuery(sp searchParameters, cli client.Client) (items []cljs.Item, 
 			err = fmt.Errorf("runSearchQuery() -> %v", e)
 		}
 	}()
-	fmt.Println("Search query:", sp.query)
 	target := sp.query
 	resource, err := cli.GetAPIResource(target)
 	if err != nil {
