@@ -39,10 +39,13 @@ type SearchParameters struct {
 	Type             string    `json:"type"`
 }
 
+// 10 years
+const defaultSearchPeriod time.Duration = 39600 * time.Hour
+
 // NewSearchParameters initializes search parameters
 func NewSearchParameters() (p SearchParameters) {
-	p.Before = time.Now().Add(39600 * time.Hour).UTC()
-	p.After = time.Now().Add(-39600 * time.Hour).UTC()
+	p.Before = time.Now().Add(defaultSearchPeriod).UTC()
+	p.After = time.Now().Add(-defaultSearchPeriod).UTC()
 	p.AgentName = "%"
 	p.AgentID = "∞"
 	p.ActionName = "%"
@@ -99,52 +102,178 @@ type IDs struct {
 	minActionID, maxActionID, minCommandID, maxCommandID, minAgentID, maxAgentID, minInvID, maxInvID float64
 }
 
+const MAXFLOAT64 float64 = 9007199254740991 // 2^53-1
+
+func makeIDsFromParams(p SearchParameters) (ids IDs, err error) {
+	ids.minActionID = 0
+	ids.maxActionID = MAXFLOAT64
+	if p.ActionID != "∞" {
+		ids.minActionID, err = strconv.ParseFloat(p.ActionID, 64)
+		if err != nil {
+			return
+		}
+		ids.maxActionID = ids.minActionID
+	}
+	ids.minCommandID = 0
+	ids.maxCommandID = MAXFLOAT64
+	if p.CommandID != "∞" {
+		ids.minCommandID, err = strconv.ParseFloat(p.CommandID, 64)
+		if err != nil {
+			return
+		}
+		ids.maxCommandID = ids.minCommandID
+	}
+	ids.minAgentID = 0
+	ids.maxAgentID = MAXFLOAT64
+	if p.AgentID != "∞" {
+		ids.minAgentID, err = strconv.ParseFloat(p.AgentID, 64)
+		if err != nil {
+			return
+		}
+		ids.maxAgentID = ids.minAgentID
+	}
+	ids.minInvID = 0
+	ids.maxInvID = MAXFLOAT64
+	if p.InvestigatorID != "∞" {
+		ids.minInvID, err = strconv.ParseFloat(p.InvestigatorID, 64)
+		if err != nil {
+			return
+		}
+		ids.maxInvID = ids.minInvID
+	}
+	return
+}
+
 // SearchCommands returns an array of commands that match search parameters
 func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands []mig.Command, err error) {
+	var (
+		rows *sql.Rows
+	)
 	ids, err := makeIDsFromParams(p)
 	if err != nil {
 		return
 	}
-	var rows *sql.Rows
 	query := `SELECT commands.id, commands.status, commands.results, commands.starttime, commands.finishtime,
 			actions.id, actions.name, actions.target, actions.description, actions.threat,
-			actions.operations, actions.validfrom, actions.expireafter,
-			actions.pgpsignatures, actions.syntaxversion,
-			agents.id, agents.name, agents.version, agents.tags, agents.environment
-			FROM commands, actions, agents, investigators, signatures
-			WHERE commands.actionid=actions.id AND commands.agentid=agents.id
-			AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
-			AND commands.starttime <= $1 AND commands.starttime >= $2
-			AND commands.id >= $3 AND commands.id <= $4
-			AND actions.name ILIKE $5
-			AND actions.id >= $6 AND actions.id <= $7
-			AND agents.name ILIKE $8
-			AND agents.id >= $9 AND agents.id <= $10
-			AND investigators.id >= $11 AND investigators.id <= $12
-			AND investigators.name ILIKE $13
-			AND commands.status ILIKE $14 `
+			actions.operations, actions.validfrom, actions.expireafter, actions.pgpsignatures,
+			actions.syntaxversion, agents.id, agents.name, agents.version, agents.tags, agents.environment
+		FROM	commands
+			INNER JOIN actions ON ( commands.actionid = actions.id)
+			INNER JOIN signatures ON ( actions.id = signatures.actionid )
+			INNER JOIN investigators ON ( signatures.investigatorid = investigators.id )
+			INNER JOIN agents ON ( commands.agentid = agents.id )
+		WHERE `
 	vals := []interface{}{}
-	vals = append(vals, p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
-		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName, p.Status)
-	valctr := 14
+	valctr := 0
+	if p.Before.Before(time.Now().Add(defaultSearchPeriod - time.Hour)) {
+		query += fmt.Sprintf(`commands.starttime <= $%d `, valctr+1)
+		vals = append(vals, p.Before)
+		valctr += 1
+	}
+	if p.After.After(time.Now().Add(-(defaultSearchPeriod - time.Hour))) {
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`commands.starttime >= $%d `, valctr+1)
+		vals = append(vals, p.After)
+		valctr += 1
+	}
+	if p.CommandID != "∞" {
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`commands.id >= $%d AND commands.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minCommandID, ids.maxCommandID)
+		valctr += 2
+	}
+	if p.Status != "%" {
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`commands.status ILIKE $%d`, valctr+1)
+		vals = append(vals, p.Status)
+		valctr += 1
+	}
+	if p.ActionID != "∞" {
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`actions.id >= $%d AND actions.id <= $%d`, valctr+1, valctr+2)
+		vals = append(vals, ids.minActionID, ids.maxActionID)
+		valctr += 2
+	}
+	if p.ActionName != "%" {
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`actions.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.ActionName)
+		valctr += 1
+	}
+	if p.InvestigatorID != "∞" {
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`investigators.id >= $%d AND investigators.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minInvID, ids.maxInvID)
+		valctr += 2
+	}
+	if p.InvestigatorName != "%" {
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`investigators.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.InvestigatorName)
+		valctr += 1
+	}
+	if p.AgentID != "∞" {
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`agents.id >= $%d AND agents.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minAgentID, ids.maxAgentID)
+		valctr += 2
+	}
+	if p.AgentName != "%" {
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`agents.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.AgentName)
+		valctr += 1
+	}
 	if doFoundAnything {
-		query += fmt.Sprintf(`AND commands.id IN (SELECT commands.id FROM commands, actions, json_array_elements(commands.results) as r
-							WHERE commands.actionid=actions.id
-							AND actions.id >= $%d AND actions.id <= $%d
-							AND r#>>'{foundanything}' = $%d) `, valctr+1, valctr+2, valctr+3)
-		vals = append(vals, ids.minActionID, ids.maxActionID, p.FoundAnything)
-		valctr += 3
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`commands.status = $%d
+			AND commands.id IN (	SELECT commands.id FROM commands, actions, json_array_elements(commands.results) as r
+						WHERE commands.actionid=actions.id
+						AND actions.id >= $%d AND actions.id <= $%d
+						AND r#>>'{foundanything}' = $%d) `,
+			valctr+1, valctr+2, valctr+3, valctr+4)
+		vals = append(vals, mig.StatusSuccess, ids.minActionID, ids.maxActionID, p.FoundAnything)
+		valctr += 4
 	}
 	if p.ThreatFamily != "%" {
-		query += fmt.Sprintf(`AND actions.threat#>>'{family}' ILIKE $%d `, valctr+1)
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`actions.threat#>>'{family}' ILIKE $%d `, valctr+1)
 		vals = append(vals, p.ThreatFamily)
 		valctr += 1
 	}
-	query += fmt.Sprintf(`GROUP BY commands.id, actions.id, agents.id ORDER BY commands.id ASC LIMIT $%d OFFSET $%d;`, valctr+1, valctr+2)
+	query += fmt.Sprintf(` GROUP BY commands.id, actions.id, agents.id
+		ORDER BY commands.starttime DESC LIMIT $%d OFFSET $%d;`, valctr+1, valctr+2)
 	vals = append(vals, uint64(p.Limit), uint64(p.Offset))
 
 	stmt, err := db.c.Prepare(query)
-	defer stmt.Close()
+	if stmt != nil {
+		defer stmt.Close()
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while preparing search statement: '%v' in '%s'", err, query)
 		return
@@ -223,32 +352,140 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 
 // SearchActions returns an array of actions that match search parameters
 func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error) {
+	var (
+		rows                                     *sql.Rows
+		joinAgent, joinInvestigator, joinCommand bool = false, false, false
+	)
 	ids, err := makeIDsFromParams(p)
 	if err != nil {
 		return
 	}
-	rows, err := db.c.Query(`SELECT actions.id, actions.name, actions.target,
-		actions.description, actions.threat, actions.operations, actions.validfrom,
-		actions.expireafter, actions.starttime, actions.finishtime, actions.lastupdatetime,
-		actions.status, actions.pgpsignatures, actions.syntaxversion
-		FROM commands, actions, agents, investigators, signatures
-		WHERE commands.actionid=actions.id AND commands.agentid=agents.id
-		AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
-		AND actions.expireafter <= $1 AND actions.validfrom >= $2
-		AND commands.id >= $3 AND commands.id <= $4
-		AND actions.name ILIKE $5
-		AND actions.id >= $6 AND actions.id <= $7
-		AND agents.name ILIKE $8
-		AND agents.id >= $9 AND agents.id <= $10
-		AND investigators.id >= $11 AND investigators.id <= $12
-		AND investigators.name ILIKE $13
-		AND actions.status ILIKE $14
-		AND actions.threat#>>'{family}' ILIKE $15
-		GROUP BY actions.id
-		ORDER BY actions.id DESC LIMIT $16 OFFSET $17`,
-		p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
-		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
-		p.Status, p.ThreatFamily, uint64(p.Limit), uint64(p.Offset))
+	columns := `actions.id, actions.name, actions.target,  actions.description, actions.threat, actions.operations,
+		actions.validfrom, actions.expireafter, actions.starttime, actions.finishtime, actions.lastupdatetime,
+		actions.status, actions.pgpsignatures, actions.syntaxversion `
+	join := ""
+	where := ""
+	vals := []interface{}{}
+	valctr := 0
+	if p.Before.Before(time.Now().Add(defaultSearchPeriod - time.Hour)) {
+		where += fmt.Sprintf(`actions.expireafter <= $%d `, valctr+1)
+		vals = append(vals, p.Before)
+		valctr += 1
+	}
+	if p.After.After(time.Now().Add(-(defaultSearchPeriod - time.Hour))) {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`actions.validfrom >= $%d `, valctr+1)
+		vals = append(vals, p.After)
+		valctr += 1
+	}
+	if p.Status != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`action.status ILIKE $%d`, valctr+1)
+		vals = append(vals, p.Status)
+		valctr += 1
+	}
+	if p.ActionID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`actions.id >= $%d AND actions.id <= $%d`, valctr+1, valctr+2)
+		vals = append(vals, ids.minActionID, ids.maxActionID)
+		valctr += 2
+	}
+	if p.ActionName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`actions.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.ActionName)
+		valctr += 1
+	}
+	if p.InvestigatorID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`investigators.id >= $%d AND investigators.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minInvID, ids.maxInvID)
+		valctr += 2
+		joinInvestigator = true
+	}
+	if p.InvestigatorName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`investigators.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.InvestigatorName)
+		valctr += 1
+		joinInvestigator = true
+	}
+	if p.AgentID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.id >= $%d AND agents.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minAgentID, ids.maxAgentID)
+		valctr += 2
+		joinAgent = true
+		joinCommand = true
+	}
+	if p.AgentName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.AgentName)
+		valctr += 1
+		joinAgent = true
+		joinCommand = true
+	}
+	if p.CommandID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`commands.id >= $%d AND commands.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minCommandID, ids.maxCommandID)
+		valctr += 2
+		joinCommand = true
+	}
+	if joinCommand {
+		join += "INNER JOIN commands ON ( commands.actionid = actions.id) "
+	}
+	if joinAgent {
+		join += " INNER JOIN agents ON ( commands.agentid = agents.id ) "
+	}
+	if joinInvestigator {
+		join += ` INNER JOIN signatures ON ( actions.id = signatures.actionid )
+			INNER JOIN investigators ON ( signatures.investigatorid = investigators.id ) `
+	}
+	if p.ThreatFamily != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`actions.threat#>>'{family}' ILIKE $%d `, valctr+1)
+		vals = append(vals, p.ThreatFamily)
+		valctr += 1
+	}
+	query := fmt.Sprintf(`SELECT %s FROM actions %s WHERE %s GROUP BY actions.id
+		ORDER BY actions.validfrom DESC LIMIT $%d OFFSET $%d;`,
+		columns, join, where, valctr+1, valctr+2)
+	vals = append(vals, uint64(p.Limit), uint64(p.Offset))
+
+	stmt, err := db.c.Prepare(query)
+	if stmt != nil {
+		defer stmt.Close()
+	}
+	if err != nil {
+		err = fmt.Errorf("Error while preparing search statement: '%v' in '%s'", err, query)
+		return
+	}
+	rows, err = stmt.Query(vals...)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -307,30 +544,146 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 
 // SearchAgents returns an array of agents that match search parameters
 func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
+	var (
+		rows                                      *sql.Rows
+		joinAction, joinInvestigator, joinCommand bool = false, false, false
+	)
 	ids, err := makeIDsFromParams(p)
 	if err != nil {
 		return
 	}
-	rows, err := db.c.Query(`SELECT agents.id, agents.name, agents.queueloc, agents.mode,
+	columns := `agents.id, agents.name, agents.queueloc, agents.mode,
 		agents.version, agents.pid, agents.starttime, agents.destructiontime,
-		agents.heartbeattime, agents.status
-		FROM commands, actions, agents, investigators, signatures
-		WHERE commands.actionid=actions.id AND commands.agentid=agents.id
-		AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
-		AND agents.heartbeattime <= $1 AND agents.heartbeattime >= $2
-		AND commands.id >= $3 AND commands.id <= $4
-		AND actions.name ILIKE $5
-		AND actions.id >= $6 AND actions.id <= $7
-		AND agents.name ILIKE $8
-		AND agents.id >= $9 AND agents.id <= $10
-		AND investigators.id >= $11 AND investigators.id <= $12
-		AND investigators.name ILIKE $13
-		AND agents.status ILIKE $14
-		GROUP BY agents.id
-		ORDER BY agents.id DESC LIMIT $15 OFFSET $16`,
-		p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
-		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
-		p.Status, uint64(p.Limit), uint64(p.Offset))
+		agents.heartbeattime, agents.status`
+	join := ""
+	where := ""
+	vals := []interface{}{}
+	valctr := 0
+	if p.Before.Before(time.Now().Add(defaultSearchPeriod - time.Hour)) {
+		where += fmt.Sprintf(`agents.heartbeattime <= $%d `, valctr+1)
+		vals = append(vals, p.Before)
+		valctr += 1
+	}
+	if p.After.After(time.Now().Add(-(defaultSearchPeriod - time.Hour))) {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.heartbeattime >= $%d `, valctr+1)
+		vals = append(vals, p.After)
+		valctr += 1
+	}
+	if p.AgentID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.id >= $%d AND agents.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minAgentID, ids.maxAgentID)
+		valctr += 2
+	}
+	if p.AgentName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.AgentName)
+		valctr += 1
+	}
+	if p.Status != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.status ILIKE $%d`, valctr+1)
+		vals = append(vals, p.Status)
+		valctr += 1
+	}
+	if p.ActionID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`actions.id >= $%d AND actions.id <= $%d`, valctr+1, valctr+2)
+		vals = append(vals, ids.minActionID, ids.maxActionID)
+		valctr += 2
+		joinAction = true
+		joinCommand = true
+	}
+	if p.ActionName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`actions.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.ActionName)
+		valctr += 1
+		joinAction = true
+		joinCommand = true
+	}
+	if p.ThreatFamily != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`actions.threat#>>'{family}' ILIKE $%d `, valctr+1)
+		vals = append(vals, p.ThreatFamily)
+		valctr += 1
+		joinAction = true
+		joinCommand = true
+	}
+	if p.InvestigatorID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`investigators.id >= $%d AND investigators.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minInvID, ids.maxInvID)
+		valctr += 2
+		joinInvestigator = true
+		joinCommand = true
+		joinAction = true
+	}
+	if p.InvestigatorName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`investigators.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.InvestigatorName)
+		valctr += 1
+		joinInvestigator = true
+		joinCommand = true
+		joinAction = true
+	}
+	if p.CommandID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`commands.id >= $%d AND commands.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minCommandID, ids.maxCommandID)
+		valctr += 2
+		joinCommand = true
+	}
+	if joinCommand {
+		join += "INNER JOIN commands ON ( commands.agentid = agents.id) "
+	}
+	if joinAction {
+		join += " INNER JOIN actions ON ( commands.actionid = actions.id ) "
+	}
+	if joinInvestigator {
+		join += ` INNER JOIN signatures ON ( actions.id = signatures.actionid )
+			INNER JOIN investigators ON ( signatures.investigatorid = investigators.id ) `
+	}
+	query := fmt.Sprintf(`SELECT %s FROM agents %s WHERE %s GROUP BY agents.id
+		ORDER BY agents.heartbeattime DESC LIMIT $%d OFFSET $%d;`,
+		columns, join, where, valctr+1, valctr+2)
+	vals = append(vals, uint64(p.Limit), uint64(p.Offset))
+
+	stmt, err := db.c.Prepare(query)
+	if stmt != nil {
+		defer stmt.Close()
+	}
+	if err != nil {
+		err = fmt.Errorf("Error while preparing search statement: '%v' in '%s'", err, query)
+		return
+	}
+	rows, err = stmt.Query(vals...)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -358,29 +711,143 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 
 // SearchInvestigators returns an array of investigators that match search parameters
 func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Investigator, err error) {
+	var (
+		rows                               *sql.Rows
+		joinAction, joinAgent, joinCommand bool = false, false, false
+	)
 	ids, err := makeIDsFromParams(p)
 	if err != nil {
 		return
 	}
-	rows, err := db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
-		investigators.status, investigators.createdat, investigators.lastmodified
-		FROM commands, actions, agents, investigators, signatures
-		WHERE commands.actionid=actions.id AND commands.agentid=agents.id
-		AND actions.id=signatures.actionid AND signatures.investigatorid=investigators.id
-		AND investigators.lastmodified <= $1 AND investigators.createdat >= $2
-		AND commands.id >= $3 AND commands.id <= $4
-		AND actions.name ILIKE $5
-		AND actions.id >= $6 AND actions.id <= $7
-		AND agents.name ILIKE $8
-		AND agents.id >= $9 AND agents.id <= $10
-		AND investigators.id >= $11 AND investigators.id <= $12
-		AND investigators.name ILIKE $13
-		AND investigators.status ILIKE $14
-		GROUP BY investigators.id
-		ORDER BY investigators.id DESC LIMIT $15 OFFSET $16`,
-		p.Before, p.After, ids.minCommandID, ids.maxCommandID, p.ActionName, ids.minActionID, ids.maxActionID,
-		p.AgentName, ids.minAgentID, ids.maxAgentID, ids.minInvID, ids.maxInvID, p.InvestigatorName,
-		p.Status, uint64(p.Limit), uint64(p.Offset))
+	columns := `investigators.id, investigators.name, investigators.pgpfingerprint,
+		investigators.status, investigators.createdat, investigators.lastmodified`
+	join := ""
+	where := ""
+	vals := []interface{}{}
+	valctr := 0
+	if p.Before.Before(time.Now().Add(defaultSearchPeriod - time.Hour)) {
+		where += fmt.Sprintf(`investigators.lastmodified <= $%d `, valctr+1)
+		vals = append(vals, p.Before)
+		valctr += 1
+	}
+	if p.After.After(time.Now().Add(-(defaultSearchPeriod - time.Hour))) {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`investigators.lastmodified >= $%d `, valctr+1)
+		vals = append(vals, p.After)
+		valctr += 1
+	}
+	if p.InvestigatorID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`investigators.id >= $%d AND investigators.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minInvID, ids.maxInvID)
+		valctr += 2
+	}
+	if p.InvestigatorName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`investigators.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.InvestigatorName)
+		valctr += 1
+	}
+	if p.Status != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`investigators.status ILIKE $%d`, valctr+1)
+		vals = append(vals, p.Status)
+		valctr += 1
+	}
+	if p.ActionID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`actions.id >= $%d AND actions.id <= $%d`, valctr+1, valctr+2)
+		vals = append(vals, ids.minActionID, ids.maxActionID)
+		valctr += 2
+		joinAction = true
+	}
+	if p.ActionName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`actions.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.ActionName)
+		valctr += 1
+		joinAction = true
+	}
+	if p.ThreatFamily != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`actions.threat#>>'{family}' ILIKE $%d `, valctr+1)
+		vals = append(vals, p.ThreatFamily)
+		valctr += 1
+		joinAction = true
+	}
+	if p.CommandID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`commands.id >= $%d AND commands.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minCommandID, ids.maxCommandID)
+		valctr += 2
+		joinCommand = true
+		joinAction = true
+	}
+	if p.AgentID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.id >= $%d AND agents.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minAgentID, ids.maxAgentID)
+		valctr += 2
+		joinCommand = true
+		joinAction = true
+		joinAgent = true
+	}
+	if p.AgentName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.AgentName)
+		valctr += 1
+		joinCommand = true
+		joinAction = true
+		joinAgent = true
+	}
+	if joinAction {
+		join += ` INNER JOIN signatures ON ( signatures.investigatorid = investigators.id ) 
+			INNER JOIN actions ON ( actions.id = signatures.actionid ) `
+	}
+	if joinCommand {
+		join += "INNER JOIN commands ON ( commands.actionid = actions.id) "
+	}
+	if joinAgent {
+		join += " INNER JOIN agents ON ( commands.agentid = agents.id ) "
+	}
+	query := fmt.Sprintf(`SELECT %s FROM investigators %s WHERE %s GROUP BY investigators.id
+		ORDER BY investigators.id ASC LIMIT $%d OFFSET $%d;`,
+		columns, join, where, valctr+1, valctr+2)
+	vals = append(vals, uint64(p.Limit), uint64(p.Offset))
+
+	stmt, err := db.c.Prepare(query)
+	if stmt != nil {
+		defer stmt.Close()
+	}
+	if err != nil {
+		err = fmt.Errorf("Error while preparing search statement: '%v' in '%s'", err, query)
+		return
+	}
+	rows, err = stmt.Query(vals...)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -399,48 +866,6 @@ func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Inves
 	}
 	if err := rows.Err(); err != nil {
 		err = fmt.Errorf("Failed to complete database query: '%v'", err)
-	}
-	return
-}
-
-const MAXFLOAT64 float64 = 9007199254740991 // 2^53-1
-
-func makeIDsFromParams(p SearchParameters) (ids IDs, err error) {
-	ids.minActionID = 0
-	ids.maxActionID = MAXFLOAT64
-	if p.ActionID != "∞" {
-		ids.minActionID, err = strconv.ParseFloat(p.ActionID, 64)
-		if err != nil {
-			return
-		}
-		ids.maxActionID = ids.minActionID
-	}
-	ids.minCommandID = 0
-	ids.maxCommandID = MAXFLOAT64
-	if p.CommandID != "∞" {
-		ids.minCommandID, err = strconv.ParseFloat(p.CommandID, 64)
-		if err != nil {
-			return
-		}
-		ids.maxCommandID = ids.minCommandID
-	}
-	ids.minAgentID = 0
-	ids.maxAgentID = MAXFLOAT64
-	if p.AgentID != "∞" {
-		ids.minAgentID, err = strconv.ParseFloat(p.AgentID, 64)
-		if err != nil {
-			return
-		}
-		ids.maxAgentID = ids.minAgentID
-	}
-	ids.minInvID = 0
-	ids.maxInvID = MAXFLOAT64
-	if p.InvestigatorID != "∞" {
-		ids.minInvID, err = strconv.ParseFloat(p.InvestigatorID, 64)
-		if err != nil {
-			return
-		}
-		ids.maxInvID = ids.minInvID
 	}
 	return
 }
