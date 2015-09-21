@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+// Given the name of a scheduled job, retrieve the path that should be used
+// to store the results for this job.
 func getResultsStoragePath(nm string) (rdir string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -38,6 +40,8 @@ func getResultsStoragePath(nm string) (rdir string, err error) {
 	return rdir, nil
 }
 
+// For mig.RunnerResult r, get the results associated with this job from the
+// API.
 func getResults(r mig.RunnerResult) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -94,11 +98,14 @@ func getResults(r mig.RunnerResult) (err error) {
 	return nil
 }
 
+// Determine the path that should be used to store the in-flight action
+// information for a given job.
 func flightPath(rr mig.RunnerResult) string {
 	aid := fmt.Sprintf("%.0f", rr.Action.ID)
 	return path.Join(ctx.Runner.RunDirectory, rr.EntityName, "inflight", aid)
 }
 
+// Cache action in-flight information on the file system.
 func actionInFlight(rr mig.RunnerResult) error {
 	fpath := flightPath(rr)
 	dn, _ := path.Split(fpath)
@@ -123,6 +130,7 @@ func actionInFlight(rr mig.RunnerResult) error {
 	return nil
 }
 
+// Remove action in-flight information from the file system when complete.
 func actionComplete(rr mig.RunnerResult) error {
 	fpath := flightPath(rr)
 	err := os.Remove(fpath)
@@ -133,6 +141,12 @@ func actionComplete(rr mig.RunnerResult) error {
 	return nil
 }
 
+// Scan the runner spool directory looking for actions that are known to be
+// in-flight that we have not loaded. For example, this can occur if the runner
+// is restarted after a job has been submitted to the API, but before the
+// results are returned. This will load the in-flight action data from the
+// file system so the runner is aware of the job and will obtain the results
+// when required.
 func scanInFlight(reslist []mig.RunnerResult) ([]mig.RunnerResult, error) {
 	rdir := ctx.Runner.RunDirectory
 	rents, err := ioutil.ReadDir(rdir)
@@ -185,6 +199,8 @@ func scanInFlight(reslist []mig.RunnerResult) ([]mig.RunnerResult, error) {
 	return reslist, nil
 }
 
+// Results processing routine. Keeps track of known submitted actions and
+// retrieves results / runs plugins as results become available.
 func processResults() {
 	mlog("results processing routine started")
 

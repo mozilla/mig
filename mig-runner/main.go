@@ -110,6 +110,8 @@ func procReap(ents []string) error {
 	return nil
 }
 
+// Scan the runner directory periodically, adding and removing jobs as the
+// configuration changes in the runner spool.
 func runnerScan() (err error) {
 	defer func() {
 		if e := recover(); e != nil {

@@ -19,6 +19,8 @@ import (
 // entity configuration does not include an expiry.
 var defaultExpiry = "5m"
 
+// Represents a scheduler entity, which is basically a job configuration that
+// lives in the runner spool directory.
 type entity struct {
 	name     string
 	baseDir  string
@@ -50,6 +52,9 @@ func (e *entityConfig) validate() error {
 	return nil
 }
 
+// Launch an action represented by a scheduler entity, this function takes
+// care of submitting the action to the API and making a note of when to
+// attempt to retrieve the results of the action.
 func (e *entity) launchAction() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -112,6 +117,8 @@ func (e *entity) launchAction() (err error) {
 	return nil
 }
 
+// Start a scheduler entity. This is normally run in it's own go-routine
+// and will wait until the configured time to execute.
 func (e *entity) start() {
 	xr := func(s string, args ...interface{}) {
 		mlog(s, args...)
@@ -145,10 +152,14 @@ func (e *entity) start() {
 	e.deadChan <- true
 }
 
+// Abort a scheduler entity, for example if the job has been removed from the
+// runner configuration.
 func (e *entity) stop() {
 	close(e.abortRun)
 }
 
+// Load the configuration of a scheduler entity from the runner spool
+// directory.
 func (e *entity) load() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
