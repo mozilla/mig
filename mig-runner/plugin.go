@@ -78,25 +78,24 @@ func loadPlugins() (err error) {
 		}
 	}()
 
-	pluginList = make([]plugin, 0)
-
 	// Identify any available output plugins
 	dirents, err := ioutil.ReadDir(ctx.Runner.PluginDirectory)
 	if err != nil {
 		panic(err)
 	}
-	for _, x := range dirents {
-		n := x.Name()
-		m := x.Mode()
-		if (m & 0111) == 0 {
-			mlog("plugins: skipping %v (not executable)", n)
+	for _, pluginEnt := range dirents {
+		pluginName := pluginEnt.Name()
+		pluginMode := pluginEnt.Mode()
+		if (pluginMode & 0111) == 0 {
+			mlog("plugins: skipping %v (not executable)", pluginName)
 			continue
 		}
-		ppath := path.Join(ctx.Runner.PluginDirectory, n)
-		mlog("plugins: registering %v", n)
-		np := plugin{}
-		np.name = n
-		np.path = ppath
+		ppath := path.Join(ctx.Runner.PluginDirectory, pluginName)
+		mlog("plugins: registering %v", pluginName)
+		np := plugin{
+			name: pluginName,
+			path: ppath,
+		}
 		pluginList = append(pluginList, np)
 	}
 
