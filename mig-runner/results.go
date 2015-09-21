@@ -66,7 +66,7 @@ func getResults(r mig.RunnerResult) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	outpath = path.Join(outpath, fmt.Sprintf("%.0f", r.Action.ID))
+	outpath = path.Join(outpath, fmt.Sprintf("%.0f.json", r.Action.ID))
 	fd, err := os.Create(outpath)
 	if err != nil {
 		panic(err)
