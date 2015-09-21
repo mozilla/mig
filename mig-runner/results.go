@@ -32,7 +32,7 @@ func getResultsStoragePath(nm string) (rdir string, err error) {
 		if !os.IsNotExist(err) {
 			panic(err)
 		}
-		err = os.MkdirAll(rdir, 0755)
+		err = os.MkdirAll(rdir, 0700)
 		if err != nil {
 			panic(err)
 		}
@@ -109,7 +109,7 @@ func flightPath(rr mig.RunnerResult) string {
 func actionInFlight(rr mig.RunnerResult) error {
 	fpath := flightPath(rr)
 	dn, _ := path.Split(fpath)
-	err := os.MkdirAll(dn, 0755)
+	err := os.MkdirAll(dn, 0700)
 	if err != nil {
 		return err
 	}
