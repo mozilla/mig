@@ -101,7 +101,7 @@ func getResults(r mig.RunnerResult) (err error) {
 // Determine the path that should be used to store the in-flight action
 // information for a given job.
 func flightPath(rr mig.RunnerResult) string {
-	aid := fmt.Sprintf("%.0f", rr.Action.ID)
+	aid := fmt.Sprintf("%.0f.json", rr.Action.ID)
 	return path.Join(ctx.Runner.RunDirectory, rr.EntityName, "inflight", aid)
 }
 
