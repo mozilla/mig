@@ -47,7 +47,7 @@ func (e *entityConfig) validate() error {
 	}
 	_, err := cronexpr.Parse(e.Configuration.Schedule)
 	if err != nil {
-		return fmt.Errorf("cron expression: %v", err)
+		return fmt.Errorf("bad cron expression: %v", err)
 	}
 	return nil
 }
@@ -129,7 +129,7 @@ func (e *entity) start() {
 	for {
 		cexpr, err := cronexpr.Parse(e.cfg.Configuration.Schedule)
 		if err != nil {
-			xr("%v: %v", e.name, err)
+			xr("%v: bad cron expression: %v", e.name, err)
 			return
 		}
 		nrun := cexpr.Next(time.Now())
