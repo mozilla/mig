@@ -32,6 +32,7 @@ func runPlugin(r mig.RunnerResult) (err error) {
 	for i := range pluginList {
 		if pluginList[i].name == r.UsePlugin {
 			pent = &pluginList[i]
+			break
 		}
 	}
 	if pent == nil {
