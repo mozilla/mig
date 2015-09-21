@@ -204,7 +204,7 @@ func scanInFlight(reslist []mig.RunnerResult) ([]mig.RunnerResult, error) {
 func processResults() {
 	mlog("results processing routine started")
 
-	reslist := make([]mig.RunnerResult, 0)
+	var reslist []mig.RunnerResult
 
 	for {
 		timeout := false
