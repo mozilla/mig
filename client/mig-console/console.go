@@ -249,7 +249,7 @@ func printStatus(cli client.Client) (err error) {
 		for _, data := range item.Data {
 			switch data.Name {
 			case "action":
-				idstr, name, datestr, invs, sent, err := actionPrintShort(data.Value)
+				idstr, name, _, datestr, invs, _, sent, err := actionPrintShort(data.Value)
 				if err != nil {
 					panic(err)
 				}

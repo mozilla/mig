@@ -13,14 +13,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/jvehent/cljs"
-	"golang.org/x/crypto/openpgp"
-	"gopkg.in/gcfg.v1"
 	"io"
 	"io/ioutil"
-	"mig.ninja/mig"
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/pgp"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -28,6 +22,13 @@ import (
 	"os/user"
 	"strings"
 	"time"
+
+	"github.com/jvehent/cljs"
+	"golang.org/x/crypto/openpgp"
+	"gopkg.in/gcfg.v1"
+	"mig.ninja/mig"
+	"mig.ninja/mig/modules"
+	"mig.ninja/mig/pgp"
 )
 
 var version string

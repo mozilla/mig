@@ -188,7 +188,7 @@ exit:
 	return
 }
 
-func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, sent int, err error) {
+func actionPrintShort(data interface{}) (idstr, name, target, datestr, invs, status string, sent int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("actionPrintShort() -> %v", e)
@@ -217,7 +217,24 @@ func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, sent
 		name = name[0:27] + "..."
 	}
 
-	datestr = a.LastUpdateTime.Format(time.RFC3339)
+	target = a.Target
+	if len(target) < 30 {
+		for i := len(target); i < 30; i++ {
+			target += " "
+		}
+	}
+	if len(target) > 30 {
+		target = target[0:27] + "..."
+	}
+
+	status = a.Status
+	if len(status) < 10 {
+		for i := len(status); i < 10; i++ {
+			status += " "
+		}
+	}
+
+	datestr = a.LastUpdateTime.UTC().Format(time.RFC3339)
 	if len(datestr) > 21 {
 		datestr = datestr[0:21]
 	}
@@ -239,6 +256,11 @@ func investigatorsStringFromAction(invlist []mig.Investigator, strlen int) (inve
 	}
 	if len(investigators) > strlen {
 		investigators = investigators[0:(strlen-3)] + "..."
+	}
+	if len(investigators) < strlen {
+		for i := len(investigators); i < strlen; i++ {
+			investigators += " "
+		}
 	}
 	return
 }

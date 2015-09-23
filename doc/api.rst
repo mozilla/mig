@@ -957,6 +957,8 @@ GET /api/v1/search
 
 	- `agentname`: filter results on string agent name, accept `ILIKE` pattern
 
+	- `agentversion`: filter results on agent version string, accept `ILIKE` pattern
+
 	- `before`: return results recorded before this RFC3339 date. If not set,
 	  return results for the next 10 years. Impact on search depends on the
 	  type:

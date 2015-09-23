@@ -14,89 +14,10 @@ import (
 	"time"
 
 	"mig.ninja/mig"
+	"mig.ninja/mig/database/search"
 
 	_ "github.com/lib/pq"
 )
-
-// SearchParameters contains fields used to perform database searches
-type SearchParameters struct {
-	ActionID         string    `json:"actionid"`
-	ActionName       string    `json:"actionname"`
-	After            time.Time `json:"after"`
-	AgentID          string    `json:"agentid"`
-	AgentName        string    `json:"agentname"`
-	Before           time.Time `json:"before"`
-	CommandID        string    `json:"commandid"`
-	FoundAnything    bool      `json:"foundanything"`
-	InvestigatorID   string    `json:"investigatorid"`
-	InvestigatorName string    `json:"investigatorname"`
-	Limit            float64   `json:"limit"`
-	Offset           float64   `json:"offset"`
-	Report           string    `json:"report"`
-	Status           string    `json:"status"`
-	Target           string    `json:"target"`
-	ThreatFamily     string    `json:"threatfamily"`
-	Type             string    `json:"type"`
-}
-
-// 10 years
-const defaultSearchPeriod time.Duration = 39600 * time.Hour
-
-// NewSearchParameters initializes search parameters
-func NewSearchParameters() (p SearchParameters) {
-	p.Before = time.Now().Add(defaultSearchPeriod).UTC()
-	p.After = time.Now().Add(-defaultSearchPeriod).UTC()
-	p.AgentName = "%"
-	p.AgentID = "∞"
-	p.ActionName = "%"
-	p.ActionID = "∞"
-	p.CommandID = "∞"
-	p.ThreatFamily = "%"
-	p.Status = "%"
-	p.Limit = 100
-	p.Offset = 0
-	p.InvestigatorID = "∞"
-	p.InvestigatorName = "%"
-	p.Type = "action"
-	return
-}
-
-// String() returns a query string with the current search parameters
-func (p SearchParameters) String() (query string) {
-	query = fmt.Sprintf("type=%s&after=%s&before=%s", p.Type, p.After.Format(time.RFC3339), p.Before.Format(time.RFC3339))
-	if p.AgentName != "%" {
-		query += fmt.Sprintf("&agentname=%s", p.AgentName)
-	}
-	if p.AgentID != "∞" {
-		query += fmt.Sprintf("&agentid=%s", p.AgentID)
-	}
-	if p.ActionName != "%" {
-		query += fmt.Sprintf("&actionname=%s", p.ActionName)
-	}
-	if p.ActionID != "∞" {
-		query += fmt.Sprintf("&actionid=%s", p.ActionID)
-	}
-	if p.CommandID != "∞" {
-		query += fmt.Sprintf("&commandid=%s", p.CommandID)
-	}
-	if p.InvestigatorID != "∞" {
-		query += fmt.Sprintf("&investigatorid=%s", p.InvestigatorID)
-	}
-	if p.InvestigatorName != "%" {
-		query += fmt.Sprintf("&investigatorname=%s", p.InvestigatorName)
-	}
-	if p.ThreatFamily != "%" {
-		query += fmt.Sprintf("&threatfamily=%s", p.ThreatFamily)
-	}
-	if p.Status != "%" {
-		query += fmt.Sprintf("&status=%s", p.Status)
-	}
-	query += fmt.Sprintf("&limit=%.0f", p.Limit)
-	if p.Offset != 0 {
-		query += fmt.Sprintf("&offset=%.0f", p.Offset)
-	}
-	return
-}
 
 type IDs struct {
 	minActionID, maxActionID, minCommandID, maxCommandID, minAgentID, maxAgentID, minInvID, maxInvID float64
@@ -104,7 +25,7 @@ type IDs struct {
 
 const MAXFLOAT64 float64 = 9007199254740991 // 2^53-1
 
-func makeIDsFromParams(p SearchParameters) (ids IDs, err error) {
+func makeIDsFromParams(p search.Parameters) (ids IDs, err error) {
 	ids.minActionID = 0
 	ids.maxActionID = MAXFLOAT64
 	if p.ActionID != "∞" {
@@ -145,7 +66,7 @@ func makeIDsFromParams(p SearchParameters) (ids IDs, err error) {
 }
 
 // SearchCommands returns an array of commands that match search parameters
-func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands []mig.Command, err error) {
+func (db *DB) SearchCommands(p search.Parameters, doFoundAnything bool) (commands []mig.Command, err error) {
 	var (
 		rows *sql.Rows
 	)
@@ -165,12 +86,12 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 		WHERE `
 	vals := []interface{}{}
 	valctr := 0
-	if p.Before.Before(time.Now().Add(defaultSearchPeriod - time.Hour)) {
+	if p.Before.Before(time.Now().Add(search.DefaultWindow - time.Hour)) {
 		query += fmt.Sprintf(`commands.starttime <= $%d `, valctr+1)
 		vals = append(vals, p.Before)
 		valctr += 1
 	}
-	if p.After.After(time.Now().Add(-(defaultSearchPeriod - time.Hour))) {
+	if p.After.After(time.Now().Add(-(search.DefaultWindow - time.Hour))) {
 		if valctr > 0 {
 			query += " AND "
 		}
@@ -243,6 +164,14 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 		}
 		query += fmt.Sprintf(`agents.name ILIKE $%d`, valctr+1)
 		vals = append(vals, p.AgentName)
+		valctr += 1
+	}
+	if p.AgentVersion != "%" {
+		if valctr > 0 {
+			query += " AND "
+		}
+		query += fmt.Sprintf(`agents.version ILIKE $%d`, valctr+1)
+		vals = append(vals, p.AgentVersion)
 		valctr += 1
 	}
 	if doFoundAnything {
@@ -351,7 +280,7 @@ func (db *DB) SearchCommands(p SearchParameters, doFoundAnything bool) (commands
 }
 
 // SearchActions returns an array of actions that match search parameters
-func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error) {
+func (db *DB) SearchActions(p search.Parameters) (actions []mig.Action, err error) {
 	var (
 		rows                                     *sql.Rows
 		joinAgent, joinInvestigator, joinCommand bool = false, false, false
@@ -367,12 +296,12 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 	where := ""
 	vals := []interface{}{}
 	valctr := 0
-	if p.Before.Before(time.Now().Add(defaultSearchPeriod - time.Hour)) {
+	if p.Before.Before(time.Now().Add(search.DefaultWindow - time.Hour)) {
 		where += fmt.Sprintf(`actions.expireafter <= $%d `, valctr+1)
 		vals = append(vals, p.Before)
 		valctr += 1
 	}
-	if p.After.After(time.Now().Add(-(defaultSearchPeriod - time.Hour))) {
+	if p.After.After(time.Now().Add(-(search.DefaultWindow - time.Hour))) {
 		if valctr > 0 {
 			where += " AND "
 		}
@@ -440,6 +369,16 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 		}
 		where += fmt.Sprintf(`agents.name ILIKE $%d`, valctr+1)
 		vals = append(vals, p.AgentName)
+		valctr += 1
+		joinAgent = true
+		joinCommand = true
+	}
+	if p.AgentVersion != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.version ILIKE $%d`, valctr+1)
+		vals = append(vals, p.AgentVersion)
 		valctr += 1
 		joinAgent = true
 		joinCommand = true
@@ -543,7 +482,7 @@ func (db *DB) SearchActions(p SearchParameters) (actions []mig.Action, err error
 }
 
 // SearchAgents returns an array of agents that match search parameters
-func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
+func (db *DB) SearchAgents(p search.Parameters) (agents []mig.Agent, err error) {
 	var (
 		rows                                      *sql.Rows
 		joinAction, joinInvestigator, joinCommand bool = false, false, false
@@ -559,12 +498,12 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 	where := ""
 	vals := []interface{}{}
 	valctr := 0
-	if p.Before.Before(time.Now().Add(defaultSearchPeriod - time.Hour)) {
+	if p.Before.Before(time.Now().Add(search.DefaultWindow - time.Hour)) {
 		where += fmt.Sprintf(`agents.heartbeattime <= $%d `, valctr+1)
 		vals = append(vals, p.Before)
 		valctr += 1
 	}
-	if p.After.After(time.Now().Add(-(defaultSearchPeriod - time.Hour))) {
+	if p.After.After(time.Now().Add(-(search.DefaultWindow - time.Hour))) {
 		if valctr > 0 {
 			where += " AND "
 		}
@@ -587,6 +526,14 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 		}
 		where += fmt.Sprintf(`agents.name ILIKE $%d`, valctr+1)
 		vals = append(vals, p.AgentName)
+		valctr += 1
+	}
+	if p.AgentVersion != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.version ILIKE $%d`, valctr+1)
+		vals = append(vals, p.AgentVersion)
 		valctr += 1
 	}
 	if p.Status != "%" {
@@ -710,7 +657,7 @@ func (db *DB) SearchAgents(p SearchParameters) (agents []mig.Agent, err error) {
 }
 
 // SearchInvestigators returns an array of investigators that match search parameters
-func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Investigator, err error) {
+func (db *DB) SearchInvestigators(p search.Parameters) (investigators []mig.Investigator, err error) {
 	var (
 		rows                               *sql.Rows
 		joinAction, joinAgent, joinCommand bool = false, false, false
@@ -725,12 +672,12 @@ func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Inves
 	where := ""
 	vals := []interface{}{}
 	valctr := 0
-	if p.Before.Before(time.Now().Add(defaultSearchPeriod - time.Hour)) {
+	if p.Before.Before(time.Now().Add(search.DefaultWindow - time.Hour)) {
 		where += fmt.Sprintf(`investigators.lastmodified <= $%d `, valctr+1)
 		vals = append(vals, p.Before)
 		valctr += 1
 	}
-	if p.After.After(time.Now().Add(-(defaultSearchPeriod - time.Hour))) {
+	if p.After.After(time.Now().Add(-(search.DefaultWindow - time.Hour))) {
 		if valctr > 0 {
 			where += " AND "
 		}
@@ -819,6 +766,17 @@ func (db *DB) SearchInvestigators(p SearchParameters) (investigators []mig.Inves
 		}
 		where += fmt.Sprintf(`agents.name ILIKE $%d`, valctr+1)
 		vals = append(vals, p.AgentName)
+		valctr += 1
+		joinCommand = true
+		joinAction = true
+		joinAgent = true
+	}
+	if p.AgentVersion != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`agents.version ILIKE $%d`, valctr+1)
+		vals = append(vals, p.AgentVersion)
 		valctr += 1
 		joinCommand = true
 		joinAction = true
