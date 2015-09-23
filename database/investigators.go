@@ -9,16 +9,19 @@ package database /* import "mig.ninja/mig/database" */
 import (
 	"database/sql"
 	"fmt"
+	"time"
+
 	_ "github.com/lib/pq"
 	"mig.ninja/mig"
-	"time"
 )
 
 // ActiveInvestigators returns a slice of investigators keys marked as active
 func (db *DB) ActiveInvestigatorsKeys() (keys [][]byte, err error) {
 	rows, err := db.c.Query("SELECT publickey FROM investigators WHERE status='active'")
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil && err != sql.ErrNoRows {
-		rows.Close()
 		err = fmt.Errorf("Error while listing active investigators keys: '%v'", err)
 		return
 	}
@@ -29,7 +32,6 @@ func (db *DB) ActiveInvestigatorsKeys() (keys [][]byte, err error) {
 		var key []byte
 		err = rows.Scan(&key)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Error while retrieving investigator key: '%v'", err)
 			return
 		}
@@ -81,8 +83,10 @@ func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err 
 		FROM investigators, signatures
 		WHERE signatures.actionid=$1
 		AND signatures.investigatorid=investigators.id`, aid)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil && err != sql.ErrNoRows {
-		rows.Close()
 		err = fmt.Errorf("Error while finding investigator: '%v'", err)
 		return
 	}
@@ -90,7 +94,6 @@ func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err 
 		var inv mig.Investigator
 		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status, &inv.CreatedAt, &inv.LastModified)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to retrieve investigator data: '%v'", err)
 			return
 		}

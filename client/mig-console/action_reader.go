@@ -8,12 +8,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bobappleyard/readline"
 	"io"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/bobappleyard/readline"
+	"mig.ninja/mig"
+	"mig.ninja/mig/client"
 )
 
 // actionReader retrieves an action from the API using its numerical ID
@@ -186,7 +188,7 @@ exit:
 	return
 }
 
-func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, sent int, err error) {
+func actionPrintShort(data interface{}) (idstr, name, target, datestr, invs, status string, sent int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("actionPrintShort() -> %v", e)
@@ -199,8 +201,8 @@ func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, sent
 	invs = investigatorsStringFromAction(a.Investigators, 23)
 
 	idstr = fmt.Sprintf("%.0f", a.ID)
-	if len(idstr) < 20 {
-		for i := len(idstr); i < 20; i++ {
+	if len(idstr) < 14 {
+		for i := len(idstr); i < 14; i++ {
 			idstr += " "
 		}
 	}
@@ -215,7 +217,24 @@ func actionPrintShort(data interface{}) (idstr, name, datestr, invs string, sent
 		name = name[0:27] + "..."
 	}
 
-	datestr = a.LastUpdateTime.Format("Mon Jan 2 3:04pm MST")
+	target = a.Target
+	if len(target) < 30 {
+		for i := len(target); i < 30; i++ {
+			target += " "
+		}
+	}
+	if len(target) > 30 {
+		target = target[0:27] + "..."
+	}
+
+	status = a.Status
+	if len(status) < 10 {
+		for i := len(status); i < 10; i++ {
+			status += " "
+		}
+	}
+
+	datestr = a.LastUpdateTime.UTC().Format(time.RFC3339)
 	if len(datestr) > 21 {
 		datestr = datestr[0:21]
 	}
@@ -237,6 +256,11 @@ func investigatorsStringFromAction(invlist []mig.Investigator, strlen int) (inve
 	}
 	if len(investigators) > strlen {
 		investigators = investigators[0:(strlen-3)] + "..."
+	}
+	if len(investigators) < strlen {
+		for i := len(investigators); i < strlen; i++ {
+			investigators += " "
+		}
 	}
 	return
 }

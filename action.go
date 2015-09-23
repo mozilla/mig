@@ -12,11 +12,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"mig.ninja/mig/pgp"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"mig.ninja/mig/pgp"
 )
 
 // ActionVersion is the version of the syntax that is expected

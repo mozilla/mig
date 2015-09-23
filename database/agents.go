@@ -10,8 +10,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"mig.ninja/mig"
 	"time"
+
+	"mig.ninja/mig"
 
 	_ "github.com/lib/pq"
 )
@@ -66,6 +67,9 @@ func (db *DB) AgentsActiveSince(pointInTime time.Time) (agents []mig.Agent, err 
 	rows, err := db.c.Query(`SELECT DISTINCT(agents.queueloc), agents.name FROM agents
 		WHERE agents.heartbeattime >= $1 AND agents.heartbeattime <= NOW()
 		GROUP BY agents.queueloc, agents.name`, pointInTime)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
@@ -74,7 +78,6 @@ func (db *DB) AgentsActiveSince(pointInTime time.Time) (agents []mig.Agent, err 
 		var agent mig.Agent
 		err = rows.Scan(&agent.QueueLoc, &agent.Name)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
 			return
 		}
@@ -127,6 +130,9 @@ func (db *DB) ListMultiAgentsQueues(pointInTime time.Time) (queues []string, err
 	rows, err := db.c.Query(`SELECT queueloc FROM agents
 		WHERE heartbeattime > $1 AND mode != 'checkin'
 		GROUP BY queueloc HAVING COUNT(queueloc) > 1`, pointInTime)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while listing multi agents queues: '%v'", err)
 		return
@@ -135,7 +141,6 @@ func (db *DB) ListMultiAgentsQueues(pointInTime time.Time) (queues []string, err
 		var q string
 		err = rows.Scan(&q)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to retrieve agent queue: '%v'", err)
 			return
 		}
@@ -151,6 +156,9 @@ func (db *DB) ListMultiAgentsQueues(pointInTime time.Time) (queues []string, err
 func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agents []mig.Agent, err error) {
 	rows, err := db.c.Query(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime, status
 		FROM agents WHERE agents.heartbeattime > $1 AND agents.queueloc=$2`, pointInTime, queueloc)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
 		return
@@ -160,7 +168,6 @@ func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agent
 		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version,
 			&agent.PID, &agent.StartTime, &agent.HeartBeatTS, &agent.Status)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
 			return
 		}
@@ -175,7 +182,6 @@ func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agent
 // ActiveAgentsByTarget runs a search for all agents that match a given target string.
 // For safety, it does so in a transaction that runs as a readonly user.
 func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error) {
-	var jTags, jEnv []byte
 	// save current user
 	var dbuser string
 	err = db.c.QueryRow("SELECT CURRENT_USER").Scan(&dbuser)
@@ -191,10 +197,12 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 		_ = txn.Rollback()
 		return
 	}
-	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc, version, pid, status,
-		environment, tags, mode, starttime, heartbeattime, destructiontime
+	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc, pid, mode
 		FROM agents WHERE agents.status IN ('%s', '%s') AND (%s)
-		ORDER BY agents.queueloc, agents.heartbeattime DESC`, mig.AgtStatusOnline, mig.AgtStatusIdle, target))
+		ORDER BY agents.queueloc ASC`, mig.AgtStatusOnline, mig.AgtStatusIdle, target))
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil {
 		_ = txn.Rollback()
 		err = fmt.Errorf("Error while finding agents: '%v'", err)
@@ -202,21 +210,9 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 	}
 	for rows.Next() {
 		var agent mig.Agent
-		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Version, &agent.PID, &agent.Status,
-			&jEnv, &jTags, &agent.Mode, &agent.StartTime, &agent.HeartBeatTS, &agent.DestructionTime)
+		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.PID, &agent.Mode)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
-			return
-		}
-		err = json.Unmarshal(jTags, &agent.Tags)
-		if err != nil {
-			err = fmt.Errorf("failed to unmarshal agent tags")
-			return
-		}
-		err = json.Unmarshal(jEnv, &agent.Env)
-		if err != nil {
-			err = fmt.Errorf("failed to unmarshal agent environment")
 			return
 		}
 		agents = append(agents, agent)
@@ -266,6 +262,9 @@ func (db *DB) GetAgentsStats(limit int) (stats []mig.AgentsStats, err error) {
 		online_endpoints, idle_agents, idle_agents_by_version, idle_endpoints, new_endpoints,
 		multi_agents_endpoints, disappeared_endpoints, flapping_endpoints
 		FROM agents_stats ORDER BY timestamp DESC LIMIT $1`, limit)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving agent statistics: '%v'", err)
 		return
@@ -277,19 +276,16 @@ func (db *DB) GetAgentsStats(limit int) (stats []mig.AgentsStats, err error) {
 			&s.IdleAgents, &jIdlAgtVer, &s.IdleEndpoints, &s.NewEndpoints,
 			&s.MultiAgentsEndpoints, &s.DisappearedEndpoints, &s.FlappingEndpoints)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to retrieve agent statistics data: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jOnlAgtVer, &s.OnlineAgentsByVersion)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal online agent by version statistics: '%v'", err)
 			return
 		}
 		err = json.Unmarshal(jIdlAgtVer, &s.IdleAgentsByVersion)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to unmarshal idle agent by version statistics: '%v'", err)
 			return
 		}
@@ -331,6 +327,9 @@ func (db *DB) StoreAgentsStats(stats mig.AgentsStats) (err error) {
 func (db *DB) SumOnlineAgentsByVersion() (sum []mig.AgentsVersionsSum, err error) {
 	rows, err := db.c.Query(`SELECT COUNT(*), version FROM agents
 		WHERE agents.status=$1 GROUP BY version`, mig.AgtStatusOnline)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while counting agents: '%v'", err)
 		return
@@ -339,7 +338,6 @@ func (db *DB) SumOnlineAgentsByVersion() (sum []mig.AgentsVersionsSum, err error
 		var asum mig.AgentsVersionsSum
 		err = rows.Scan(&asum.Count, &asum.Version)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to retrieve summary data: '%v'", err)
 			return
 		}
@@ -359,6 +357,9 @@ func (db *DB) SumIdleAgentsByVersion() (sum []mig.AgentsVersionsSum, err error) 
 			SELECT distinct(queueloc) FROM agents
 			WHERE agents.status=$2)
 		GROUP BY version`, mig.AgtStatusIdle, mig.AgtStatusOnline)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while counting agents: '%v'", err)
 		return
@@ -367,7 +368,6 @@ func (db *DB) SumIdleAgentsByVersion() (sum []mig.AgentsVersionsSum, err error) 
 		var asum mig.AgentsVersionsSum
 		err = rows.Scan(&asum.Count, &asum.Version)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to retrieve summary data: '%v'", err)
 			return
 		}
@@ -491,6 +491,9 @@ func (db *DB) GetDisappearedEndpoints(oldest time.Time) (queues []string, err er
 			GROUP BY queueloc
 			)
 		GROUP BY queueloc`, oldest)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving disappeared endpoints: '%v'", err)
 		return
@@ -499,7 +502,6 @@ func (db *DB) GetDisappearedEndpoints(oldest time.Time) (queues []string, err er
 		var q string
 		err = rows.Scan(&q)
 		if err != nil {
-			rows.Close()
 			err = fmt.Errorf("Failed to retrieve endpoint queue: '%v'", err)
 			return
 		}

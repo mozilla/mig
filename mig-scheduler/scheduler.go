@@ -9,13 +9,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
+	"runtime"
+	"time"
+
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
 	"mig.ninja/mig/pgp"
-	"os"
-	"runtime"
-	"time"
 )
 
 // build version
@@ -182,7 +183,7 @@ func createCommand(ctx Context, action mig.Action, agent mig.Agent, emptyResults
 // sendCommand is called when a command file is created in ctx.Directories.Command.Ready
 // it read the command, sends it to the agent via AMQP, and update the DB
 func sendCommands(cmds []mig.Command, ctx Context) (err error) {
-	aid := cmds[0].ID
+	aid := cmds[0].Action.ID
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("sendCommand() -> %v", e)

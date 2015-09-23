@@ -7,14 +7,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/jvehent/cljs"
-	"mig.ninja/mig"
-	migdb "mig.ninja/mig/database"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/jvehent/cljs"
+	"mig.ninja/mig"
+	migdbsearch "mig.ninja/mig/database/search"
 )
 
 type pagination struct {
@@ -27,7 +28,7 @@ type pagination struct {
 func search(respWriter http.ResponseWriter, request *http.Request) {
 	var (
 		err         error
-		p           migdb.SearchParameters
+		p           migdbsearch.Parameters
 		filterFound bool
 	)
 	opid := getOpID(request)
@@ -234,13 +235,13 @@ var truere = regexp.MustCompile("(?i)^true$")
 var falsere = regexp.MustCompile("(?i)^false$")
 
 // parseSearchParameters transforms a query string into search parameters in the migdb format
-func parseSearchParameters(qp url.Values) (p migdb.SearchParameters, filterFound bool, err error) {
+func parseSearchParameters(qp url.Values) (p migdbsearch.Parameters, filterFound bool, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("parseSearchParameters()-> %v", e)
 		}
 	}()
-	p = migdb.NewSearchParameters()
+	p = migdbsearch.NewParameters()
 	for queryParams, _ := range qp {
 		switch queryParams {
 		case "actionname":
@@ -256,6 +257,8 @@ func parseSearchParameters(qp url.Values) (p migdb.SearchParameters, filterFound
 			p.AgentID = qp["agentid"][0]
 		case "agentname":
 			p.AgentName = qp["agentname"][0]
+		case "agentversion":
+			p.AgentVersion = qp["agentversion"][0]
 		case "before":
 			p.Before, err = time.Parse(time.RFC3339, qp["before"][0])
 			if err != nil {

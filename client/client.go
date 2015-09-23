@@ -13,14 +13,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/jvehent/cljs"
-	"golang.org/x/crypto/openpgp"
-	"gopkg.in/gcfg.v1"
 	"io"
 	"io/ioutil"
-	"mig.ninja/mig"
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/pgp"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -28,6 +22,13 @@ import (
 	"os/user"
 	"strings"
 	"time"
+
+	"github.com/jvehent/cljs"
+	"golang.org/x/crypto/openpgp"
+	"gopkg.in/gcfg.v1"
+	"mig.ninja/mig"
+	"mig.ninja/mig/modules"
+	"mig.ninja/mig/pgp"
 )
 
 var version string
@@ -695,7 +696,7 @@ func (cli Client) EvaluateAgentTarget(target string) (agents []mig.Agent, err er
 			err = fmt.Errorf("EvaluateAgentTarget() -> %v", e)
 		}
 	}()
-	query := "search?type=agent&target=" + url.QueryEscape(target)
+	query := "search?type=agent&limit=1000000&target=" + url.QueryEscape(target)
 	resource, err := cli.GetAPIResource(query)
 	if err != nil {
 		panic(err)
