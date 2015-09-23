@@ -59,6 +59,18 @@ type GpgConf struct {
 	Keyserver string
 }
 
+// Can store the passphrase used to decrypt a GPG private key so the client
+// does not attempt to prompt for it. We do not store it in the client
+// configuration, as under normal usage passphrases for MIG should not be
+// stored in cleartext. However in some cases such as with mig-runner this
+// behavior is required for automated operation.
+var clientPassphrase string
+
+// Set the GPG passphrase to be used by the client for secret key operations.
+func ClientPassphrase(s string) {
+	clientPassphrase = s
+}
+
 // NewClient initiates a new instance of a Client
 func NewClient(conf Configuration, version string) (cli Client, err error) {
 	cli.Version = version
@@ -90,6 +102,9 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 			// socket was found, set it
 			os.Setenv("GPG_AGENT_INFO", conf.GPG.Home+"/S.gpg-agent")
 		}
+	}
+	if clientPassphrase != "" {
+		pgp.CachePassphrase(clientPassphrase)
 	}
 	// try to make a signed token, just to check that we can access the private key
 	_, err = cli.MakeSignedToken()
@@ -294,6 +309,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 	}
 	hasResource := false
 	if resp.Body != nil {
+		defer resp.Body.Close()
 		// unmarshal the body. don't attempt to interpret it, as long as it
 		// fits into a cljs.Resource, it's acceptable
 		body, err := ioutil.ReadAll(resp.Body)
@@ -772,6 +788,58 @@ finish:
 	a.PrintCounters()
 	fmt.Fprintf(os.Stderr, "\x1b[0m")
 	return
+}
+
+// FetchActionResults retrieves mig command results associated with a
+// particular action. This function differs from PrintActionResults in
+// that it returns a slice of mig.Command structs, rather then printing
+// results to stdout.
+//
+// XXX Note in the future it may be worth refactoring the action print
+// functions to make use of this, but it would require additional work.
+func (cli Client) FetchActionResults(a mig.Action) (ret []mig.Command, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("FetchActionResults() -> %v", e)
+		}
+	}()
+
+	limit := 37
+	offset := 0
+	ret = make([]mig.Command, 0)
+
+	for {
+		target := fmt.Sprintf("search?type=command&limit=%d&offset=%d", limit, offset)
+		target = target + fmt.Sprintf("&actionid=%.0f", a.ID)
+
+		resource, err := cli.GetAPIResource(target)
+		if resource.Collection.Error.Message == "no results found" {
+			err = nil
+			break
+		} else if err != nil {
+			panic(err)
+		}
+		count := 0
+		for _, item := range resource.Collection.Items {
+			for _, data := range item.Data {
+				if data.Name != "command" {
+					continue
+				}
+				cmd, err := ValueToCommand(data.Value)
+				if err != nil {
+					panic(err)
+				}
+				ret = append(ret, cmd)
+				count++
+			}
+		}
+		if count == 0 {
+			break
+		}
+		offset += limit
+	}
+
+	return ret, nil
 }
 
 func (cli Client) PrintActionResults(a mig.Action, show, render string) (err error) {

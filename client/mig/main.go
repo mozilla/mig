@@ -32,6 +32,7 @@ usage: %s <module> <global options> <module parameters>
 -e <duration>	time after which the action expires. 60 seconds by default.
 		example: -e 300s (5 minutes)
 -i <file>	load and run action from a file. supersedes other action flags.
+-p <bool>       display action json that would be used and exit
 -show <mode>	type of results to show. if not set, default is 'found'.
 		* found: 	only print positive results
 		* notfound: 	only print negative results
@@ -75,6 +76,7 @@ func main() {
 		op                                             mig.Operation
 		a                                              mig.Action
 		migrc, show, render, target, expiration, afile string
+		printAndExit                                   bool
 		verbose                                        bool
 		modargs                                        []string
 		run                                            interface{}
@@ -87,6 +89,7 @@ func main() {
 	homedir := client.FindHomedir()
 	fs := flag.NewFlagSet("mig flag", flag.ContinueOnError)
 	fs.Usage = continueOnFlagError
+	fs.BoolVar(&printAndExit, "p", false, "display action json that would be used and exit")
 	fs.StringVar(&migrc, "c", homedir+"/.migrc", "alternative configuration file")
 	fs.StringVar(&show, "show", "found", "type of results to show")
 	fs.StringVar(&render, "render", "text", "results rendering mode")
@@ -121,6 +124,14 @@ func main() {
 			panic(err)
 		}
 		fmt.Fprintf(os.Stderr, "[info] launching action from file, all flags are ignored\n")
+		if printAndExit {
+			actionstr, err := a.IndentedString()
+			if err != nil {
+				panic(err)
+			}
+			fmt.Fprintf(os.Stdout, "%v\n", actionstr)
+			os.Exit(0)
+		}
 		goto readytolaunch
 	}
 
@@ -207,6 +218,15 @@ func main() {
 		a.Name += arg + " "
 	}
 	a.Target = target
+
+	if printAndExit {
+		actionstr, err := a.IndentedString()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Fprintf(os.Stdout, "%v\n", actionstr)
+		os.Exit(0)
+	}
 
 readytolaunch:
 	// instanciate an API client

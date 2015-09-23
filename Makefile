@@ -64,6 +64,9 @@ mig-scheduler: create-bindir
 mig-api: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-api $(GOLDFLAGS) mig.ninja/mig/mig-api
 
+mig-runner: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-runner $(GOLDFLAGS) mig.ninja/mig/mig-runner
+
 mig-action-generator: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
 
@@ -104,6 +107,7 @@ go_vendor_dependencies:
 	$(GOGETTER) github.com/mozilla/scribe/src/scribe
 	$(GOGETTER) github.com/oschwald/geoip2-golang
 	$(GOGETTER) github.com/streadway/amqp
+	$(GOGETTER) github.com/gorhill/cronexpr
 	$(GOGETTER) golang.org/x/crypto/openpgp
 	$(GOGETTER) golang.org/x/crypto/sha3
 	$(GOGETTER) golang.org/x/net/icmp

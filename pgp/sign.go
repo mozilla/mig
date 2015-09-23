@@ -20,6 +20,12 @@ import (
 
 var cachedPassphrase string
 
+// CachePassphrase() can be used to pre-cache a passphrase and avoid asking
+// for it. This would normally be called from the MIG client API.
+func CachePassphrase(s string) {
+	cachedPassphrase = s
+}
+
 // Sign signs a string with a key identified by a key fingerprint or an email address
 func Sign(data, keyid string, secringFile io.Reader) (sig string, err error) {
 	defer func() {
