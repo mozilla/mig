@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"runtime"
 )
 
 type CommandLocation struct {
@@ -81,7 +82,14 @@ func PrintMap(locs []CommandLocation, title string) (err error) {
 	}
 	filepath := fmt.Sprintf("%s/%s", os.TempDir(), fi.Name())
 	fmt.Fprintf(os.Stderr, "map written to %s\n", filepath)
-	err = exec.Command("firefox", filepath).Start()
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("firefox", filepath).Start()
+	case "darwin":
+		err = exec.Command("open", "-b", "org.mozilla.firefox", filepath).Start()
+	default:
+		return
+	}
 	if err != nil {
 		panic(err)
 	}
