@@ -679,7 +679,7 @@ func (cli Client) EvaluateAgentTarget(target string) (agents []mig.Agent, err er
 			err = fmt.Errorf("EvaluateAgentTarget() -> %v", e)
 		}
 	}()
-	query := "search?type=agent&target=" + url.QueryEscape(target)
+	query := "search?type=agent&limit=1000000&target=" + url.QueryEscape(target)
 	resource, err := cli.GetAPIResource(query)
 	if err != nil {
 		panic(err)
