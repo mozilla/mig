@@ -3,13 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"mig.ninja/mig/client"
 	"os"
 	"strings"
 	"time"
-)
 
-var version string
+	"mig.ninja/mig"
+	"mig.ninja/mig/client"
+)
 
 func main() {
 	flag.Usage = func() {
@@ -21,14 +21,20 @@ func main() {
 	var err error
 	homedir := client.FindHomedir()
 	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
+	var showversion = flag.Bool("V", false, "Show build version and exit")
 	flag.Parse()
+
+	if *showversion {
+		fmt.Println(mig.Version)
+		os.Exit(0)
+	}
 
 	// instanciate an API client
 	conf, err := client.ReadConfiguration(*config)
 	if err != nil {
 		panic(err)
 	}
-	cli, err := client.NewClient(conf, "agent-search-"+version)
+	cli, err := client.NewClient(conf, "agent-search-"+mig.Version)
 	if err != nil {
 		panic(err)
 	}
