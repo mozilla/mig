@@ -3,13 +3,14 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 BUILDENV	:= dev
+BUILDREL 	:= 0
 ifeq ($(OS),windows)
-	# on windows, the version is year.month.date
-	BUILDREV := $(shell date +%y).$(shell date +%m).$(shell date +%d)
+	# on windows, the version is year.month.date.release
+	BUILDREV := $(shell date +%y).$(shell date +%m).$(shell date +%d).$(BUILDREL)
 	BINSUFFIX := ".exe"
 else
-	# on *nix, the version is yearmonthdate+lastcommit.env
-	BUILDREV := $(shell date +%Y%m%d)+$(shell git log --pretty=format:'%h' -n 1).$(BUILDENV)
+	# on *nix, the version is yearmonthdate.release+lastcommit.env
+	BUILDREV := $(shell date +%Y%m%d)-$(BUILDREL).$(shell git log --pretty=format:'%h' -n 1).$(BUILDENV)
 	BINSUFFIX := ""
 endif
 

@@ -6,4 +6,4 @@
 
 package mig /* import "mig.ninja/mig" */
 
-var Version string = "20150924+637dcd7"
+var Version string = "20150924-0.76f33f2"
