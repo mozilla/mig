@@ -19,16 +19,19 @@ import (
 	"mig.ninja/mig/pgp"
 )
 
-// build version
-var version string
-
 func main() {
 	cpus := runtime.NumCPU()
 	runtime.GOMAXPROCS(cpus * 2)
 
 	// command line options
 	var config = flag.String("c", "/etc/mig/scheduler.cfg", "Load configuration from file")
+	var showversion = flag.Bool("V", false, "Show build version and exit")
 	flag.Parse()
+
+	if *showversion {
+		fmt.Println(mig.Version)
+		os.Exit(0)
+	}
 
 	// The context initialization takes care of parsing the configuration,
 	// and creating connections to database, message broker, syslog, ...

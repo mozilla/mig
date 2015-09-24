@@ -22,9 +22,6 @@ import (
 	"mig.ninja/mig/client"
 )
 
-// build version
-var version string
-
 func main() {
 	var err error
 	defer func() {
@@ -41,7 +38,7 @@ func main() {
 	flag.Parse()
 
 	if *showversion {
-		fmt.Println(version)
+		fmt.Println(mig.Version)
 		os.Exit(0)
 	}
 
@@ -74,7 +71,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli, err := client.NewClient(conf, "console-"+version)
+	cli, err := client.NewClient(conf, "console-"+mig.Version)
 	if err != nil {
 		panic(err)
 	}

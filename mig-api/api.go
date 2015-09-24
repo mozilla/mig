@@ -8,18 +8,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/gorilla/context"
-	"github.com/gorilla/mux"
-	"github.com/jvehent/cljs"
-	"mig.ninja/mig"
 	"net/http"
 	"os"
 	"runtime"
 	"strings"
-)
 
-// build version
-var version string
+	"github.com/gorilla/context"
+	"github.com/gorilla/mux"
+	"github.com/jvehent/cljs"
+	"mig.ninja/mig"
+)
 
 var ctx Context
 
@@ -35,7 +33,7 @@ func main() {
 	flag.Parse()
 
 	if *showversion {
-		fmt.Println(version)
+		fmt.Println(mig.Version)
 		os.Exit(0)
 	}
 

@@ -6,16 +6,17 @@
 package main
 
 import (
-	"gopkg.in/gcfg.v1"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/jvehent/gozdef"
-	"mig.ninja/mig"
-	"mig.ninja/mig/workers"
 	"os"
 	"os/exec"
 	"regexp"
+
+	"github.com/jvehent/gozdef"
+	"gopkg.in/gcfg.v1"
+	"mig.ninja/mig"
+	"mig.ninja/mig/workers"
 )
 
 const workerName = "agent_intel"
@@ -42,7 +43,12 @@ func main() {
 		flag.PrintDefaults()
 	}
 	var configPath = flag.String("c", "/etc/mig/agent-intel-worker.cfg", "Load configuration from file")
+	var showversion = flag.Bool("V", false, "Show build version and exit")
 	flag.Parse()
+	if *showversion {
+		fmt.Println(mig.Version)
+		os.Exit(0)
+	}
 	err = gcfg.ReadFileInto(&conf, *configPath)
 	if err != nil {
 		panic(err)

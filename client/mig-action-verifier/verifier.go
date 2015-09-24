@@ -8,9 +8,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
 	"mig.ninja/mig"
 	"mig.ninja/mig/client"
-	"os"
 )
 
 func main() {
@@ -33,7 +34,13 @@ func main() {
 	var actionfile = flag.String("a", "/path/to/action", "Load action from file")
 	var commandfile = flag.String("c", "/path/to/command", "Load command from file")
 	var config = flag.String("conf", homedir+"/.migrc", "Load configuration from file")
+	var showversion = flag.Bool("V", false, "Show build version and exit")
 	flag.Parse()
+
+	if *showversion {
+		fmt.Println(mig.Version)
+		os.Exit(0)
+	}
 
 	conf, err := client.ReadConfiguration(*config)
 	if err != nil {

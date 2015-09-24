@@ -10,15 +10,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
 	"net/url"
 	"os"
 	"time"
-)
 
-// build version
-var version string
+	"mig.ninja/mig"
+	"mig.ninja/mig/client"
+)
 
 func main() {
 	var err error
@@ -52,7 +50,7 @@ func main() {
 	flag.Parse()
 
 	if *showversion {
-		fmt.Println(version)
+		fmt.Println(mig.Version)
 		os.Exit(0)
 	}
 
@@ -65,7 +63,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cli, err := client.NewClient(conf, "generator-"+version)
+	cli, err := client.NewClient(conf, "generator-"+mig.Version)
 	if err != nil {
 		panic(err)
 	}

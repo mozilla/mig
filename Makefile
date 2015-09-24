@@ -37,7 +37,7 @@ LDFLAGS		:=
 GOOPTS		:=
 GO 			:= GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
 GOGETTER	:= GOPATH=$(shell pwd)/.tmpdeps go get -d
-GOLDFLAGS	:= -ldflags "-X main.version=$(BUILDREV)"
+GOLDFLAGS	:= -ldflags "-X mig.ninja/mig.Version=$(BUILDREV)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install

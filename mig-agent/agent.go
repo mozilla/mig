@@ -10,21 +10,19 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/jvehent/service-go"
-	"github.com/streadway/amqp"
 	"io/ioutil"
-	"mig.ninja/mig"
-	"mig.ninja/mig/modules"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
-)
 
-// build version
-var version string
+	"github.com/jvehent/service-go"
+	"github.com/streadway/amqp"
+	"mig.ninja/mig"
+	"mig.ninja/mig/modules"
+)
 
 // publication lock is used to prevent publication when the channels are not
 // available, like during a shutdown
@@ -73,7 +71,7 @@ func main() {
 	flag.Parse()
 
 	if *showversion {
-		fmt.Println(version)
+		fmt.Println(mig.Version)
 		os.Exit(0)
 	}
 
@@ -205,7 +203,7 @@ func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
 		fmt.Fprintf(os.Stderr, "Failed to start agent routines: '%v'", err)
 		os.Exit(0)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s in checkin mode", version, ctx.Agent.Hostname)}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s in checkin mode", mig.Version, ctx.Agent.Hostname)}
 
 	// The loop below retrieves messages from the relay. If no message is available,
 	// it will timeout and break out of the loop after 10 seconds, causing the agent to exit
@@ -279,7 +277,7 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 		panic(err)
 	}
 
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", version, ctx.Agent.Hostname)}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", mig.Version, ctx.Agent.Hostname)}
 
 	// The agent blocks here until a termination order is received
 	// The order is then evaluated to decide if a new agent must be respawned, or the agent
@@ -669,7 +667,7 @@ func heartbeat(ctx Context) (err error) {
 	HeartBeat := mig.Agent{
 		Name:      ctx.Agent.Hostname,
 		Mode:      ctx.Agent.Mode,
-		Version:   version,
+		Version:   mig.Version,
 		PID:       os.Getpid(),
 		QueueLoc:  ctx.Agent.QueueLoc,
 		StartTime: time.Now(),

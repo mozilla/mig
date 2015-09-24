@@ -9,12 +9,13 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"mig.ninja/mig"
 	"os"
 	"os/signal"
 	"path"
 	"sync"
 	"time"
+
+	"mig.ninja/mig"
 )
 
 var ctx Context
@@ -24,7 +25,13 @@ func main() {
 	var err error
 
 	var config = flag.String("c", "/etc/mig/runner.cfg", "Load configuration from file")
+	var showversion = flag.Bool("V", false, "Show build version and exit")
 	flag.Parse()
+
+	if *showversion {
+		fmt.Println(mig.Version)
+		os.Exit(0)
+	}
 
 	ctx, err = initContext(*config)
 	if err != nil {
