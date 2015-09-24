@@ -19,9 +19,6 @@ import (
 	"mig.ninja/mig/modules"
 )
 
-// build version
-var version string
-
 func usage() {
 	fmt.Printf(`%s - Mozilla InvestiGator command line client
 usage: %s <module> <global options> <module parameters>
@@ -49,6 +46,7 @@ usage: %s <module> <global options> <module parameters>
 		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
 		* run on local system:	 -t local
 -v		verbose output, includes debug information and raw queries
+-V		print version
 
 Progress information is sent to stderr, silence it with "2>/dev/null".
 Results are sent to stdout, redirect them with "1>/path/to/file".
@@ -77,7 +75,7 @@ func main() {
 		a                                              mig.Action
 		migrc, show, render, target, expiration, afile string
 		printAndExit                                   bool
-		verbose                                        bool
+		verbose, showversion                           bool
 		modargs                                        []string
 		run                                            interface{}
 	)
@@ -97,6 +95,7 @@ func main() {
 	fs.StringVar(&expiration, "e", "300s", "expiration")
 	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
 	fs.BoolVar(&verbose, "v", false, "Enable verbose output")
+	fs.BoolVar(&showversion, "V", false, "Show version")
 
 	// if first argument is missing, or is help, print help
 	// otherwise, pass the remainder of the arguments to the module for parsing
@@ -105,8 +104,8 @@ func main() {
 		usage()
 	}
 
-	if len(os.Args) < 2 || os.Args[1] == "-V" {
-		fmt.Println(version)
+	if showversion || (len(os.Args) > 1 && (os.Args[1] == "-V" || os.Args[1] == "version")) {
+		fmt.Println(mig.Version)
 		os.Exit(0)
 	}
 
@@ -234,7 +233,7 @@ readytolaunch:
 	if err != nil {
 		panic(err)
 	}
-	cli, err = client.NewClient(conf, "cmd-"+version)
+	cli, err = client.NewClient(conf, "cmd-"+mig.Version)
 	if err != nil {
 		panic(err)
 	}
