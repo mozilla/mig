@@ -93,6 +93,7 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 			},
 			InsecureSkipVerify: conf.API.SkipVerifyCert,
 		},
+		Proxy: http.ProxyFromEnvironment,
 	}
 	cli.API = &http.Client{Transport: tr}
 	// if the env variable to the gpg agent socket isn't set, try to
