@@ -55,21 +55,28 @@ func startRoutines(ctx Context) {
 		readyCmd := make(map[float64]mig.Command)
 		ctr := 0
 		for {
+			sendFunction := func(rc map[float64]mig.Command) map[float64]mig.Command {
+				var cmdlist []mig.Command
+				for _, migcmd := range rc {
+					cmdlist = append(cmdlist, migcmd)
+				}
+				err := sendCommands(cmdlist, ctx)
+				if err != nil {
+					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
+				}
+				return make(map[float64]mig.Command)
+			}
 			select {
 			case cmd := <-ctx.Channels.CommandReady:
 				ctr++
 				readyCmd[cmd.ID] = cmd
+				if ctr >= 1024 {
+					readyCmd = sendFunction(readyCmd)
+					ctr = 0
+				}
 			case <-time.After(1 * time.Second):
 				if ctr > 0 {
-					var cmds []mig.Command
-					for id, cmd := range readyCmd {
-						cmds = append(cmds, cmd)
-						delete(readyCmd, id)
-					}
-					err := sendCommands(cmds, ctx)
-					if err != nil {
-						ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
-					}
+					readyCmd = sendFunction(readyCmd)
 				}
 				// reinit
 				ctx.OpID = mig.GenID()
@@ -86,21 +93,28 @@ func startRoutines(ctx Context) {
 		returnedCmd := make(map[uint64]string)
 		var ctr uint64 = 0
 		for {
+			returnFunc := func(rc map[uint64]string) map[uint64]string {
+				var cmdlist []string
+				for _, migcmd := range rc {
+					cmdlist = append(cmdlist, migcmd)
+				}
+				err := returnCommands(cmdlist, ctx)
+				if err != nil {
+					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
+				}
+				return make(map[uint64]string)
+			}
 			select {
 			case cmdFile := <-ctx.Channels.CommandReturned:
 				ctr++
 				returnedCmd[ctr] = cmdFile
+				if ctr >= 1024 {
+					returnedCmd = returnFunc(returnedCmd)
+					ctr = 0
+				}
 			case <-time.After(1 * time.Second):
 				if ctr > 0 {
-					var cmdFiles []string
-					for id, cmdFile := range returnedCmd {
-						cmdFiles = append(cmdFiles, cmdFile)
-						delete(returnedCmd, id)
-					}
-					err := returnCommands(cmdFiles, ctx)
-					if err != nil {
-						ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
-					}
+					returnedCmd = returnFunc(returnedCmd)
 				}
 				// reinit
 				ctx.OpID = mig.GenID()
@@ -116,21 +130,28 @@ func startRoutines(ctx Context) {
 		doneCmd := make(map[float64]mig.Command)
 		ctr := 0
 		for {
+			updateFunc := func(dc map[float64]mig.Command) map[float64]mig.Command {
+				var cmdlist []mig.Command
+				for _, migcmd := range dc {
+					cmdlist = append(cmdlist, migcmd)
+				}
+				err := updateAction(cmdlist, ctx)
+				if err != nil {
+					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
+				}
+				return make(map[float64]mig.Command)
+			}
 			select {
 			case cmd := <-ctx.Channels.CommandDone:
 				ctr++
 				doneCmd[cmd.ID] = cmd
+				if ctr >= 1024 {
+					doneCmd = updateFunc(doneCmd)
+					ctr = 0
+				}
 			case <-time.After(1 * time.Second):
 				if ctr > 0 {
-					var cmds []mig.Command
-					for id, cmd := range doneCmd {
-						cmds = append(cmds, cmd)
-						delete(doneCmd, id)
-					}
-					err := updateAction(cmds, ctx)
-					if err != nil {
-						ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("%v", err)}.Err()
-					}
+					doneCmd = updateFunc(doneCmd)
 				}
 				// reinit
 				ctx.OpID = mig.GenID()
