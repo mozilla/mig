@@ -30,18 +30,27 @@ A complete environment should be configured in the following order:
 Prepare a build environment
 ------------------------------
 
-Install **Go 1.5** from your package manager or `from source`_.
+Install **Go 1.5** from your package manager , via `gvm`_ or `from source`_.
+
+.. _`gvm`: https://github.com/moovweb/gvm
 
 .. _`from source`: http://golang.org/doc/install/source
 
+You **must** use Go 1.5 because MIG uses vendoring that isn't available in prior
+versions.
+
 .. code:: bash
 
-    $ wget https://storage.googleapis.com/golang/go1.2.2.linux-amd64.tar.gz
-    $ tar -xzvf go1.2.2.linux-amd64.tar.gz
-    $ export GOPATH="$HOME/go"
-    $ export PATH="$PATH:$GOPATH/bin"
     $ go version
     go version go1.5 linux/amd64
+
+As with any Go setup, make sure your GOPATH is exported, for example by setting
+it to `$HOME/go`
+
+.. code:: bash
+
+    $ export GOPATH="$HOME/go"
+    $ mkdir $GOPATH
 
 Then retrieve MIG's source code using go get:
 
@@ -61,6 +70,12 @@ commands:
     $ make mig-api
     $ make worker-agent-intel
     $ make worker-compliance-item
+
+Or just run `make` that will build everything and runs tests as well.
+
+.. code:: bash
+
+	$ make
 
 Deploy the Postgresql database
 ------------------------------
