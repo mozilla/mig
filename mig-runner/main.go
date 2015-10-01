@@ -91,7 +91,6 @@ func runnerScan() (err error) {
 
 	// Begin scanning the runner directory
 	for {
-		mlog("scanning %v", ctx.Runner.RunDirectory)
 		ents, err := ioutil.ReadDir(ctx.Runner.RunDirectory)
 		if err != nil {
 			panic(err)
