@@ -39,7 +39,7 @@ An example configuration file for use by mig-runner is shown below.
         delayresults = "30s"; Duration after action expiry to fetch results
 
 If the GPG key used by mig-runner is protected by a passphrase, the
-`passphrase` option can be included under the client section. If this is
+`passphrase` option can be included under the `client` section. If this is
 specified this passphrase will be used to access the private key.
 
 The `delayresults` value is optional. If not set, the runner will attempt
@@ -47,6 +47,13 @@ to fetch action results when the action has expired. If this is set to a
 duration string value, the runner will wait the specified duration after
 action expiry before fetching results (for example to ensure all results
 are written to the database by the scheduler).
+
+The `checkdirectory` option specifies the number of seconds that elapse
+between scans of the runner directory for job changes. The runner will
+automatically add or remove jobs as new jobs are added in the spool
+directory. When the runner identifies changes to a job, this will be
+indicated in the log file as the old job configuration will be removed
+and the new configuration installed.
 
 The `directory` option specifies the root directory that stores all the
 mig-runner related control information. A typical runner directory may look
@@ -86,6 +93,12 @@ plugin can then parse and forward the data as needed.
 Optionally the `expiry` setting can be set to a go Duration string to use
 for action expiry (for example 10m for 10 minutes). If this is not set
 in the job configuration, a default of 5 minutes will be used.
+
+Optionally the `sendonly` setting can be set to true, which will result in
+the runner only dispatching the action, but not attempting to retrieve
+any results. As an example, this can be used to deploy actions that would
+be processed by MIG workers, rather than retrieved and processed on the
+runner side.
 
 The results are also written into a `results/` subdirectory under the
 runner directory, using the action ID as a file name. This happens
