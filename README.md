@@ -93,10 +93,3 @@ Documentation
 All documentation is available in the 'doc' directory and on http://mig.mozilla.org .
 * [Concepts & Internal Components](doc/concepts.rst)
 * [Installation & Configuration](doc/configuration.rst)
-
-Bug & Issue tracker
--------------------
-We use Bugzilla to track the work on MIG.
-* List open bugs: [Bugzilla MIG](https://bugzilla.mozilla.org/showdependencytree.cgi?id=896480&hide_resolved=1)
-* Create a new bug: [New Bug in
-  Bugzilla](https://bugzilla.mozilla.org/enter_bug.cgi?assigned_to=nobody%40mozilla.org&blocked=896480&bug_file_loc=http%3A%2F%2F&bug_ignored=0&bug_severity=normal&bug_status=NEW&cf_fx_iteration=---&cf_fx_points=---&component=MIG&contenttypemethod=autodetect&contenttypeselection=text%2Fplain&defined_groups=1&flag_type-4=X&flag_type-607=X&flag_type-791=X&flag_type-800=X&form_name=enter_bug&maketemplate=Remember%20values%20as%20bookmarkable%20template&op_sys=Linux&priority=--&product=Enterprise%20Information%20Security&qa_contact=jvehent%40mozilla.com&rep_platform=x86_64&short_desc=[mig]%20INSERT%20DESCRIPTIVE%20TITLE%20HERE&target_milestone=---&version=unspecified)
