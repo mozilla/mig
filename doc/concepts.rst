@@ -41,7 +41,7 @@ Terminology:
 * **Module**: single feature Go program that does stuff, like inspecting a file
   system, listing connected IP addresses, creating user accounts or adding
   firewall rules
-* **Scheduler**: a messenging daemon that routes actions and commands to and from
+* **Scheduler**: a messaging daemon that routes actions and commands to and from
   agents.
 * **Relay**: a RabbitMQ server that queues messages between schedulers and agents.
 * **Database**: a storage backend used by the scheduler and the api

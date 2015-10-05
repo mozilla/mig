@@ -245,7 +245,9 @@ and workers into a single DEB package. Otherwise, use the following make
 commands:</p><pre><code class="code bash"><span class="name variable">$ </span>make mig-scheduler
 <span class="name variable">$ </span>make mig-api
 <span class="name variable">$ </span>make worker-agent-intel
-<span class="name variable">$ </span>make worker-compliance-item</code></pre><p>Or just run <cite>make</cite> that will build everything and runs tests as well.</p><pre><code class="code bash"><span class="name variable">$ </span>make</code></pre></section><section id="deploy-the-postgresql-database"><header><h2><a href="#id5">2   Deploy the Postgresql database</a></h2></header><p>Install postgres 9.3+ on a server and copy the scripts
+<span class="name variable">$ </span>make worker-compliance-item</code></pre><p>Or just run <cite>make</cite> that will build everything and runs tests as well.</p><p>Note: running <cite>make</cite> will build everything including the mig-console which
+requires <strong>readline</strong> to be installed (<cite>readline-devel</cite> on rhel/fedora or
+<cite>libreadline-dev</cite> on debian/ubuntu).</p><pre><code class="code bash"><span class="name variable">$ </span>make</code></pre></section><section id="deploy-the-postgresql-database"><header><h2><a href="#id5">2   Deploy the Postgresql database</a></h2></header><p>Install postgres 9.3+ on a server and copy the scripts
 <cite>database/createlocaldb.sh</cite> and <cite>database/schema.sql</cite>. Make sure you have sudo
 access to the server and run the script (or run the commands from createlocaldb.sh
 manually).</p><pre><code class="code bash"><span class="name variable">$ </span>./createlocaldb.sh
@@ -348,7 +350,10 @@ a template configuration will be placed in /etc/mig/scheduler.cfg. Otherwise,
 you can find one in <cite>conf/scheduler.cfg.inc</cite>.</p><p>If you use <cite>deb-server</cite>, simply <cite>dpkg -i</cite> the package and the scheduler will be
 installed into /opt/mig/bin/mig-scheduler, its configuration kept in /etc/mig.</p><p>If you build your own binary, get one by running <cite>make mig-scheduler</cite>.</p><p>Start by copying the ca.crt, scheduler.key and scheduler.crt we generated in the
 PKI into the /etc/mig/ folder.</p><p>Then edit the configuration file to replace the DB and RabbitMQ parameters with
-the ones that we obtained in previous steps. For example:</p><pre><code class="code">[agent]
+the ones that we obtained in previous steps. The default configurations provided
+for both Postgres and RabbitMQ are purposedly wrong and need to be replaced,
+otherwise the scheduler will fail to connect. Below is an example configuration
+that would work with the setup we have prepared.</p><pre><code class="code">[agent]
         ; timeout controls the inactivity period after which
         ; agents are marked offline
         timeout = "60m"
@@ -635,8 +640,8 @@ command line tool that can run investigations quickly, and <cite>mig-console</ci
 readline console that can also run investigations but browse through passed
 investigations as well and manage investigators. We will use <cite>mig-console</cite> to
 create our first investigator.</p><p>Here we will assume you already have GnuPG installed, and that you generate a
-keypair for yourself. You should be able to access your PGP Fingerprint using
-this command:</p><pre><code class="code">$ gpg --fingerprint myinvestigator@example.net
+keypair for yourself (see the <a class="reference external" href="https://www.gnupg.org/gph/en/manual.html#AEN26">doc on gnupg.org</a>).
+You should be able to access your PGP Fingerprint using this command:</p><pre><code class="code">$ gpg --fingerprint myinvestigator@example.net
 
 pub   2048R/3B763E8F 2013-04-30
 Key fingerprint = E608 92BB 9BD8 9A69 F759  A1A0 A3D6 5217 3B76 3E8F

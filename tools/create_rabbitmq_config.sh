@@ -46,9 +46,16 @@ echo '[
                         {certfile,		"/etc/rabbitmq/rabbitmq.crt"},
                         {keyfile,		"/etc/rabbitmq/rabbitmq.key"},
                         {verify,		verify_peer},
-                        {fail_if_no_peer_cert,	true}
-         ]}                                                                                                                                                                                                                                                    
-  ]}                                                                                                                                                                                                                                                           
+                        {fail_if_no_peer_cert,	true},
+                        {versions, ['tlsv1.2', 'tlsv1.1']},
+                        {ciphers,  [{dhe_rsa,aes_256_cbc,sha256},
+                                    {dhe_rsa,aes_128_cbc,sha256},
+                                    {dhe_rsa,aes_256_cbc,sha},
+                                    {rsa,aes_256_cbc,sha256},
+                                    {rsa,aes_128_cbc,sha256},
+                                    {rsa,aes_256_cbc,sha}]}
+        ]}
+  ]}
 ].' > $mqconf
 sudo mv $mqconf /etc/rabbitmq/rabbitmq.config
 

@@ -245,7 +245,7 @@ milliseconds.</p><p>Terminology:</p><ul><li><p><strong>Investigators</strong>: h
 from the scheduler through the relays, execute those commands using modules,
 and sends the results back to the relays.</p></li><li><p><strong>Module</strong>: single feature Go program that does stuff, like inspecting a file
 system, listing connected IP addresses, creating user accounts or adding
-firewall rules</p></li><li><p><strong>Scheduler</strong>: a messenging daemon that routes actions and commands to and from
+firewall rules</p></li><li><p><strong>Scheduler</strong>: a messaging daemon that routes actions and commands to and from
 agents.</p></li><li><p><strong>Relay</strong>: a RabbitMQ server that queues messages between schedulers and agents.</p></li><li><p><strong>Database</strong>: a storage backend used by the scheduler and the api</p></li><li><p><strong>API</strong>: a REST api that exposes the MIG platform to clients</p></li><li><p><strong>Client</strong>: a program used by an investigator to interface with MIG (like the
 MIG Console, or the action generator)</p></li><li><p><strong>Worker</strong>: a worker is a small extension to the scheduler and api that
 performs very specific tasks based on events received via the relay.</p></li></ul><p>An investigator uses a client (such as the MIG Console) to communicate with

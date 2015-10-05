@@ -73,6 +73,10 @@ commands:
 
 Or just run `make` that will build everything and runs tests as well.
 
+Note: running `make` will build everything including the mig-console which
+requires **readline** to be installed (`readline-devel` on rhel/fedora or
+`libreadline-dev` on debian/ubuntu).
+
 .. code:: bash
 
 	$ make
@@ -269,7 +273,10 @@ Start by copying the ca.crt, scheduler.key and scheduler.crt we generated in the
 PKI into the /etc/mig/ folder.
 
 Then edit the configuration file to replace the DB and RabbitMQ parameters with
-the ones that we obtained in previous steps. For example:
+the ones that we obtained in previous steps. The default configurations provided
+for both Postgres and RabbitMQ are purposedly wrong and need to be replaced,
+otherwise the scheduler will fail to connect. Below is an example configuration
+that would work with the setup we have prepared.
 
 .. code::
 
@@ -620,8 +627,9 @@ investigations as well and manage investigators. We will use `mig-console` to
 create our first investigator.
 
 Here we will assume you already have GnuPG installed, and that you generate a
-keypair for yourself. You should be able to access your PGP Fingerprint using
-this command:
+keypair for yourself (see the `doc on gnupg.org
+<https://www.gnupg.org/gph/en/manual.html#AEN26>`_).
+You should be able to access your PGP Fingerprint using this command:
 
 .. code::
 
