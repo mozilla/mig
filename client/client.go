@@ -266,6 +266,9 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 	}
 	// execute the request
 	resp, err = cli.API.Do(r)
+	if resp == nil {
+		panic("failed to contact the API")
+	}
 	if err != nil {
 		msg := fmt.Errorf("request failed error: %d %s (%v)", resp.StatusCode, resp.Status, err)
 		panic(msg)
@@ -310,7 +313,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 		panic(err)
 	}
 	hasResource := false
-	if resp.Body != nil {
+	if resp.Body != nil && resp.StatusCode < 500 {
 		defer resp.Body.Close()
 		// unmarshal the body. don't attempt to interpret it, as long as it
 		// fits into a cljs.Resource, it's acceptable
