@@ -22,8 +22,7 @@
             <td>
               <a href="https://github.com/mozilla/mig" class="btn">Get the code</a>
               <a href="doc.html" class="btn">Documentation</a>
-              <a href="https://bugzilla.mozilla.org/showdependencytree.cgi?id=896480&hide_resolved=0" class="btn">Tracker</a>
-              <a href="about.html" class="btn">About</a>
+              <a href="http://list.mig.ninja/listinfo/list" class="btn">Mailing List</a>
             </td>
             <td>
               <p><img src="http://4u.1nw.eu/mig-logo-transparent.png" alt="MIG logo" width="500"></p>
@@ -35,35 +34,46 @@
 
     <div class="container">
       <section id="main_content">
-          <h2><span style="color: #FF7800;">Start Here -&gt;</span> <a href="doc/cheatsheet.rst.html">MIG Cheat Sheet</a></h2>
+
+        <p>This page contains a lot of information about MIG. Start with the cheat sheet to get an idea of capabilities, then
+        read <a href="doc/concepts.rst.html">"Concepts & Internal Components"</a>. You can also ask your questions in the
+        <strong>#mig</strong> channel on irc.mozilla.org, and on <a href="http://list.mig.ninja/listinfo/list">the mailing List</a>.</p>
+
+        <h2><span style="color: #FF7800;">Start Here -&gt;</span> <a href="doc/cheatsheet.rst.html">MIG Cheat Sheet</a></h2>
+
         <h1>Documentation</h1>
-        <p>The pages below explain MIG in details.</p>
+
         <a href="doc/concepts.rst.html"><h2>Concepts & Internal Components</h2></a>
         <p>
         The essential documentation to understand the architecture of MIG
         and the role of its various parts.
         </p>
+
         <a href="doc/configuration.rst.html"><h2>Configuration Guide</h2></a>
         <p>
         A step by step guide to deploy a MIG platform, from the agent to
         the database.
         </p>
+
         <a href="doc/data.rst.html"><h2>Data documentation</h2></a>
         <p>
         MIG stores data in Postgresql. This page explains the database
         structure as well as some example queries.
         </p>
+
         <a href="doc/api.rst.html"><h2>API endpoints</h2></a>
         <p>
         Interactions between an investigator's console and the MIG
         platform is done through a REST api. This page describe its various
         endpoints.
         </p>
+
         <a href="doc/modules.rst.html"><h2>Modules writing</h2></a>
         <p>
         At the core of MIG are modules that perform the investigation actions
         inside the agent. Writing your own modules is described in this document.
         </p>
+
         <h2>Modules documentation</h2>
         <table>
         <tr>
@@ -152,6 +162,7 @@
             </td>
         </tr>
         </table>
+
         <h2>Workers documentation</h2>
         <table>
         <tr>
