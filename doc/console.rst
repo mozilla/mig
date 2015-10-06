@@ -60,7 +60,7 @@ starts with **mig>**.
 	| 4947944865794    file -c /home/ulfr/.migrc-l...        2   2015-09-20T14:07:36Z   Julien Vehent
 	+------
 
-	Connected to https://jaffa.linuxwall.info/api/v1/. Exit with ctrl+d. Type help for help.
+	Connected to https://mig.example.net/api/v1/. Exit with ctrl+d. Type help for help.
 	mig>
 
 Entering **help** here, or on any other mode of the console, provides the user
