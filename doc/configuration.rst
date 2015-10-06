@@ -1,6 +1,5 @@
 Mozilla InvestiGator Deployment and Configuration Documentation
 ===============================================================
-:Author: Julien Vehent <jvehent@mozilla.com>
 
 .. sectnum::
 .. contents:: Table of Contents

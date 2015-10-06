@@ -1,6 +1,6 @@
 body {
   width: 95%;
-  max-width: 900px;
+  max-width: 70%;
   margin: 20px;
   padding: 0;
   background: #151515 url("../images/bkg.png") 0 0;
@@ -29,7 +29,7 @@ section {
 
 h1, h2, h3, h4, h5, h6 {
   /*margin: 0 0 20px;*/
-  margin: 0;
+  /*margin: 0;*/
 }
 
 /* Header, <header>
@@ -78,6 +78,8 @@ header h2 {
 
 body {
   width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   -webkit-font-smoothing: antialiased;
 }
 section img {

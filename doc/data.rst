@@ -1,7 +1,6 @@
 ========
 MIG Data
 ========
-:Author: Julien Vehent <jvehent@mozilla.com>
 
 .. sectnum::
 .. contents:: Table of Contents

@@ -1,7 +1,6 @@
 ===========
 MIG Modules
 ===========
-:Author: Julien Vehent <jvehent@mozilla.com>
 
 .. sectnum::
 .. contents:: Table of Contents

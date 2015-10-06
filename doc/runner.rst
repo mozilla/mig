@@ -1,7 +1,6 @@
 ==========
 MIG RUNNER
 ==========
-:Author: Aaron Meihm <ameihm@mozilla.com>
 
 .. sectnum::
 .. contents:: Table of contents
