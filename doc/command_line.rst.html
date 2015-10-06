@@ -229,68 +229,19 @@ cite {
 strong {
   color: #C64216;
 }
-</style></head><body><h1>Mozilla InvestiGator: Agent Intel Worker</h1><table><tr><td class="field-label">Author</td><td>Julien Vehent &lt;<a class="reference external" href="mailto:jvehent@mozilla.com">jvehent@mozilla.com</a>&gt;</td></tr></table><div class="contents" id="table-of-contents"><h2>Table of Contents</h2><ul class="auto-toc"><li><p><a class="reference internal" href="#configuration" id="id1">1   Configuration</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#upstart" id="id2">1.1   Upstart</a></p></li></ul></li></ul></div><p>The Agent Intel Worker in a separate program that listens for event about
-agents that newly joined the platform, and create asset hints that are
-published to MozDef. This worker serves a very specific purpose in the
-collection of asset data performed by Mozilla OpSec. It may not be very useful
-to anyone else.</p><section id="configuration"><header><h2><a href="#id1">1   Configuration</a></h2></header><p>This worker retrieves agents hearbeats in the MIG Agent format from the MIG
-Relay, transforms them into Asset Hints, and publishes them to some other
-rabbitmq endpoint when MozDef will retrieve them.</p><pre><code class="code">; mozdef rabbitmq endpoint
-[mozdef]
-        host = "mozdef.rabbitmq.example.net"
-        port = 5671
-        user = "migassetworker"
-        pass = "secretpassphrase"
-        vhost = "mozdef"
-        exchange = "eventtask"
-        routingkey = "eventtask"
-        usetls  = true
-        cacertpath  = "/etc/certs/ca.crt"
-        clientcertpath = "/etc/certs/migassetworker.crt"
-        clientkeypath  = "/etc/certs/migassetworker.key"
-        timeout = "10s"
+</style></head><body><h1>MIG command line</h1><p>The MIG command line is a terminal-based client interface that provides fast
+interaction with the MIG API to launch actions and receive results. Its goal is
+to be simple and fast to use for basic investigations. Unlike the mig-console,
+it does not provide access to previous actions, search or investigators
+management.</p><p>To install the MIG command line, use <cite>go get mig.ninja/mig/client/mig</cite>. This
+command will place a binary called <cite>mig</cite> under $GOPATH/bin/mig. On first run, it
+will invite you to create a configuration:</p><pre><code class="code">$ mig file -path /etc -name "^passwd$" -content "jvehent"
+no configuration file found at /home/jvehent/.migrc
+would you like to generate a new configuration file at /home/jvehent/.migrc? Y/n&gt; Y
+found key 'Julien Vehent (ulfr) &lt;jvehent@mozilla.com&gt;' with fingerprint 'E60892BB9BD89A69F759A1A0A3D652173B763E8F'.
+use this key? Y/n&gt; Y
+using key E60892BB9BD89A69F759A1A0A3D652173B763E8F
+what is the location of the API? (ex: https://mig.example.net/api/v1/) &gt; https://api.mig.example.net/api/v1/
+MIG client configuration generated at /home/jvehent/.migrc
 
-; https://github.com/ameihm0912/vmintgr
-[vmintgr]
-        bin = "/opt/vmintgr/bin/grouptest"
-
-; mig rabbitmq endpoint
-[mq]
-        host = "hostname.mig.relay.example.net"
-        port = 5671
-        user = "migworker"
-        pass = "somepassphrase"
-        vhost = "mig"
-        usetls  = true
-        cacert  = "/path/to/ca.crt"
-        tlscert = "/path/to/client.crt"
-        tlskey  = "/path/to/client.key"
-        timeout = "10s"
-
-[logging]
-        mode = "syslog" ; stdout | file | syslog
-        level = "info"  ; debug | info | warning | error | critical
-        host = "localhost"
-        port = 514
-        protocol = "udp"</code></pre><section id="upstart"><header><h3><a href="#id2">1.1   Upstart</a></h3></header><pre><code class="code"># Mozilla InvestiGator Agent Intel Worker
-
-description     "MIG Agent Intel Worker"
-
-start on filesystem or runlevel [2345]
-stop on runlevel [!2345]
-
-setuid mig
-limit nofile 640000 640000
-
-respawn
-respawn limit 10 5
-umask 022
-
-console none
-
-pre-start script
-        test /opt/mig_agent_intel_worker || { stop; exit 0; }
-end script
-
-# Start
-exec /opt/mig_agent_intel_worker</code></pre></section></section></body></html>
+1226 agents will be targeted. ctrl+c to cancel. launching in 5 4....</code></pre><p>Subsequent runs of <cite>mig</cite> will read the configuration from <cite>$HOME/.migrc</cite> directly.</p><p>For more examples on how to use the mig command line, see the <a class="reference external" href="cheatsheet.rst.html">cheatsheet</a>.</p></body></html>

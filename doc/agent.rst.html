@@ -1,6 +1,6 @@
 <!DOCTYPE html><html><head><meta charset="utf-8"><title></title><style type="text/css">body {
   width: 95%;
-  max-width: 900px;
+  max-width: 70%;
   margin: 20px;
   padding: 0;
   background: #151515 url("../images/bkg.png") 0 0;
@@ -29,7 +29,7 @@ section {
 
 h1, h2, h3, h4, h5, h6 {
   /*margin: 0 0 20px;*/
-  margin: 0;
+  /*margin: 0;*/
 }
 
 /* Header, <header>
@@ -78,6 +78,8 @@ header h2 {
 
 body {
   width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   -webkit-font-smoothing: antialiased;
 }
 section img {
@@ -227,10 +229,156 @@ cite {
 strong {
   color: #C64216;
 }
-</style></head><body><h1>Agent</h1><p>The agent accepts different classes of inputs on stdin, as one-line JSON objects. The most common one is the
-<code>parameters</code> class, but it could also receive a <code>stop</code> input that
-indicates that the module should stop its execution immediately. The format of
-module input messages is defined by <code>modules.Message</code>.</p><pre><code class="code go"><span class="comment single">// Message defines the input messages received by modules.
+</style></head><body><h1>MIG Agent Architecture</h1><div class="contents" id="table-of-contents"><h2>Table of Contents</h2><ul class="auto-toc"><li><p><a class="reference internal" href="#initialization-process" id="id1">1   Initialization process</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#registration-process" id="id2">1.1   Registration process</a></p></li><li><p><a class="reference internal" href="#check-in-mode" id="id3">1.2   Check-In mode</a></p></li></ul></li><li><p><a class="reference internal" href="#communication-with-modules" id="id4">2   Communication with modules</a></p><ul class="auto-toc"><li><p><a class="reference internal" href="#command-expiration-timeouts" id="id5">2.1   Command expiration &amp; timeouts</a></p></li><li><p><a class="reference internal" href="#agent-modules-message-format" id="id6">2.2   Agent/Modules message format</a></p></li></ul></li><li><p><a class="reference internal" href="#agent-upgrade-process" id="id7">3   Agent upgrade process</a></p></li></ul></div><section id="initialization-process"><header><h2><a href="#id1">1   Initialization process</a></h2></header><p>The agent tries to be as autonomous as possible. One of the goal is to ship
+agents without requiring external provisioning tools, such as Chef or Puppet.
+Therefore, the agent attempts to install itself as a service, and also supports
+a builtin upgrade protocol (described in the next section).</p><p>As a portable binary, the agent needs to detect the type of operating system
+and init method that is used by an endpoint. Depending on the endpoint,
+different initialization methods are used. The diagram below explains the
+decision process followed by the agent.</p><img alt=".files/mig-agent-initialization-process.png" src=".files/mig-agent-initialization-process.png"><p>Go does not provide support for running programs in the backgroud. On endpoints
+that run upstart, systemd (linux) or launchd (darwin), this is not an issue
+because the init daemon takes care of running the agent in the background,
+rerouting its file descriptors and restarting on crash. On Windows and System-V,
+however, the agent daemonizes by forking itself into <cite>foreground</cite> mode, and
+re-forking itself on error (such as loss of connectivity to the relay).
+On Windows and System-V, if the agent is killed, it will not be restarted
+automatically.</p><section id="registration-process"><header><h3><a href="#id2">1.1   Registration process</a></h3></header><p>The initialization process goes through several environment detection steps
+which are used to select the proper init method. Once started, the agent will
+send a heartbeat to the public relay, and also store that heartbeat in its
+<cite>run</cite> directory. The location of the <cite>run</cite> directory is platform specific.</p><ul><li><p>windows: C:Windows</p></li><li><p>darwin: /Library/Preferences/mig/</p></li><li><p>linux: /var/run/mig/</p></li></ul><p>Below is a sample heartbeat message from a linux agent stored in
+<cite>/var/run/mig/mig-agent.ok</cite>.</p><pre><code class="code json"><span class="punctuation">{</span>
+        <span class="name tag">"destructiontime"</span><span class="punctuation">:</span> <span class="literal string double">"0001-01-01T00:00:00Z"</span><span class="punctuation">,</span>
+        <span class="name tag">"environment"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"arch"</span><span class="punctuation">:</span> <span class="literal string double">"amd64"</span><span class="punctuation">,</span>
+                <span class="name tag">"ident"</span><span class="punctuation">:</span> <span class="literal string double">"Red Hat Enterprise Linux Server release 6.5 (Santiago)"</span><span class="punctuation">,</span>
+                <span class="name tag">"init"</span><span class="punctuation">:</span> <span class="literal string double">"upstart"</span>
+        <span class="punctuation">},</span>
+        <span class="name tag">"heartbeatts"</span><span class="punctuation">:</span> <span class="literal string double">"2014-07-31T14:00:20.00442837-07:00"</span><span class="punctuation">,</span>
+        <span class="name tag">"name"</span><span class="punctuation">:</span> <span class="literal string double">"someserver.example.net"</span><span class="punctuation">,</span>
+        <span class="name tag">"os"</span><span class="punctuation">:</span> <span class="literal string double">"linux"</span><span class="punctuation">,</span>
+        <span class="name tag">"pid"</span><span class="punctuation">:</span> <span class="literal number integer">26256</span><span class="punctuation">,</span>
+        <span class="name tag">"queueloc"</span><span class="punctuation">:</span> <span class="literal string double">"linux.someserver.example.net.5hsa811oda"</span><span class="punctuation">,</span>
+        <span class="name tag">"starttime"</span><span class="punctuation">:</span> <span class="literal string double">"2014-07-30T21:34:48.525449401-07:00"</span><span class="punctuation">,</span>
+        <span class="name tag">"version"</span><span class="punctuation">:</span> <span class="literal string double">"201407310027+bcbdd94.prod"</span>
+<span class="punctuation">}</span></code></pre></section><section id="check-in-mode"><header><h3><a href="#id3">1.2   Check-In mode</a></h3></header><p>In infrastructure where running the agent as a permanent process is not
+acceptable, it is possible to run the agent as a cron job. By starting the
+agent with the flag <strong>-m agent-checkin</strong>, the agent will connect to the
+configured relay, retrieve and run outstanding commands, and exit after 10
+seconds of inactivity.</p></section></section><section id="communication-with-modules"><header><h2><a href="#id4">2   Communication with modules</a></h2></header><p>Upon processing of an action, the scheduler will retrieve a list of agents to
+send the action to. One action is then derived into multiple commands and sent
+to agents.</p><p>An agent receives a command from the scheduler on its personal AMQP queue (1).
+It parses the command (2) and extracts all of the operations to perform.
+Operations are passed to modules and executed in parallel (3). Rather than
+maintaining a state of the running command, the agent create a goroutine and a
+channel tasked with receiving the results from the modules. Each modules
+published its results inside that channel (4). The result parsing goroutine
+receives them, and when it has received all of them, populates the <cite>results</cite> (5)
+array of the command with the results from each module, and send the command
+back to the scheduler(6).</p><p>When the agent is done running the command, both the channel and the goroutine
+are destroyed.</p><blockquote><pre>             +-------+   [ - - - - - - A G E N T - - - - - - - - - - - - ]
+             |command|+----&gt;(listener)
+             +-------+          |(2)
+               ^                V
+               |(1)         (parser)
+               |               +       [ m o d u l e s ]
++---------+    |            (3)|----------&gt; op1 +----------------+
+|SCHEDULER|+---+               |------------&gt; op2 +--------------|
+|         |&lt;---+               |--------------&gt; op3 +------------|
++---------+    |               +----------------&gt; op4 +----------+
+               |                                                 V(4)
+               |(6)                                         (receiver)
+               |                                                 |
+               |                                                 V(5)
+               +                                             (publisher)
+             +-------+                                           /
+             |results|&lt;-----------------------------------------'
+             +-------+</pre></blockquote><p>The command received by the agent is composed of a copy of the action described
+previously, but signed with the private key of a trusted investigator. It also
+contains additional parameters that are specific to the targetted agent, such as
+command processing timestamps, name of the agent queue on the message broker,
+action and command unique IDs and status and results of the command. Below is an
+command derived from the root password checking action, and ran on the host named
+'host1.example.net'.</p><pre><code class="code json"><span class="punctuation">{</span>
+  <span class="name tag">"id"</span><span class="punctuation">:</span> <span class="literal number float">1.427392971126604e+18</span><span class="punctuation">,</span>
+  <span class="name tag">"action"</span><span class="punctuation">:</span> <span class="punctuation">{</span> <span class="error">...</span> <span class="error">SIGNED</span> <span class="error">COPY</span> <span class="error">OF</span> <span class="error">THE</span> <span class="error">ACTION</span> <span class="error">...</span> <span class="punctuation">},</span>
+  <span class="name tag">"agent"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+        <span class="name tag">"id"</span><span class="punctuation">:</span> <span class="literal number float">1.4271760437936648e+18</span><span class="punctuation">,</span>
+        <span class="name tag">"name"</span><span class="punctuation">:</span> <span class="literal string double">"host1.example.net"</span><span class="punctuation">,</span>
+        <span class="name tag">"queueloc"</span><span class="punctuation">:</span> <span class="literal string double">"linux.host1.example.net.981alsd19aos1984"</span><span class="punctuation">,</span>
+        <span class="name tag">"mode"</span><span class="punctuation">:</span> <span class="literal string double">"daemon"</span><span class="punctuation">,</span>
+        <span class="name tag">"version"</span><span class="punctuation">:</span> <span class="literal string double">"20150324+0d0f88c.prod"</span>
+  <span class="punctuation">},</span>
+  <span class="name tag">"status"</span><span class="punctuation">:</span> <span class="literal string double">"success"</span><span class="punctuation">,</span>
+  <span class="name tag">"results"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+        <span class="punctuation">{</span>
+          <span class="name tag">"foundanything"</span><span class="punctuation">:</span> <span class="keyword constant">true</span><span class="punctuation">,</span>
+          <span class="name tag">"success"</span><span class="punctuation">:</span> <span class="keyword constant">true</span><span class="punctuation">,</span>
+          <span class="name tag">"elements"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"root_passwd_hashed_or_disabled"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                  <span class="punctuation">{</span>
+                        <span class="name tag">"file"</span><span class="punctuation">:</span> <span class="literal string double">"/etc/shadow"</span><span class="punctuation">,</span>
+                        <span class="name tag">"fileinfo"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                          <span class="name tag">"lastmodified"</span><span class="punctuation">:</span> <span class="literal string double">"2015-02-07 01:51:07.17850601 +0000 UTC"</span><span class="punctuation">,</span>
+                          <span class="name tag">"mode"</span><span class="punctuation">:</span> <span class="literal string double">"----------"</span><span class="punctuation">,</span>
+                          <span class="name tag">"size"</span><span class="punctuation">:</span> <span class="literal number integer">1684</span>
+                        <span class="punctuation">},</span>
+                        <span class="name tag">"search"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                          <span class="name tag">"contents"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                <span class="literal string double">"root:(\\*|!|\\$(1|2a|5|6)\\$).+"</span>
+                          <span class="punctuation">],</span>
+                          <span class="name tag">"options"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                                <span class="name tag">"matchall"</span><span class="punctuation">:</span> <span class="keyword constant">false</span><span class="punctuation">,</span>
+                                <span class="name tag">"matchlimit"</span><span class="punctuation">:</span> <span class="literal number integer">0</span><span class="punctuation">,</span>
+                                <span class="name tag">"maxdepth"</span><span class="punctuation">:</span> <span class="literal number integer">0</span>
+                          <span class="punctuation">},</span>
+                          <span class="name tag">"paths"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                                <span class="literal string double">"/etc"</span>
+                          <span class="punctuation">]</span>
+                        <span class="punctuation">}</span>
+                  <span class="punctuation">}</span>
+                <span class="punctuation">]</span>
+          <span class="punctuation">},</span>
+          <span class="name tag">"statistics"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"exectime"</span><span class="punctuation">:</span> <span class="literal string double">"2.017849ms"</span><span class="punctuation">,</span>
+                <span class="name tag">"filescount"</span><span class="punctuation">:</span> <span class="literal number integer">1</span><span class="punctuation">,</span>
+                <span class="name tag">"openfailed"</span><span class="punctuation">:</span> <span class="literal number integer">0</span><span class="punctuation">,</span>
+                <span class="name tag">"totalhits"</span><span class="punctuation">:</span> <span class="literal number integer">1</span>
+          <span class="punctuation">},</span>
+          <span class="name tag">"errors"</span><span class="punctuation">:</span> <span class="keyword constant">null</span>
+        <span class="punctuation">}</span>
+  <span class="punctuation">],</span>
+  <span class="name tag">"starttime"</span><span class="punctuation">:</span> <span class="literal string double">"2015-03-26T18:02:51.126605Z"</span><span class="punctuation">,</span>
+  <span class="name tag">"finishtime"</span><span class="punctuation">:</span> <span class="literal string double">"2015-03-26T18:03:00.671232Z"</span>
+<span class="punctuation">}</span></code></pre><p>The results of the command show that the file '/etc/shadow' has matched, and
+thus "FoundAnything" returned "True".</p><p>The invocation of the file module has completed successfully, which is
+represented by <strong>results-&gt;0-&gt;success=true</strong>. In our example, there is only one
+operation in the <strong>action-&gt;operations</strong> array, so only one result is present.
+When multiple operations are performed, each has its results listed in a
+corresponding entry of the results array (operations[0] is in results[0],
+operations[1] in results[1], etc...).</p><p>Finally, the agent has performed all operations in the operations array
+successfully, and returned <strong>status=success</strong>. Had a failure happened on the
+agent, the returned status would be one of "failed", "timeout" or "cancelled".</p><section id="command-expiration-timeouts"><header><h3><a href="#id5">2.1   Command expiration &amp; timeouts</a></h3></header><p>To prevent abuse of resources, agents will kill long-running modules after a
+given period of time. That timeout is hardcoded in the agent configuration
+at compile time and defaults to 5 minutes.</p><pre><code class="code go"><span class="comment single">// timeout after which a module run is killed
+</span><span class="keyword declaration">var</span> <span class="name other">MODULETIMEOUT</span> <span class="name other">time</span><span class="punctuation">.</span><span class="name other">Duration</span> <span class="punctuation">=</span> <span class="literal number integer">300</span> <span class="operator">*</span> <span class="name other">time</span><span class="punctuation">.</span><span class="name other">Second</span></code></pre><p>That timeout represents the <strong>maximum</strong> execution time of a single operation. If
+an action contains 3 operations, each operation gets its own timeout. But because
+operations run in parallel in the agent, the maximum runtime of an action should
+be very close to the value of MODULETIMEOUT.</p><p>In a typical deployment, it is safe to increase MODULETIMEOUT to allow for
+longer operations. A value of 20 minutes is usual. Make sure to fine tune this
+to your environment, and get the approval of your ops team because mig-agent
+may end up consuming resources (but never more than 50% of the cpu available on
+a system).</p><p>Oftentimes, an investigator will want a timeout that is much shorter than the value
+of MODULETIMEOUT. In the MIG command line, the flag <cite>-e</cite> controls the
+expiration. It defaults to 5 minutes but can be set to 30 seconds for simple
+investigations. When that happens, the agent will calculate an appropriate expiration
+for the operations being run. If the expiration set on the action is set to 30 seconds,
+the agent will kill operations that run for more than 30 seconds.</p><p>If the expiration is larger than the value of MODULETIMEOUT (for example, 2
+hours), then MODULETIMEOUT is used. Setting a long expiration may be useful to
+allow agents that only check in periodically to pick up actions long after they
+are launched.</p></section><section id="agent-modules-message-format"><header><h3><a href="#id6">2.2   Agent/Modules message format</a></h3></header><p>The agent accepts different classes of inputs on stdin, as one-line JSON objects.
+The most common one is the <code>parameters</code> class, but it could also receive a
+<code>stop</code> input that indicates that the module should stop its execution immediately.
+The format of module input messages is defined by <code>modules.Message</code>.</p><pre><code class="code go"><span class="comment single">// Message defines the input messages received by modules.
 </span><span class="keyword declaration">type</span> <span class="name other">Message</span> <span class="keyword declaration">struct</span> <span class="punctuation">{</span>
         <span class="name other">Class</span>      <span class="keyword type">string</span>      <span class="comment single">// represent the type of message being passed to the module
 </span>        <span class="name other">Parameters</span> <span class="keyword declaration">interface</span><span class="punctuation">{}</span> <span class="comment single">// for `parameters` class, this interface contains the module parameters
@@ -243,4 +391,77 @@ module input messages is defined by <code>modules.Message</code>.</p><pre><code 
 extracts the operation parameters from <code>Command.Action.Operations[N].Parameters</code>
 and copies them into <code>Message.Parameters</code>. It then sets <code>Message.Class</code> to
 <code>modules.MsgClassParameters</code>, marshals the struct into JSON, and pass the
-resulting <code>[]byte</code> to the module as an IO stream.</p></body></html>
+resulting <code>[]byte</code> to the module as an IO stream.</p></section></section><section id="agent-upgrade-process"><header><h2><a href="#id7">3   Agent upgrade process</a></h2></header><p>MIG supports upgrading agents in the wild. The upgrade protocol is designed with
+security in mind. The flow diagram below presents a high-level view:</p><blockquote><pre>Investigator          Scheduler             Agent             NewAgent           FileServer
++-----------+         +-------+             +---+             +------+           +--------+
+          |                   |                   |                   |                   |
+          |    1.initiate     |                   |                   |                   |
+          |------------------&gt;|                   |                   |                   |
+          |                   |  2.send command   |                   |                   |
+          |                   |------------------&gt;| 3.verify          |                   |
+          |                   |                   |--------+          |                   |
+          |                   |                   |        |          |                   |
+          |                   |                   |        |          |                   |
+          |                   |                   |&lt;-------+          |                   |
+          |                   |                   |                   |                   |
+          |                   |                   |    4.download     |                   |
+          |                   |                   |--------------------------------------&gt;|
+          |                   |                   |                   |                   |
+          |                   |                   | 5.checksum        |                   |
+          |                   |                   |--------+          |                   |
+          |                   |                   |        |          |                   |
+          |                   |                   |        |          |                   |
+          |                   |                   |&lt;-------+          |                   |
+          |                   |                   |                   |                   |
+          |                   |                   |      6.exec       |                   |
+          |                   |                   |------------------&gt;|                   |
+          |                   |  7.return own PID |                   |                   |
+          |                   |&lt;------------------|                   |                   |
+          |                   |                   |                   |                   |
+          |                   |------+ 8.mark     |                   |                   |
+          |                   |      | agent as   |                   |                   |
+          |                   |      | upgraded   |                   |                   |
+          |                   |&lt;-----+            |                   |                   |
+          |                   |                   |                   |                   |
+          |                   |    9.register     |                   |                   |
+          |                   |&lt;--------------------------------------|                   |
+          |                   |                   |                   |                   |
+          |                   |------+10.find dup |                   |                   |
+          |                   |      |agents in   |                   |                   |
+          |                   |      |registrations                   |                   |
+          |                   |&lt;-----+            |                   |                   |
+          |                   |                   |                   |                   |
+          |                   |    11.send command to kill PID old agt|                   |
+          |                   |--------------------------------------&gt;|                   |
+          |                   |                   |                   |                   |
+          |                   |  12.acknowledge   |                   |                   |
+          |                   |&lt;--------------------------------------|                   |</pre></blockquote><p>All upgrade operations are initiated by an investigator (1). The upgrade is
+triggered by an action to the upgrade module with the following parameters:</p><pre><code class="code json"><span class="literal string double">"Operations"</span><span class="error">:</span> <span class="punctuation">[</span>
+    <span class="punctuation">{</span>
+        <span class="name tag">"Module"</span><span class="punctuation">:</span> <span class="literal string double">"upgrade"</span><span class="punctuation">,</span>
+        <span class="name tag">"Parameters"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+            <span class="name tag">"linux/amd64"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+                <span class="name tag">"to_version"</span><span class="punctuation">:</span> <span class="literal string double">"16eb58b-201404021544"</span><span class="punctuation">,</span>
+                <span class="name tag">"location"</span><span class="punctuation">:</span> <span class="literal string double">"http://localhost/mig/bin/linux/amd64/mig-agent"</span><span class="punctuation">,</span>
+                <span class="name tag">"checksum"</span><span class="punctuation">:</span> <span class="literal string double">"31fccc576635a29e0a27bbf7416d4f32a0ebaee892475e14708641c0a3620b03"</span>
+            <span class="punctuation">}</span>
+        <span class="punctuation">}</span>
+    <span class="punctuation">}</span>
+<span class="punctuation">]</span><span class="error">,</span></code></pre><ul><li><p>Each OS family and architecture have their own parameters (ex: "linux/amd64",
+"darwin/amd64", "windows/386", ...). Then, in each OS/Arch group, we have:</p></li><li><p>to_version is the version an agent should upgrade to</p></li><li><p>location points to a HTTPS address that contains the agent binary</p></li><li><p>checksum is a SHA256 hash of the agent binary to be verified after download</p></li></ul><p>The parameters above are signed using a standard PGP action signature.</p><p>The upgrade action is forwarded to agents (2) like any other action. The action
+signature is verified by the agent (3), and the upgrade module is called. The
+module downloads the new binary (4), verifies the version and checksum (5) and
+installs itself on the system.</p><p>Assuming everything checks in, the old agent executes the binary of the new
+agent (6). At that point, two agents are running on the same machine, and the
+rest of the protocol is designed to shut down the old agent, and clean up.</p><p>After executing the new agent, the old agent returns a successful result to the
+scheduler, and includes its own PID in the results.
+The new agent starts by registering with the scheduler (7). This tells the
+scheduler that two agents are running on the same node, and one of them must
+terminate. The scheduler sends a kill action to both agents with the PID of the
+old agent (8). The kill action may be executed twice, but that doesn't matter.
+When the scheduler receives the kill results (9), it sends a new action to check
+for <cite>mig-agent</cite> processes (10). Only one should be found in the results (11),
+and if that is the case, the scheduler tells the agent to remove the binary of
+the old agent (12). When the agent returns (13), the upgrade protocol is done.</p><p>If the PID of the old agent lingers on the system, an error is logged for the
+investigator to decide what to do next. The scheduler does not attempt to clean
+up the situation.</p></section></body></html>

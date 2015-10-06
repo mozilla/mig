@@ -1,0 +1,293 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title></title><style type="text/css">body {
+  width: 95%;
+  max-width: 70%;
+  margin: 20px;
+  padding: 0;
+  background: #151515 url("../images/bkg.png") 0 0;
+  color: #eaeaea;
+  font: 16px;
+  line-height: 1.5em;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+}
+
+#table-of-contents ul {
+    line-height: 1;
+}
+
+/* General & 'Reset' Stuff */
+
+.container {
+  width: 95%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+section {
+  display: block;
+  margin: 0 0 20px 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  /*margin: 0 0 20px;*/
+  /*margin: 0;*/
+}
+
+/* Header, <header>
+ *    header   - container
+ *       h1       - project name
+ *          h2       - project description
+ *          */
+
+header {
+  background: rgba(0, 0, 0, 0.1);
+  width: 100%;
+  /*border-bottom: 1px dashed #b5e853;*/
+  /*padding: 20px 0;
+ *   margin: 0 0 40px 0;*/
+  padding: 5px 0;
+  margin: 0 0 10px 0;
+}
+
+header h1 {
+  font-size: 30px;
+  line-height: 1.5;
+  margin: 0 0 0 -40px;
+  font-weight: bold;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  /*color: #b5e853;*/
+  color: #089d00;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1),
+               0 0 5px rgba(181, 232, 83, 0.1),
+               0 0 10px rgba(181, 232, 83, 0.1);
+  letter-spacing: -1px;
+  -webkit-font-smoothing: antialiased;
+}
+
+header h1:before {
+  content: "./ ";
+  font-size: 24px;
+}
+
+header h2 {
+  font-size: 18px;
+  font-weight: 300;
+}
+
+/* Main Content
+ * */
+
+body {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  -webkit-font-smoothing: antialiased;
+}
+section img {
+  max-width: 100%
+}
+
+h2 a {
+  font-weight: bold;
+  color: #8AB638;
+  line-height: 1.4em;
+  font-size: 1.4em;
+}
+h3 a, h4 a, h5 a, h6 a {
+  font-weight: bold;
+  color: #934500;
+  line-height: 1.4em;
+}
+
+h1 {
+  font-size: 30px;
+}
+
+h2 {
+  font-size: 28px;
+  border-bottom: 1px dashed #b5e853;
+}
+
+h3 {
+  font-size: 18px;
+}
+
+h4 {
+  font-size: 14px;
+}
+
+h5 {
+  font-size: 12px;
+  text-transform: uppercase;
+  margin: 0 0 5px 0;
+}
+
+h6 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #999;
+  margin: 0 0 5px 0;
+}
+
+dt {
+  font-style: italic;
+  font-weight: bold;
+}
+/*
+ul li {
+  list-style: none;
+}
+*/
+/*
+ul li:before {
+  content: ">>";
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  font-size: 13px;
+  color: #b5e853;
+  margin-left: -37px;
+  margin-right: 21px;
+  line-height: 16px;
+}
+*/
+
+blockquote {
+  color: #aaa;
+  padding-left: 10px;
+  border-left: 1px dotted #666;
+}
+
+
+pre {
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px;
+  font-size: 14px;
+  //color: #b5e853;
+  border-radius: 2px;
+  -moz-border-radius: 2px;
+  -webkit-border-radius: 2px;
+  text-wrap: normal;
+  overflow: auto;
+  overflow-y: hidden;
+}
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+code .ln { color: grey; } /* line numbers */
+/*code, code { background-color: #eeeeee }*/
+code .comment, code .comment, code .c1 { color: #999; }
+code .keyword, code .keyword, code .kd, code .kn, code .k, code .o { color: #FC8F3F; font-weight: bold;}
+code .nb { color: #c45918;}
+code .s {color: #0a77c4;}
+code .punctuation, code .p { color: white;}
+code .literal.string, code .literal.string { color: #40BF32; }
+code .name, code .name.builtin, code .nx { color: white; }
+code .deleted, code .deleted { background-color: #DEB0A1}
+code .inserted, code .inserted { background-color: #A3D289}
+
+table {
+  width: 100%;
+  margin: 0 0 20px 0;
+}
+
+th {
+  text-align: left;
+  border-bottom: 1px dashed #b5e853;
+  padding: 5px 10px;
+}
+
+td {
+  padding: 5px 10px;
+}
+
+hr {
+  height: 0;
+  border: 0;
+  border-bottom: 1px dashed #b5e853;
+  color: #b5e853;
+}
+/* Links
+ *    a, a:hover, a:visited
+ *    */
+
+a {
+  color: #63c0f5;
+  /*text-shadow: 0 0 5px rgba(104, 182, 255, 0.5);*/
+  text-decoration: none;
+}
+
+cite {
+  color: #00FF4A;
+}
+
+strong {
+  color: #C64216;
+}
+</style></head><body><h1>MIG RUNNER</h1><div class="contents" id="table-of-contents"><h2>Table of contents</h2><ul class="auto-toc"><li><p><a class="reference internal" href="#runner-configuration-file" id="id1">1   Runner configuration file</a></p></li><li><p><a class="reference internal" href="#job-configuration" id="id2">2   Job configuration</a></p></li><li><p><a class="reference internal" href="#output-plugins" id="id3">3   Output plugins</a></p></li></ul></div><p>MIG runner is a service that can be deployed to automatically schedule actions
+to run within the MIG environment and retrieve/process the results.</p><p>The runner interacts directly with the MIG API in the same manner as a client
+would. When an action is scheduled to run, the runner will deploy the action
+and schedule a time to gather results (shortly after the action has expired).
+Once the action has expired, the runner will retrieve results from the API
+and store these results in the runner directory. The runner can also send the
+results from MIG to an external program for automatic parsing or formatting,
+for example to create events for MozDef and send them.</p><section id="runner-configuration-file"><header><h2><a href="#id1">1   Runner configuration file</a></h2></header><p>An example configuration file for use by mig-runner is shown below.</p><pre><code class="code">; Sample MIG runner configuration file
+
+[runner]
+directory = "/home/mig-runner/runner" ; The path to the root runner directory
+checkdirectory = 30 ; How often to check runners/ for job changes
+
+[logging]
+mode = "stdout" ; stdout | file | syslog
+level = "debug"
+
+[client]
+clientconfpath = "default" ; Path to client conf, default for $HOME/.migrc
+delayresults = "30s"; Duration after action expiry to fetch results</code></pre><p>If the GPG key used by mig-runner is protected by a passphrase, the
+<cite>passphrase</cite> option can be included under the <cite>client</cite> section. If this is
+specified this passphrase will be used to access the private key.</p><p>The <cite>delayresults</cite> value is optional. If not set, the runner will attempt
+to fetch action results when the action has expired. If this is set to a
+duration string value, the runner will wait the specified duration after
+action expiry before fetching results (for example to ensure all results
+are written to the database by the scheduler).</p><p>The <cite>checkdirectory</cite> option specifies the number of seconds that elapse
+between scans of the runner directory for job changes. The runner will
+automatically add or remove jobs as new jobs are added in the spool
+directory. When the runner identifies changes to a job, this will be
+indicated in the log file as the old job configuration will be removed
+and the new configuration installed.</p><p>The <cite>directory</cite> option specifies the root directory that stores all the
+mig-runner related control information. A typical runner directory may look
+something like this.</p><pre><code class="code">runner/
+|
++ runners/
+| |
+| + job1/
+| + job2/
+|
++ plugins/</code></pre></section><section id="job-configuration"><header><h2><a href="#id2">2   Job configuration</a></h2></header><p>Under each job directory, a file entity.cfg defines the parameters used to
+run this job.</p><pre><code class="code">[configuration]
+schedule = "&lt;cronexpr&gt;"
+plugin = "&lt;plugin name&gt;"</code></pre><p>The schedule option should be set to a cron style expression to note when
+the job should be run.</p><p>The plugin is optional.  If set, the value will be interpreted as an
+executable in the plugins directory. The results of the job will be piped
+into stdin of this executable in JSON format (mig.RunnerResult). The
+plugin can then parse and forward the data as needed.</p><p>Optionally the <cite>expiry</cite> setting can be set to a go Duration string to use
+for action expiry (for example 10m for 10 minutes). If this is not set
+in the job configuration, a default of 5 minutes will be used.</p><p>Optionally the <cite>sendonly</cite> setting can be set to true, which will result in
+the runner only dispatching the action, but not attempting to retrieve
+any results. As an example, this can be used to deploy actions that would
+be processed by MIG workers, rather than retrieved and processed on the
+runner side.</p><p>The results are also written into a <cite>results/</cite> subdirectory under the
+runner directory, using the action ID as a file name. This happens
+regardless of any plugin configuration for the job.</p><p>In the job directory, the MIG action should should be launched should be
+called <cite>action.json</cite>. The time validity and expiration fields will be
+filled in by the runner process before dispatching the action to the
+API.</p></section><section id="output-plugins"><header><h2><a href="#id3">3   Output plugins</a></h2></header><p>The runner writes JSON output to stdin of any configured output plugin. This
+is intended to provide flexibility, allowing plugins to be developed in
+any language. If a plugin is being developed in go, the mig.RunnerResult
+type can be used to parse incoming data. In other languages the JSON can
+be parsed as desired.</p></section></body></html>
