@@ -102,6 +102,7 @@ type options struct {
 	Mismatch   []string `json:"mismatch"`
 	MatchLimit float64  `json:"matchlimit"`
 	Debug      string   `json:"debug,omitempty"`
+	Hash       bool     `json:"hash"`
 }
 
 type checkType uint64
@@ -1529,9 +1530,10 @@ type matchedfile struct {
 }
 
 type fileinfo struct {
-	Size  float64 `json:"size"`
-	Mode  string  `json:"mode"`
-	Mtime string  `json:"lastmodified"`
+	Size   float64 `json:"size"`
+	Mode   string  `json:"mode"`
+	Mtime  string  `json:"lastmodified"`
+	SHA256 string  `json:"sha256"`
 }
 
 // newResults allocates a Results structure
@@ -1605,6 +1607,12 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 					mf.FileInfo.Size = float64(fi.Size())
 					mf.FileInfo.Mode = fi.Mode().String()
 					mf.FileInfo.Mtime = fi.ModTime().UTC().String()
+					if search.Options.Hash {
+						mf.FileInfo.SHA256, err = getHash(mf.File, checkSHA256)
+						if err != nil {
+							panic(err)
+						}
+					}
 				}
 				mf.Search = search
 				mf.Search.Options.MatchLimit = 0
@@ -1735,8 +1743,12 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 				}
 				out = fmt.Sprintf("0 match found in search '%s'", label)
 			} else {
-				out = fmt.Sprintf("%s [lastmodified:%s, mode:%s, size:%.0f] in search '%s'",
-					mf.File, mf.FileInfo.Mtime, mf.FileInfo.Mode, mf.FileInfo.Size, label)
+				out = fmt.Sprintf("%s [lastmodified:%s, mode:%s, size:%.0f",
+					mf.File, mf.FileInfo.Mtime, mf.FileInfo.Mode, mf.FileInfo.Size)
+				if mf.FileInfo.SHA256 != "" {
+					out += fmt.Sprintf(", hash:%s", strings.ToLower(mf.FileInfo.SHA256))
+				}
+				out += fmt.Sprintf("] in search '%s'", label)
 			}
 			if mf.Search.Options.MatchAll {
 				prints = append(prints, out)
