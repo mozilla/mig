@@ -117,7 +117,7 @@ return files that have unknown keys.
 	-content "^((#.+)|(\s+)?|(ssh-rsa AAAAB3NznoMzq\+2r2Vx2bhFWMU3Uuid 1061157)|(ssh-rsa AAYWH\+0XAASw== ffxbld_rsa))$" \
 	-macroal -mismatch content
 
-Find is a user is currently running any process (or is connected)
+Find if a user is currently running any process (or is connected)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you know the UID of a user, you can check if he has any process running.
@@ -127,7 +127,7 @@ for.
 
 .. code:: bash
 
-        mig file -path /proc/ -maxdepth 2 -name "^status$" -content "^Uid:.*1663"
+        mig file -path /proc/ -maxdepth 2 -name "^status$" -content "^Uid:\s+(1664)\s+"
 
 Netstat module
 --------------
