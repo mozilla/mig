@@ -17,9 +17,9 @@ full of interesting information.
       represents the importance of your commit the best.
     - `[(level)/bug]` for commits that fix a bug
 
-* If your commit is linked to a bug number of an issue, please add a reference
+* If your commit is linked to a github issue, please add a reference
   to it in the commit message.
-  ex: `[minor] fix bad counter on agent stats, bug 987123`
+  ex: `[minor] fix bad counter on agent stats, fixes #125123`
 
 * Pull requests must represent the final state of your commit. If you spent two
   weeks working on code, please only submit the commits that represent the
