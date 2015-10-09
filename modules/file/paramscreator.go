@@ -78,12 +78,14 @@ Options
 %smatchlimit <int>	- limit the number of files that can be matched by a search.
 			  the default limit is set to 1000. search will stop once the limit
 			  is reached.
+%sreturnsha256		- include sha256 hash for matched files.
+			  ex: %sreturnsha256
 
 Module documentation is at http://mig.mozilla.org/doc/module_file.html
 Cheatsheet and examples are at http://mig.mozilla.org/doc/cheatsheet.rst.html
 `, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash,
 		dash, dash, dash, dash, dash, dash, dash, dash, dash,
-		dash, dash, dash, dash, dash, dash)
+		dash, dash, dash, dash, dash, dash, dash, dash)
 
 	return
 }
@@ -344,6 +346,12 @@ func (r *run) ParamsCreator() (interface{}, error) {
 					continue
 				}
 				search.Options.MatchAll = false
+			case "returnsha256":
+				if checkValue != "" {
+					fmt.Println("This option doesn't take arguments, try again")
+					continue
+				}
+				search.Options.ReturnSHA256 = true
 			case "macroal":
 				if checkValue != "" {
 					fmt.Println("This option doesn't take arguments, try again")
@@ -394,9 +402,9 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 		err error
 		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha256s,
 		sha384s, sha512s, sha3_224s, sha3_256s, sha3_384s, sha3_512s, mismatch flagParam
-		maxdepth, matchlimit                 float64
-		matchall, matchany, macroal, verbose bool
-		fs                                   flag.FlagSet
+		maxdepth, matchlimit                               float64
+		returnsha256, matchall, matchany, macroal, verbose bool
+		fs                                                 flag.FlagSet
 	)
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
 		printHelp(true)
@@ -425,6 +433,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.BoolVar(&matchany, "matchany", false, "see help")
 	fs.BoolVar(&macroal, "macroal", false, "see help")
 	fs.BoolVar(&debug, "verbose", false, "see help")
+	fs.BoolVar(&returnsha256, "returnsha256", false, "see help")
 	err = fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -450,6 +459,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	s.Options.Macroal = macroal
 	s.Options.Mismatch = mismatch
 	s.Options.MatchAll = matchall
+	s.Options.ReturnSHA256 = returnsha256
 	if matchany {
 		s.Options.MatchAll = false
 	}

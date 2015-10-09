@@ -218,6 +218,11 @@ Several options can be applied to a search:
   single file search, you should probably consider breaking it down into smaller
   searches, or running the search locally instead of through MIG.
 
+* **returnsha256** instructs the agent to return the SHA256 hash for any
+  matched files. The client will display the hash with the file information
+  in the result. As an example, this option can be used to do basic file
+  integrity monitoring across actions.
+
 Search algorithm
 ----------------
 
