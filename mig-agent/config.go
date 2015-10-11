@@ -9,8 +9,9 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"mig.ninja/mig"
 	"time"
+
+	"mig.ninja/mig"
 
 	"gopkg.in/gcfg.v1"
 )
@@ -42,10 +43,30 @@ func configLoad(path string) (err error) {
 		}
 	}()
 	var config config
-	err = gcfg.ReadFileInto(&config, path)
+	if err = gcfg.ReadFileInto(&config, path); err != nil {
+		panic(err)
+	}
+	hbf, err := time.ParseDuration(config.Agent.HeartbeatFreq)
 	if err != nil {
 		panic(err)
 	}
+	timeout, err := time.ParseDuration(config.Agent.ModuleTimeout)
+	if err != nil {
+		panic(err)
+	}
+	agentkey, err := ioutil.ReadFile(config.Certs.Key)
+	if err != nil {
+		panic(err)
+	}
+	cacert, err := ioutil.ReadFile(config.Certs.Ca)
+	if err != nil {
+		panic(err)
+	}
+	agentcert, err := ioutil.ReadFile(config.Certs.Cert)
+	if err != nil {
+		panic(err)
+	}
+
 	ISIMMORTAL = config.Agent.IsImmortal
 	MUSTINSTALLSERVICE = config.Agent.InstallService
 	DISCOVERPUBLICIP = config.Agent.DiscoverPublicIP
@@ -53,25 +74,10 @@ func configLoad(path string) (err error) {
 	LOGGINGCONF = config.Logging
 	AMQPBROKER = config.Agent.Relay
 	APIURL = config.Agent.Api
-	HEARTBEATFREQ, err = time.ParseDuration(config.Agent.HeartbeatFreq)
-	if err != nil {
-		panic(err)
-	}
-	MODULETIMEOUT, err = time.ParseDuration(config.Agent.ModuleTimeout)
-	if err != nil {
-		panic(err)
-	}
-	CACERT, err = ioutil.ReadFile(config.Certs.Ca)
-	if err != nil {
-		panic(err)
-	}
-	AGENTCERT, err = ioutil.ReadFile(config.Certs.Cert)
-	if err != nil {
-		panic(err)
-	}
-	AGENTKEY, err = ioutil.ReadFile(config.Certs.Key)
-	if err != nil {
-		panic(err)
-	}
+	HEARTBEATFREQ = hbf
+	MODULETIMEOUT = timeout
+	CACERT = cacert
+	AGENTCERT = agentcert
+	AGENTKEY = agentkey
 	return
 }
