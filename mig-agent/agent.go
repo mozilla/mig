@@ -78,17 +78,11 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *debug {
-		*foreground = true
-		LOGGINGCONF.Level = "debug"
-		LOGGINGCONF.Mode = "stdout"
-	}
-
 	if *query != "somequery" {
 		resp, err := socketQuery(SOCKET, *query)
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(10)
+			os.Exit(1)
 		}
 		fmt.Println(resp)
 		goto exit
@@ -98,7 +92,7 @@ func main() {
 		res, err := loadActionFromFile(*file, *pretty)
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(10)
+			os.Exit(1)
 		}
 		fmt.Println(res)
 		goto exit
@@ -112,6 +106,13 @@ func main() {
 	} else {
 		fmt.Fprintf(os.Stderr, "[info] Using external conf from %q\n", *config)
 	}
+
+	if *debug {
+		*foreground = true
+		LOGGINGCONF.Level = "debug"
+		LOGGINGCONF.Mode = "stdout"
+	}
+
 	// if checkin mode is set in conf, enforce the mode
 	if CHECKIN && *mode == "agent" {
 		*mode = "agent-checkin"
