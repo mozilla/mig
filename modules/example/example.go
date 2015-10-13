@@ -29,6 +29,7 @@ package example /* import "mig.ninja/mig/modules/example" */
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/tudalex/seccomp-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"net"
@@ -39,10 +40,15 @@ import (
 // An instance of this type will represent this module; it's possible to add
 // additional data fields here, although that is rarely needed.
 type module struct {
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
+}
+
+func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
+	return m.SandboxProfile
 }
 
 // init is called by the Go runtime at startup. We use this function to

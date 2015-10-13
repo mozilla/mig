@@ -7,9 +7,12 @@
 
 package modules /* import "mig.ninja/mig/modules" */
 
+import "github.com/tudalex/seccomp-sandbox"
+
 // A mig module implements this interface
 type Moduler interface {
 	NewRun() Runner
+	GetSandboxProfile() sandbox.SandboxProfile
 }
 
 // The set of registered modules

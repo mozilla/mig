@@ -16,6 +16,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/seccomp/libseccomp-golang"
+	"github.com/tudalex/seccomp-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"net"
@@ -25,14 +27,58 @@ import (
 )
 
 type module struct {
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
+func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
+	return m.SandboxProfile
+}
+
 func init() {
-	modules.Register("timedrift", new(module))
+	m := new(module)
+	sandbox := sandbox.SandboxProfile{
+		DefaultPolicy: seccomp.ActTrap,
+		Filters: []sandbox.FilterOperation{
+			sandbox.FilterOperation{
+				FilterOn: []string{
+					"select",
+					"futex",
+					"write",
+					"read",
+					"epoll_ctl",
+					"close",
+					"epoll_wait",
+					"mmap",
+					"socket",
+					"setsockopt",
+					"connect",
+					"getsockname",
+					"getpeername",
+					"rt_sigprocmask",
+					"mprotect",
+					"openat",
+					"sigaltstack",
+					"gettid",
+					"stat",
+					"set_robust_list",
+
+					"sched_yield",
+					"clone",
+					"epoll_create1",
+					// Used for pretty printing the violating syscall (rare)
+					"exit_group",
+					"rt_sigreturn",
+				},
+				Action: seccomp.ActAllow,
+			},
+		},
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("timedrift", m)
 }
 
 type run struct {
