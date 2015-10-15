@@ -483,7 +483,7 @@ func runModule(ctx Context, op moduleOp) (err error) {
 		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "leaving runModule()"}.Debug()
 	}()
 
-	ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: fmt.Sprintf("executing module '%s'", op.mode)}.Debug()
+	ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: fmt.Sprintf("executing module %q", op.mode)}.Debug()
 	// waiter is a channel that receives a message when the timeout expires
 	waiter := make(chan error, 1)
 	var out bytes.Buffer
@@ -572,8 +572,8 @@ func runModule(ctx Context, op moduleOp) (err error) {
 	return
 }
 
-// receiveResult listens on a temporary channels for results coming from modules. It aggregated them, and
-// when all are received, it build a response that is passed to the Result channel
+// receiveResult listens on a temporary channels for results coming from modules. It aggregates them, and
+// when all are received, it builds a response that is passed to the Result channel
 func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleResult, opsCounter int) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -617,15 +617,14 @@ func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleRe
 			cmd.Status = result.status
 		}
 		cmd.Results[result.position] = result.output
-		// if the result includes an error condition that occurred during runModule(), include
-		// that.
+		// if the result includes an error condition that occurred during runModule(), include it.
 		if result.err != nil {
 			errstr := result.err.Error()
 			cmd.Results[result.position].Errors = append(cmd.Results[result.position].Errors, errstr)
 		}
 		resultReceived++
 		if resultReceived >= opsCounter {
-			break
+			goto finish
 		}
 	}
 finish:
@@ -684,11 +683,11 @@ func heartbeat(ctx Context) (err error) {
 			desc := fmt.Sprintf("heartbeat failed with error '%v'", err)
 			ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
 		}
-		desc := fmt.Sprintf("heartbeat '%s'", body)
+		desc := fmt.Sprintf("heartbeat %q", body)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 		publish(ctx, mig.Mq_Ex_ToSchedulers, mig.Mq_Q_Heartbeat, body)
 		// update the local heartbeat file
-		err = ioutil.WriteFile(ctx.Agent.RunDir+"mig-agent.ok", []byte(time.Now().String()), 644)
+		err = ioutil.WriteFile(ctx.Agent.RunDir+"mig-agent.ok", []byte(time.Now().String()), 0644)
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{Desc: "Failed to write mig-agent.ok to disk"}.Err()
 		}
@@ -723,7 +722,7 @@ func publish(ctx Context, exchange, routingKey string, body []byte) (err error) 
 			false, // is immediate
 			msg)   // AMQP message
 		if err == nil { // success! exit the function
-			desc := fmt.Sprintf("Message published to exchange '%s' with routing key '%s' and body '%s'", exchange, routingKey, msg.Body)
+			desc := fmt.Sprintf("Message published to exchange %q with routing key %q and body %q", exchange, routingKey, msg.Body)
 			ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 			return
 		}
