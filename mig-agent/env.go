@@ -9,13 +9,15 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"mig.ninja/mig"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
+
+	"mig.ninja/mig"
 )
 
+// findLocalIPs updates the given context with the IP Addresses found in the machine.
 func findLocalIPs(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
 	// grab the local ip addresses
