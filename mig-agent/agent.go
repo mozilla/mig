@@ -253,7 +253,7 @@ func runAgent(foreground, upgrading, debug bool) (err error) {
 	ctx, err = Init(foreground, upgrading)
 	if err != nil {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
-		if debug {
+		if foreground {
 			// if in foreground mode, don't retry, just panic
 			time.Sleep(1 * time.Second)
 			panic(err)
