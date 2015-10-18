@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
-	"time"
 )
 
 // QueuesCleanup deletes rabbitmq queues of endpoints that no
@@ -44,7 +45,7 @@ func QueuesCleanup(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("QueuesCleanup(): found %d offline endpoints between %s and now", len(queues), oldest.String())}.Debug()
+	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("QueuesCleanup(): found %d offline endpoints between %s and now", len(queues), oldest.String())}
 	makeamqpchan := true
 	for _, queue := range queues {
 		if makeamqpchan {
