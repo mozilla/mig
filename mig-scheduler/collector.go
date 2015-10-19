@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"mig.ninja/mig"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -134,6 +135,12 @@ func loadReturnedCommands(ctx Context) (err error) {
 			continue
 		}
 		filename := ctx.Directories.Command.Returned + "/" + DirEntry.Name()
+
+		if strings.HasSuffix(filename, ".fail") {
+			// skip files with invalid commands
+			continue
+		}
+
 		_, err = os.Stat(filename)
 		if err != nil {
 			// file is already gone, probably consumed by the file notifier
