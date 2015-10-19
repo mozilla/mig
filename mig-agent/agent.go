@@ -123,7 +123,7 @@ func main() {
 	// attempt to read a local configuration file
 	err = configLoad(*config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[error] Failed to load conf from %q, err: %v\n", *config, err)
+		fmt.Fprintf(os.Stderr, "[warn] Could not load a local conf from %q, err: %v\n", *config, err)
 		fmt.Fprintf(os.Stderr, "[info] Using builtin conf.\n")
 	} else {
 		fmt.Fprintf(os.Stderr, "[info] Using external conf from %q\n", *config)
