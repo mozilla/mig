@@ -248,7 +248,11 @@ func returnCommands(cmdFiles []string, ctx Context) (err error) {
 		// load and parse the command. If this fail, skip it and continue.
 		cmd, err := mig.CmdFromFile(cmdFile)
 		if err != nil {
-			panic(err)
+			// if CmdFromFile fails, rename the cmdFile and skip.
+			desc := fmt.Sprintf("Command in %s failed, renaming to %s.fail", cmdFile, cmdFile)
+			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Debug()
+			os.Rename(cmdFile, cmdFile+".fail")
+			continue
 		}
 		cmd.FinishTime = time.Now().UTC()
 		// update command in database
