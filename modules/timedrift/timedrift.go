@@ -20,6 +20,7 @@ import (
 	"mig.ninja/mig/modules"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -64,6 +65,13 @@ type ntpstats struct {
 	Reachable bool      `json:"reachable"`
 }
 
+var NtpBackupPool = []string{
+	`time.nist.gov`,
+	`0.pool.ntp.org`,
+	`1.pool.ntp.org`,
+	`2.pool.ntp.org`,
+	`3.pool.ntp.org`}
+
 func (r *run) ValidateParameters() (err error) {
 	if r.Parameters.Drift != "" {
 		_, err = time.ParseDuration(r.Parameters.Drift)
@@ -73,9 +81,12 @@ func (r *run) ValidateParameters() (err error) {
 
 func (r *run) Run(in io.Reader) (out string) {
 	var (
-		stats statistics
-		el    elements
-		drift time.Duration
+		stats   statistics
+		el      elements
+		drift   time.Duration
+		ntpFile *os.File
+		ntpScan *bufio.Scanner
+		ntpPool []string
 	)
 	defer func() {
 		if e := recover(); e != nil {
@@ -106,12 +117,32 @@ func (r *run) Run(in io.Reader) (out string) {
 	}
 	// assume host has synched time and set to false if not true
 	el.IsWithinDrift = true
+
+	//Load ntp servers from /etc/ntp.conf
+	ntpFile, err = os.Open("/etc/ntp.conf")
+	if err != nil {
+		r.Results.Errors = append(r.Results.Errors,
+			fmt.Sprintf("Using backup NTP hosts. Failed to read /etc/ntp.conf with error '%v'", err))
+	} else {
+		defer ntpFile.Close()
+		ntpScan = bufio.NewScanner(ntpFile)
+		for ntpScan.Scan() {
+			ntpFields := strings.Fields(ntpScan.Text())
+			if len(ntpFields) < 2 {
+				continue
+			}
+			if ntpFields[0] == "server" {
+				ntpPool = append(ntpPool, ntpFields[1])
+			}
+		}
+	}
+
+	//Add our hardcoded online servers to the end of our ntpPool as fallbacks
+	ntpPool = append(ntpPool, NtpBackupPool...)
+
 	// attempt to get network time from each of the NTP servers, and exit
 	// as soon as we get a valid result from one of them
-	for i := 0; i < len(NtpPool); i++ {
-
-		// pick a server between 0 and len of ntppool, somewhat randomly
-		ntpsrv := NtpPool[time.Now().Nanosecond()%len(NtpPool)]
+	for _, ntpsrv := range ntpPool {
 		t, lat, err := GetNetworkTime(ntpsrv)
 		if err != nil {
 			// failed to get network time, log a failure and try another one
@@ -155,13 +186,6 @@ done:
 	out = r.buildResults(el, stats)
 	return
 }
-
-var NtpPool = [...]string{
-	`time.nist.gov`,
-	`0.pool.ntp.org`,
-	`1.pool.ntp.org`,
-	`2.pool.ntp.org`,
-	`3.pool.ntp.org`}
 
 // GetNetworkTime queries a given NTP server to obtain the network time
 func GetNetworkTime(host string) (t time.Time, latency string, err error) {
