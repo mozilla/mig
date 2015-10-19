@@ -189,9 +189,9 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 	aid := cmds[0].Action.ID
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("sendCommand() -> %v", e)
+			err = fmt.Errorf("sendCommands() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: aid, Desc: "leaving sendCommand()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: aid, Desc: "leaving sendCommands()"}.Debug()
 	}()
 	// store all the commands into the database at once
 	insertCount, err := ctx.DB.InsertCommands(cmds)
@@ -240,9 +240,9 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 func returnCommands(cmdFiles []string, ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("terminateCommand() -> %v", e)
+			err = fmt.Errorf("returnCommands() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving terminateCommand()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving returnCommands()"}.Debug()
 	}()
 	for _, cmdFile := range cmdFiles {
 		// load and parse the command. If this fail, skip it and continue.
