@@ -217,7 +217,7 @@ func MakeConfiguration(file string) (err error) {
 		}
 	}
 	if cfg.GPG.KeyID == "" {
-		panic("no suitable key found")
+		panic("no suitable key found in " + sr.Name())
 	}
 	for {
 		fmt.Printf("what is the location of the API? (ex: https://mig.example.net/api/v1/) > ")
