@@ -44,6 +44,7 @@ type params struct {
 	NeighborIP    []string `json:"neighborip,omitempty"`
 	ConnectedIP   []string `json:"connectedip,omitempty"`
 	ListeningPort []string `json:"listeningport,omitempty"`
+	Namespaces    bool     `json:"namespaces,omitempty"`
 }
 
 type elements struct {
@@ -153,6 +154,69 @@ func validatePort(val string) error {
 	return nil
 }
 
+func (r *run) netstatLookup(els *elements) {
+	for _, val := range r.Parameters.LocalMAC {
+		found, el, err := HasLocalMAC(val)
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		}
+		if len(el) > 0 {
+			els.LocalMAC[val] = append(els.LocalMAC[val], el...)
+		}
+		if found {
+			r.Results.FoundAnything = true
+		}
+	}
+	for _, val := range r.Parameters.NeighborMAC {
+		found, el, err := HasSeenMac(val)
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		}
+		if len(el) > 0 {
+			els.NeighborMAC[val] = append(els.NeighborMAC[val], el...)
+		}
+		if found {
+			r.Results.FoundAnything = true
+		}
+	}
+	for _, val := range r.Parameters.LocalIP {
+		found, el, err := HasLocalIP(val)
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		}
+		if len(el) > 0 {
+			els.LocalIP[val] = append(els.LocalIP[val], el...)
+		}
+		if found {
+			r.Results.FoundAnything = true
+		}
+	}
+	for _, val := range r.Parameters.ConnectedIP {
+		found, el, err := HasIPConnected(val)
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		}
+		if len(el) > 0 {
+			els.ConnectedIP[val] = append(els.ConnectedIP[val], el...)
+		}
+		if found {
+			r.Results.FoundAnything = true
+		}
+	}
+	for _, port := range r.Parameters.ListeningPort {
+		found, el, err := HasListeningPort(port)
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		}
+		if len(el) > 0 {
+			els.ListeningPort[port] = append(els.ListeningPort[port], el...)
+		}
+		if found {
+			r.Results.FoundAnything = true
+		}
+	}
+}
+
 func (r *run) Run(in io.Reader) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -178,58 +242,23 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	}
 
 	els := *newElements()
-
-	for _, val := range r.Parameters.LocalMAC {
-		found, el, err := HasLocalMAC(val)
+	if r.Parameters.Namespaces && namespacesSupported() {
+		fdlist, err := cacheNamespaces()
 		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+			panic(err)
 		}
-		els.LocalMAC[val] = el
-		if found {
-			r.Results.FoundAnything = true
+		for i := range fdlist {
+			err = setNamespace(fdlist[i])
+			if err != nil {
+				panic(err)
+			}
+			r.netstatLookup(&els)
 		}
-	}
-	for _, val := range r.Parameters.NeighborMAC {
-		found, el, err := HasSeenMac(val)
-		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		}
-		els.NeighborMAC[val] = el
-		if found {
-			r.Results.FoundAnything = true
-		}
-	}
-	for _, val := range r.Parameters.LocalIP {
-		found, el, err := HasLocalIP(val)
-		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		}
-		els.LocalIP[val] = el
-		if found {
-			r.Results.FoundAnything = true
-		}
-	}
-	for _, val := range r.Parameters.ConnectedIP {
-		found, el, err := HasIPConnected(val)
-		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		}
-		els.ConnectedIP[val] = el
-		if found {
-			r.Results.FoundAnything = true
-		}
-	}
-	for _, port := range r.Parameters.ListeningPort {
-		found, el, err := HasListeningPort(port)
-		if err != nil {
-			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
-		}
-		els.ListeningPort[port] = el
-		if found {
-			r.Results.FoundAnything = true
-		}
+	} else {
+		r.netstatLookup(&els)
 	}
 	r.Results.Elements = els
+
 	// calculate execution time
 	t1 := time.Now()
 	stats.Exectime = t1.Sub(t0).String()
