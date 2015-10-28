@@ -20,3 +20,4 @@ script:
     - cd "$GOPATH/src/mig.ninja/mig"
     - make
     - yes | bash tools/standalone_install.sh
+    - ./bin/linux/amd64/mig-agent-latest -i actions/example_v2.json

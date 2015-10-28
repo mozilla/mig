@@ -179,11 +179,7 @@ func executeAction(action mig.Action, prettyPrint bool) (cmd mig.Command, err er
 
 	// launch each operation consecutively
 	for _, op := range action.Operations {
-		args, err := json.Marshal(op.Parameters)
-		if err != nil {
-			panic(err)
-		}
-		out := runModuleDirectly(op.Module, args, prettyPrint)
+		out := runModuleDirectly(op.Module, op.Parameters, prettyPrint)
 		var res modules.Result
 		err = json.Unmarshal([]byte(out), &res)
 		if err != nil {
@@ -195,13 +191,17 @@ func executeAction(action mig.Action, prettyPrint bool) (cmd mig.Command, err er
 }
 
 // runModuleDirectly executes a module and displays the results on stdout
-func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
+func runModuleDirectly(mode string, args interface{}, pretty bool) (out string) {
 	if _, ok := modules.Available[mode]; !ok {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	// instanciate and call module
 	run := modules.Available[mode].NewRun()
-	out = run.Run(os.Stdin)
+	msg, err := modules.MakeMessage(modules.MsgClassParameters, args)
+	if err != nil {
+		panic(err)
+	}
+	out = run.Run(bytes.NewBuffer(msg))
 	if pretty {
 		var modres modules.Result
 		err := json.Unmarshal([]byte(out), &modres)
