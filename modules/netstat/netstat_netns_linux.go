@@ -17,24 +17,33 @@ import (
 
 var SYS_SETNS = 308
 
-func namespacesSupported() bool {
-	return true
+type linuxNsCache struct {
+	fd   int
+	name string
 }
 
-func setNamespace(fd int) error {
-	defer syscall.Close(fd)
-	_, _, errno := syscall.RawSyscall(uintptr(SYS_SETNS), uintptr(fd), 0, 0)
+func (n *linuxNsCache) setNamespace() error {
+	defer syscall.Close(n.fd)
+	_, _, errno := syscall.RawSyscall(uintptr(SYS_SETNS), uintptr(n.fd), 0, 0)
 	if errno != 0 {
 		return fmt.Errorf("setNamespace Linux errno %v", errno)
 	}
 	return nil
 }
 
-func cacheNamespaces() ([]int, error) {
-	retfd := make([]int, 0)
+func (n *linuxNsCache) getName() string {
+	return n.name
+}
+
+func namespacesSupported() bool {
+	return true
+}
+
+func cacheNamespaces() ([]nsCache, error) {
+	retns := make([]nsCache, 0)
 	pents, err := ioutil.ReadDir("/proc")
 	if err != nil {
-		return retfd, err
+		return retns, err
 	}
 
 	seen := make([]string, 0)
@@ -47,7 +56,7 @@ func cacheNamespaces() ([]int, error) {
 		nsfile := path.Join("/proc", procdir.Name(), "ns", "net")
 		fi, err := os.Lstat(nsfile)
 		if err != nil {
-			return retfd, err
+			return retns, err
 		}
 		if fi.Mode()&os.ModeSymlink == 0 {
 			continue
@@ -75,8 +84,9 @@ func cacheNamespaces() ([]int, error) {
 			continue
 		}
 		seen = append(seen, lname)
-		retfd = append(retfd, fd)
+		newns := linuxNsCache{fd: fd, name: lname}
+		retns = append(retns, &newns)
 	}
 
-	return retfd, nil
+	return retns, nil
 }
