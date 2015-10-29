@@ -13,33 +13,30 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/jvehent/service-go"
-	"github.com/kardianos/osext"
-	"github.com/streadway/amqp"
 	"io/ioutil"
 	mrand "math/rand"
-	"mig.ninja/mig"
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jvehent/service-go"
+	"github.com/streadway/amqp"
+	"mig.ninja/mig"
 )
 
-// Context contains all configuration variables as well as handlers for
-// logs and channels
-// Context is intended as a single structure that can be passed around easily.
-type Context struct {
-	ACL   mig.ACL
-	Agent struct {
-		Hostname, QueueLoc, Mode, UID, BinPath, RunDir string
+type Agent struct {
+	ACL    mig.acl
+	Config struct {
+	}
+	Context struct {
+		Hostname, Queueloc, Mode, UID, BinPath, RunDir string
 		Respawn                                        bool
 		CheckIn                                        bool
 		Env                                            mig.AgentEnv
-		Tags                                           interface{}
+		Tags                                           interface{} // tags are free structs that are used to mark a group of agents, used to identify agents families by business units.
 	}
 	Channels struct {
 		// internal
@@ -71,208 +68,45 @@ type Context struct {
 	Logging mig.Logging
 }
 
-// Init prepare the AMQP connections to the broker and launches the
-// goroutines that will process commands received by the MIG Scheduler
-func Init(foreground, upgrade bool) (ctx Context, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("initAgent() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
-	}()
-	ctx.Agent.Tags = TAGS
-
-	ctx.Logging, err = mig.InitLogger(LOGGINGCONF, "mig-agent")
-	if err != nil {
-		panic(err)
-	}
-	// create the go channels
-	ctx, err = initChannels(ctx)
-	if err != nil {
-		panic(err)
-	}
-	// Logging GoRoutine,
-	go func() {
-		for event := range ctx.Channels.Log {
-			_, err := mig.ProcessLog(ctx.Logging, event)
-			if err != nil {
-				fmt.Println("Unable to process logs")
-			}
-		}
-	}()
-	ctx.Channels.Log <- mig.Log{Desc: "Logging routine initialized."}.Debug()
-
-	// defines whether the agent should respawn itself or not
-	// this value is overriden in the daemonize calls if the agent
-	// is controlled by systemd, upstart or launchd
-	ctx.Agent.Respawn = ISIMMORTAL
-
-	// get the path of the executable
-	ctx.Agent.BinPath, err = osext.Executable()
-	if err != nil {
-		panic(err)
-	}
-
-	// retrieve the hostname
-	ctx, err = findHostname(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// retrieve information about the operating system
-	ctx.Agent.Env.OS = runtime.GOOS
-	ctx.Agent.Env.Arch = runtime.GOARCH
-	ctx, err = findOSInfo(ctx)
-	if err != nil {
-		panic(err)
-	}
-	ctx, err = findLocalIPs(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// Attempt to discover the public IP
-	if DISCOVERPUBLICIP {
-		ctx, err = findPublicIP(ctx)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	// find the run directory
-	ctx.Agent.RunDir = getRunDir()
-
-	// get the agent ID
-	ctx, err = initAgentID(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// build the agent message queue location
-	ctx.Agent.QueueLoc = fmt.Sprintf("%s.%s.%s", ctx.Agent.Env.OS, ctx.Agent.Hostname, ctx.Agent.UID)
-
-	// daemonize if not in foreground mode
-	if !foreground {
-		// give one second for the caller to exit
-		time.Sleep(time.Second)
-		ctx, err = daemonize(ctx, upgrade)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	ctx.Sleeper = HEARTBEATFREQ
-	if err != nil {
-		panic(err)
-	}
-
-	// parse the ACLs
-	ctx, err = initACL(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	connected := false
-	// connect to the message broker
-	ctx, err = initMQ(ctx, false, "")
-	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay directly: '%v'", err)}.Debug()
-		// if the connection failed, look for a proxy
-		// in the environment variables, and try again
-		ctx, err = initMQ(ctx, true, "")
-		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay using HTTP_PROXY: '%v'", err)}.Debug()
-			// still failing, try connecting using the proxies in the configuration
-			for _, proxy := range PROXIES {
-				ctx, err = initMQ(ctx, true, proxy)
-				if err != nil {
-					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay using proxy %s: '%v'", proxy, err)}.Debug()
-					continue
-				}
-				connected = true
-				goto mqdone
-			}
-		} else {
-			connected = true
-		}
-	} else {
-		connected = true
-	}
-mqdone:
-	if !connected {
-		panic("Failed to connect to the relay")
-	}
-
-	// catch interrupts
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		sig := <-c
-		ctx.Channels.Terminate <- sig.String()
-	}()
-
-	// try to connect the stat socket until it works
-	// this may fail if one agent is already running
-	if SOCKET != "" {
-		go func() {
-			for {
-				ctx.Socket.Bind = SOCKET
-				ctx, err = initSocket(ctx)
-				if err == nil {
-					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Stat socket connected successfully on %s", ctx.Socket.Bind)}.Info()
-					goto socketdone
-				}
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect stat socket: '%v'", err)}.Err()
-				time.Sleep(60 * time.Second)
-			}
-		socketdone:
-			return
-		}()
-	}
-
+// initChannels creates all the channels needed by a mig agent.
+func (agt *Agent) initChannels() {
+	agt.Channels.Terminate = make(chan string)
+	agt.Channels.NewCommand = make(chan []byte, 7)
+	agt.Channels.RunAgentCommand = make(chan moduleOp, 5)
+	agt.Channels.RunExternalCommand = make(chan moduleOp, 5)
+	agt.Channels.Results = make(chan mig.Command, 5)
+	agt.Channels.Log = make(chan mig.Log, 97)
+	agt.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
 	return
 }
 
-func initChannels(orig_ctx Context) (ctx Context, err error) {
-	ctx = orig_ctx
-	ctx.Channels.Terminate = make(chan string)
-	ctx.Channels.NewCommand = make(chan []byte, 7)
-	ctx.Channels.RunAgentCommand = make(chan moduleOp, 5)
-	ctx.Channels.RunExternalCommand = make(chan moduleOp, 5)
-	ctx.Channels.Results = make(chan mig.Command, 5)
-	ctx.Channels.Log = make(chan mig.Log, 97)
-	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
-	return
-}
-
-// initAgentID will retrieve an ID from disk, or request one if missing
-func initAgentID(orig_ctx Context) (ctx Context, err error) {
-	ctx = orig_ctx
+// initAgentID will retrieve an ID from disk, or create one if missing
+func (agt *Agent) initAgentID() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initAgentID() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgentID()"}.Debug()
+		agt.Channels.Log <- mig.Log{Desc: "leaving initAgentID()"}.Debug()
 	}()
-	os.Chmod(ctx.Agent.RunDir, 0755)
-	idFile := ctx.Agent.RunDir + ".migagtid"
+	os.Chmod(agt.Context.RunDir, 0755)
+	idFile := agt.Context.RunDir + ".migagtid"
 	id, err := ioutil.ReadFile(idFile)
 	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("unable to read agent id from '%s': %v", idFile, err)}.Debug()
+		agt.Channels.Log <- mig.Log{Desc: fmt.Sprintf("unable to read agent id from '%s': %v", idFile, err)}.Debug()
 		// ID file doesn't exist, create it
-		id, err = createIDFile(ctx)
+		id, err = agt.createIDFile()
 		if err != nil {
 			panic(err)
 		}
 	}
-	ctx.Agent.UID = fmt.Sprintf("%s", id)
+	agt.Context.UID = fmt.Sprintf("%s", id)
 	os.Chmod(idFile, 0400)
 	return
 }
 
 // createIDFile will generate a new ID for this agent and store it on disk
 // the location depends on the operating system
-func createIDFile(ctx Context) (id []byte, err error) {
+func (agt *Agent) createIDFile() (id []byte, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("createIDFile() -> %v", e)
@@ -284,14 +118,15 @@ func createIDFile(ctx Context) (id []byte, err error) {
 	sid += strconv.FormatUint(uint64(r.Int63()), 36)
 	sid += strconv.FormatUint(uint64(r.Int63()), 36)
 	sid += strconv.FormatUint(uint64(r.Int63()), 36)
+	runDir := agt.Context.RunDir
 
 	// check that the storage DIR exist, and that it's a dir
-	tdir, err := os.Open(ctx.Agent.RunDir)
+	tdir, err := os.Open(runDir)
 	defer tdir.Close()
 	if err != nil {
 		// dir doesn't exist, create it
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("agent rundir is missing from '%s'. creating it", ctx.Agent.RunDir)}.Debug()
-		err = os.MkdirAll(ctx.Agent.RunDir, 0755)
+		agt.Channels.Log <- mig.Log{Desc: fmt.Sprintf("agent rundir is missing from '%s'. creating it", runDir)}.Debug()
+		err = os.MkdirAll(runDir, 0755)
 		if err != nil {
 			panic(err)
 		}
@@ -302,46 +137,44 @@ func createIDFile(ctx Context) (id []byte, err error) {
 			panic(err)
 		}
 		if !tdirMode.Mode().IsDir() {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("'%s' is not a directory. removing it", ctx.Agent.RunDir)}.Debug()
+			agt.Channels.Log <- mig.Log{Desc: fmt.Sprintf("'%s' is not a directory. removing it", runDir)}.Debug()
 			// not a valid dir. destroy whatever it is, and recreate
-			err = os.Remove(ctx.Agent.RunDir)
+			err = os.Remove(runDir)
 			if err != nil {
 				panic(err)
 			}
-			err = os.MkdirAll(ctx.Agent.RunDir, 0755)
+			err = os.MkdirAll(runDir, 0755)
 			if err != nil {
 				panic(err)
 			}
 		}
 	}
 
-	idFile := ctx.Agent.RunDir + ".migagtid"
+	idFile := runDir + ".migagtid"
 
 	// something exists at the location of the id file, just plain remove it
 	_ = os.Remove(idFile)
 
 	// write the ID file
-	err = ioutil.WriteFile(idFile, []byte(sid), 0400)
-	if err != nil {
+	if err = ioutil.WriteFile(idFile, []byte(sid), 0400); err != nil {
 		panic(err)
 	}
 	// read ID from disk
-	id, err = ioutil.ReadFile(idFile)
-	if err != nil {
+	if _, err = ioutil.ReadFile(idFile); err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("agent id created in '%s'", idFile)}.Debug()
+
+	agt.Channels.Log <- mig.Log{Desc: fmt.Sprintf("agent id created in '%s'", idFile)}.Debug()
 	return
 }
 
 // parse the permissions from the configuration into an ACL structure
-func initACL(orig_ctx Context) (ctx Context, err error) {
-	ctx = orig_ctx
+func (agt *Agent) initACL() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initACL() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving initACL()"}.Debug()
+		agt.Channels.Log <- mig.Log{Desc: "leaving initACL()"}.Debug()
 	}()
 	for _, jsonPermission := range AGENTACL {
 		var parsedPermission mig.Permission
@@ -351,46 +184,45 @@ func initACL(orig_ctx Context) (ctx Context, err error) {
 		}
 		for permName, _ := range parsedPermission {
 			desc := fmt.Sprintf("Loading permission named '%s'", permName)
-			ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
+			a.Channels.Log <- mig.Log{Desc: desc}.Debug()
 		}
-		ctx.ACL = append(ctx.ACL, parsedPermission)
+		agt.ACL = append(agt.ACL, parsedPermission)
 	}
 	return
 }
 
-func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err error) {
-	ctx = orig_ctx
+func (agt *Agent) initMQ(try_proxy bool, proxy string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initMQ() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving initMQ()"}.Debug()
+		agt.Channels.Log <- mig.Log{Desc: "leaving initMQ()"}.Debug()
 	}()
 
 	//Define the AMQP binding
-	ctx.MQ.Bind.Queue = fmt.Sprintf("mig.agt.%s", ctx.Agent.QueueLoc)
-	ctx.MQ.Bind.Key = fmt.Sprintf("mig.agt.%s", ctx.Agent.QueueLoc)
+	agt.MQ.Bind.Queue = fmt.Sprintf("mig.agt.%s", agt.Context.QueueLoc)
+	agt.MQ.Bind.Key = fmt.Sprintf("mig.agt.%s", agt.Context.QueueLoc)
 
 	// parse the dial string and use TLS if using amqps
 	amqp_uri, err := amqp.ParseURI(AMQPBROKER)
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("AMQP: host=%s, port=%d, vhost=%s", amqp_uri.Host, amqp_uri.Port, amqp_uri.Vhost)}.Debug()
+	agt.Channels.Log <- mig.Log{Desc: fmt.Sprintf("AMQP: host=%s, port=%d, vhost=%s", amqp_uri.Host, amqp_uri.Port, amqp_uri.Vhost)}.Debug()
 	if amqp_uri.Scheme == "amqps" {
-		ctx.MQ.UseTLS = true
+		agt.MQ.UseTLS = true
 	}
 
 	// create an AMQP configuration with specific timers
 	var dialConfig amqp.Config
-	dialConfig.Heartbeat = 2 * ctx.Sleeper
+	dialConfig.Heartbeat = 2 * agt.Sleeper
 	if try_proxy {
 		// if in try_proxy mode, the agent will try to connect to the relay using a CONNECT proxy
 		// but because CONNECT is a HTTP method, not available in AMQP, we need to establish
 		// that connection ourselves, and give it back to the amqp.DialConfig method
 		if proxy == "" {
 			// try to get the proxy from the environemnt (variable HTTP_PROXY)
-			target := "http://" + amqp_uri.Host + ":" + fmt.Sprintf("%d", amqp_uri.Port)
+			target := fmt.Sprintf("http://%s:%d", amqp_uri.Host, amqp_uri.Port)
 			req, err := http.NewRequest("GET", target, nil)
 			if err != nil {
 				panic(err)
@@ -403,9 +235,9 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 				panic("Failed to find a suitable proxy in environment")
 			}
 			proxy = proxy_url.Host
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Found proxy at %s", proxy)}.Debug()
+			agt.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Found proxy at %s", proxy)}.Debug()
 		}
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Connecting via proxy %s", proxy)}.Debug()
+		agt.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Connecting via proxy %s", proxy)}.Debug()
 		dialConfig.Dial = func(network, addr string) (conn net.Conn, err error) {
 			// connect to the proxy
 			conn, err = net.DialTimeout("tcp", proxy, 5*time.Second)
@@ -430,8 +262,8 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 				err = fmt.Errorf("Invalid status received from proxy: '%s'", status[0:len(status)-2])
 				return
 			}
-			ctx.Agent.Env.IsProxied = true
-			ctx.Agent.Env.Proxy = proxy
+			agt.Context.Env.IsProxied = true
+			agt.Context.Env.Proxy = proxy
 			return
 		}
 	} else {
@@ -440,8 +272,8 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 		}
 	}
 
-	if ctx.MQ.UseTLS {
-		ctx.Channels.Log <- mig.Log{Desc: "Loading AMQPS TLS parameters"}.Debug()
+	if agt.MQ.UseTLS {
+		agt.Channels.Log <- mig.Log{Desc: "Loading AMQPS TLS parameters"}.Debug()
 		// import the client certificates
 		cert, err := tls.X509KeyPair(AGENTCERT, AGENTKEY)
 		if err != nil {
@@ -461,24 +293,24 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 		dialConfig.TLSClientConfig = &TLSconfig
 	}
 	// Open AMQP connection
-	ctx.Channels.Log <- mig.Log{Desc: "Establishing connection to relay"}.Debug()
-	ctx.MQ.conn, err = amqp.DialConfig(AMQPBROKER, dialConfig)
+	agt.Channels.Log <- mig.Log{Desc: "Establishing connection to relay"}.Debug()
+	agt.MQ.conn, err = amqp.DialConfig(AMQPBROKER, dialConfig)
 	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: "Connection failed"}.Debug()
+		agt.Channels.Log <- mig.Log{Desc: "Connection failed"}.Debug()
 		panic(err)
 	}
 
-	ctx.MQ.Chan, err = ctx.MQ.conn.Channel()
+	agt.MQ.Chan, err = agt.MQ.conn.Channel()
 	if err != nil {
 		panic(err)
 	}
 
 	// Limit the number of message the channel will receive at once
-	err = ctx.MQ.Chan.Qos(1, // prefetch count (in # of msg)
+	err = agt.MQ.Chan.Qos(1, // prefetch count (in # of msg)
 		0,     // prefetch size (in bytes)
 		false) // is global
 
-	_, err = ctx.MQ.Chan.QueueDeclare(ctx.MQ.Bind.Queue, // Queue name
+	_, err = agt.MQ.Chan.QueueDeclare(agt.MQ.Bind.Queue, // Queue name
 		true,  // is durable
 		false, // is autoDelete
 		false, // is exclusive
@@ -488,8 +320,8 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 		panic(err)
 	}
 
-	err = ctx.MQ.Chan.QueueBind(ctx.MQ.Bind.Queue, // Queue name
-		ctx.MQ.Bind.Key,    // Routing key name
+	err = agt.MQ.Chan.QueueBind(agt.MQ.Bind.Queue, // Queue name
+		agt.MQ.Bind.Key,    // Routing key name
 		mig.Mq_Ex_ToAgents, // Exchange name
 		false,              // is noWait
 		nil)                // AMQP args
@@ -498,7 +330,7 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 	}
 
 	// Consume AMQP message into channel
-	ctx.MQ.Bind.Chan, err = ctx.MQ.Chan.Consume(ctx.MQ.Bind.Queue, // queue name
+	agt.MQ.Bind.Chan, err = agt.MQ.Chan.Consume(agt.MQ.Bind.Queue, // queue name
 		"",    // some tag
 		false, // is autoAck
 		false, // is exclusive
@@ -512,28 +344,34 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 	return
 }
 
-func Destroy(ctx Context) (err error) {
-	close(ctx.Channels.Terminate)
-	close(ctx.Channels.NewCommand)
-	close(ctx.Channels.RunAgentCommand)
-	close(ctx.Channels.RunExternalCommand)
-	close(ctx.Channels.Results)
+func (agt *Agent) Destroy() (err error) {
+	close(agt.Channels.Terminate)
+	close(agt.Channels.NewCommand)
+	close(agt.Channels.RunAgentCommand)
+	close(agt.Channels.RunExternalCommand)
+	close(agt.Channels.Results)
 	// give one second for the goroutines to close
 	time.Sleep(1 * time.Second)
-	ctx.MQ.conn.Close()
+	agt.MQ.conn.Close()
 	return
 }
 
 // serviceDeploy stops, removes, installs and start the mig-agent service in one go
-func serviceDeploy(orig_ctx Context) (ctx Context, err error) {
-	ctx = orig_ctx
+func (agt *Agent) serviceDeploy() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("serviceDeploy() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving serviceDeploy()"}.Debug()
+		agt.Channels.Log <- mig.Log{Desc: "leaving serviceDeploy()"}.Debug()
 	}()
-	svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
+
+	svcConfig := &service.Config{
+		Name:        "mig-agent",
+		DisplayName: "MIG Agent",
+		Description: "Mozilla InvestiGator Agent",
+	}
+
+	svc, err := service.New(agt, svcConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -544,28 +382,28 @@ func serviceDeploy(orig_ctx Context) (ctx Context, err error) {
 	// if already running, stop it. don't panic on error
 	err = svc.Stop()
 	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to stop service mig-agent: '%v'", err)}.Info()
+		agt.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to stop service mig-agent: '%v'", err)}.Info()
 	} else {
-		ctx.Channels.Log <- mig.Log{Desc: "Stopped running mig-agent service"}.Info()
+		agt.Channels.Log <- mig.Log{Desc: "Stopped running mig-agent service"}.Info()
 	}
 
 	err = svc.Remove()
 	if err != nil {
 		// fail but continue, the service may not exist yet
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to remove service mig-agent: '%v'", err)}.Info()
+		agt.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to remove service mig-agent: '%v'", err)}.Info()
 	} else {
-		ctx.Channels.Log <- mig.Log{Desc: "Removed existing mig-agent service"}.Info()
+		agt.Channels.Log <- mig.Log{Desc: "Removed existing mig-agent service"}.Info()
 	}
 	err = svc.Install()
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: "Installed mig-agent service"}.Info()
+	agt.Channels.Log <- mig.Log{Desc: "Installed mig-agent service"}.Info()
 	err = svc.Start()
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: "Started mig-agent service"}.Info()
+	agt.Channels.Log <- mig.Log{Desc: "Started mig-agent service"}.Info()
 	return
 }
 
