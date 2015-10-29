@@ -59,15 +59,18 @@ func main() {
 
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
-	var debug = flag.Bool("d", false, "Debug mode: run in foreground, log to stdout.")
-	var mode = flag.String("m", "agent", "Module to run (eg. agent, filechecker).")
-	var file = flag.String("i", "/path/to/file", "Load action from file.")
-	var config = flag.String("c", "/etc/mig/mig-agent.cfg", "Load configuration from file.")
-	var query = flag.String("q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
-	var foreground = flag.Bool("f", false, "Agent will fork into background by default. Except if this flag is set.")
-	var upgrading = flag.Bool("u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
-	var pretty = flag.Bool("p", false, "When running a module, pretty print the results instead of returning JSON.")
-	var showversion = flag.Bool("V", false, "Print Agent version to stdout and exit.")
+	var (
+		debug       = flag.Bool("d", false, "Debug mode: run in foreground, log to stdout.")
+		mode        = flag.String("m", "agent", "Module to run (eg. agent, filechecker).")
+		file        = flag.String("i", "/path/to/file", "Load action from file.")
+		config      = flag.String("c", "/etc/mig/mig-agent.cfg", "Load configuration from file.")
+		query       = flag.String("q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
+		foreground  = flag.Bool("f", false, "Agent will fork into background by default. Except if this flag is set.")
+		upgrading   = flag.Bool("u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
+		pretty      = flag.Bool("p", false, "When running a module, pretty print the results instead of returning JSON.")
+		showversion = flag.Bool("V", false, "Print Agent version to stdout and exit.")
+	)
+
 	flag.Parse()
 
 	if *showversion {
@@ -75,48 +78,23 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *debug {
-		*foreground = true
-		LOGGINGCONF.Level = "debug"
-		LOGGINGCONF.Mode = "stdout"
-	}
-
 	if *query != "somequery" {
 		resp, err := socketQuery(SOCKET, *query)
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(10)
+			os.Exit(1)
 		}
 		fmt.Println(resp)
 		goto exit
 	}
 
 	if *file != "/path/to/file" {
-		// get input data from file
-		action, err := mig.ActionFromFile(*file)
+		res, err := loadActionFromFile(*file, *pretty)
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
-		var cmd mig.Command
-		// launch each operation consecutively
-		for _, op := range action.Operations {
-			args, err := json.Marshal(op.Parameters)
-			if err != nil {
-				panic(err)
-			}
-			out := runModuleDirectly(op.Module, args, *pretty)
-			var res modules.Result
-			err = json.Unmarshal([]byte(out), &res)
-			if err != nil {
-				panic(err)
-			}
-			cmd.Results = append(cmd.Results, res)
-		}
-		jCmd, err := json.MarshalIndent(cmd.Results, "", "  ")
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("%s\n", jCmd)
+		fmt.Println(res)
 		goto exit
 	}
 
@@ -128,6 +106,13 @@ func main() {
 	} else {
 		fmt.Fprintf(os.Stderr, "[info] Using external conf from %q\n", *config)
 	}
+
+	if *debug {
+		*foreground = true
+		LOGGINGCONF.Level = "debug"
+		LOGGINGCONF.Mode = "stdout"
+	}
+
 	// if checkin mode is set in conf, enforce the mode
 	if CHECKIN && *mode == "agent" {
 		*mode = "agent-checkin"
@@ -156,14 +141,67 @@ func main() {
 exit:
 }
 
+// loadActionFromFile loads an action from a file, runs it and returns the results encoded as a json list.
+func loadActionFromFile(file string, prettyPrint bool) (res string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("loadActionFromFile() -> %v", e)
+		}
+	}()
+
+	// get input data from file
+	action, err := mig.ActionFromFile(file)
+	if err != nil {
+		panic(err)
+	}
+
+	cmd, err := executeAction(action, prettyPrint)
+	if err != nil {
+		panic(err)
+	}
+
+	// results to json list.
+	jcmd, err := json.MarshalIndent(cmd.Results, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+
+	return string(jcmd), err
+}
+
+// executeAction runs a single mig.Action
+func executeAction(action mig.Action, prettyPrint bool) (cmd mig.Command, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("executeAction() -> %v", e)
+		}
+	}()
+
+	// launch each operation consecutively
+	for _, op := range action.Operations {
+		out := runModuleDirectly(op.Module, op.Parameters, prettyPrint)
+		var res modules.Result
+		err = json.Unmarshal([]byte(out), &res)
+		if err != nil {
+			panic(err)
+		}
+		cmd.Results = append(cmd.Results, res)
+	}
+	return
+}
+
 // runModuleDirectly executes a module and displays the results on stdout
-func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
+func runModuleDirectly(mode string, args interface{}, pretty bool) (out string) {
 	if _, ok := modules.Available[mode]; !ok {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	// instanciate and call module
 	run := modules.Available[mode].NewRun()
-	out = run.Run(os.Stdin)
+	msg, err := modules.MakeMessage(modules.MsgClassParameters, args)
+	if err != nil {
+		panic(err)
+	}
+	out = run.Run(bytes.NewBuffer(msg))
 	if pretty {
 		var modres modules.Result
 		err := json.Unmarshal([]byte(out), &modres)
