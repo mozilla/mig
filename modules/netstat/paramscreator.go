@@ -38,6 +38,9 @@ connectedip <ip|cidr>	search for connections with the given IP address or within
 
 listeningport <port>	search for an open socket on the local system listening on <port>, tcp and udp
 			example: > listeningport 443
+
+namespaces              enable namespace resolution (linux)
+                        example: > namespaces
 `
 
 // ParamsCreator implements an interactive parameters creation interface, which
@@ -62,6 +65,10 @@ func (r *run) ParamsCreator() (interface{}, error) {
 		}
 		if input == "help" {
 			fmt.Printf("%s\n", help)
+			continue
+		}
+		if input == "namespaces" {
+			p.SearchNamespaces = true
 			continue
 		}
 		arr := strings.SplitN(input, " ", 2)
@@ -130,30 +137,33 @@ func (r *run) ParamsCreator() (interface{}, error) {
 }
 
 const cmd_help string = `
--lm <regex>	search for local mac addresses that match <regex>
-		example: -lm ^8c:70:[0-9a-f]
+-lm <regex>	   search for local mac addresses that match <regex>
+		   example: -lm ^8c:70:[0-9a-f]
 
--nm <regex>	search for neighbors mac addresses that match <regex>
-		in the ARP table
-		example: -nm ^8c:70:[0-9a-f]
+-nm <regex>	   search for neighbors mac addresses that match <regex>
+		   in the ARP table
+		   example: -nm ^8c:70:[0-9a-f]
 
--li <ip|cidr>	search for IPs that match <ip|cidr> on the local interfaces
-		if a cidr is specified, return all matching addresses.
-		example: -li 10.0.0.0/8
-			 -li 2001:db8::/32
+-li <ip|cidr>	   search for IPs that match <ip|cidr> on the local interfaces
+		   if a cidr is specified, return all matching addresses.
+		   example: -li 10.0.0.0/8
+			    -li 2001:db8::/32
 
--ni <ip|cidr>	search for neighbors IPs that match <ip|cidr> in the ARP table
-		if a cidr is specified, return all matching addresses
-		example: -ni 10.1.2.3
-			 -ni fdda:5cc1:23:4::1f
+-ni <ip|cidr>	   search for neighbors IPs that match <ip|cidr> in the ARP table
+		   if a cidr is specified, return all matching addresses
+		   example: -ni 10.1.2.3
+			    -ni fdda:5cc1:23:4::1f
 
--ci <ip|cidr>	search for remote IPs connected to the system matching <ip|cidr>.
-		returns connection tuple: localip:localport remoteip:remoteport
-		example: -ci 80.70.60.0/24
-			 -ci 2001:0db8:0123:4567:89ab:cdef:1234:0/116
+-ci <ip|cidr>	   search for remote IPs connected to the system matching <ip|cidr>.
+		   returns connection tuple: localip:localport remoteip:remoteport
+		   example: -ci 80.70.60.0/24
+			    -ci 2001:0db8:0123:4567:89ab:cdef:1234:0/116
 
--lp <port>	search for a listening tcp/udp port on <port>
-		example: -lp 443
+-lp <port>	   search for a listening tcp/udp port on <port>
+		   example: -lp 443
+
+-namespaces <bool> enable namespace resolution (linux)
+                   example: -namespaces
 `
 
 // ParamsParser implements a command line parameters parser that takes a string
@@ -164,6 +174,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 		err                    error
 		lm, nm, li, ni, ci, lp flagParam
 		fs                     flag.FlagSet
+		namespaces             bool
 	)
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
 		fmt.Println(cmd_help)
@@ -176,6 +187,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.Var(&ni, "ni", "see help")
 	fs.Var(&ci, "ci", "see help")
 	fs.Var(&lp, "lp", "see help")
+	fs.BoolVar(&namespaces, "namespaces", false, "see help")
 	err = fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -187,6 +199,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	p.NeighborIP = ni
 	p.ConnectedIP = ci
 	p.ListeningPort = lp
+	p.SearchNamespaces = namespaces
 
 	r.Parameters = p
 	return p, r.ValidateParameters()
