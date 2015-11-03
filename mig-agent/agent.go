@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"flag"
@@ -131,12 +132,7 @@ func main() {
 			panic(err)
 		}
 	default:
-		var tmparg string
-		for _, arg := range flag.Args() {
-			tmparg = tmparg + arg
-		}
-		args := []byte(tmparg)
-		fmt.Printf("%s", runModuleDirectly(*mode, args, *pretty))
+		fmt.Printf("%s", runModuleDirectly(*mode, nil, *pretty))
 	}
 exit:
 }
@@ -191,17 +187,27 @@ func executeAction(action mig.Action, prettyPrint bool) (cmd mig.Command, err er
 }
 
 // runModuleDirectly executes a module and displays the results on stdout
-func runModuleDirectly(mode string, args interface{}, pretty bool) (out string) {
+//
+// paramargs allows the parameters to be specified as an argument to the
+// function, overriding the expectation parameters will be sent via
+// Stdin. If nil, the parameters will still be read on Stdin by the module.
+func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out string) {
 	if _, ok := modules.Available[mode]; !ok {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
-	// instanciate and call module
-	run := modules.Available[mode].NewRun()
-	msg, err := modules.MakeMessage(modules.MsgClassParameters, args)
-	if err != nil {
-		panic(err)
+	infd := bufio.NewReader(os.Stdin)
+	// If parameters are being supplied as an argument, use these vs.
+	// expecting parameters to be supplied on Stdin.
+	if paramargs != nil {
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, paramargs)
+		if err != nil {
+			panic(err)
+		}
+		infd = bufio.NewReader(bytes.NewBuffer(msg))
 	}
-	out = run.Run(bytes.NewBuffer(msg))
+	// instantiate and call module
+	run := modules.Available[mode].NewRun()
+	out = run.Run(infd)
 	if pretty {
 		var modres modules.Result
 		err := json.Unmarshal([]byte(out), &modres)
