@@ -127,9 +127,22 @@ func main() {
 		}
 	case "agent-checkin":
 		*foreground = true
-		err = runAgentCheckin(*foreground, *upgrading, *debug)
-		if err != nil {
-			panic(err)
+		// in checkin mode, the agent is not allowed to run for longer than
+		// MODULETIMEOUT, so we create a timer that force exit if the run
+		// takes too long.
+		done := make(chan error, 1)
+		go func() {
+			done <- runAgentCheckin(*foreground, *upgrading, *debug)
+		}()
+		select {
+		// add 10% to moduletimeout to let the agent kill modules before exiting
+		case <-time.After(MODULETIMEOUT * 110 / 100):
+			fmt.Fprintf(os.Stderr, "[critical] Agent in checkin mode reached max exec time, exiting\n")
+			goto exit
+		case err := <-done:
+			if err != nil {
+				panic(err)
+			}
 		}
 	default:
 		fmt.Printf("%s", runModuleDirectly(*mode, nil, *pretty))
@@ -272,8 +285,7 @@ func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
 		}
 	}
 done:
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Agent is done checking in. shutting down.")}
-
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Agent is done checking in. waiting for all modules to complete.")}
 	// wait until all running operations are done
 	for {
 		time.Sleep(1 * time.Second)
@@ -281,6 +293,7 @@ done:
 			break
 		}
 	}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("all modules completed, shutting down.")}
 	// lock publication forever, we're shutting down
 	publication.Lock()
 	Destroy(ctx)
