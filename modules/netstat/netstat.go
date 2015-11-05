@@ -38,12 +38,13 @@ type run struct {
 }
 
 type params struct {
-	LocalMAC      []string `json:"localmac,omitempty"`
-	LocalIP       []string `json:"localip,omitempty"`
-	NeighborMAC   []string `json:"neighbormac,omitempty"`
-	NeighborIP    []string `json:"neighborip,omitempty"`
-	ConnectedIP   []string `json:"connectedip,omitempty"`
-	ListeningPort []string `json:"listeningport,omitempty"`
+	LocalMAC         []string `json:"localmac,omitempty"`
+	LocalIP          []string `json:"localip,omitempty"`
+	NeighborMAC      []string `json:"neighbormac,omitempty"`
+	NeighborIP       []string `json:"neighborip,omitempty"`
+	ConnectedIP      []string `json:"connectedip,omitempty"`
+	ListeningPort    []string `json:"listeningport,omitempty"`
+	SearchNamespaces bool     `json:"namespaces,empty"`
 }
 
 type elements struct {
@@ -62,6 +63,7 @@ type element struct {
 	LocalPort     float64 `json:"localport,omitempty"`
 	RemoteAddr    string  `json:"remoteaddr,omitempty"`
 	RemotePort    float64 `json:"remoteport,omitempty"`
+	Namespace     string  `json:"namespace,omitempty"`
 }
 
 func newElements() *elements {
@@ -83,6 +85,11 @@ type statistics struct {
 	Exectime  string  `json:"exectime"`
 	Totalhits float64 `json:"totalhits"`
 }
+
+// Indicates module should use namespace resolution mode, which changes
+// the behavior on Linux; optional right now but may be the default in
+// the future.
+var namespaceMode bool
 
 func (r *run) ValidateParameters() (err error) {
 	for _, val := range r.Parameters.LocalMAC {
@@ -175,6 +182,10 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	err = r.ValidateParameters()
 	if err != nil {
 		panic(err)
+	}
+
+	if r.Parameters.SearchNamespaces {
+		namespaceMode = true
 	}
 
 	els := *newElements()
@@ -319,6 +330,13 @@ func HasLocalIP(ipStr string) (found bool, elements []element, err error) {
 	return
 }
 
+func printNamespaceId(ns string) string {
+	if ns != "" && ns != "default" {
+		return fmt.Sprintf(" namespace:[%v]", ns)
+	}
+	return ""
+}
+
 func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []string, err error) {
 	var (
 		el    elements
@@ -340,6 +358,7 @@ func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []stri
 		}
 		for _, el := range res {
 			resStr := fmt.Sprintf("found local mac %s for netstat localmac:'%s'", el.LocalMACAddr, val)
+			resStr += printNamespaceId(el.Namespace)
 			prints = append(prints, resStr)
 		}
 	}
@@ -350,6 +369,7 @@ func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []stri
 		for _, el := range res {
 			resStr := fmt.Sprintf("found neighbor mac %s %s for netstat neighbormac:'%s'",
 				el.RemoteMACAddr, el.RemoteAddr, val)
+			resStr += printNamespaceId(el.Namespace)
 			prints = append(prints, resStr)
 		}
 		if len(res) == 0 {
@@ -363,6 +383,7 @@ func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []stri
 		}
 		for _, el := range res {
 			resStr := fmt.Sprintf("found local ip %s for netstat localip:'%s'", el.LocalAddr, val)
+			resStr += printNamespaceId(el.Namespace)
 			prints = append(prints, resStr)
 		}
 		if len(res) == 0 {
@@ -377,6 +398,7 @@ func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []stri
 		for _, el := range res {
 			resStr := fmt.Sprintf("found connected tuple %s:%.0f with local tuple %s:%.0f for netstat connectedip:'%s'",
 				el.RemoteAddr, el.RemotePort, el.LocalAddr, el.LocalPort, val)
+			resStr += printNamespaceId(el.Namespace)
 			prints = append(prints, resStr)
 		}
 		if len(res) == 0 {
@@ -390,6 +412,7 @@ func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []stri
 		}
 		for _, el := range res {
 			resStr := fmt.Sprintf("found listening port %.0f for netstat listeningport:'%s'", el.LocalPort, val)
+			resStr += printNamespaceId(el.Namespace)
 			prints = append(prints, resStr)
 		}
 		if len(res) == 0 {
