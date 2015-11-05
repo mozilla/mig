@@ -8,9 +8,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"mig.ninja/mig"
 	"os"
 	"time"
+
+	"mig.ninja/mig"
 )
 
 func startRoutines(ctx Context) {
@@ -279,9 +280,26 @@ func startRoutines(ctx Context) {
 		ctx.Channels.Log <- mig.Log{Desc: "killDupAgents() routine started"}
 	}
 
+	// launch the routine that heartbeats the relays and terminates if connection is lost
+	go func() {
+		hostname, _ := os.Hostname()
+		hbmsg := fmt.Sprintf("host='%s' pid='%d'", hostname, os.Getpid())
+		for {
+			ctx.OpID = mig.GenID()
+			err = sendEvent(mig.Ev_Q_Sched_Hb, []byte(hbmsg+time.Now().UTC().String()), ctx)
+			if err != nil {
+				err = fmt.Errorf("relay heartbeating failed with error '%v'", err)
+				ctx.Channels.Terminate <- err
+			}
+			time.Sleep(60 * time.Second)
+		}
+	}()
+	ctx.Channels.Log <- mig.Log{Desc: "relay heartbeating routine started"}
+
 	// block here until a terminate message is received
 	exitReason := <-ctx.Channels.Terminate
-	fmt.Fprintf(os.Stderr, "Scheduler is shutting down. Reason: %s", exitReason)
+	time.Sleep(time.Second)
+	fmt.Fprintf(os.Stderr, "Scheduler is shutting down. Reason: %s\n", exitReason)
 	Destroy(ctx)
 	return
 }

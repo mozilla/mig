@@ -7,9 +7,10 @@ package main
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
-	"time"
 )
 
 // sendEvent publishes a message to the miginternal rabbitmq exchange

@@ -18,4 +18,7 @@ const (
 	Ev_Q_Agt_Auth_Fail = "agent.authentication.failure"
 	Ev_Q_Agt_New       = "agent.new"
 	Ev_Q_Cmd_Res       = "command.results"
+
+	// dummy queue for scheduler heartbeats to the relays
+	Ev_Q_Sched_Hb = "scheduler.heartbeat"
 )

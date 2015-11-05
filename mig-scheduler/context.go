@@ -10,17 +10,18 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/streadway/amqp"
-	"gopkg.in/gcfg.v1"
 	"io"
 	"io/ioutil"
-	"mig.ninja/mig"
-	migdb "mig.ninja/mig/database"
 	"net"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/streadway/amqp"
+	"gopkg.in/gcfg.v1"
+	"mig.ninja/mig"
+	migdb "mig.ninja/mig/database"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -317,6 +318,7 @@ func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx.Channels.CommandDone = make(chan mig.Command)
 	ctx.Channels.DetectDupAgents = make(chan string)
 	ctx.Channels.Log = make(chan mig.Log, 100000)
+	ctx.Channels.Terminate = make(chan error)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
 	return
 }
