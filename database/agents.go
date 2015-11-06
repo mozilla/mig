@@ -198,7 +198,8 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 		_ = txn.Rollback()
 		return
 	}
-	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc, pid, mode, environment, tags
+	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc,
+		version, pid, starttime, destructiontime, heartbeattime, status, mode, environment, tags
 		FROM agents WHERE agents.status IN ('%s', '%s') AND (%s)
 		ORDER BY agents.queueloc ASC`, mig.AgtStatusOnline, mig.AgtStatusIdle, target))
 	if rows != nil {
@@ -211,7 +212,9 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 	}
 	for rows.Next() {
 		var agent mig.Agent
-		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.PID, &agent.Mode, &jEnv, &jTags)
+		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Version,
+			&agent.PID, &agent.StartTime, &agent.DestructionTime, &agent.HeartBeatTS,
+			&agent.Status, &agent.Mode, &jEnv, &jTags)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
 			return
