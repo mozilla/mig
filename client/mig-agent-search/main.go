@@ -63,10 +63,10 @@ All Linux agents:
   $ mig-agent-search "environment->>'os'='linux'"
 
 Ubuntu agents running 32 bits
-  $ mig-agent-search "environment->>'ident' LIKE 'Ubuntu%' AND environment->>'arch'='386'
+  $ mig-agent-search "environment->>'ident' LIKE 'Ubuntu%%' AND environment->>'arch'='386'
 
 MacOS agents in datacenter SCL3
-  $ mig-agent-search "environment->>'os'='darwin' AND name LIKE '%\.scl3\.%'
+  $ mig-agent-search "environment->>'os'='darwin' AND name LIKE '%%\.scl3\.%%'
 
 Agents with uptime greater than 30 days
   $ mig-agent-search "starttime < NOW() - INTERVAL '30 days'"
