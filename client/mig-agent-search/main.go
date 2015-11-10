@@ -13,8 +13,72 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s - Search for MIG Agents\n"+
-			"Usage: %s name='some.agent.example.net' OR name='some.other.agent.example.com'\n",
+		fmt.Fprintf(os.Stderr, `%s <query> - Search for MIG Agents
+Usage: %s "name='some.agent.example.net' OR name='some.other.agent.example.com'"
+
+A search query is a SQL WHERE condition. It can filter on any field present in
+the MIG Agents table.
+	     Column      |           Type
+	-----------------+-------------------------
+	 id              | numeric
+	 name            | character varying(2048)
+	 queueloc        | character varying(2048)
+	 mode            | character varying(2048)
+	 version         | character varying(2048)
+	 pid             | integer
+	 starttime       | timestamp with time zone
+	 destructiontime | timestamp with time zone
+	 heartbeattime   | timestamp with time zone
+	 status          | character varying(255)
+	 environment     | json
+	 tags            | json
+
+The "environment" and "tags" fields are free JSON fields and can be queried using
+Postgresql's JSON querying syntax.
+
+Below is an example of environment document:
+	{
+	    "addresses": [
+		"172.21.0.3/20",
+		"fe80::3602:86ff:fe2b:6fdd/64"
+	    ],
+	    "arch": "amd64",
+	    "ident": "Debian testing-updates sid",
+	    "init": "upstart",
+	    "isproxied": false,
+	    "os": "linux",
+	    "publicip": "172.21.0.3"
+	}
+
+Below is an example of tags document:
+	{"operator":"linuxwall"}
+
+EXAMPLE QUERIES
+---------------
+
+Agent name "myserver.example.net"
+  $ mig-agent-search "name='myserver.example.net'"
+
+All Linux agents:
+  $ mig-agent-search "environment->>'os'='linux'"
+
+Ubuntu agents running 32 bits
+  $ mig-agent-search "environment->>'ident' LIKE 'Ubuntu%' AND environment->>'arch'='386'
+
+MacOS agents in datacenter SCL3
+  $ mig-agent-search "environment->>'os'='darwin' AND name LIKE '%\.scl3\.%'
+
+Agents with uptime greater than 30 days
+  $ mig-agent-search "starttime < NOW() - INTERVAL '30 days'"
+
+Linux agents in checkin mode that are currently idle but woke up in the last hour
+  $ mig-agent-search "mode='checkin' AND environment->>'os'='linux' AND status='idle' AND starttime > NOW() - INTERVAL '1 hour'"
+
+Agents operated by team "opsec"
+  $ mig-agent-search "tags->>'operator'='opsec'"
+
+Command line flags:
+`,
 			os.Args[0], os.Args[0])
 		flag.PrintDefaults()
 	}
