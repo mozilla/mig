@@ -23,10 +23,16 @@ type config struct {
 		DiscoverPublicIP bool
 		CheckIn          bool
 		Relay            string
+		Proxy            []string
 		Socket           string
 		HeartbeatFreq    string
 		ModuleTimeout    string
 		Api              string
+	}
+	ACL struct {
+		MasterKey  []string
+		Signatures uint
+		Name       []string
 	}
 	Certs struct {
 		Ca, Cert, Key string
@@ -74,6 +80,9 @@ func configLoad(path string) (err error) {
 	LOGGINGCONF = config.Logging
 	AMQPBROKER = config.Agent.Relay
 	APIURL = config.Agent.Api
+	ACLKEYS = config.ACL.MasterKey
+	ACLSIGMIN = config.ACL.Signatures
+	ACL = config.ACL.Name
 	HEARTBEATFREQ = hbf
 	MODULETIMEOUT = timeout
 	CACERT = cacert

@@ -7,6 +7,10 @@
     ; location of the mig api
     api             = "http://localhost:1664/api/v1/"
 
+    ; a list of proxies to try if direct connection doesn't work
+    proxy           = "proxy.example.net:3128"
+    proxy           = "proxy2.example.net:8080"
+
     ; location of the local stat socket
     socket           = "127.0.0.1:51664"
 
@@ -29,7 +33,22 @@
 
     ; in check-in mode, the agent connects to the relay, runs all pending commands
     ; and exits. this mode is used to run the agent as a cron job, not a daemon.
-    checkin = off
+    checkin          = off
+
+[acl]
+    ; Master Keys are used to verify ACL Signatures
+    key = "E60892BB9BD89A69F759A1A0A3D652173B763E8F"
+    key = "FA5D79F95F7AF7097C3E83DA26A86D5E5885AC11"
+
+    ; Signatures Minimum indicates how many signatures from ACL Keys
+    ; are required to verify and load an ACL
+    signatureminimum = 1
+
+    ; ACL indicates which Access Control Lists the agent should load.
+    ; For each group, an ACL will be requested from the API, verified
+    ; and loaded into the agent.
+    acl = default
+    acl = mygroup1
 
 [certs]
     ca  = "/path/to/ca/cert"

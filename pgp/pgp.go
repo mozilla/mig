@@ -3,19 +3,17 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
-
-/* The PGP package is a helper around Golang's OpenPGP implementation
- */
-package pgp /* import "mig.ninja/mig/pgp" */
+package pgp
 
 import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
 	"io"
 	"strings"
+
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/armor"
 )
 
 // ArmoredKeysToKeyring takes a list of PGP keys in armored form and transforms
@@ -121,6 +119,10 @@ func GetFingerprintFromSignature(data string, signature string, keyring io.Reade
 	}
 	fingerprint = hex.EncodeToString(entity.PrimaryKey.Fingerprint[:])
 	return
+}
+
+func GetFingerprintFromEntity(entity *openpgp.Entity) string {
+	return hex.EncodeToString(entity.PrimaryKey.Fingerprint[:])
 }
 
 func GenerateKeyPair(name, desc, email string) (pubkey, privkey []byte, fp string, err error) {

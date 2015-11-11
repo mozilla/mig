@@ -62,64 +62,21 @@ var HEARTBEATFREQ time.Duration = 300 * time.Second
 // timeout after which a module run is killed
 var MODULETIMEOUT time.Duration = 300 * time.Second
 
-// Control modules permissions by PGP keys
-var AGENTACL = [...]string{
-`{
-    "default": {
-        "minimumweight": 2,
-        "investigators": {
-            "Bob Kelso": {
-                "fingerprint": "E60892BB....",
-                "weight": 2
-            },
-            "Morpheus": {
-                "fingerprint": "AD595634....",
-                "weight": 3
-            }
-        }
-    }
-}`,
-`{
-    "agentdestroy": {
-        "minimumweight": 1,
-        "investigators": {
-            "MIG Scheduler": {
-                "fingerprint": "E60892BB...",
-                "weight": 1
-            }
-        }
-    }
-}`,
-}
+// === Access Control List ===
 
+// Master Keys are used to verify ACL Signatures
+var ACLKEYS = [...]string{
+`E60892BB9BD89A69F759A1A0A3D652173B763E8F`,
+`FA5D79F95F7AF7097C3E83DA26A86D5E5885AC11`}
 
-// PGP public keys that are authorized to sign actions
-// this is an array of strings, put each public key block
-// into its own array entry, as shown below
-var PUBLICPGPKEYS = [...]string{
-`
------BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v1; Name: User for MIG test (Another test user for Mozilla Investigator) <usertest+mig@example.org>
+// Signatures indicates how many signatures from master keys
+// are required to accept an ACL
+var ACLSIGMIN int = 1
 
-mI0EUvJc0gEEAJuW77RlSYpAa777tI1foSVB6Vxp7XVE6fe7lmc6PokvMHjKZCB9
-.........
-lMVXz7c/B8T79KIH0EDAG8o6AbvZQdTMSZp+Ap562smLkV+xsPo1O1Zd/hDJKYuY
-936oKqajBV4Jh8vXGb3r
-=SWyb
------END PGP PUBLIC KEY BLOCK-----
-`,
-`
------BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v1; Name: Test User (This is a test user for Mozilla Investigator) <testuser+mig@example.net>
-
-mI0EUvJcngEEAKH4MbzljzAha4MzUy4wnNHqNX65hlsWD3wPMAPL4R0F8h9VuyLw
-.........
-vld2mOto/1HZ7I3re0ItO/M+kpn1VgcsWFTmunohlmAZUKh9LK6gGZ4nXEqe3Lbx
-QnD9SDA9/d80
-=phhK
------END PGP PUBLIC KEY BLOCK-----
-`}
-
+// MemberOf indicates which groups the agent is a member of.
+// For each group, an ACL will be requested from the API, verified
+// and loaded into the agent.
+var ACL = [...]string{`default`, `mygroup1`}
 
 // CA cert that signs the rabbitmq server certificate, for verification
 // of the chain of trust. If rabbitmq uses a self-signed cert, add this
