@@ -10,6 +10,7 @@ package modules /* import "mig.ninja/mig/modules" */
 // A mig module implements this interface
 type Moduler interface {
 	NewRun() Runner
+	GetSandboxProfile() SandboxProfile
 }
 
 // The set of registered modules

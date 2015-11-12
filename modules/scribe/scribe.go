@@ -36,10 +36,15 @@ func endCounters() {
 }
 
 type module struct {
+	SandboxProfile modules.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
+}
+
+func (m *module) GetSandboxProfile() modules.SandboxProfile {
+	return m.SandboxProfile
 }
 
 func init() {

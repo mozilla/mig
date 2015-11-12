@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/seccomp/libseccomp-golang"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
@@ -26,14 +27,37 @@ import (
 )
 
 type module struct {
+	SandboxProfile modules.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
+func (m *module) GetSandboxProfile() modules.SandboxProfile {
+	return m.SandboxProfile
+}
+
 func init() {
-	modules.Register("ping", new(module))
+	m := new(module)
+	sandbox := modules.SandboxProfile{
+		DefaultPolicy: seccomp.ActTrap,
+		Filters: []modules.FilterOperation{
+			modules.FilterOperation{
+				FilterOn: []string{"clone", "close", "connect", "epoll_create1",
+					"epoll_ctl", "epoll_wait", "exit_group",
+					"exit", "futex", "futex", "getpeername",
+					"getsockname", "getsockopt", "mmap",
+					"mprotect", "nanosleep", "openat", "read",
+					"rt_sigprocmask", "rt_sigreturn", "select",
+					"setsockopt", "stat", "write",
+				},
+				Action: seccomp.ActAllow,
+			},
+		},
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("ping", m)
 }
 
 type run struct {

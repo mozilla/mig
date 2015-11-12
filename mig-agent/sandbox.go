@@ -1,4 +1,5 @@
 package main
+
 /*
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,13 +26,12 @@ void install_sighandler() {
 import "C"
 
 import (
-	"log"
 	"github.com/seccomp/libseccomp-golang"
+	"log"
+	"mig.ninja/mig/modules"
 )
 
-
-func jail(calls ...string) {
-
+func jail(sandboxProfile modules.SandboxProfile) {
 	C.install_sighandler()
 	filter, err := seccomp.NewFilter(seccomp.ActTrap)
 	if err != nil {
@@ -46,19 +46,21 @@ func jail(calls ...string) {
 	} else if action != seccomp.ActTrap {
 		log.Printf("Default action of filter was set incorrectly!\n")
 	}
-	for _, call_name := range calls {
-		call, err := seccomp.GetSyscallFromName(call_name)
-		if err != nil {
-			log.Fatal("Error getting syscall number of %s: %s\n", call_name, err)
-		} else {
-			log.Printf("Got hook to syscall %d\n", call)
-		}
-
-		err = filter.AddRule(call, seccomp.ActAllow)
-		if err != nil {
-			log.Fatal("Error adding rule to restrict syscall: %s\n", err)
-		} else {
-			log.Printf("Added rule to restrict syscall open\n")
+	log.Printf("%s\n", sandboxProfile.DefaultPolicy)
+	for _, profileFilter := range sandboxProfile.Filters {
+		for _, call_name := range profileFilter.FilterOn {
+			call, err := seccomp.GetSyscallFromName(call_name)
+			if err != nil {
+				log.Fatal("Error getting syscall number of %s: %s\n", call_name, err)
+			} else {
+				log.Printf("Got hook to syscall %d\n", call)
+			}
+			err = filter.AddRule(call, profileFilter.Action)
+			if err != nil {
+				log.Fatal("Error adding rule to restrict syscall: %s\n", err)
+			} else {
+				log.Printf("Added rule to restrict syscall open\n")
+			}
 		}
 	}
 	filter.SetTsync(true)

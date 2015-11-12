@@ -162,32 +162,7 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 	}
 	// instanciate and call module
 	run := modules.Available[mode].NewRun()
-	jail("clone",
-		"close",
-		"connect",
-		"epoll_create1",
-		"epoll_ctl",
-		"epoll_wait",
-		"exit_group",
-		"exit",
-		"futex",
-		"getpeername",
-		"getsockname",
-		"getsockopt",
-		"mmap",
-		"mprotect",
-		"nanosleep",
-		"openat",
-		"read",
-		"rt_sigprocmask",
-		"rt_sigreturn",
-		"sched_yield",
-		"select",
-		"setsockopt",
-		//"socket",
-		"stat",
-		"write")
-
+	jail(modules.Available[mode].GetSandboxProfile())
 	out = run.Run(os.Stdin)
 	if pretty {
 		var modres modules.Result
