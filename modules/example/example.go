@@ -39,10 +39,15 @@ import (
 // An instance of this type will represent this module; it's possible to add
 // additional data fields here, although that is rarely needed.
 type module struct {
+	SandboxProfile modules.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
+}
+
+func (m *module) GetSandboxProfile() modules.SandboxProfile {
+	return m.SandboxProfile
 }
 
 // init is called by the Go runtime at startup. We use this function to

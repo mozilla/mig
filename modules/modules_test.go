@@ -15,10 +15,15 @@ import (
 )
 
 type testModule struct {
+	SandboxProfile SandboxProfile
 }
 
 func (m *testModule) NewRun() Runner {
 	return new(testRunner)
+}
+
+func (m *testModule) GetSandboxProfile() SandboxProfile {
+	return m.SandboxProfile
 }
 
 type testRunner struct {
