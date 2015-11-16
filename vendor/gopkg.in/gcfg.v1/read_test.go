@@ -205,6 +205,8 @@ var readtests = []struct {
 	//{"[xsection]\nname=value", &cBasic{XSection: cBasicS4{XName: "value"}}, false},
 	// name specified as struct tag
 	{"[tag-name]\nname=value", &cBasic{TagName: cBasicS1{Name: "value"}}, true},
+	// empty subsections
+	{"\n[sub \"A\"]\n[sub \"B\"]", &cSubs{map[string]*cSubsS1{"A": &cSubsS1{}, "B": &cSubsS1{}}}, true},
 }}, {"multivalue", []readtest{
 	// unnamed slice type: treat as multi-value
 	{"\n[m1]", &cMulti{M1: cMultiS1{}}, true},

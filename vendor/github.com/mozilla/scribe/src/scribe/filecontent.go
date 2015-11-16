@@ -18,13 +18,13 @@ import (
 	"regexp"
 )
 
-type filecontent struct {
-	Path       string `json:"path"`
-	File       string `json:"file"`
-	Expression string `json:"expression"`
-	Concat     string `json:"concat"`
+type FileContent struct {
+	Path       string `json:"path,omitempty"`
+	File       string `json:"file,omitempty"`
+	Expression string `json:"expression,omitempty"`
+	Concat     string `json:"concat,omitempty"`
 
-	ImportChain []string `json:"import-chain"`
+	ImportChain []string `json:"import-chain,omitempty"`
 
 	matches []contentMatch
 }
@@ -39,7 +39,7 @@ type matchLine struct {
 	groups    []string
 }
 
-func (f *filecontent) validate(d *Document) error {
+func (f *FileContent) validate(d *Document) error {
 	if len(f.Path) == 0 {
 		return fmt.Errorf("filecontent path must be set")
 	}
@@ -64,7 +64,7 @@ func (f *filecontent) validate(d *Document) error {
 	return nil
 }
 
-func (f *filecontent) fireChains(d *Document) ([]evaluationCriteria, error) {
+func (f *FileContent) fireChains(d *Document) ([]evaluationCriteria, error) {
 	if len(f.ImportChain) == 0 {
 		return nil, nil
 	}
@@ -85,12 +85,12 @@ func (f *filecontent) fireChains(d *Document) ([]evaluationCriteria, error) {
 	}
 	ret := make([]evaluationCriteria, 0)
 	for _, x := range uids {
-		varlist := make([]variable, 0)
+		varlist := make([]Variable, 0)
 		debugPrint("fireChains(): run for \"%v\"\n", x)
 
 		// Build our variable list for the filecontent chain import.
 		dirent, _ := path.Split(x)
-		newvar := variable{Key: "chain_root", Value: dirent}
+		newvar := Variable{Key: "chain_root", Value: dirent}
 		varlist = append(varlist, newvar)
 
 		// Execute each chain entry in order for each identifier.
@@ -121,7 +121,7 @@ func (f *filecontent) fireChains(d *Document) ([]evaluationCriteria, error) {
 	return ret, nil
 }
 
-func (f *filecontent) mergeCriteria(c []evaluationCriteria) {
+func (f *FileContent) mergeCriteria(c []evaluationCriteria) {
 	for _, x := range c {
 		nml := matchLine{}
 		nml.groups = make([]string, 0)
@@ -133,19 +133,19 @@ func (f *filecontent) mergeCriteria(c []evaluationCriteria) {
 	}
 }
 
-func (f *filecontent) isChain() bool {
+func (f *FileContent) isChain() bool {
 	if hasChainVariables(f.Path) {
 		return true
 	}
 	return false
 }
 
-func (f *filecontent) expandVariables(v []variable) {
+func (f *FileContent) expandVariables(v []Variable) {
 	f.Path = variableExpansion(v, f.Path)
 	f.File = variableExpansion(v, f.File)
 }
 
-func (f *filecontent) getCriteria() (ret []evaluationCriteria) {
+func (f *FileContent) getCriteria() (ret []evaluationCriteria) {
 	for _, x := range f.matches {
 		for _, y := range x.matches {
 			for _, z := range y.groups {
@@ -162,7 +162,7 @@ func (f *filecontent) getCriteria() (ret []evaluationCriteria) {
 	return ret
 }
 
-func (f *filecontent) prepare() error {
+func (f *FileContent) prepare() error {
 	debugPrint("prepare(): analyzing file system, path %v, file \"%v\"\n", f.Path, f.File)
 
 	sfl := newSimpleFileLocator()

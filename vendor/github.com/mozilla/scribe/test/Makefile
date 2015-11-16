@@ -1,4 +1,5 @@
-TESTDIRS = filecontent filename package concat raw import-chain hasline evrtest
+TESTDIRS = filecontent filename package concat raw import-chain hasline tags \
+	   evrtest
 
 all:
 

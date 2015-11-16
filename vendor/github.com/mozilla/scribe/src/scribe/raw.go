@@ -11,27 +11,27 @@ import (
 	"fmt"
 )
 
-type raw struct {
-	Identifiers []rawIdentifiers `json:"identifiers"`
+type Raw struct {
+	Identifiers []RawIdentifiers `json:"identifiers,omitempty"`
 }
 
-type rawIdentifiers struct {
-	Identifier string `json:"identifier"`
-	Value      string `json:"value"`
+type RawIdentifiers struct {
+	Identifier string `json:"identifier,omitempty"`
+	Value      string `json:"value,omitempty"`
 }
 
-func (r *raw) isChain() bool {
+func (r *Raw) isChain() bool {
 	return false
 }
 
-func (r *raw) fireChains(d *Document) ([]evaluationCriteria, error) {
+func (r *Raw) fireChains(d *Document) ([]evaluationCriteria, error) {
 	return nil, nil
 }
 
-func (r *raw) mergeCriteria(c []evaluationCriteria) {
+func (r *Raw) mergeCriteria(c []evaluationCriteria) {
 }
 
-func (r *raw) validate(d *Document) error {
+func (r *Raw) validate(d *Document) error {
 	if len(r.Identifiers) == 0 {
 		return fmt.Errorf("at least one identifier must be present")
 	}
@@ -43,7 +43,7 @@ func (r *raw) validate(d *Document) error {
 	return nil
 }
 
-func (r *raw) getCriteria() []evaluationCriteria {
+func (r *Raw) getCriteria() []evaluationCriteria {
 	ret := make([]evaluationCriteria, 0)
 	for _, x := range r.Identifiers {
 		nc := evaluationCriteria{}
@@ -54,9 +54,9 @@ func (r *raw) getCriteria() []evaluationCriteria {
 	return ret
 }
 
-func (r *raw) prepare() error {
+func (r *Raw) prepare() error {
 	return nil
 }
 
-func (r *raw) expandVariables(v []variable) {
+func (r *Raw) expandVariables(v []Variable) {
 }

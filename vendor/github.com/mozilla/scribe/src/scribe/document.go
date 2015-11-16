@@ -14,9 +14,9 @@ import (
 // A scribe document. Contains all tests and other information used to execute
 // the document.
 type Document struct {
-	Variables []variable `json:"variables"`
-	Objects   []object   `json:"objects"`
-	Tests     []test     `json:"tests"`
+	Variables []Variable `json:"variables,omitempty"`
+	Objects   []Object   `json:"objects,omitempty"`
+	Tests     []Test     `json:"tests,omitempty"`
 }
 
 // Validate a scribe document for consistency. This identifies any errors in
@@ -71,7 +71,7 @@ func (d *Document) prepareObjects() error {
 }
 
 func (d *Document) objectPrepared(obj string) (bool, error) {
-	var objptr *object
+	var objptr *Object
 	for i := range d.Objects {
 		if d.Objects[i].Object == obj {
 			objptr = &d.Objects[i]
@@ -98,7 +98,7 @@ func (d *Document) runTests() error {
 }
 
 // Return a pointer to a test instance of the test whose identifier matches
-func (d *Document) getTest(testid string) (*test, error) {
+func (d *Document) getTest(testid string) (*Test, error) {
 	for i := range d.Tests {
 		if d.Tests[i].TestID == testid {
 			return &d.Tests[i], nil

@@ -12,10 +12,10 @@ import (
 	"regexp"
 )
 
-type hasline struct {
-	Path       string `json:"path"`
-	File       string `json:"file"`
-	Expression string `json:"expression"`
+type HasLine struct {
+	Path       string `json:"path,omitempty"`
+	File       string `json:"file,omitempty"`
+	Expression string `json:"expression,omitempty"`
 
 	matches []haslineStatus
 }
@@ -25,7 +25,7 @@ type haslineStatus struct {
 	found bool
 }
 
-func (h *hasline) validate(d *Document) error {
+func (h *HasLine) validate(d *Document) error {
 	if len(h.Path) == 0 {
 		return fmt.Errorf("hasline path must be set")
 	}
@@ -46,23 +46,23 @@ func (h *hasline) validate(d *Document) error {
 	return nil
 }
 
-func (h *hasline) mergeCriteria(c []evaluationCriteria) {
+func (h *HasLine) mergeCriteria(c []evaluationCriteria) {
 }
 
-func (h *hasline) fireChains(d *Document) ([]evaluationCriteria, error) {
+func (h *HasLine) fireChains(d *Document) ([]evaluationCriteria, error) {
 	return nil, nil
 }
 
-func (h *hasline) isChain() bool {
+func (h *HasLine) isChain() bool {
 	return false
 }
 
-func (h *hasline) expandVariables(v []variable) {
+func (h *HasLine) expandVariables(v []Variable) {
 	h.Path = variableExpansion(v, h.Path)
 	h.File = variableExpansion(v, h.File)
 }
 
-func (h *hasline) getCriteria() (ret []evaluationCriteria) {
+func (h *HasLine) getCriteria() (ret []evaluationCriteria) {
 	for _, x := range h.matches {
 		n := evaluationCriteria{}
 		n.identifier = x.path
@@ -72,7 +72,7 @@ func (h *hasline) getCriteria() (ret []evaluationCriteria) {
 	return ret
 }
 
-func (h *hasline) prepare() error {
+func (h *HasLine) prepare() error {
 	debugPrint("prepare(): analyzing file system, path %v, file \"%v\"\n", h.Path, h.File)
 
 	sfl := newSimpleFileLocator()
