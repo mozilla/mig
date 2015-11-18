@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mig.ninja/mig/client"
 	"strconv"
 	"strings"
 	"time"
+
+	"mig.ninja/mig/client"
 
 	"github.com/bobappleyard/readline"
 )
@@ -69,6 +70,14 @@ func agentReader(input string, cli client.Client) (err error) {
 			if err != nil {
 				panic(err)
 			}
+			jEnv, err := json.MarshalIndent(agt.Env, "", "    ")
+			if err != nil {
+				panic(err)
+			}
+			jTags, err := json.MarshalIndent(agt.Tags, "", "    ")
+			if err != nil {
+				panic(err)
+			}
 			fmt.Printf(`Agent ID %.0f
 name       %s
 last seen  %s ago
@@ -79,8 +88,10 @@ platform   %s %s
 pid        %d
 starttime  %s
 status     %s
+environment %s
+tags %s
 `, agt.ID, agt.Name, time.Now().Sub(agt.HeartBeatTS).String(), agt.Version, agt.Mode, agt.QueueLoc,
-				agt.Env.OS, agt.Env.Arch, agt.PID, agt.StartTime, agt.Status)
+				agt.Env.OS, agt.Env.Arch, agt.PID, agt.StartTime, agt.Status, jEnv, jTags)
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
