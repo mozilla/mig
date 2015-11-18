@@ -11,8 +11,8 @@ import (
 	"fmt"
 )
 
-type pkg struct {
-	Name    string `json:"name"`
+type Pkg struct {
+	Name    string `json:"name,omitempty"`
 	pkgInfo []packageInfo
 }
 
@@ -21,25 +21,25 @@ type packageInfo struct {
 	Version string
 }
 
-func (p *pkg) isChain() bool {
+func (p *Pkg) isChain() bool {
 	return false
 }
 
-func (p *pkg) validate(d *Document) error {
+func (p *Pkg) validate(d *Document) error {
 	if len(p.Name) == 0 {
 		return fmt.Errorf("package must specify name")
 	}
 	return nil
 }
 
-func (p *pkg) fireChains(d *Document) ([]evaluationCriteria, error) {
+func (p *Pkg) fireChains(d *Document) ([]evaluationCriteria, error) {
 	return nil, nil
 }
 
-func (p *pkg) mergeCriteria(c []evaluationCriteria) {
+func (p *Pkg) mergeCriteria(c []evaluationCriteria) {
 }
 
-func (p *pkg) getCriteria() (ret []evaluationCriteria) {
+func (p *Pkg) getCriteria() (ret []evaluationCriteria) {
 	for _, x := range p.pkgInfo {
 		n := evaluationCriteria{}
 		n.identifier = x.Name
@@ -49,7 +49,7 @@ func (p *pkg) getCriteria() (ret []evaluationCriteria) {
 	return ret
 }
 
-func (p *pkg) prepare() error {
+func (p *Pkg) prepare() error {
 	debugPrint("prepare(): preparing information for package \"%v\"\n", p.Name)
 	p.pkgInfo = make([]packageInfo, 0)
 	ret := getPackage(p.Name)
@@ -62,6 +62,6 @@ func (p *pkg) prepare() error {
 	return nil
 }
 
-func (p *pkg) expandVariables(v []variable) {
+func (p *Pkg) expandVariables(v []Variable) {
 	p.Name = variableExpansion(v, p.Name)
 }

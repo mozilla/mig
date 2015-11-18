@@ -11,12 +11,12 @@ import (
 	"regexp"
 )
 
-type variable struct {
+type Variable struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
-func variableExpansion(v []variable, in string) string {
+func variableExpansion(v []Variable, in string) string {
 	res := in
 	for _, x := range v {
 		s := "\\$\\{" + x.Key + "\\}"

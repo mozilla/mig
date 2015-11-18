@@ -106,7 +106,9 @@ go_vendor_dependencies:
 	$(GOGETTER) github.com/mozilla/masche/memsearch
 	$(GOGETTER) github.com/mozilla/masche/process
 	$(GOGETTER) github.com/mozilla/scribe/src/scribe
-	$(GOGETTER) github.com/oschwald/geoip2-golang
+	# go 1.5 vendoring and submodules don't work well, so comment this deps out
+	# https://github.com/oschwald/geoip2-golang/issues/13
+	#$(GOGETTER) github.com/oschwald/geoip2-golang
 	$(GOGETTER) github.com/streadway/amqp
 	$(GOGETTER) github.com/gorhill/cronexpr
 	$(GOGETTER) golang.org/x/crypto/openpgp

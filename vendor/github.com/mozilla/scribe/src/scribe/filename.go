@@ -13,9 +13,9 @@ import (
 	"regexp"
 )
 
-type filename struct {
-	Path string `json:"path"`
-	File string `json:"file"`
+type FileName struct {
+	Path string `json:"path,omitempty"`
+	File string `json:"file,omitempty"`
 
 	matches []nameMatch
 }
@@ -25,18 +25,18 @@ type nameMatch struct {
 	match string
 }
 
-func (f *filename) isChain() bool {
+func (f *FileName) isChain() bool {
 	return false
 }
 
-func (f *filename) fireChains(d *Document) ([]evaluationCriteria, error) {
+func (f *FileName) fireChains(d *Document) ([]evaluationCriteria, error) {
 	return nil, nil
 }
 
-func (f *filename) mergeCriteria(c []evaluationCriteria) {
+func (f *FileName) mergeCriteria(c []evaluationCriteria) {
 }
 
-func (f *filename) validate(d *Document) error {
+func (f *FileName) validate(d *Document) error {
 	if len(f.Path) == 0 {
 		return fmt.Errorf("filename path must be set")
 	}
@@ -46,11 +46,11 @@ func (f *filename) validate(d *Document) error {
 	return nil
 }
 
-func (f *filename) expandVariables(v []variable) {
+func (f *FileName) expandVariables(v []Variable) {
 	f.Path = variableExpansion(v, f.Path)
 }
 
-func (f *filename) getCriteria() (ret []evaluationCriteria) {
+func (f *FileName) getCriteria() (ret []evaluationCriteria) {
 	for _, x := range f.matches {
 		n := evaluationCriteria{}
 		n.identifier = x.path
@@ -60,7 +60,7 @@ func (f *filename) getCriteria() (ret []evaluationCriteria) {
 	return ret
 }
 
-func (f *filename) prepare() error {
+func (f *FileName) prepare() error {
 	debugPrint("prepare(): analyzing file system, path %v, file \"%v\"\n", f.Path, f.File)
 
 	sfl := newSimpleFileLocator()

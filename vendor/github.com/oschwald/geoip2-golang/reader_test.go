@@ -2,11 +2,12 @@ package geoip2
 
 import (
 	"fmt"
-	. "launchpad.net/gocheck"
 	"math/rand"
 	"net"
 	"testing"
 	"time"
+
+	. "gopkg.in/check.v1"
 )
 
 func TestGeoIP2(t *testing.T) { TestingT(t) }
@@ -32,15 +33,15 @@ func (s *MySuite) TestReader(c *C) {
 	m := reader.Metadata()
 	c.Assert(m.BinaryFormatMajorVersion, Equals, uint(2))
 	c.Assert(m.BinaryFormatMinorVersion, Equals, uint(0))
-	c.Assert(m.BuildEpoch, Equals, uint(1403110838))
-	c.Assert(m.DatabaseType, Equals, "GeoIP2 City")
+	c.Assert(m.BuildEpoch, Equals, uint(1436981935))
+	c.Assert(m.DatabaseType, Equals, "GeoIP2-City")
 	c.Assert(m.Description, DeepEquals, map[string]string{
 		"en": "GeoIP2 City Test Database (a small sample of real GeoIP2 data)",
 		"zh": "小型数据库",
 	})
 	c.Assert(m.IPVersion, Equals, uint(6))
 	c.Assert(m.Languages, DeepEquals, []string{"en", "zh"})
-	c.Assert(m.NodeCount, Equals, uint(1218))
+	c.Assert(m.NodeCount, Equals, uint(1240))
 	c.Assert(m.RecordSize, Equals, uint(28))
 
 	c.Assert(record.City.GeoNameID, Equals, uint(2643743))
@@ -176,6 +177,29 @@ func (s *MySuite) TestISP(c *C) {
 	c.Assert(record.AutonomousSystemOrganization, Equals, "Telstra Pty Ltd")
 	c.Assert(record.ISP, Equals, "Telstra Internet")
 	c.Assert(record.Organization, Equals, "Telstra Internet")
+
+}
+
+func (s *MySuite) TestAnonymousIP(c *C) {
+	reader, err := Open("test-data/test-data/GeoIP2-Anonymous-IP-Test.mmdb")
+	if err != nil {
+		c.Log(err)
+		c.Fail()
+	}
+	defer reader.Close()
+
+	record, err := reader.AnonymousIP(net.ParseIP("1.2.0.0"))
+	if err != nil {
+		c.Log(err)
+		c.Fail()
+	}
+
+	c.Assert(record.IsAnonymous, Equals, true)
+
+	c.Assert(record.IsAnonymousVPN, Equals, true)
+	c.Assert(record.IsHostingProvider, Equals, false)
+	c.Assert(record.IsPublicProxy, Equals, false)
+	c.Assert(record.IsTorExitNode, Equals, false)
 
 }
 

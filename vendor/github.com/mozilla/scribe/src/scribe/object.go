@@ -11,13 +11,13 @@ import (
 	"fmt"
 )
 
-type object struct {
+type Object struct {
 	Object      string      `json:"object"`
-	FileContent filecontent `json:"filecontent"`
-	FileName    filename    `json:"filename"`
-	Package     pkg         `json:"package"`
-	Raw         raw         `json:"raw"`
-	HasLine     hasline     `json:"hasline"`
+	FileContent FileContent `json:"filecontent"`
+	FileName    FileName    `json:"filename"`
+	Package     Pkg         `json:"package"`
+	Raw         Raw         `json:"raw"`
+	HasLine     HasLine     `json:"hasline"`
 
 	isChain  bool  // True if object is part of an import chain.
 	prepared bool  // True if object has been prepared.
@@ -28,13 +28,13 @@ type genericSource interface {
 	prepare() error
 	getCriteria() []evaluationCriteria
 	isChain() bool
-	expandVariables([]variable)
+	expandVariables([]Variable)
 	validate(d *Document) error
 	mergeCriteria([]evaluationCriteria)
 	fireChains(*Document) ([]evaluationCriteria, error)
 }
 
-func (o *object) validate(d *Document) error {
+func (o *Object) validate(d *Document) error {
 	if len(o.Object) == 0 {
 		return fmt.Errorf("an object in document has no identifier")
 	}
@@ -49,11 +49,11 @@ func (o *object) validate(d *Document) error {
 	return nil
 }
 
-func (o *object) markChain() {
+func (o *Object) markChain() {
 	o.isChain = o.getSourceInterface().isChain()
 }
 
-func (o *object) getSourceInterface() genericSource {
+func (o *Object) getSourceInterface() genericSource {
 	if o.Package.Name != "" {
 		return &o.Package
 	} else if o.FileContent.Path != "" {
@@ -68,7 +68,7 @@ func (o *object) getSourceInterface() genericSource {
 	return nil
 }
 
-func (o *object) fireChains(d *Document) error {
+func (o *Object) fireChains(d *Document) error {
 	si := o.getSourceInterface()
 	// We only fire chains on root object types, not on chain entries
 	// themselves.
@@ -92,7 +92,7 @@ func (o *object) fireChains(d *Document) error {
 	return nil
 }
 
-func (o *object) prepare(d *Document) error {
+func (o *Object) prepare(d *Document) error {
 	if o.isChain {
 		debugPrint("prepare(): skipping chain object \"%v\"\n", o.Object)
 		return nil

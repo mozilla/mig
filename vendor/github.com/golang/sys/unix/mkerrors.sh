@@ -12,11 +12,16 @@ export LC_ALL=C
 export LC_CTYPE=C
 
 if test -z "$GOARCH" -o -z "$GOOS"; then
-  echo 1>&2 "GOARCH or GOOS not defined in environment"
-  exit 1
+	echo 1>&2 "GOARCH or GOOS not defined in environment"
+	exit 1
 fi
 
-CC=${CC:-gcc}
+CC=${CC:-cc}
+
+if [[ "$GOOS" -eq "solaris" ]]; then
+	# Assumes GNU versions of utilities in PATH.
+	export PATH=/usr/gnu/bin:$PATH
+fi
 
 uname=$(uname)
 
@@ -200,6 +205,7 @@ includes_OpenBSD='
 '
 
 includes_SunOS='
+#include <limits.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
@@ -303,6 +309,9 @@ ccflags="$@"
 		$2 ~ /^(NETLINK|NLM|NLMSG|NLA|IFA|IFAN|RT|RTCF|RTN|RTPROT|RTNH|ARPHRD|ETH_P)_/ ||
 		$2 ~ /^SIOC/ ||
 		$2 ~ /^TIOC/ ||
+		$2 ~ /^TCGET/ ||
+		$2 ~ /^TCSET/ ||
+		$2 ~ /^TC(FLSH|SBRK|XONC)$/ ||
 		$2 !~ "RTF_BITS" &&
 		$2 ~ /^(IFF|IFT|NET_RT|RTM|RTF|RTV|RTA|RTAX)_/ ||
 		$2 ~ /^BIOC/ ||

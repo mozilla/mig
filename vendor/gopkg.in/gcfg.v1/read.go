@@ -100,6 +100,13 @@ func readInto(config interface{}, fset *token.FileSet, file *token.File, src []b
 			if tok != token.EOL && tok != token.EOF && tok != token.COMMENT {
 				return errfn("expected EOL, EOF, or comment")
 			}
+			// If a section/subsection header was found, ensure a
+			// container object is created, even if there are no
+			// variables further down.
+			err := set(config, sect, sectsub, "", true, "")
+			if err != nil {
+				return err
+			}
 		case token.IDENT:
 			if sect == "" {
 				return errfn("expected section header")
