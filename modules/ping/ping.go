@@ -44,33 +44,13 @@ func init() {
 		DefaultPolicy: seccomp.ActTrap,
 		Filters: []modules.FilterOperation{
 			modules.FilterOperation{
-				FilterOn: []string{
-					"epoll_ctl",
-					"select",
-					"setsockopt",
-					"close",
-					"socket",
-					"connect",
-					"futex",
-					"getsockname",
-					"getpeername",
-					"write",
-					"epoll_wait",
-					"read",
-					"mmap",
-					"rt_sigprocmask",
-					"mprotect",
-					"openat", // Used for DNS resolution
-					"getsockopt",
-					"clone",
-					"stat",
-					"epoll_create1",
-					"getpid", // Necessary for ICMP ping
-
-					// Used for pretty printing the violating syscall (rare)
-					"exit_group",
-					"rt_sigreturn",
-
+				FilterOn: []string{"clone", "close", "connect", "epoll_create1",
+					"epoll_ctl", "epoll_wait", "exit_group",
+					"exit", "futex", "futex", "getpeername",
+					"getsockname", "getsockopt", "mmap",
+					"mprotect", "nanosleep", "openat", "read",
+					"rt_sigprocmask", "rt_sigreturn", "select",
+					"setsockopt", "stat", "write",
 				},
 				Action: seccomp.ActAllow,
 			},

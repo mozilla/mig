@@ -19,7 +19,6 @@ import (
 	"github.com/mozilla/masche/listlibs"
 	"github.com/mozilla/masche/memaccess"
 	"github.com/mozilla/masche/process"
-	"github.com/seccomp/libseccomp-golang"
 	"io"
 	"mig.ninja/mig/modules"
 	"regexp"
@@ -41,32 +40,7 @@ func (m *module) GetSandboxProfile() modules.SandboxProfile {
 }
 
 func init() {
-	m := new(module)
-	sandbox := modules.SandboxProfile{
-		DefaultPolicy: seccomp.ActTrap,
-		Filters: []modules.FilterOperation{
-			modules.FilterOperation{
-				FilterOn: []string{
-					"read",
-					"mmap",
-					"futex",
-					"openat",
-					"getdents64",
-					"lstat",
-					"close",
-
-					// Used for pretty printing the violating syscall (rare)
-					"write",
-					"exit_group",
-					"rt_sigreturn",
-
-				},
-				Action: seccomp.ActAllow,
-			},
-		},
-	}
-	m.SandboxProfile = sandbox
-	modules.Register("memory", m)
+	modules.Register("memory", new(module))
 }
 
 type run struct {
