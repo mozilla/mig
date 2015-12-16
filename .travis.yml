@@ -12,6 +12,14 @@ notifications:
             - ulfr@mozilla.com
         on_success: never
         on_failure: always
+before_install:
+    # this is a fix to get rng-tools to work in travis-ci
+    - sudo apt-get update -qq
+    - sudo apt-get install --yes rng-tools
+    - sudo rm -f /dev/random
+    - sudo mknod -m 0666 /dev/random c 1 9
+    - echo HRNGDEVICE=/dev/urandom | sudo tee /etc/default/rng-tools
+    - sudo /etc/init.d/rng-tools restart
 script:
     - export OLDPATH=$(pwd)
     - cd
