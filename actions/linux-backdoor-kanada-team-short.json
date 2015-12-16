@@ -20,7 +20,7 @@
                         "paths": [
                             "/bin/ls"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "adbee847c12c73605ff657e668c8096df138f824eb542027a10c0b5c07619c8d"
                         ]
                     },
@@ -29,7 +29,7 @@
                         "paths": [
                             "/bin/netstat"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "39823089fa324ceba00d5939d2e7b308fec28ee0f16c6caa4739a53ad6ecee64"
                         ]
                     },
@@ -38,7 +38,7 @@
                         "paths": [
                             "/bin/ps"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "72a44f3e7c4d9c9b72b1bda77d687346447d8e398983965b8e690eeeadebdc76"
                         ]
                     },
@@ -47,7 +47,7 @@
                         "paths": [
                             "/sbin/ifconfig"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "89a400077d74d1d76103180f41f40de6bcfffc89de461f497eef2ea763a68d73"
                         ]
                     },
@@ -56,7 +56,7 @@
                         "paths": [
                             "/usr/bin/dir"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "adbee847c12c73605ff657e668c8096df138f824eb542027a10c0b5c07619c8d"
                         ]
                     },
@@ -65,7 +65,7 @@
                         "paths": [
                             "/usr/bin/find"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "3efee976d6565edd1492aa1047ffa10be6025de18206f6c68f91dd218801778f"
                         ]
                     },
@@ -74,7 +74,7 @@
                         "paths": [
                             "/usr/bin/md5sum"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "89b68f8ea6a32d525fbf491878980180ffa395b042ea3104b11da229bade71db"
                         ]
                     },
@@ -83,7 +83,7 @@
                         "paths": [
                             "/usr/bin/ps"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "72a44f3e7c4d9c9b72b1bda77d687346447d8e398983965b8e690eeeadebdc76"
                         ]
                     },
@@ -92,7 +92,7 @@
                         "paths": [
                             "/usr/bin/pstree"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "dbe7fc18667cd75317d494ed3b32cfe3cd077c870d015dc18b406a4a39747f55"
                         ]
                     },
@@ -101,7 +101,7 @@
                         "paths": [
                             "/usr/bin/slocate"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "6114624bf5d7e29f738f939bcc2bc794de9bf377a571fe1e84ae9159794308cf"
                         ]
                     },
@@ -110,7 +110,7 @@
                         "paths": [
                             "/usr/bin/top"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "286c39ec3d8e4f15f353dca350ca7575e0269dba808206f3ce8d1a3ea142b353"
                         ]
                     },
@@ -119,7 +119,7 @@
                         "paths": [
                             "/usr/sbin/lsof"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "939cc74b5343bde1a17dfa270f8e6dc719a4bc6b3143f4581b401c81fd9a110d"
                         ]
                     },
@@ -128,7 +128,7 @@
                         "paths": [
                             "/usr/sbin/netstat"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "39823089fa324ceba00d5939d2e7b308fec28ee0f16c6caa4739a53ad6ecee64"
                         ]
                     }

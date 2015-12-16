@@ -21,7 +21,7 @@
                         "paths": [
                             "/usr/sbin/"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "ebfd9354ed83635ed38bd117b375903f9984a18780ef86dbf7a642fc6584271c"
                         ]
                     }

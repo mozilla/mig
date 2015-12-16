@@ -25,7 +25,7 @@
                             "/opt/*",
                             "/tmp/*"
                         ],
-                        "sha256": [
+                        "sha2": [
                             "adbee847c12c73605ff657e668c8096df138f824eb542027a10c0b5c07619c8d",
                             "7c9816b5f1b840eb8c5ecfc0fed29972877ca5bd909469d03f26d3b8f837043d",
                             "3efee976d6565edd1492aa1047ffa10be6025de18206f6c68f91dd218801778f",
