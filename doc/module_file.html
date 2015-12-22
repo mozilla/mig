@@ -263,7 +263,8 @@ label (key) and search parameters (value).</p><p>A search label is a string betw
                             <span class="punctuation">],</span>
                             <span class="name tag">"options"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
                                     <span class="name tag">"matchall"</span><span class="punctuation">:</span> <span class="keyword constant">true</span><span class="punctuation">,</span>
-                                    <span class="name tag">"maxdepth"</span><span class="punctuation">:</span> <span class="literal number integer">3</span>
+                                    <span class="name tag">"maxdepth"</span><span class="punctuation">:</span> <span class="literal number integer">3</span><span class="punctuation">,</span>
+                                    <span class="name tag">"decompress"</span><span class="punctuation">:</span> <span class="keyword constant">true</span>
                             <span class="punctuation">}</span>
                     <span class="punctuation">}</span>
     <span class="punctuation">}</span>
@@ -341,7 +342,10 @@ single file search, you should probably consider breaking it down into smaller
 searches, or running the search locally instead of through MIG.</p></li><li><p><strong>returnsha256</strong> instructs the agent to return the SHA256 hash for any
 matched files. The client will display the hash with the file information
 in the result. As an example, this option can be used to do basic file
-integrity monitoring across actions.</p></li></ul></section></section><section id="search-algorithm"><header><h2><a href="#id5">2   Search algorithm</a></h2></header><p>FM traverse a directory tree starting from a root path and until no search are
+integrity monitoring across actions.</p></li><li><p><strong>decompress</strong> tells the agent to decompress gzipped files prior to
+inspecting content or calculating hashes. Note that if the decompress flag
+is set for one search, all searches will involve a test for file
+decompression.</p></li></ul></section></section><section id="search-algorithm"><header><h2><a href="#id5">2   Search algorithm</a></h2></header><p>FM traverse a directory tree starting from a root path and until no search are
 longer active. FM traverses a given path only once, regardless of the number of
 searches that are being performed. When FM enters a directory, it activates
 searches that apply to the directory, and deactivates the ones that don't.

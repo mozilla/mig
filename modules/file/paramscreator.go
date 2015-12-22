@@ -76,6 +76,8 @@ Options
 			  is reached.
 %sreturnsha256		- include sha256 hash for matched files.
 			  ex: %sreturnsha256
+%sdecompress		- decompress file before inspection
+			  ex: %sdecompress
 
 Module documentation is at http://mig.mozilla.org/doc/module_file.html
 Cheatsheet and examples are at http://mig.mozilla.org/doc/cheatsheet.rst.html
@@ -100,6 +102,7 @@ func (r *run) ParamsCreator() (interface{}, error) {
 		search.Options.MatchAll = true
 		search.Options.MaxDepth = 1000
 		search.Options.MatchLimit = 1000
+		search.Options.Decompress = false
 		for {
 			fmt.Println("Give a name to this search, or 'done' to exit")
 			fmt.Printf("label> ")
@@ -347,6 +350,12 @@ func (r *run) ParamsCreator() (interface{}, error) {
 					continue
 				}
 				search.Options.MatchLimit = v
+			case "decompress":
+				if checkValue != "" {
+					fmt.Println("This option doesn't take arguments, try again")
+					continue
+				}
+				search.Options.Decompress = true
 			default:
 				fmt.Printf("Invalid method!\n")
 				continue
@@ -369,9 +378,9 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 		err error
 		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha2s,
 		sha3s, mismatch flagParam
-		maxdepth, matchlimit                               float64
-		returnsha256, matchall, matchany, macroal, verbose bool
-		fs                                                 flag.FlagSet
+		maxdepth, matchlimit                                           float64
+		returnsha256, matchall, matchany, macroal, verbose, decompress bool
+		fs                                                             flag.FlagSet
 	)
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
 		printHelp(true)
@@ -396,6 +405,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.BoolVar(&macroal, "macroal", false, "see help")
 	fs.BoolVar(&debug, "verbose", false, "see help")
 	fs.BoolVar(&returnsha256, "returnsha256", false, "see help")
+	fs.BoolVar(&decompress, "decompress", false, "see help")
 	err = fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -417,6 +427,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	s.Options.Mismatch = mismatch
 	s.Options.MatchAll = matchall
 	s.Options.ReturnSHA256 = returnsha256
+	s.Options.Decompress = decompress
 	if matchany {
 		s.Options.MatchAll = false
 	}
