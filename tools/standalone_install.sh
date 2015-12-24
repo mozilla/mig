@@ -300,6 +300,7 @@ var TAGS = struct {
 var ISIMMORTAL bool = false
 var MUSTINSTALLSERVICE bool = true
 var DISCOVERPUBLICIP bool = false
+var DISCOVERAWSMETA bool = true
 var CHECKIN bool = false
 var APIURL string = "http://localhost:1664/api/v1/"
 var LOGGINGCONF = mig.Logging{

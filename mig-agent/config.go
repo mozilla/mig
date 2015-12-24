@@ -21,6 +21,7 @@ type config struct {
 		IsImmortal       bool
 		InstallService   bool
 		DiscoverPublicIP bool
+		DiscoverAWSMeta  bool
 		CheckIn          bool
 		Relay            string
 		Socket           string
@@ -70,6 +71,7 @@ func configLoad(path string) (err error) {
 	ISIMMORTAL = config.Agent.IsImmortal
 	MUSTINSTALLSERVICE = config.Agent.InstallService
 	DISCOVERPUBLICIP = config.Agent.DiscoverPublicIP
+	DISCOVERAWSMETA = config.Agent.DiscoverAWSMeta
 	CHECKIN = config.Agent.CheckIn
 	LOGGINGCONF = config.Logging
 	AMQPBROKER = config.Agent.Relay

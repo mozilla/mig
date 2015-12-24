@@ -139,6 +139,14 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 		}
 	}
 
+	// Discover AWS instance metadata
+	if DISCOVERAWSMETA {
+		ctx, err = addAWSMetadata(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	// find the run directory
 	ctx.Agent.RunDir = getRunDir()
 
