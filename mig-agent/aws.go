@@ -62,7 +62,7 @@ func addAWSInstanceID(orig_ctx Context) (ctx Context, err error) {
 	if err != nil {
 		return
 	}
-	ctx.Agent.Env.AWSInstanceID = res
+	ctx.Agent.Env.AWS.AWSInstanceID = res
 	return
 }
 
@@ -73,7 +73,7 @@ func addAWSLocalIPV4(orig_ctx Context) (ctx Context, err error) {
 	if err != nil {
 		return
 	}
-	ctx.Agent.Env.AWSLocalIPV4 = res
+	ctx.Agent.Env.AWS.AWSLocalIPV4 = res
 	return
 }
 
@@ -84,7 +84,7 @@ func addAWSAMIID(orig_ctx Context) (ctx Context, err error) {
 	if err != nil {
 		return
 	}
-	ctx.Agent.Env.AWSAMIID = res
+	ctx.Agent.Env.AWS.AWSAMIID = res
 	return
 }
 
@@ -95,7 +95,7 @@ func addAWSInstanceType(orig_ctx Context) (ctx Context, err error) {
 	if err != nil {
 		return
 	}
-	ctx.Agent.Env.AWSInstanceType = res
+	ctx.Agent.Env.AWS.AWSInstanceType = res
 	return
 }
 
