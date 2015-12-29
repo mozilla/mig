@@ -44,7 +44,8 @@ MKDIR		:= mkdir
 INSTALL		:= install
 
 
-all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item
+all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-action-generator mig-action-verifier worker-agent-intel worker-compliance-item \
+	runner-compliance
 
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
@@ -91,6 +92,9 @@ worker-agent-intel: create-bindir
 
 worker-compliance-item: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-worker-compliance-item $(GOLDFLAGS) mig.ninja/mig/workers/mig-worker-compliance-item
+
+runner-compliance: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-compliance $(GOLDFLAGS) mig.ninja/mig/runner-plugins/runner-compliance
 
 go_vendor_dependencies:
 	GOOS="linux" $(GOGETTER) github.com/bobappleyard/readline
