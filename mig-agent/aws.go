@@ -110,7 +110,8 @@ func awsFetchMeta(endpoint string) (result string, err error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("invalid HTTP response code returned by metadata service")
+		err = fmt.Errorf("invalid HTTP response code returned by metadata service: %v",
+			resp.StatusCode)
 		return
 	}
 	if resp.ContentLength == -1 || resp.ContentLength > FETCHBODYMAX {
