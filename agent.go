@@ -49,10 +49,10 @@ type AgentEnv struct {
 
 // Stores AWS specific agent environment values
 type AgentEnvAWS struct {
-	AWSInstanceID   string `json:"aws_instanceid,omitempty"`
-	AWSLocalIPV4    string `json:"aws_localipv4,omitempty"`
-	AWSAMIID        string `json:"aws_amiid,omitempty"`
-	AWSInstanceType string `json:"aws_instancetype,omitempty"`
+	InstanceID   string `json:"instanceid,omitempty"`
+	LocalIPV4    string `json:"localipv4,omitempty"`
+	AMIID        string `json:"amiid,omitempty"`
+	InstanceType string `json:"instancetype,omitempty"`
 }
 
 type AgentsStats struct {
