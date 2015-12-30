@@ -27,6 +27,9 @@ var MUSTINSTALLSERVICE bool = true
 // attempt to discover the public IP of the endpoint by querying the api
 var DISCOVERPUBLICIP = true
 
+// attempt to discover meta-data for instances running in AWS
+var DISCOVERAWSMETA = true
+
 // in check-in mode, the agent connects to the relay, runs all pending commands
 // and exits. this mode is used to run the agent as a cron job, not a daemon.
 var CHECKIN = false
