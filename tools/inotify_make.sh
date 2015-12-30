@@ -65,7 +65,6 @@ do
         echo
         make worker-agent-verif && \
         make worker-agent-intel && \
-        make worker-compliance-item && \
         echo success $(date +%H:%M:%S)
 
     elif [[ "$dir" =~ workers\/agent_intel ]] ; then

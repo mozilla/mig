@@ -2,16 +2,22 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
+// Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 package main
+
+// This is a plugin for use with mig-runner that processes incoming compliance
+// results from MIG and sends them to MozDef
+//
+// It replaces the historical compliance item worker process. This program
+// generally is not run directly, but instead should be called by mig-runner
+// as a plugin.
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
-	"regexp"
 	"time"
 
 	"github.com/jvehent/gozdef"
@@ -19,110 +25,95 @@ import (
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
 	"mig.ninja/mig/modules/file"
-	"mig.ninja/mig/workers"
 )
 
-const workerName = "compliance_item"
-
 type Config struct {
-	Mq      workers.MqConf
-	MozDef  gozdef.MqConf
-	Logging mig.Logging
-	API     struct {
-		Host string
+	MIG struct {
+		// The MIG API URL
+		API string
+	}
+	MozDef struct {
+		// URL to post events to MozDef
+		URL string
 	}
 	Vmintgr struct {
+		// Location of vmintgr wrapper executable
 		Bin string
 	}
 }
 
+const configPath string = "/etc/mig/runner-compliance.conf"
+
+var conf Config
+
 func main() {
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", e)
+			os.Exit(1)
+		}
+	}()
+
 	var (
-		err   error
-		conf  Config
-		items []gozdef.ComplianceItem
+		err     error
+		results mig.RunnerResult
 	)
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s - a worker that transform commands results into compliance items and publishes them to mozdef\n", os.Args[0])
-		flag.PrintDefaults()
-	}
-	var configPath = flag.String("c", "/etc/mig/compliance-item-worker.cfg", "Load configuration from file")
-	var showversion = flag.Bool("V", false, "Show build version and exit")
-	flag.Parse()
-	if *showversion {
-		fmt.Println(mig.Version)
-		os.Exit(0)
-	}
 
-	err = gcfg.ReadFileInto(&conf, *configPath)
+	err = gcfg.ReadFileInto(&conf, configPath)
 	if err != nil {
 		panic(err)
 	}
 
-	logctx, err := mig.InitLogger(conf.Logging, workerName)
+	buf, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
 		panic(err)
 	}
-
-	// bind to the MIG even queue
-	workerQueue := "migevent.worker." + workerName
-	consumerChan, err := workers.InitMqWithConsumer(conf.Mq, workerQueue, mig.Ev_Q_Cmd_Res)
+	err = json.Unmarshal(buf, &results)
 	if err != nil {
 		panic(err)
 	}
-
-	// bind to the mozdef relay exchange
-	gp, err := gozdef.InitAmqp(conf.MozDef)
-	if err != nil {
-		panic(err)
-	}
-
-	mig.ProcessLog(logctx, mig.Log{Desc: "worker started, consuming queue " + workerQueue + " from key " + mig.Ev_Q_Cmd_Res})
-	tFamRe := regexp.MustCompile("(?i)^compliance$")
-	for event := range consumerChan {
-		var cmd mig.Command
-		err = json.Unmarshal(event.Body, &cmd)
+	for _, x := range results.Commands {
+		items, err := makeComplianceItem(x)
 		if err != nil {
-			mig.ProcessLog(logctx, mig.Log{Desc: fmt.Sprintf("invalid command: %v", err)}.Err())
+			panic(err)
 		}
-		// discard actions that aren't threat.family=compliance
-		if !tFamRe.MatchString(cmd.Action.Threat.Family) {
-			continue
-		}
-		items, err = makeComplianceItem(cmd, conf)
-		if err != nil {
-			mig.ProcessLog(logctx, mig.Log{Desc: fmt.Sprintf("failed to make compliance items: %v", err)}.Err())
-		}
-		for _, item := range items {
-			// create a new event and set values in the fields
-			ev, err := gozdef.NewEvent()
+		for _, y := range items {
+			err = sendItem(y)
 			if err != nil {
-				mig.ProcessLog(logctx, mig.Log{Desc: fmt.Sprintf("failed to make new mozdef event: %v", err)}.Err())
-			}
-			ev.Category = "complianceitems"
-			ev.Source = "mig"
-			cverb := "fails"
-			if item.Compliance {
-				cverb = "passes"
-			}
-			ev.Summary = fmt.Sprintf("%s %s compliance with %s", item.Target, cverb, item.Check.Ref)
-			ev.Tags = append(ev.Tags, "mig")
-			ev.Tags = append(ev.Tags, "compliance")
-			ev.Info()
-			ev.Details = item
-			err = gp.Send(ev)
-			if err != nil {
-				mig.ProcessLog(logctx, mig.Log{Desc: fmt.Sprintf("failed to publish to mozdef: %v", err)}.Err())
-				// if publication to mozdef fails, crash the worker. systemd/upstart will restart a new one
 				panic(err)
 			}
 		}
-		mig.ProcessLog(logctx, mig.Log{Desc: fmt.Sprintf("published %d items from command %.0f to mozdef", len(items), cmd.ID)}.Info())
 	}
+}
+
+// Send a compliance item to MozDef
+func sendItem(item gozdef.ComplianceItem) (err error) {
+	ev, err := gozdef.NewEvent()
+	if err != nil {
+		return
+	}
+	ev.Category = "complianceitems"
+	ev.Source = "mig"
+	cverb := "fails"
+	if item.Compliance {
+		cverb = "passes"
+	}
+	ev.Summary = fmt.Sprintf("%s %s compliance with %s", item.Target, cverb, item.Check.Ref)
+	ev.Tags = append(ev.Tags, "mig")
+	ev.Tags = append(ev.Tags, "compliance")
+	ev.Info()
+	ev.Details = item
+	ac := gozdef.ApiConf{Url: conf.MozDef.URL}
+	pub, err := gozdef.InitApi(ac)
+	if err != nil {
+		return
+	}
+	err = pub.Send(ev)
 	return
 }
 
-func makeComplianceItem(cmd mig.Command, conf Config) (items []gozdef.ComplianceItem, err error) {
+// Convert a MIG command result into a MozDef compliance event
+func makeComplianceItem(cmd mig.Command) (items []gozdef.ComplianceItem, err error) {
 	var ci gozdef.ComplianceItem
 	ci.Utctimestamp = time.Now().UTC().Format(time.RFC3339Nano)
 	ci.Target = cmd.Agent.Name
@@ -131,7 +122,7 @@ func makeComplianceItem(cmd mig.Command, conf Config) (items []gozdef.Compliance
 	ci.Policy.Level = cmd.Action.Threat.Level
 	ci.Check.Ref = cmd.Action.Threat.Ref
 	ci.Check.Description = cmd.Action.Name
-	ci.Link = fmt.Sprintf("%s/command?commandid=%.0f", conf.API.Host, cmd.ID)
+	ci.Link = fmt.Sprintf("%s/command?commandid=%.0f", conf.MIG.API, cmd.ID)
 	if cmd.Agent.Tags != nil {
 		operator := ""
 		if _, ok := cmd.Agent.Tags.(map[string]interface{})["operator"]; ok {

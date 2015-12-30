@@ -68,7 +68,7 @@ commands:
     $ make mig-scheduler
     $ make mig-api
     $ make worker-agent-intel
-    $ make worker-compliance-item
+    $ make mig-runner
 
 Or just run `make` that will build everything and runs tests as well.
 
