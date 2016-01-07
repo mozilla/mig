@@ -22,7 +22,6 @@ import (
 	"github.com/jvehent/service-go"
 	"github.com/mozilla/mig-sandbox"
 	"github.com/streadway/amqp"
-	"github.com/tudalex/seccomp-sandbox"
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
 )
