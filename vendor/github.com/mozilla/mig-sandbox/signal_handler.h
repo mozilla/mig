@@ -1,3 +1,0 @@
-
-void install_sighandler();
-

@@ -10,11 +10,6 @@ import (
 )
 
 var (
-	errMissingAddress           = errors.New("missing address")
-	errMissingHeader            = errors.New("missing header")
-	errHeaderTooShort           = errors.New("header too short")
-	errBufferTooShort           = errors.New("buffer too short")
-	errInvalidConnType          = errors.New("invalid conn type")
 	errOpNoSupport              = errors.New("operation not supported")
 	errNoSuchInterface          = errors.New("no such interface")
 	errNoSuchMulticastInterface = errors.New("no such multicast interface")

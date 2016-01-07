@@ -557,15 +557,13 @@ func (cn *conn) simpleQuery(q string) (res *rows, err error) {
 				cn.bad = true
 				errorf("unexpected message %q in simple query execution", t)
 			}
-			if res == nil {
-				res = &rows{
-					cn:       cn,
-					colNames: st.colNames,
-					colTyps:  st.colTyps,
-					colFmts:  st.colFmts,
-				}
+			res = &rows{
+				cn:       cn,
+				colNames: st.colNames,
+				colTyps:  st.colTyps,
+				colFmts:  st.colFmts,
+				done:     true,
 			}
-			res.done = true
 		case 'Z':
 			cn.processReadyForQuery(r)
 			// done

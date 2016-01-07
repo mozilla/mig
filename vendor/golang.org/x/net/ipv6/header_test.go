@@ -7,7 +7,6 @@ package ipv6_test
 import (
 	"net"
 	"reflect"
-	"strings"
 	"testing"
 
 	"golang.org/x/net/internal/iana"
@@ -47,9 +46,5 @@ func TestParseHeader(t *testing.T) {
 	}
 	if !reflect.DeepEqual(h, testHeader) {
 		t.Fatalf("got %#v; want %#v", h, testHeader)
-	}
-	s := h.String()
-	if strings.Contains(s, ",") {
-		t.Fatalf("should be space-separated values: %s", s)
 	}
 }

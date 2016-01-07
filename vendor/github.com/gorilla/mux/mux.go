@@ -59,12 +59,6 @@ func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 			return true
 		}
 	}
-
-	// Closest match for a router (includes sub-routers)
-	if r.NotFoundHandler != nil {
-		match.Handler = r.NotFoundHandler
-		return true
-	}
 	return false
 }
 
@@ -95,7 +89,10 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		setCurrentRoute(req, match.Route)
 	}
 	if handler == nil {
-		handler = http.NotFoundHandler()
+		handler = r.NotFoundHandler
+		if handler == nil {
+			handler = http.NotFoundHandler()
+		}
 	}
 	if !r.KeepContext {
 		defer context.Clear(req)
@@ -327,15 +324,11 @@ func CurrentRoute(r *http.Request) *Route {
 }
 
 func setVars(r *http.Request, val interface{}) {
-	if val != nil {
-		context.Set(r, varsKey, val)
-	}
+	context.Set(r, varsKey, val)
 }
 
 func setCurrentRoute(r *http.Request, val interface{}) {
-	if val != nil {
-		context.Set(r, routeKey, val)
-	}
+	context.Set(r, routeKey, val)
 }
 
 // ----------------------------------------------------------------------------

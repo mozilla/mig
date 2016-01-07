@@ -4,15 +4,13 @@
 
 // Package http2 implements the HTTP/2 protocol.
 //
-// This package is low-level and intended to be used directly by very
-// few people. Most users will use it indirectly through the automatic
-// use by the net/http package (from Go 1.6 and later).
-// For use in earlier Go versions see ConfigureServer. (Transport support
-// requires Go 1.6 or later)
+// This is a work in progress. This package is low-level and intended
+// to be used directly by very few people. Most users will use it
+// indirectly through integration with the net/http package. See
+// ConfigureServer. That ConfigureServer call will likely be automatic
+// or available via an empty import in the future.
 //
-// See https://http2.github.io/ for more information on HTTP/2.
-//
-// See https://http2.golang.org/ for a test server running this code.
+// See http://http2.github.io/
 package http2
 
 import (
@@ -20,13 +18,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
-	"strings"
 	"sync"
 )
 
-var VerboseLogs = strings.Contains(os.Getenv("GODEBUG"), "h2debug=1")
+var VerboseLogs = false
 
 const (
 	// ClientPreface is the string that must be sent by new
@@ -254,18 +250,4 @@ func mustUint31(v int32) uint32 {
 		panic("out of range")
 	}
 	return uint32(v)
-}
-
-// bodyAllowedForStatus reports whether a given response status code
-// permits a body. See RFC2616, section 4.4.
-func bodyAllowedForStatus(status int) bool {
-	switch {
-	case status >= 100 && status <= 199:
-		return false
-	case status == 204:
-		return false
-	case status == 304:
-		return false
-	}
-	return true
 }

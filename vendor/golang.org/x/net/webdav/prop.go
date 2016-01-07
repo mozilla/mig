@@ -115,23 +115,23 @@ var liveProps = map[xml.Name]struct {
 	},
 	xml.Name{Space: "DAV:", Local: "getcontentlength"}: {
 		findFn: findContentLength,
-		dir:    false,
+		dir:    true,
 	},
 	xml.Name{Space: "DAV:", Local: "getlastmodified"}: {
 		findFn: findLastModified,
-		dir:    false,
+		dir:    true,
 	},
 	xml.Name{Space: "DAV:", Local: "creationdate"}: {
 		findFn: nil,
-		dir:    false,
+		dir:    true,
 	},
 	xml.Name{Space: "DAV:", Local: "getcontentlanguage"}: {
 		findFn: nil,
-		dir:    false,
+		dir:    true,
 	},
 	xml.Name{Space: "DAV:", Local: "getcontenttype"}: {
 		findFn: findContentType,
-		dir:    false,
+		dir:    true,
 	},
 	xml.Name{Space: "DAV:", Local: "getetag"}: {
 		findFn: findETag,
@@ -358,18 +358,14 @@ func findContentType(fs FileSystem, ls LockSystem, name string, fi os.FileInfo) 
 	defer f.Close()
 	// This implementation is based on serveContent's code in the standard net/http package.
 	ctype := mime.TypeByExtension(filepath.Ext(name))
-	if ctype != "" {
-		return ctype, nil
+	if ctype == "" {
+		// Read a chunk to decide between utf-8 text and binary.
+		var buf [512]byte
+		n, _ := io.ReadFull(f, buf[:])
+		ctype = http.DetectContentType(buf[:n])
+		// Rewind file.
+		_, err = f.Seek(0, os.SEEK_SET)
 	}
-	// Read a chunk to decide between utf-8 text and binary.
-	var buf [512]byte
-	n, err := io.ReadFull(f, buf[:])
-	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
-		return "", err
-	}
-	ctype = http.DetectContentType(buf[:n])
-	// Rewind file.
-	_, err = f.Seek(0, os.SEEK_SET)
 	return ctype, err
 }
 

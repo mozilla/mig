@@ -77,6 +77,9 @@ func TestMemPS(t *testing.T) {
 			wantPnames: []xml.Name{
 				xml.Name{Space: "DAV:", Local: "resourcetype"},
 				xml.Name{Space: "DAV:", Local: "displayname"},
+				xml.Name{Space: "DAV:", Local: "getcontentlength"},
+				xml.Name{Space: "DAV:", Local: "getlastmodified"},
+				xml.Name{Space: "DAV:", Local: "getcontenttype"},
 				xml.Name{Space: "DAV:", Local: "supportedlock"},
 			},
 		}, {
@@ -106,6 +109,15 @@ func TestMemPS(t *testing.T) {
 				}, {
 					XMLName:  xml.Name{Space: "DAV:", Local: "displayname"},
 					InnerXML: []byte("dir"),
+				}, {
+					XMLName:  xml.Name{Space: "DAV:", Local: "getcontentlength"},
+					InnerXML: []byte("0"),
+				}, {
+					XMLName:  xml.Name{Space: "DAV:", Local: "getlastmodified"},
+					InnerXML: nil, // Calculated during test.
+				}, {
+					XMLName:  xml.Name{Space: "DAV:", Local: "getcontenttype"},
+					InnerXML: []byte("text/plain; charset=utf-8"),
 				}, {
 					XMLName:  xml.Name{Space: "DAV:", Local: "supportedlock"},
 					InnerXML: []byte(lockEntry),

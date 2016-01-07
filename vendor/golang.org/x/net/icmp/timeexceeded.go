@@ -16,7 +16,7 @@ func (p *TimeExceeded) Len(proto int) int {
 		return 0
 	}
 	l, _ := multipartMessageBodyDataLen(proto, p.Data, p.Extensions)
-	return 4 + l
+	return l
 }
 
 // Marshal implements the Marshal method of MessageBody interface.

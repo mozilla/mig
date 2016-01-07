@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"github.com/mozilla/mig-sandbox"
 	scribelib "github.com/mozilla/scribe/src/scribe"
+	"github.com/tudalex/seccomp-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"mig.ninja/mig/modules/file"

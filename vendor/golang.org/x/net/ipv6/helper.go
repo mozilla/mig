@@ -9,13 +9,7 @@ import (
 	"net"
 )
 
-var (
-	errMissingAddress  = errors.New("missing address")
-	errHeaderTooShort  = errors.New("header too short")
-	errInvalidConnType = errors.New("invalid conn type")
-	errOpNoSupport     = errors.New("operation not supported")
-	errNoSuchInterface = errors.New("no such interface")
-)
+var errOpNoSupport = errors.New("operation not supported")
 
 func boolint(b bool) int {
 	if b {
