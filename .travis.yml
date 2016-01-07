@@ -22,6 +22,7 @@ before_install:
     - echo HRNGDEVICE=/dev/urandom | sudo tee /etc/default/rng-tools
     - sudo /etc/init.d/rng-tools restart
 script:
+    - chmod o+x $HOME
     - export OLDPATH=$(pwd)
     - cd
     - mkdir -p "$GOPATH/src/mig.ninja/"
