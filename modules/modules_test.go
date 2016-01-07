@@ -7,7 +7,7 @@
 package modules /* import "mig.ninja/mig/modules" */
 
 import (
-	"github.com/tudalex/seccomp-sandbox"
+	"github.com/mozilla/mig-sandbox"
 	"io"
 	"os"
 	"strings"

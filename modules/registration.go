@@ -7,7 +7,7 @@
 
 package modules /* import "mig.ninja/mig/modules" */
 
-import "github.com/tudalex/seccomp-sandbox"
+import "github.com/mozilla/mig-sandbox"
 
 // A mig module implements this interface
 type Moduler interface {

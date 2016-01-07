@@ -29,7 +29,7 @@ package example /* import "mig.ninja/mig/modules/example" */
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tudalex/seccomp-sandbox"
+	"github.com/mozilla/mig-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"net"

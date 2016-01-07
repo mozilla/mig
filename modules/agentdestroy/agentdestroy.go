@@ -14,7 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/osext"
-	"github.com/tudalex/seccomp-sandbox"
+	"github.com/mozilla/mig-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"os"

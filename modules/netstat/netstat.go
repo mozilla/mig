@@ -12,8 +12,8 @@ package netstat /* import "mig.ninja/mig/modules/netstat" */
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mozilla/mig-sandbox"
 	"github.com/seccomp/libseccomp-golang"
-	"github.com/tudalex/seccomp-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"net"

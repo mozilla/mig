@@ -31,8 +31,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mozilla/mig-sandbox"
 	"github.com/seccomp/libseccomp-golang"
-	"github.com/tudalex/seccomp-sandbox"
 	"golang.org/x/crypto/sha3"
 	"mig.ninja/mig/modules"
 )

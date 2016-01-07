@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/osext"
-	"github.com/tudalex/seccomp-sandbox"
+	"github.com/mozilla/mig-sandbox"
 	"hash"
 	"io"
 	"io/ioutil"
