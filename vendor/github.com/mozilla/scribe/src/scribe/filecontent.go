@@ -235,6 +235,17 @@ func (s *simpleFileLocator) locate(target string, useRegexp bool) error {
 	return s.locateInner(target, useRegexp, "")
 }
 
+func (s *simpleFileLocator) symFollowIsRegular(path string) (bool, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return false, err
+	}
+	if fi.Mode().IsRegular() {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (s *simpleFileLocator) locateInner(target string, useRegexp bool, path string) error {
 	var (
 		spath string
@@ -288,6 +299,22 @@ func (s *simpleFileLocator) locateInner(target string, useRegexp bool, path stri
 					s.matches = append(s.matches, fname)
 				}
 			}
+		} else if (x.Mode() & os.ModeSymlink) > 0 {
+			isregsym, err := s.symFollowIsRegular(fname)
+			if err != nil {
+				return err
+			}
+			if isregsym {
+				if !useRegexp {
+					if x.Name() == target {
+						s.matches = append(s.matches, fname)
+					}
+				} else {
+					if re.MatchString(x.Name()) {
+						s.matches = append(s.matches, fname)
+					}
+				}
+			}
 		}
 	}
 	return nil
@@ -309,7 +336,10 @@ func fileContentCheck(path string, regex string) ([]matchLine, error) {
 	rdr := bufio.NewReader(fd)
 	ret := make([]matchLine, 0)
 	for {
-		ln, err := rdr.ReadString('\n')
+		// XXX Ignore potential partial reads (prefix) here, for lines
+		// with excessive length we will just treat it as multiple
+		// lines
+		buf, _, err := rdr.ReadLine()
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -317,6 +347,7 @@ func fileContentCheck(path string, regex string) ([]matchLine, error) {
 				return nil, err
 			}
 		}
+		ln := string(buf)
 		mtch := re.FindStringSubmatch(ln)
 		if len(mtch) > 0 {
 			newmatch := matchLine{}
