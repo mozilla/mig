@@ -45,7 +45,7 @@ INSTALL		:= install
 
 
 all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-action-generator mig-action-verifier worker-agent-intel \
-	runner-compliance
+	runner-compliance runner-scribe
 
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
@@ -92,6 +92,9 @@ worker-agent-intel: create-bindir
 
 runner-compliance: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-compliance $(GOLDFLAGS) mig.ninja/mig/runner-plugins/runner-compliance
+
+runner-scribe: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-scribe $(GOLDFLAGS) mig.ninja/mig/runner-plugins/runner-scribe
 
 go_vendor_dependencies:
 	GOOS="linux" $(GOGETTER) github.com/bobappleyard/readline
