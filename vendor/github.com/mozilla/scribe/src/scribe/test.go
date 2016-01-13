@@ -12,8 +12,15 @@ import (
 	"strings"
 )
 
+// Describes arbitrary key value tags that can be associated with a test
+type TestTag struct {
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
 type Test struct {
 	TestID      string `json:"test"`   // The ID for this test.
+	TestName    string `json:"name"`   // An optional name for this test
 	Object      string `json:"object"` // The object this test references.
 	Description string `json:"description,omitempty"`
 
@@ -22,7 +29,7 @@ type Test struct {
 	Regexp Regex      `json:"regexp,omitempty"`     // Regular expression comparison
 	EMatch ExactMatch `json:"exactmatch,omitempty"` // Exact string match
 
-	Tags []string `json:"tags,omitempty"` // Tags associated with the test
+	Tags []TestTag `json:"tags,omitempty"` // Tags associated with the test
 
 	If []string `json:"if,omitempty"` // Slice of test names for dependencies
 
@@ -88,8 +95,11 @@ func (t *Test) validate(d *Document) error {
 	}
 	// Ensure the tags only contain valid characters
 	for _, x := range t.Tags {
-		if strings.ContainsRune(x, '"') {
-			return fmt.Errorf("%v: test tag cannot contain quote", t.TestID)
+		if strings.ContainsRune(x.Key, '"') {
+			return fmt.Errorf("%v: test tag key cannot contain quote", t.TestID)
+		}
+		if strings.ContainsRune(x.Value, '"') {
+			return fmt.Errorf("%v: test tag value cannot contain quote", t.TestID)
 		}
 	}
 	return nil
