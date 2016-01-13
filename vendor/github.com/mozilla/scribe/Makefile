@@ -1,4 +1,5 @@
-PROJS = scribe scribecmd evrtest ubuntu-cve-tracker parse-nasltokens
+PROJS = scribe scribecmd evrtest ubuntu-cve-tracker parse-nasltokens \
+	scribevulnpolicy
 GO = GOPATH=$(shell pwd):$(shell go env GOROOT)/bin go
 export SCRIBECMD = $(shell pwd)/bin/scribecmd
 export EVRTESTCMD = $(shell pwd)/bin/evrtest
@@ -17,9 +18,14 @@ evrtest:
 scribe:
 	$(GO) build scribe
 	$(GO) install scribe
+	$(GO) build scribe/vulnpolicy
+	$(GO) install scribe/vulnpolicy
 
 scribecmd:
 	$(GO) install scribecmd
+
+scribevulnpolicy:
+	$(GO) install scribevulnpolicy
 
 runtests: scribetests gotests
 

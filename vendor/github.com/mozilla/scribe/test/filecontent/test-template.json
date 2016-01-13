@@ -50,6 +50,15 @@
 	},
 
 	{
+		"object": "testfile2-version",
+		"filecontent": {
+			"path": "${root}",
+			"file": ".*file2",
+			"expression": "^Version = (\\S+)"
+		}
+	},
+
+	{
 		"object": "anyfile",
 		"filecontent": {
 			"path": "${root}/data",
@@ -128,6 +137,17 @@
 		"description": "version is ok",
 		"expectedresult": false,
 		"object": "testfile1-version",
+		"evr": {
+			"operation": "<",
+			"value": "0.4z"
+		}
+	},
+
+	{
+		"test": "filecontent4",
+		"description": "version is ok",
+		"expectedresult": false,
+		"object": "testfile2-version",
 		"evr": {
 			"operation": "<",
 			"value": "0.4z"

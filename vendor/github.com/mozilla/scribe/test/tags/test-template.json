@@ -18,8 +18,14 @@
 	{
 		"test": "files-without-line",
 		"tags": [
-			"tag1",
-			"Another tag with spaces"
+			{
+				"key": "testtag",
+				"value": "tag1"
+			},
+			{
+				"key": "another tag",
+				"value": "Another tag with spaces"
+			}
 		],
 		"expectedresult": true,
 		"object": "file-hasline",

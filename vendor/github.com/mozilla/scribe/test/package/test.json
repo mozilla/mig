@@ -19,6 +19,14 @@
 		"package": {
 			"name": "grub-common"
 		}
+	},
+
+	{
+		"object": "kernel-package-newest",
+		"package": {
+			"name": "kernel",
+			"onlynewest": true
+		}
 	}
 	],
 
@@ -97,6 +105,16 @@
 		"evr": {
 			"operation": ">",
 			"value": "1.0.1d"
+		}
+	},
+
+	{
+		"test": "package8",
+		"expectedresult": false,
+		"object": "kernel-package-newest",
+		"evr": {
+			"operation": "<",
+			"value": "2.6.32-573.8.1.el6.x86_64"
 		}
 	}
 	]
