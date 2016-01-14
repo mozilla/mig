@@ -8,6 +8,11 @@ import (
 	"log"
 )
 
+
+var ActTrap = seccomp.ActTrap
+var ActAllow = seccomp.ActAllow
+
+
 type FilterAction string
 
 type FilterOperation struct {

@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/mozilla/mig-sandbox"
-	"github.com/seccomp/libseccomp-golang"
 	"golang.org/x/crypto/sha3"
 	"mig.ninja/mig/modules"
 )
@@ -60,7 +59,7 @@ func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 func init() {
 	m := new(module)
 	sandbox := sandbox.SandboxProfile{
-		DefaultPolicy: seccomp.ActTrap,
+		DefaultPolicy: sandbox.ActTrap,
 		Filters: []sandbox.FilterOperation{
 			sandbox.FilterOperation{
 				FilterOn: []string{
@@ -86,7 +85,7 @@ func init() {
 					"rt_sigreturn", // Sandbox
 
 				},
-				Action: seccomp.ActAllow,
+				Action: sandbox.ActAllow,
 			},
 		},
 	}

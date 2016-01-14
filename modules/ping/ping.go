@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mozilla/mig-sandbox"
-	"github.com/seccomp/libseccomp-golang"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
@@ -42,7 +41,7 @@ func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 func init() {
 	m := new(module)
 	sandbox := sandbox.SandboxProfile{
-		DefaultPolicy: seccomp.ActTrap,
+		DefaultPolicy: sandbox.ActTrap,
 		Filters: []sandbox.FilterOperation{
 			sandbox.FilterOperation{
 				FilterOn: []string{
@@ -72,7 +71,7 @@ func init() {
 					"exit_group",
 					"rt_sigreturn",
 				},
-				Action: seccomp.ActAllow,
+				Action: sandbox.ActAllow,
 			},
 		},
 	}

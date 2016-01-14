@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mozilla/mig-sandbox"
-	"github.com/seccomp/libseccomp-golang"
 	"io"
 	"mig.ninja/mig/modules"
 	"net"
@@ -38,7 +37,7 @@ func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 func init() {
 	m := new(module)
 	sandbox := sandbox.SandboxProfile{
-		DefaultPolicy: seccomp.ActTrap,
+		DefaultPolicy: sandbox.ActTrap,
 		Filters: []sandbox.FilterOperation{
 			sandbox.FilterOperation{
 				FilterOn: []string{
@@ -50,7 +49,7 @@ func init() {
 					"socket",
 					"exit_group",
 				},
-				Action: seccomp.ActAllow,
+				Action: sandbox.ActAllow,
 			},
 		},
 	}
