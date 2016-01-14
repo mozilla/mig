@@ -55,7 +55,8 @@ A search must have at least one search path.
 				],
 				"options": {
 					"matchall": true,
-					"maxdepth": 3
+					"maxdepth": 3,
+					"decompress": true
 				}
 			}
         }
@@ -213,6 +214,11 @@ Several options can be applied to a search:
   matched files. The client will display the hash with the file information
   in the result. As an example, this option can be used to do basic file
   integrity monitoring across actions.
+
+* **decompress** tells the agent to decompress gzipped files prior to
+  inspecting content or calculating hashes. Note that if the decompress flag
+  is set for one search, all searches will involve a test for file
+  decompression.
 
 Search algorithm
 ----------------

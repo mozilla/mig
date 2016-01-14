@@ -7,7 +7,7 @@
 /* The file module provides functions to scan a file system. It can look into files
 using regexes. It can search files by name. It can match hashes in md5, sha1,
 sha256, sha384, sha512, sha3_224, sha3_256, sha3_384 and sha3_512.
-The filesystem can be searches using pattern, as described in the Parameters
+The filesystem can be searched using patterns, as described in the Parameters
 documentation at http://mig.mozilla.org/doc/module_file.html .
 */
 package file /* import "mig.ninja/mig/modules/file" */
@@ -33,9 +33,12 @@ import (
 
 	"golang.org/x/crypto/sha3"
 	"mig.ninja/mig/modules"
+
+	"compress/gzip"
 )
 
 var debug bool = false
+var tryDecompress bool = false
 
 func debugprint(format string, a ...interface{}) {
 	if debug {
@@ -98,6 +101,7 @@ type options struct {
 	MatchLimit   float64  `json:"matchlimit"`
 	Debug        string   `json:"debug,omitempty"`
 	ReturnSHA256 bool     `json:"returnsha256,omitempty"`
+	Decompress   bool     `json:"decompress,omitempty"`
 }
 
 type checkType uint64
@@ -513,6 +517,11 @@ func (r *run) ValidateParameters() (err error) {
 			if err != nil {
 				return
 			}
+		}
+		if s.Options.Decompress {
+			tryDecompress = true
+		} else {
+			tryDecompress = false
 		}
 	}
 	return
@@ -934,6 +943,57 @@ func followSymLink(link string) (mode os.FileMode, path string, err error) {
 	return
 }
 
+type fileEntry struct {
+	filename string
+	fd       *os.File
+	compRdr  io.Reader
+}
+
+func (f *fileEntry) Close() {
+	f.fd.Close()
+}
+
+// getReader returns an appropriate reader for the file being checked.
+// This is done by checking whether the file is compressed or not
+func (f *fileEntry) getReader() io.Reader {
+	var (
+		err error
+	)
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("getReader() -> %v", err)
+		}
+	}()
+	f.fd, err = os.Open(f.filename)
+	if err != nil {
+		stats.Openfailed++
+		panic(err)
+	}
+	if tryDecompress != true {
+		return f.fd
+	}
+	magic := make([]byte, 2)
+	n, err := f.fd.Read(magic)
+	if err != nil {
+		panic(err)
+	}
+	if n != 2 {
+		return f.fd
+	}
+	_, err = f.fd.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+	if magic[0] == 0x1f && magic[1] == 0x8b {
+		f.compRdr, err = gzip.NewReader(f.fd)
+		if err != nil {
+			panic(err)
+		}
+		return f.compRdr
+	}
+	return f.fd
+}
+
 // evaluateFile takes a single file and applies searches to it
 func (r *run) evaluateFile(file string) (err error) {
 	var activeSearches []string
@@ -990,16 +1050,17 @@ func (r *run) evaluateFile(file string) (err error) {
 	// Second pass: Enter all content & hash checks across all searches.
 	// Only perform the searches that are active.
 	// Optimize to only read a file once per check type
-	r.checkContent(file)
-	r.checkHash(file, checkMD5)
-	r.checkHash(file, checkSHA1)
-	r.checkHash(file, checkSHA256)
-	r.checkHash(file, checkSHA384)
-	r.checkHash(file, checkSHA512)
-	r.checkHash(file, checkSHA3_224)
-	r.checkHash(file, checkSHA3_256)
-	r.checkHash(file, checkSHA3_384)
-	r.checkHash(file, checkSHA3_512)
+	f := fileEntry{filename: file}
+	r.checkContent(f)
+	r.checkHash(f, checkMD5)
+	r.checkHash(f, checkSHA1)
+	r.checkHash(f, checkSHA256)
+	r.checkHash(f, checkSHA384)
+	r.checkHash(f, checkSHA512)
+	r.checkHash(f, checkSHA3_224)
+	r.checkHash(f, checkSHA3_256)
+	r.checkHash(f, checkSHA3_384)
+	r.checkHash(f, checkSHA3_512)
 	return
 }
 
@@ -1151,10 +1212,9 @@ func (s search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
 	return
 }
 
-func (r *run) checkContent(file string) {
+func (r *run) checkContent(f fileEntry) {
 	var (
 		err error
-		fd  *os.File
 	)
 	defer func() {
 		if e := recover(); e != nil {
@@ -1184,14 +1244,10 @@ func (r *run) checkContent(file string) {
 	if !continuereadingfile {
 		return
 	}
-	fd, err = os.Open(file)
-	if err != nil {
-		stats.Openfailed++
-		panic(err)
-	}
-	defer fd.Close()
 	// iterate over the file content
-	scanner := bufio.NewScanner(fd)
+	reader := f.getReader()
+	defer f.Close()
+	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
 			panic(err)
@@ -1246,7 +1302,7 @@ func (r *run) checkContent(file string) {
 							debugprint("checkContent: [pass] must match any line and current line matched. regex='%s', line='%s'\n",
 								c.value, scanner.Text())
 							if c.wantThis(true) {
-								c.storeMatch(file)
+								c.storeMatch(f.filename)
 							}
 						}
 					} else {
@@ -1255,7 +1311,7 @@ func (r *run) checkContent(file string) {
 								c.value, scanner.Text())
 							macroalstatus[label] = false
 							if c.wantThis(true) {
-								c.storeMatch(file)
+								c.storeMatch(f.filename)
 							}
 						} else {
 							debugprint("checkContent: [fail] must not match at least one line but current line matched. regex='%s', line='%s'\n",
@@ -1280,7 +1336,7 @@ func (r *run) checkContent(file string) {
 								c.value, scanner.Text())
 							macroalstatus[label] = false
 							if c.wantThis(false) {
-								c.storeMatch(file)
+								c.storeMatch(f.filename)
 							}
 						} else {
 							debugprint("checkContent: [fail] much match any line and current line didn't match. regex='%s', line='%s'\n",
@@ -1309,7 +1365,7 @@ func (r *run) checkContent(file string) {
 		// 1. if MACROAL is set and the search succeeded, store the file in each content check
 		if search.Options.Macroal && macroalstatus[label] {
 			debugprint("checkContent: macroal is set and search label '%s' passed on file '%s'\n",
-				label, file)
+				label, f.filename)
 			// we match all content regexes on all lines of the file,
 			// as requested via the Macroal flag
 			// now store the filename in all checks
@@ -1318,7 +1374,7 @@ func (r *run) checkContent(file string) {
 					continue
 				}
 				if c.wantThis(checksstatus[label][i]) {
-					c.storeMatch(file)
+					c.storeMatch(f.filename)
 				}
 				search.checks[i] = c
 			}
@@ -1332,9 +1388,9 @@ func (r *run) checkContent(file string) {
 			}
 			if !checksstatus[label][i] && c.inversematch {
 				debugprint("in search '%s' on file '%s', check '%s' has not matched and is set to inversematch, record this as a positive result\n",
-					label, file, c.value)
+					label, f.filename, c.value)
 				if c.wantThis(checksstatus[label][i]) {
-					c.storeMatch(file)
+					c.storeMatch(f.filename)
 				}
 				// adjust check status to true because the check did in fact match as an inverse
 				checksstatus[label][i] = true
@@ -1350,7 +1406,7 @@ func (r *run) checkContent(file string) {
 				// check hasn't matched, or has matched and we didn't want it to, deactivate the search
 				if !checksstatus[label][i] || (checksstatus[label][i] && c.inversematch) {
 					if c.wantThis(checksstatus[label][i]) {
-						c.storeMatch(file)
+						c.storeMatch(f.filename)
 						search.checks[i] = c
 					}
 					search.deactivate()
@@ -1362,7 +1418,7 @@ func (r *run) checkContent(file string) {
 	return
 }
 
-func (r *run) checkHash(file string, hashtype checkType) {
+func (r *run) checkHash(f fileEntry, hashtype checkType) {
 	var (
 		err error
 	)
@@ -1382,7 +1438,7 @@ func (r *run) checkHash(file string, hashtype checkType) {
 	if nothingToDo {
 		return
 	}
-	hash, err := getHash(file, hashtype)
+	hash, err := getHash(f, hashtype)
 	if err != nil {
 		panic(err)
 	}
@@ -1395,10 +1451,10 @@ func (r *run) checkHash(file string, hashtype checkType) {
 				match := false
 				if c.value == hash {
 					match = true
-					debugprint("checkHash: file '%s' matches checksum '%s'\n", file, c.value)
+					debugprint("checkHash: file '%s' matches checksum '%s'\n", f.filename, c.value)
 				}
 				if c.wantThis(match) {
-					c.storeMatch(file)
+					c.storeMatch(f.filename)
 				} else if search.Options.MatchAll {
 					search.deactivate()
 				}
@@ -1411,19 +1467,15 @@ func (r *run) checkHash(file string, hashtype checkType) {
 }
 
 // getHash calculates the hash of a file.
-func getHash(file string, hashType checkType) (hexhash string, err error) {
+func getHash(f fileEntry, hashType checkType) (hexhash string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("getHash() -> %v", e)
 		}
 	}()
-	fd, err := os.Open(file)
-	if err != nil {
-		stats.Openfailed++
-		panic(err)
-	}
-	defer fd.Close()
-	debugprint("getHash: computing hash for '%s'\n", fd.Name())
+	reader := f.getReader()
+	defer f.Close()
+	debugprint("getHash: computing hash for '%s'\n", f.fd.Name())
 	var h hash.Hash
 	switch hashType {
 	case checkMD5:
@@ -1449,9 +1501,8 @@ func getHash(file string, hashType checkType) (hexhash string, err error) {
 		panic(err)
 	}
 	buf := make([]byte, 4096)
-	var offset int64 = 0
 	for {
-		block, err := fd.ReadAt(buf, offset)
+		block, err := reader.Read(buf)
 		if err != nil && err != io.EOF {
 			panic(err)
 		}
@@ -1459,7 +1510,6 @@ func getHash(file string, hashType checkType) (hexhash string, err error) {
 			break
 		}
 		h.Write(buf[:block])
-		offset += int64(block)
 	}
 	hexhash = fmt.Sprintf("%X", h.Sum(nil))
 	return
@@ -1554,7 +1604,8 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 					mf.FileInfo.Mode = fi.Mode().String()
 					mf.FileInfo.Mtime = fi.ModTime().UTC().String()
 					if search.Options.ReturnSHA256 {
-						mf.FileInfo.SHA256, err = getHash(mf.File, checkSHA256)
+						f := fileEntry{filename: mf.File}
+						mf.FileInfo.SHA256, err = getHash(f, checkSHA256)
 						if err != nil {
 							panic(err)
 						}

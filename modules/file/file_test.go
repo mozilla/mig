@@ -102,6 +102,48 @@ func TestContentSearch(t *testing.T) {
 	}
 }
 
+func TestDecompressedContentSearch(t *testing.T) {
+	for _, tp := range TESTDATA {
+		var (
+			r run
+			s search
+		)
+		var expectedfiles = []string{
+			basedir + "/" + tp.name,
+			basedir + subdirs + tp.name,
+		}
+		// testfile8 is a corrupt gzip and should fail to decompress
+		if tp.name == "testfile8" {
+			expectedfiles = []string{""}
+		}
+		r.Parameters = *newParameters()
+		s.Paths = append(s.Paths, basedir)
+		if tp.decompressedcontent != "" {
+			s.Contents = append(s.Contents, tp.decompressedcontent)
+		} else {
+			s.Contents = append(s.Contents, tp.content)
+		}
+		s.Contents = append(s.Contents, "!^FOOBAR$")
+		s.Options.MatchAll = true
+		s.Options.Decompress = true
+		r.Parameters.Searches["s1"] = s
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("%s\n", msg)
+		out := r.Run(bytes.NewBuffer(msg))
+		if len(out) == 0 {
+			t.Fatal("run failed")
+		}
+		t.Log(out)
+		err = evalResults([]byte(out), expectedfiles)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestSize(t *testing.T) {
 	for _, tp := range TESTDATA {
 		var (
@@ -237,6 +279,46 @@ func TestHashes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+		}
+	}
+}
+
+func TestDecompressedHash(t *testing.T) {
+	for _, tp := range TESTDATA {
+		var (
+			r run
+			s search
+		)
+		var expectedfiles = []string{
+			basedir + "/" + tp.name,
+			basedir + subdirs + tp.name,
+		}
+		// testfile8 is a corrupt gzip and should fail to decompress
+		if tp.name == "testfile8" {
+			expectedfiles = []string{""}
+		}
+		r.Parameters = *newParameters()
+		s.Paths = append(s.Paths, basedir)
+		if tp.decompressedmd5 != "" {
+			s.MD5 = append(s.MD5, tp.decompressedmd5)
+		} else {
+			s.MD5 = append(s.MD5, tp.md5)
+		}
+		s.Options.Decompress = true
+		r.Parameters.Searches["s1"] = s
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("%s\n", msg)
+		out := r.Run(bytes.NewBuffer(msg))
+		if len(out) == 0 {
+			t.Fatal("run failed")
+		}
+		t.Log(out)
+		err = evalResults([]byte(out), expectedfiles)
+		if err != nil {
+			t.Fatal(err)
 		}
 	}
 }
@@ -387,7 +469,7 @@ type mismatchtest struct {
 func TestMismatch(t *testing.T) {
 	var MismatchTestCases = []mismatchtest{
 		mismatchtest{
-			desc: "want files that don't match name '^testfile0' with maxdepth=1, should find testfile1, 2, 3, 4 & 5",
+			desc: "want files that don't match name '^testfile0' with maxdepth=1, should find testfile1, 2, 3, 4, 5, 6, 7 & 8",
 			search: search{
 				Paths: []string{basedir},
 				Names: []string{"^" + TESTDATA[0].name + "$"},
@@ -401,10 +483,13 @@ func TestMismatch(t *testing.T) {
 				basedir + "/" + TESTDATA[2].name,
 				basedir + "/" + TESTDATA[3].name,
 				basedir + "/" + TESTDATA[4].name,
-				basedir + "/" + TESTDATA[5].name},
+				basedir + "/" + TESTDATA[5].name,
+				basedir + "/" + TESTDATA[6].name,
+				basedir + "/" + TESTDATA[7].name,
+				basedir + "/" + TESTDATA[8].name},
 		},
 		mismatchtest{
-			desc: "want files that don't have a size of 190 bytes or larger than 10{k,m,g,t} or smaller than 10 bytes, should find testfile1, 2 & 3",
+			desc: "want files that don't have a size of 190 bytes or larger than 10{k,m,g,t} or smaller than 10 bytes, should find testfile1, 2, 3, 4, 5, 6, 7 & 8",
 			search: search{
 				Paths: []string{basedir},
 				Sizes: []string{"190", ">10k", ">10m", ">10g", ">10t", "<10"},
@@ -419,7 +504,10 @@ func TestMismatch(t *testing.T) {
 				basedir + "/" + TESTDATA[2].name,
 				basedir + "/" + TESTDATA[3].name,
 				basedir + "/" + TESTDATA[4].name,
-				basedir + "/" + TESTDATA[5].name},
+				basedir + "/" + TESTDATA[5].name,
+				basedir + "/" + TESTDATA[6].name,
+				basedir + "/" + TESTDATA[7].name,
+				basedir + "/" + TESTDATA[8].name},
 		},
 		mismatchtest{
 			desc: "want files that have not been modified in the last hour ago, should find nothing",
@@ -473,7 +561,7 @@ func TestMismatch(t *testing.T) {
 				basedir + subdirs + TESTDATA[1].name},
 		},
 		mismatchtest{
-			desc: "want files that don't match the hashes of testfile2, should find testfile0, 1, 3, 4, & 5",
+			desc: "want files that don't match the hashes of testfile2, should find testfile0, 1, 3, 4, 5, 6, 7 & 8",
 			search: search{
 				Paths: []string{basedir},
 				MD5:   []string{TESTDATA[2].md5},
@@ -491,7 +579,10 @@ func TestMismatch(t *testing.T) {
 				basedir + "/" + TESTDATA[1].name,
 				basedir + "/" + TESTDATA[3].name,
 				basedir + "/" + TESTDATA[4].name,
-				basedir + "/" + TESTDATA[5].name},
+				basedir + "/" + TESTDATA[5].name,
+				basedir + "/" + TESTDATA[6].name,
+				basedir + "/" + TESTDATA[7].name,
+				basedir + "/" + TESTDATA[8].name},
 		},
 	}
 
@@ -543,6 +634,7 @@ func TestParamsParser(t *testing.T) {
 	args = append(args, "-matchlimit", "10")
 	args = append(args, "-maxdepth", "2")
 	args = append(args, "-verbose")
+	args = append(args, "-decompress")
 	t.Logf("%s\n", args)
 	_, err = r.ParamsParser(args)
 	if err != nil {
@@ -633,7 +725,8 @@ const subdirs string = `/a/b/c/d/e/f/g/h/i/j/k/l/m/n/`
 type testParams struct {
 	data []byte
 	name, size, mode, mtime, content,
-	md5, sha1, sha2, sha3 string
+	md5, sha1, sha2, sha3,
+	decompressedcontent, decompressedmd5 string
 }
 
 var TESTDATA = []testParams{
@@ -786,5 +879,78 @@ some other text`),
 		sha1:    `fb03d2d4ac2a82090bc29934f75c1d6914bacc91`,
 		sha2:    `8871b2ff047be05571549398e54c1f36163ae171e05a89900468688ea3bac4f9f3d7c922f0bebc24fdac28d0b2d38fb2718209fb5976c9245e7c837170b79819`,
 		sha3:    `cb086f02b728d57e299651f89e1fb0f89c659db50c7c780ec2689a8143e55c8e5e63ab47fe20897be7155e409151c190`,
+	},
+	testParams{
+		data: []byte("\x1f\x8b\x08\x08\xd9\xdc\x88\x56\x00\x03\x74\x65\x73\x74\x00\x8d" +
+			"\x8e\xcd\x0a\xc3\x30\x0c\x83\xef\x79\x0a\xc1\xae\xf3\x43\x65\xad" +
+			"\x4a\x0c\x49\x1c\x1a\xb3\xbf\xa7\x5f\x96\xb2\x4b\x4f\x33\x42\x18" +
+			"\xf3\x49\x58\x44\x90\x18\x57\xee\xd8\x6c\xc7\x5b\x5b\xe3\x8a\x4d" +
+			"\x33\x21\x22\xe1\x02\x4f\xda\x31\x14\xb1\x58\x29\xac\x1e\xf0\xdf" +
+			"\x8c\x6c\xbc\xd9\x9d\x33\x5c\x91\xb5\xf2\xdb\x9b\x47\xfd\x43\x3d" +
+			"\xa1\xb7\xb8\xb0\x87\x13\xc6\xd2\xfc\x35\xe1\x2b\xaa\xfd\xa0\x6e" +
+			"\x85\x70\x3e\xfd\xd8\xcc\xd3\xf8\xf7\xf0\x79\xfd\x00\x4c\x08\xa4" +
+			"\x7a\xc6\x00\x00\x00"),
+		name:                `testfile6`,
+		size:                `133`,
+		mode:                `-rw-r--r--`,
+		mtime:               `<1m`,
+		content:             `KO3B`,
+		md5:                 `31d38eee231318166538e1569631aba9`,
+		sha1:                `bd1f24d8cbb000bbf7bcd618c2aec73280388721`,
+		sha2:                `bb4e449df74edae0292d60d2733a3b1801d90ae23560484b1e04fb52f111a14f`,
+		sha3:                `433b84f162d1b00481e6da022c5738fb4d04c3bb4317f73266746dd1`,
+		decompressedcontent: `^--- header for zipped file ---$`,
+		decompressedmd5:     `5bb23d3b1eaaddc6e108e3fb0ee80a61`,
+	},
+	testParams{
+		data: []byte("\x1f\x8b\x08\x00\xd9\xe3\x8f\x56\x00\x03\xed\xd4\xcb\x6a\x84\x30" +
+			"\x14\x06\x60\xd7\xf3\x14\x07\xba\xad\x60\xe2\xed\x09\xfa\x02\x5d" +
+			"\x14\xba\x4c\xf5\x0c\x86\x6a\x22\xe6\xf4\xfa\xf4\x8d\xce\x74\x28" +
+			"\x03\x65\xba\xb1\x45\xfa\x7f\x44\x22\x7a\x12\x43\xf0\x8f\x70\x90" +
+			"\xbd\xed\x59\x25\xeb\xc9\xa2\xaa\x2a\xe6\x5e\xd5\x65\xf6\xb5\x5f" +
+			"\xe4\xaa\x4c\x94\xae\x8a\xbc\xae\x54\xa1\x55\x92\x29\xad\xeb\x2c" +
+			"\xa1\x6c\xc5\x35\x9d\x3c\x05\x31\x13\x51\xf2\x68\x43\xe7\xa7\xef" +
+			"\xeb\x2e\xbd\xdf\xa8\x34\x4d\xa9\x63\xd3\xf2\x44\x7b\x1f\x2f\x3b" +
+			"\x05\xa1\x77\x3b\x8e\xdc\xd2\xfc\x5f\x50\x2c\xd8\x5d\x91\x74\x36" +
+			"\x50\x6c\x86\x1a\x3f\x0c\xec\x64\x47\x3f\x13\xc7\x9a\x07\xff\xcc" +
+			"\xcb\x60\x47\xbd\x75\x3c\xcf\xdb\xc7\xe9\x5f\xac\x74\x14\x46\xd3" +
+			"\x70\xd8\x9d\x95\xf1\x30\xca\xdb\x52\x7c\x4d\xce\x7f\x16\x05\x3f" +
+			"\x30\x09\xbf\xca\xe1\xce\x4b\x17\x57\x3d\x19\xd7\xfa\xe1\xf0\xf8" +
+			"\xaf\x37\x73\x83\xe4\x98\x7f\xbd\xe2\x37\x2e\xe6\x5f\xe7\xa7\xfc" +
+			"\x97\xc5\x31\xff\x39\xf2\xff\x1b\xce\xf2\x1f\xb8\xf1\xae\xdd\xd4" +
+			"\x01\x70\x77\x73\x7b\x8f\x53\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+			"\x00\x00\x00\x00\x00\x00\x00\xfe\xaf\x0f\x60\x69\x1f\x15\x00\x28" +
+			"\x00\x00"),
+		name:                `testfile7`,
+		size:                `274`,
+		mode:                `-rw-r--r--`,
+		mtime:               `<1m`,
+		content:             `t6Pl`,
+		md5:                 `52fa96013b5c6aa9302d39ee7fe2f6a5`,
+		sha1:                `31952c0d2772c302ec94b303c2b80b67cf830060`,
+		sha2:                `f6032dc9b4ba112397a6f8bcb778ab10708c1acd38e48f637ace15c3ae417ded`,
+		sha3:                `3f4dacf0b2347d0a0ab6f09b7d7c98fd12cb2030d4af8baeacaf55a9`,
+		decompressedcontent: `ustar`,
+		decompressedmd5:     `7f82b4c1613fd10208ad1f71de17ebb5`,
+	},
+	testParams{
+		data: []byte("\x1f\x8b\x08\x08\x2c\xe8\x8f\x56\x00\x03\x74\x65\x73\x74\x66\x69" +
+			"\x6c\x65\x33\x00\x8d\x8e\x4b\x0a\x03\x31\x0c\x43\xf7\x73\x0a\x41" +
+			"\xb7\xf5\xa1\xd2\x19\x0d\x09\x24\x71\x48\xdc\xef\xe9\xeb\xa6\xcc" +
+			"\xa6\xab\x1a\x81\x6c\x78\x12\x16\x11\x44\x86\x8d\x1d\xbb\x76\xac" +
+			"\xda\xfb\xb5\x19\x37\xbc\x52\x6b\x00\x00\xca\x84\x88\x2c\x27\x58" +
+			"\x4c\x03\xae\xe0\x54\x29\xac\xb6\xe0\xbf\xf1\x6c\xb8\xe8\x8d\x33" +
+			"\x5c\x91\x53\xe5\xa7\x37\x7b\xfd\x3d\x59\xc4\x68\x61\xe5\x58\x7e" +
+			"\x30\x96\x66\xcf\x09\x9f\x51\xf5\x80\x86\x16\xc2\xf8\xb0\xef\xa6" +
+			"\x16\xfd\xf3\x79\xbf\x01\x7b\xae\xde\x84\xca\x00\x00\x00"),
+		name:    `testfile8`,
+		size:    `142`,
+		mode:    `-rw-r--r--`,
+		mtime:   `<1m`,
+		content: `,'XL`,
+		md5:     `df7b577ceb59f700d5b03db9d12d174e`,
+		sha1:    `ea033d30e996ac443bc50e9c37eb25b37505302e`,
+		sha2:    `2f4f81c0920501f178085032cd2784b8aa811b8c8e94da7ff85a43a361cd96cc`,
+		sha3:    `d171566f8026a4ca6b4cdf8e6491a651625f98fbc15f9cb601833b64`,
 	},
 }
