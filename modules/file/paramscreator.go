@@ -50,13 +50,9 @@ func printHelp(isCmd bool) {
 
 %smd5 <hash>      .
 %ssha1 <hash>     .
-%ssha256 <hash>   .
-%ssha384 <hash>   .
-%ssha512 <hash>   .
-%ssha3_224 <hash> .
-%ssha3_256 <hash> .
-%ssha3_384 <hash> .
-%ssha3_512 <hash> - compare file against given hash
+%ssha2 <hash>     .
+%ssha3 <hash>     - compare file against given hash
+ 
 
 
 Options
@@ -251,83 +247,54 @@ func (r *run) ParamsCreator() (interface{}, error) {
 					continue
 				}
 				search.SHA1 = append(search.SHA1, checkValue)
-			case "sha256":
+			case "sha2":
 				if checkValue == "" {
 					fmt.Println("Missing parameter, try again")
 					continue
 				}
-				err = validateHash(checkValue, checkSHA256)
+				var hashSize = len(checkValue)
+				hashType := checkContent
+				switch hashSize {
+				case 64:
+					hashType = checkSHA256
+				case 96:
+					hashType = checkSHA384
+				case 128:
+					hashType = checkSHA512
+				default:
+					fmt.Printf("ERROR: Invalid hash length")
+				}
+				err = validateHash(checkValue, hashType)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
 					continue
 				}
-				search.SHA256 = append(search.SHA256, checkValue)
-			case "sha384":
+				search.SHA2 = append(search.SHA2, checkValue)
+			case "sha3":
 				if checkValue == "" {
 					fmt.Println("Missing parameter, try again")
 					continue
 				}
-				err = validateHash(checkValue, checkSHA384)
+				var hashSize = len(checkValue)
+				hashType := checkContent
+				switch hashSize {
+				case 56:
+					hashType = checkSHA3_224
+				case 64:
+					hashType = checkSHA3_256
+				case 96:
+					hashType = checkSHA3_384
+				case 128:
+					hashType = checkSHA3_512
+				default:
+					fmt.Printf("ERROR: Invalid hash length")
+				}
+				err = validateHash(checkValue, hashType)
 				if err != nil {
 					fmt.Printf("ERROR: %v\nTry again.\n", err)
 					continue
 				}
-				search.SHA384 = append(search.SHA384, checkValue)
-			case "sha512":
-				if checkValue == "" {
-					fmt.Println("Missing parameter, try again")
-					continue
-				}
-				err = validateHash(checkValue, checkSHA512)
-				if err != nil {
-					fmt.Printf("ERROR: %v\nTry again.\n", err)
-					continue
-				}
-				search.SHA512 = append(search.SHA512, checkValue)
-			case "sha3_224":
-				if checkValue == "" {
-					fmt.Println("Missing parameter, try again")
-					continue
-				}
-				err = validateHash(checkValue, checkSHA3_224)
-				if err != nil {
-					fmt.Printf("ERROR: %v\nTry again.\n", err)
-					continue
-				}
-				search.SHA3_224 = append(search.SHA3_224, checkValue)
-			case "sha3_256":
-				if checkValue == "" {
-					fmt.Println("Missing parameter, try again")
-					continue
-				}
-				err = validateHash(checkValue, checkSHA3_256)
-				if err != nil {
-					fmt.Printf("ERROR: %v\nTry again.\n", err)
-					continue
-				}
-				search.SHA3_256 = append(search.SHA3_256, checkValue)
-			case "sha3_384":
-				if checkValue == "" {
-					fmt.Println("Missing parameter, try again")
-					continue
-				}
-				err = validateHash(checkValue, checkSHA3_384)
-				if err != nil {
-					fmt.Printf("ERROR: %v\nTry again.\n", err)
-					continue
-				}
-				search.SHA3_384 = append(search.SHA3_384, checkValue)
-			case "sha3_512":
-				if checkValue == "" {
-					fmt.Println("Missing parameter, try again")
-					continue
-				}
-				err = validateHash(checkValue, checkSHA3_512)
-				if err != nil {
-					fmt.Printf("ERROR: %v\nTry again.\n", err)
-					continue
-				}
-				search.SHA3_512 = append(search.SHA3_512, checkValue)
+				search.SHA3 = append(search.SHA3, checkValue)
 			case "maxdepth":
 				if checkValue == "" {
 					fmt.Println("Missing parameter, try again")
@@ -400,8 +367,8 @@ exit:
 func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		err error
-		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha256s,
-		sha384s, sha512s, sha3_224s, sha3_256s, sha3_384s, sha3_512s, mismatch flagParam
+		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha2s,
+		sha3s, mismatch flagParam
 		maxdepth, matchlimit                               float64
 		returnsha256, matchall, matchany, macroal, verbose bool
 		fs                                                 flag.FlagSet
@@ -419,13 +386,8 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.Var(&contents, "content", "see help")
 	fs.Var(&md5s, "md5", "see help")
 	fs.Var(&sha1s, "sha1", "see help")
-	fs.Var(&sha256s, "sha256", "see help")
-	fs.Var(&sha384s, "sha384", "see help")
-	fs.Var(&sha512s, "sha512", "see help")
-	fs.Var(&sha3_224s, "sha3_224", "see help")
-	fs.Var(&sha3_256s, "sha3_256", "see help")
-	fs.Var(&sha3_384s, "sha3_384", "see help")
-	fs.Var(&sha3_512s, "sha3_512", "see help")
+	fs.Var(&sha2s, "sha2", "see help")
+	fs.Var(&sha3s, "sha3", "see help")
 	fs.Var(&mismatch, "mismatch", "see help")
 	fs.Float64Var(&maxdepth, "maxdepth", 1000, "see help")
 	fs.Float64Var(&matchlimit, "matchlimit", 1000, "see help")
@@ -447,13 +409,8 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	s.Contents = contents
 	s.MD5 = md5s
 	s.SHA1 = sha1s
-	s.SHA256 = sha256s
-	s.SHA384 = sha384s
-	s.SHA512 = sha512s
-	s.SHA3_224 = sha3_224s
-	s.SHA3_256 = sha3_256s
-	s.SHA3_384 = sha3_384s
-	s.SHA3_512 = sha3_512s
+	s.SHA2 = sha2s
+	s.SHA3 = sha3s
 	s.Options.MaxDepth = maxdepth
 	s.Options.MatchLimit = matchlimit
 	s.Options.Macroal = macroal

@@ -132,47 +132,17 @@ func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, 
 							}
 							bitem.Check.Test.Value += fmt.Sprintf("sha1='%s'", v)
 						}
-						for _, v := range mf.Search.SHA256 {
+						for _, v := range mf.Search.SHA2 {
 							if len(bitem.Check.Test.Value) > 0 {
 								bitem.Check.Test.Value += " and "
 							}
-							bitem.Check.Test.Value += fmt.Sprintf("sha256='%s'", v)
+							bitem.Check.Test.Value += fmt.Sprintf("sha2='%s'", v)
 						}
-						for _, v := range mf.Search.SHA384 {
+						for _, v := range mf.Search.SHA3 {
 							if len(bitem.Check.Test.Value) > 0 {
 								bitem.Check.Test.Value += " and "
 							}
-							bitem.Check.Test.Value += fmt.Sprintf("sha384='%s'", v)
-						}
-						for _, v := range mf.Search.SHA512 {
-							if len(bitem.Check.Test.Value) > 0 {
-								bitem.Check.Test.Value += " and "
-							}
-							bitem.Check.Test.Value += fmt.Sprintf("sha512='%s'", v)
-						}
-						for _, v := range mf.Search.SHA3_224 {
-							if len(bitem.Check.Test.Value) > 0 {
-								bitem.Check.Test.Value += " and "
-							}
-							bitem.Check.Test.Value += fmt.Sprintf("sha3_224='%s'", v)
-						}
-						for _, v := range mf.Search.SHA3_256 {
-							if len(bitem.Check.Test.Value) > 0 {
-								bitem.Check.Test.Value += " and "
-							}
-							bitem.Check.Test.Value += fmt.Sprintf("sha3_256='%s'", v)
-						}
-						for _, v := range mf.Search.SHA3_384 {
-							if len(bitem.Check.Test.Value) > 0 {
-								bitem.Check.Test.Value += " and "
-							}
-							bitem.Check.Test.Value += fmt.Sprintf("sha3_384='%s'", v)
-						}
-						for _, v := range mf.Search.SHA3_512 {
-							if len(bitem.Check.Test.Value) > 0 {
-								bitem.Check.Test.Value += " and "
-							}
-							bitem.Check.Test.Value += fmt.Sprintf("sha3_512='%s'", v)
+							bitem.Check.Test.Value += fmt.Sprintf("sha3='%s'", v)
 						}
 						if mf.File == "" {
 							for i, p := range mf.Search.Paths {

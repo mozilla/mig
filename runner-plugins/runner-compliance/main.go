@@ -206,47 +206,17 @@ func makeComplianceItem(cmd mig.Command) (items []gozdef.ComplianceItem, err err
 						}
 						ci.Check.Test.Value += fmt.Sprintf("sha1='%s'", v)
 					}
-					for _, v := range mf.Search.SHA256 {
+					for _, v := range mf.Search.SHA2 {
 						if len(ci.Check.Test.Value) > 0 {
 							ci.Check.Test.Value += " and "
 						}
-						ci.Check.Test.Value += fmt.Sprintf("sha256='%s'", v)
+						ci.Check.Test.Value += fmt.Sprintf("sha2='%s'", v)
 					}
-					for _, v := range mf.Search.SHA384 {
+					for _, v := range mf.Search.SHA3 {
 						if len(ci.Check.Test.Value) > 0 {
 							ci.Check.Test.Value += " and "
 						}
-						ci.Check.Test.Value += fmt.Sprintf("sha384='%s'", v)
-					}
-					for _, v := range mf.Search.SHA512 {
-						if len(ci.Check.Test.Value) > 0 {
-							ci.Check.Test.Value += " and "
-						}
-						ci.Check.Test.Value += fmt.Sprintf("sha512='%s'", v)
-					}
-					for _, v := range mf.Search.SHA3_224 {
-						if len(ci.Check.Test.Value) > 0 {
-							ci.Check.Test.Value += " and "
-						}
-						ci.Check.Test.Value += fmt.Sprintf("sha3_224='%s'", v)
-					}
-					for _, v := range mf.Search.SHA3_256 {
-						if len(ci.Check.Test.Value) > 0 {
-							ci.Check.Test.Value += " and "
-						}
-						ci.Check.Test.Value += fmt.Sprintf("sha3_256='%s'", v)
-					}
-					for _, v := range mf.Search.SHA3_384 {
-						if len(ci.Check.Test.Value) > 0 {
-							ci.Check.Test.Value += " and "
-						}
-						ci.Check.Test.Value += fmt.Sprintf("sha3_384='%s'", v)
-					}
-					for _, v := range mf.Search.SHA3_512 {
-						if len(ci.Check.Test.Value) > 0 {
-							ci.Check.Test.Value += " and "
-						}
-						ci.Check.Test.Value += fmt.Sprintf("sha3_512='%s'", v)
+						ci.Check.Test.Value += fmt.Sprintf("sha3='%s'", v)
 					}
 					if mf.File == "" {
 						for i, p := range mf.Search.Paths {

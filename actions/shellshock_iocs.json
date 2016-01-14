@@ -19,7 +19,7 @@
               "/tmp",
               "/var/tmp"
             ],
-            "sha256": [
+            "sha2": [
               "73b0d95541c84965fa42c3e257bb349957b3be626dec9d55efcc6ebcba6fa489",
               "ae3b4f296957ee0a208003569647f04e585775be1f3992921af996b320cf520b",
               "2d3e0be24ef668b85ed48e81ebb50dce50612fb8dce96879f80306701bc41614",
