@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cheggaaa/pb"
 	"github.com/jvehent/cljs"
 	"golang.org/x/crypto/openpgp"
 	"gopkg.in/gcfg.v1"
@@ -722,34 +723,33 @@ func (cli Client) EvaluateAgentTarget(target string) (agents []mig.Agent, err er
 
 // FollowAction continuously loops over an action and prints its completion status in os.Stderr.
 // when the action reaches its expiration date, FollowAction prints its final status and returns.
-func (cli Client) FollowAction(a mig.Action) (err error) {
+func (cli Client) FollowAction(a mig.Action, total int) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("followAction() -> %v", e)
 		}
 	}()
-	fmt.Fprintf(os.Stderr, "\x1b[34mFollowing action ID %.0f.\x1b[0m", a.ID)
-	sent := 0
-	dotter := 0
+	fmt.Fprintf(os.Stderr, "\x1b[34mFollowing action ID %.0f.\x1b[0m\n", a.ID)
 	previousctr := 0
 	status := ""
 	attempts := 0
 	var completion float64
+	bar := pb.New(total)
+	bar.ShowSpeed = true
+	bar.SetMaxWidth(80)
+	bar.Output = os.Stderr
+	bar.Start()
 	for {
 		a, _, err = cli.GetAction(a.ID)
 		if err != nil {
 			attempts++
-			time.Sleep(1 * time.Second)
+			time.Sleep(time.Second)
 			if attempts >= 30 {
 				panic("failed to retrieve action after 30 seconds. launch may have failed")
 			}
 			continue
 		}
 		if status == "" {
-			status = a.Status
-		}
-		if status != a.Status {
-			fmt.Fprintf(os.Stderr, "\x1b[34mstatus=%s\x1b[0m", a.Status)
 			status = a.Status
 		}
 		// exit follower mode if status isn't one we follow,
@@ -761,33 +761,26 @@ func (cli Client) FollowAction(a mig.Action) (err error) {
 			goto finish
 			break
 		}
-		// init counters
-		if sent == 0 {
-			if a.Counters.Sent == 0 {
-				time.Sleep(1 * time.Second)
-				continue
-			} else {
-				sent = a.Counters.Sent
-			}
-		}
 		if a.Counters.Done > 0 && a.Counters.Done > previousctr {
 			completion = (float64(a.Counters.Done) / float64(a.Counters.Sent)) * 100
 			if completion < 99.5 {
+				bar.Add(a.Counters.Done - previousctr)
+				bar.Update()
 				previousctr = a.Counters.Done
-				fmt.Fprintf(os.Stderr, "\x1b[34m%.0f%%\x1b[0m", completion)
 			}
 		}
-		fmt.Fprintf(os.Stderr, "\x1b[34m.\x1b[0m")
 		time.Sleep(2 * time.Second)
-		dotter++
 	}
 finish:
+	bar.Add(total - previousctr)
+	bar.Update()
+	bar.Finish()
 	a, _, err = cli.GetAction(a.ID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[error] failed to retrieve action counters\n")
 	} else {
 		completion = (float64(a.Counters.Done) / float64(a.Counters.Sent)) * 100
-		fmt.Fprintf(os.Stderr, "\n\x1b[34m- %2.1f%% done in %s\x1b[0m\n", completion, time.Now().Sub(a.StartTime).String())
+		fmt.Fprintf(os.Stderr, "\x1b[34m%2.1f%% done in %s\x1b[0m\n", completion, time.Now().Sub(a.StartTime).String())
 	}
 	fmt.Fprintf(os.Stderr, "\x1b[34m")
 	a.PrintCounters()

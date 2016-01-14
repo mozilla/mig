@@ -279,7 +279,7 @@ readytolaunch:
 	done := make(chan bool, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
-		err = cli.FollowAction(a)
+		err = cli.FollowAction(a, len(agents))
 		if err != nil {
 			panic(err)
 		}

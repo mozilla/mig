@@ -8,14 +8,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bobappleyard/readline"
 	"io"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
-	"mig.ninja/mig/modules"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bobappleyard/readline"
+	"mig.ninja/mig"
+	"mig.ninja/mig/client"
+	"mig.ninja/mig/modules"
 )
 
 // default expiration is 300 seconds
@@ -29,7 +30,10 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 			err = fmt.Errorf("actionLauncher() -> %v", e)
 		}
 	}()
-	var a mig.Action
+	var (
+		a      mig.Action
+		tcount int
+	)
 	if tpl.ID == 0 {
 		fmt.Println("Entering action launcher with empty template")
 	} else {
@@ -188,12 +192,12 @@ times			show the various timestamps of the action
 				if err != nil {
 					panic(err)
 				}
-				count := len(agents)
-				if count == 0 {
+				tcount = len(agents)
+				if tcount == 0 {
 					fmt.Println("0 agents match this target. launch aborted")
 					break
 				}
-				fmt.Printf("%d agents will be targeted by search \"%s\"\n", count, a.Target)
+				fmt.Printf("%d agents will be targeted by search \"%s\"\n", tcount, a.Target)
 				input, err = readline.String("continue? (y/n)> ")
 				if err != nil {
 					panic(err)
@@ -230,7 +234,7 @@ times			show the various timestamps of the action
 			fmt.Printf("Action '%s' successfully launched with ID '%.0f' on target '%s'\n",
 				a.Name, a.ID, a.Target)
 			if follow {
-				err = cli.FollowAction(a)
+				err = cli.FollowAction(a, tcount)
 				if err != nil {
 					panic(err)
 				}
@@ -286,7 +290,8 @@ times			show the various timestamps of the action
 				fmt.Println(err)
 				break
 			}
-			fmt.Printf("%d agents will be targetted. To get the list, use 'listagents'\n", len(agents))
+			tcount = len(agents)
+			fmt.Printf("%d agents will be targetted. To get the list, use 'listagents'\n", tcount)
 			hasEvaluatedTarget = true
 		case "settimes":
 			// set the dates
