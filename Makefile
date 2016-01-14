@@ -111,7 +111,6 @@ go_vendor_dependencies:
 	# https://github.com/oschwald/geoip2-golang/issues/13
 	#$(GOGETTER) github.com/oschwald/geoip2-golang
 	$(GOGETTER) github.com/streadway/amqp
-	$(GOGETTER) github.com/seccomp/libseccomp-golang
 	$(GOGETTER) github.com/mozilla/mig-sandbox
 	$(GOGETTER) github.com/gorhill/cronexpr
 	$(GOGETTER) golang.org/x/crypto/openpgp

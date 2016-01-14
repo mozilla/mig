@@ -20,7 +20,6 @@ import (
 	"github.com/mozilla/masche/memaccess"
 	"github.com/mozilla/masche/process"
 	"github.com/mozilla/mig-sandbox"
-	"github.com/seccomp/libseccomp-golang"
 	"io"
 	"mig.ninja/mig/modules"
 	"regexp"
@@ -44,7 +43,7 @@ func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 func init() {
 	m := new(module)
 	sandbox := sandbox.SandboxProfile{
-		DefaultPolicy: seccomp.ActTrap,
+		DefaultPolicy: sandbox.ActTrap,
 		Filters: []sandbox.FilterOperation{
 			sandbox.FilterOperation{
 				FilterOn: []string{
@@ -68,7 +67,7 @@ func init() {
 					"exit_group",
 					"rt_sigreturn",
 				},
-				Action: seccomp.ActAllow,
+				Action: sandbox.ActAllow,
 			},
 		},
 	}
