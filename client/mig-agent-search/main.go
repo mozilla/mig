@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -106,14 +107,18 @@ Command line flags:
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("name; id; status; version; mode; os; arch; pid; starttime; heartbeattime; operator; ident; publicip; addresses")
+	fmt.Println("name; id; status; version; mode; os; arch; pid; starttime; heartbeattime; tags; environment")
 	for _, agt := range agents {
-		operator := "unknown"
-		if _, ok := agt.Tags.(map[string]interface{})["operator"]; ok {
-			operator = agt.Tags.(map[string]interface{})["operator"].(string)
+		tags, err := json.Marshal(agt.Tags)
+		if err != nil {
+			panic(err)
 		}
-		fmt.Printf("\"%s\"; \"%.0f\"; \"%s\"; \"%s\"; \"%s\"; \"%s\"; \"%s\"; \"%d\"; \"%s\"; \"%s\"; \"%s\"; \"%s\"; \"%s\"; \"%s\"\n",
+		env, err := json.Marshal(agt.Env)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("%s; %.0f; %s; %s; %s; %s; %s; %d; %s; %s; %s; %s\n",
 			agt.Name, agt.ID, agt.Status, agt.Version, agt.Mode, agt.Env.OS, agt.Env.Arch, agt.PID, agt.StartTime.Format(time.RFC3339),
-			agt.HeartBeatTS.Format(time.RFC3339), operator, agt.Env.Ident, agt.Env.PublicIP, agt.Env.Addresses)
+			agt.HeartBeatTS.Format(time.RFC3339), tags, env)
 	}
 }
