@@ -33,7 +33,7 @@ thousands of systems isn't making it any better.
 MIG can help. The signature of the vulnerable PHP app (the md5 of a file, a regex,
 or just a filename) can be searched for across all your systems using
 the `file` module. Similarly, IOCs such as specific log entries, backdoor files
-with {md5,sha{1,256,512,3-{256,512}}} hashes, IP addresses from botnets or byte
+with md5 and sha1/2/3 hashes, IP addresses from botnets or byte
 strings in processes memories can be investigated using MIG. Suddenly, your
 weekend is looking a lot better. And with just a few commands, thousands of systems
 will be remotely investigated to verify that you're not at risk.
