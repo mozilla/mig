@@ -1,3 +1,4 @@
+// +build linux
 package sandbox
 
 //#include "signal_handler.h"

@@ -11,7 +11,6 @@ Functionality is achieved by applying [seccomp](https://www.kernel.org/doc/Docum
 
 The following requirements must be met in order to sandbox MIG:
 * Go v1.5
-* MIG
 * libseccomp v2
 * [libseccomp go bindings](https://github.com/seccomp/libseccomp-golang)
 
