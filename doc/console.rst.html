@@ -235,7 +235,7 @@ easy to use. Similar to the command line client, <cite>mig-console</cite> reads 
 configuration from $HOME/.migrc and will prompt the user to create one if it
 doesn't exists.</p><p>The base screen of the API presents a dashboard of the current state of the
 infrastructure. It includes the number of agents and endpoints, broken down
-by version of the agent ,and a list of the latest actions that have run.</p><p>Underneath the dasboard, the user is invited to interact in a prompt that
+by version of the agent ,and a list of the latest actions that have run.</p><p>Underneath the dashboard, the user is invited to interact in a prompt that
 starts with <strong>mig&gt;</strong>.</p><pre><code class="code bash"><span class="name variable">$ </span>mig-console -c ~/.migrc-lnw
 
 <span class="comment">## ##                                     _.---._     .---.
@@ -251,32 +251,32 @@ starts with <strong>mig&gt;</strong>.</p><pre><code class="code bash"><span clas
 </span>                  <span class="comment"># ### /--\  | |   ||-\  //
 </span>                  <span class="comment">#####/    \ |  \_/ |  \//__
 </span>+------
-<span class="punctuation">|</span> Agents <span class="punctuation">&amp;</span> Endpoints summary:
-<span class="punctuation">|</span> * <span class="literal number">2</span> online agents on <span class="literal number">2</span> endpoints
-<span class="punctuation">|</span> * <span class="literal number">0</span> idle agents on <span class="literal number">0</span> endpoints
-<span class="punctuation">|</span> * <span class="literal number">0</span> endpoints are running <span class="literal number">2</span> or more agents
-<span class="punctuation">|</span> * <span class="literal number">0</span> endpoints appeared over the last <span class="literal number">7</span> days
-<span class="punctuation">|</span> * <span class="literal number">0</span> endpoints disappeared over the last <span class="literal number">7</span> days
-<span class="punctuation">|</span> * <span class="literal number">0</span> endpoints have been flapping
-<span class="punctuation">|</span> Online agents by version:
-<span class="punctuation">|</span> * version 20150909+f2456f5.dev: <span class="literal number">2</span> agents
-<span class="punctuation">|</span> Idle agents by version:
-<span class="punctuation">|</span>
-<span class="punctuation">|</span> Latest Actions:
-<span class="punctuation">|</span> ----  ID  ---- + ----         Name         ---- + -Sent- + ----    Date    ---- + ---- Investigators ----
-<span class="punctuation">|</span> <span class="literal number">4999271350274</span>    file -c /home/ulfr/.migrc-l...        <span class="literal number">2</span>   2015-09-29T15:40:35Z   Julien Vehent
-<span class="punctuation">|</span> <span class="literal number">4964811669519</span>    file -c /home/ulfr/.migrc-l...        <span class="literal number">2</span>   2015-09-23T13:37:16Z   Julien Vehent
-<span class="punctuation">|</span> <span class="literal number">4964811669506</span>    file -c /home/ulfr/.migrc-l...        <span class="literal number">2</span>   2015-09-23T13:37:03Z   Julien Vehent
-<span class="punctuation">|</span> <span class="literal number">4964764024853</span>    file -c /home/ulfr/.migrc-l...        <span class="literal number">2</span>   2015-09-23T13:25:26Z   Julien Vehent
-<span class="punctuation">|</span> <span class="literal number">4964764024834</span>    file -c /home/ulfr/.migrc-l...        <span class="literal number">2</span>   2015-09-23T13:24:57Z   Julien Vehent
-<span class="punctuation">|</span> <span class="literal number">4949328330767</span>    file -c /home/ulfr/.migrc-l...        <span class="literal number">2</span>   2015-09-20T19:59:39Z   Julien Vehent
-<span class="punctuation">|</span> <span class="literal number">4949328330754</span>    file -c /home/ulfr/.migrc-l...        <span class="literal number">2</span>   2015-09-20T19:59:25Z   Julien Vehent
-<span class="punctuation">|</span> <span class="literal number">4948324450316</span>    file -c /home/ulfr/.migrc-l...        <span class="literal number">2</span>   2015-09-20T19:45:51Z   Julien Vehent
-<span class="punctuation">|</span> <span class="literal number">4948324450307</span>    file -c /home/ulfr/.migrc-l...        <span class="literal number">2</span>   2015-09-20T19:33:17Z   Julien Vehent
-<span class="punctuation">|</span> <span class="literal number">4947944865794</span>    file -c /home/ulfr/.migrc-l...        <span class="literal number">2</span>   2015-09-20T14:07:36Z   Julien Vehent
+| Agents &amp; Endpoints summary:
+| * 2 online agents on 2 endpoints
+| * 0 idle agents on 0 endpoints
+| * 0 endpoints are running 2 or more agents
+| * 0 endpoints appeared over the last 7 days
+| * 0 endpoints disappeared over the last 7 days
+| * 0 endpoints have been flapping
+| Online agents by version:
+| * version 20150909+f2456f5.dev: 2 agents
+| Idle agents by version:
+|
+| Latest Actions:
+| ----  ID  ---- + ----         Name         ---- + -Sent- + ----    Date    ---- + ---- Investigators ----
+| 4999271350274    file -c /home/ulfr/.migrc-l...        2   2015-09-29T15:40:35Z   Julien Vehent
+| 4964811669519    file -c /home/ulfr/.migrc-l...        2   2015-09-23T13:37:16Z   Julien Vehent
+| 4964811669506    file -c /home/ulfr/.migrc-l...        2   2015-09-23T13:37:03Z   Julien Vehent
+| 4964764024853    file -c /home/ulfr/.migrc-l...        2   2015-09-23T13:25:26Z   Julien Vehent
+| 4964764024834    file -c /home/ulfr/.migrc-l...        2   2015-09-23T13:24:57Z   Julien Vehent
+| 4949328330767    file -c /home/ulfr/.migrc-l...        2   2015-09-20T19:59:39Z   Julien Vehent
+| 4949328330754    file -c /home/ulfr/.migrc-l...        2   2015-09-20T19:59:25Z   Julien Vehent
+| 4948324450316    file -c /home/ulfr/.migrc-l...        2   2015-09-20T19:45:51Z   Julien Vehent
+| 4948324450307    file -c /home/ulfr/.migrc-l...        2   2015-09-20T19:33:17Z   Julien Vehent
+| 4947944865794    file -c /home/ulfr/.migrc-l...        2   2015-09-20T14:07:36Z   Julien Vehent
 +------
 
-Connected to https://mig.example.net/api/v1/. Exit with ctrl+d. Type <span class="name builtin">help </span><span class="keyword">for</span> help.
+Connected to https://mig.example.net/api/v1/. Exit with ctrl+d. Type <span class="name builtin">help </span><span class="keyword">for </span>help.
 mig&gt;</code></pre><p>Entering <strong>help</strong> here, or on any other mode of the console, provides the user
 with a list of available functionalities:</p><pre>mig&gt; help
 The following orders are available:
