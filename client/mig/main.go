@@ -47,6 +47,7 @@ usage: %s <module> <global options> <module parameters>
 		* run on local system:	 -t local
 -v		verbose output, includes debug information and raw queries
 -V		print version
+-z <bool>       compress action before sending it to agents
 
 Progress information is sent to stderr, silence it with "2>/dev/null".
 Results are sent to stdout, redirect them with "1>/path/to/file".
@@ -76,6 +77,7 @@ func main() {
 		migrc, show, render, target, expiration, afile string
 		printAndExit                                   bool
 		verbose, showversion                           bool
+		compressAction                                 bool
 		modargs                                        []string
 		run                                            interface{}
 	)
@@ -96,6 +98,7 @@ func main() {
 	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
 	fs.BoolVar(&verbose, "v", false, "Enable verbose output")
 	fs.BoolVar(&showversion, "V", false, "Show version")
+	fs.BoolVar(&compressAction, "z", false, "Request compression of action parameters")
 
 	// if first argument is missing, or is help, print help
 	// otherwise, pass the remainder of the arguments to the module for parsing
@@ -181,10 +184,14 @@ func main() {
 	if err != nil || op.Parameters == nil {
 		panic(err)
 	}
+	// If compression has been enabled, flag it in the operation.
+	if compressAction {
+		op.WantCompressed = true
+	}
 	// If running against the local target, don't post the action to the MIG API
 	// but run it locally instead.
 	if target == "local" {
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, op.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, op.Parameters, false)
 		if err != nil {
 			panic(err)
 		}
@@ -252,6 +259,10 @@ readytolaunch:
 	// add extra 60 seconds taken for clock skew
 	a.ExpireAfter = a.ExpireAfter.Add(60 * time.Second).UTC()
 
+	a, err = cli.CompressAction(a)
+	if err != nil {
+		panic(err)
+	}
 	asig, err := cli.SignAction(a)
 	if err != nil {
 		panic(err)
