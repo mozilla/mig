@@ -99,6 +99,10 @@ func main() {
 		a.Target = *target
 	}
 
+	a, err = cli.CompressAction(a)
+	if err != nil {
+		panic(err)
+	}
 	asig, err := cli.SignAction(a)
 	if err != nil {
 		panic(err)

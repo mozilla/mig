@@ -90,6 +90,10 @@ func (e *entity) launchAction() (err error) {
 	// time begins in the past.
 	period += -window
 	act.ExpireAfter = act.ValidFrom.Add(period)
+	act, err = cli.CompressAction(act)
+	if err != nil {
+		panic(err)
+	}
 	asig, err := cli.SignAction(act)
 	if err != nil {
 		panic(err)

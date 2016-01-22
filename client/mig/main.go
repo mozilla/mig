@@ -98,7 +98,7 @@ func main() {
 	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
 	fs.BoolVar(&verbose, "v", false, "Enable verbose output")
 	fs.BoolVar(&showversion, "V", false, "Show version")
-	fs.BoolVar(&compressAction, "z", false, "Compress action before sending it to agents")
+	fs.BoolVar(&compressAction, "z", false, "Request compression of action parameters")
 
 	// if first argument is missing, or is help, print help
 	// otherwise, pass the remainder of the arguments to the module for parsing
@@ -184,18 +184,14 @@ func main() {
 	if err != nil || op.Parameters == nil {
 		panic(err)
 	}
-	// If compression has been enabled, replace the parameters with a
-	// compressed version and set the flag.
+	// If compression has been enabled, flag it in the operation.
 	if compressAction {
-		err = op.CompressOperationParam()
-		if err != nil {
-			panic(err)
-		}
+		op.WantCompressed = true
 	}
 	// If running against the local target, don't post the action to the MIG API
 	// but run it locally instead.
 	if target == "local" {
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, op.Parameters, op.IsCompressed)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, op.Parameters, false)
 		if err != nil {
 			panic(err)
 		}
@@ -263,6 +259,10 @@ readytolaunch:
 	// add extra 60 seconds taken for clock skew
 	a.ExpireAfter = a.ExpireAfter.Add(60 * time.Second).UTC()
 
+	a, err = cli.CompressAction(a)
+	if err != nil {
+		panic(err)
+	}
 	asig, err := cli.SignAction(a)
 	if err != nil {
 		panic(err)

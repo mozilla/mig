@@ -100,11 +100,7 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 					break
 				}
 				if paramCompression {
-					err = operation.CompressOperationParam()
-					if err != nil {
-						fmt.Println("Compression failed: %v\n", err)
-					}
-					break
+					operation.WantCompressed = true
 				}
 				a.Operations = append(a.Operations, operation)
 				opjson, err := json.MarshalIndent(operation, "", "  ")
@@ -124,25 +120,23 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 			}
 			switch strings.ToLower(orders[1]) {
 			case "false":
-				for _, x := range a.Operations {
-					if x.IsCompressed {
-						fmt.Println("Warning: some operations have already been compressed")
-						fmt.Println("Restart action creation if this is not desired")
-						break
+				paramCompression = false
+				// Disable compression on all existing operations
+				for i := range a.Operations {
+					a.Operations[i].WantCompressed = false
+					err = a.Operations[i].DecompressOperationParam()
+					if err != nil {
+						panic(err)
 					}
 				}
-				paramCompression = false
+				// Invalidate any signatures applied to the action at this point
+				hasSignatures = false
+				a.PGPSignatures = nil
 			case "true":
 				paramCompression = true
 				// Enable compression on all existing operations
 				for i := range a.Operations {
-					if a.Operations[i].IsCompressed {
-						continue
-					}
-					err = a.Operations[i].CompressOperationParam()
-					if err != nil {
-						panic(err)
-					}
+					a.Operations[i].WantCompressed = true
 				}
 			default:
 				fmt.Println("Argument to compress must be true or false")
@@ -176,7 +170,7 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 		case "help":
 			fmt.Printf(`The following orders are available:
 addoperation <module>	append a new operation of type <module> to the action operations
-compress <false|true>   compress parameters in operations stored in action
+compress <false|true>   request parameter compression in operations stored in action
 listagents		list agents targetted by an action
 deloperation <opnum>	remove operation numbered <opnum> from operations array, count starts at zero
 details			display the action details
@@ -200,11 +194,15 @@ times			show the various timestamps of the action
 					fmt.Printf("Unknown option '%s'\n", orders[1])
 				}
 			}
+			tmpAction, err := getActionView(a)
+			if err != nil {
+				panic(err)
+			}
 			var ajson []byte
 			if pack {
-				ajson, err = json.Marshal(a)
+				ajson, err = json.Marshal(tmpAction)
 			} else {
-				ajson, err = json.MarshalIndent(a, "", "  ")
+				ajson, err = json.MarshalIndent(tmpAction, "", "  ")
 			}
 			if err != nil {
 				panic(err)
@@ -260,6 +258,10 @@ times			show the various timestamps of the action
 				hasTimes = true
 			}
 			if !hasSignatures {
+				a, err = cli.CompressAction(a)
+				if err != nil {
+					panic(err)
+				}
 				asig, err := cli.SignAction(a)
 				if err != nil {
 					panic(err)
@@ -306,6 +308,10 @@ times			show the various timestamps of the action
 			if !hasTimes {
 				fmt.Println("Times must be set prior to signing")
 				break
+			}
+			a, err = cli.CompressAction(a)
+			if err != nil {
+				panic(err)
 			}
 			asig, err := cli.SignAction(a)
 			if err != nil {
@@ -452,5 +458,35 @@ finish:
 	fmt.Printf("%d sent, %d done: %d returned, %d cancelled, %d expired, %d failed, %d timed out, %d still in flight\n",
 		a.Counters.Sent, a.Counters.Done, a.Counters.Done, a.Counters.Cancelled, a.Counters.Expired,
 		a.Counters.Failed, a.Counters.TimeOut, a.Counters.InFlight)
+	return
+}
+
+// Return a view of an action suitable for JSON display in the console; this
+// function essentially strips compression from the parameters, but leaves
+// other fields intact -- the output should be used for display purposes only.
+func getActionView(a mig.Action) (ret mig.Action, err error) {
+	ret = a
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("getActionView() -> %v", e)
+		}
+	}()
+	// Create a copy of the original operations to modify, so we don't
+	// change any of the original action parameters
+	ret.Operations = make([]mig.Operation, len(a.Operations))
+	copy(ret.Operations, a.Operations)
+	for i := range ret.Operations {
+		if !ret.Operations[i].IsCompressed {
+			continue
+		}
+		err = ret.Operations[i].DecompressOperationParam()
+		if err != nil {
+			panic(err)
+		}
+		// Reset the IsCompressed flag, purely for visual purposes to
+		// indicate the parameters are compressed when the JSON is
+		// viewed
+		ret.Operations[i].IsCompressed = true
+	}
 	return
 }

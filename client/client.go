@@ -672,6 +672,33 @@ func (cli Client) MakeSignedToken() (token string, err error) {
 	return
 }
 
+// CompressAction takens a MIG action, and applies compression to any operations
+// within the action for which compression is requested.
+//
+// This function should be called on the action prior to signing it for submission
+// to the API.
+func (cli Client) CompressAction(a mig.Action) (comp_action mig.Action, err error) {
+	comp_action = a
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("CompressAction() -> %v", e)
+		}
+	}()
+	for i := range comp_action.Operations {
+		if !comp_action.Operations[i].WantCompressed {
+			continue
+		}
+		if comp_action.Operations[i].IsCompressed {
+			continue
+		}
+		err = comp_action.Operations[i].CompressOperationParam()
+		if err != nil {
+			panic(err)
+		}
+	}
+	return
+}
+
 // SignAction takes a MIG Action, signs it with the key identified in the configuration
 // and returns the signed action
 func (cli Client) SignAction(a mig.Action) (signed_action mig.Action, err error) {

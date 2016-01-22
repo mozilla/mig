@@ -84,10 +84,13 @@ type Operation struct {
 	Module     string      `json:"module"`
 	Parameters interface{} `json:"parameters"`
 
-	// If IsCompressed is true, Parameters is a base64 encoded gzip
-	// stream of the marshaled parameters. If false, Parameters is
-	// JSON parameter data.
-	IsCompressed bool `json:"is_compressed"`
+	// If WantCompressed is set in the operation, the parameters
+	// will be compressed in PostAction() when the client sends the
+	// action to the API. This will also result in IsCompressed being
+	// marked as true, so the receiving agent knows it must decompress
+	// the parameter data.
+	IsCompressed   bool `json:"is_compressed,omitempty"`
+	WantCompressed bool `json:"want_compressed,omitempty"`
 }
 
 // Compress the parameters stored within an operation
@@ -112,6 +115,38 @@ func (op *Operation) CompressOperationParam() (err error) {
 	wb64.Close()
 	op.Parameters = string(b.Bytes())
 	op.IsCompressed = true
+	return
+}
+
+// Decompress the parameters stored within an operation
+func (op *Operation) DecompressOperationParam() (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("DecompressOperationParam() -> %v", e)
+		}
+	}()
+	if !op.IsCompressed {
+		return nil
+	}
+	pstr, ok := op.Parameters.(string)
+	if !ok {
+		panic("Compressed parameter was not a string")
+	}
+	b := bytes.NewBuffer([]byte(pstr))
+	rb64 := base64.NewDecoder(base64.StdEncoding, b)
+	r, err := gzip.NewReader(rb64)
+	if err != nil {
+		panic(err)
+	}
+	rb, err := ioutil.ReadAll(r)
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(rb, &op.Parameters)
+	if err != nil {
+		panic(err)
+	}
+	op.IsCompressed = false
 	return
 }
 

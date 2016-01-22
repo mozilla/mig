@@ -132,8 +132,12 @@ times		show the various timestamps of the action
 				fmt.Println(i.Name, "- Key ID:", i.PGPFingerprint)
 			}
 		case "json":
+			tmpAction, err := getActionView(a)
+			if err != nil {
+				panic(err)
+			}
 			var ajson []byte
-			ajson, err = json.MarshalIndent(a, "", "  ")
+			ajson, err = json.MarshalIndent(tmpAction, "", "  ")
 			if err != nil {
 				panic(err)
 			}
