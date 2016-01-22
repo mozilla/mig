@@ -16,4 +16,5 @@ var OSList = []OS{
 	{"redhat"},
 	{"centos"},
 	{"debian"},
+	{"amazon"},
 }
