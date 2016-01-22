@@ -14,7 +14,7 @@ in the cli instead of calling mig-agent like a normal investigation would.
 File module
 -----------
 
-You can find detailled documentation by running `mig file help` or in the
+You can find detailed documentation by running `mig file help` or in the
 online doc at `doc/module_file.html`_.
 
 .. _`doc/module_file.html`: http://mig.mozilla.org/doc/module_file.html
@@ -132,7 +132,7 @@ for.
 Netstat module
 --------------
 
-You can find detailled documentation by running `mig netstat help`.
+You can find detailed documentation by running `mig netstat help`.
 
 Searching for a fraudulent IP
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

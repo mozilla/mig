@@ -17,16 +17,16 @@ Besides scalability, MIG is designed to provide strong security primitives:
   but will not be able to send actions to agents. The GPG keys are securely
   kept by their investigators.
 * **Privacy** is respected by never retrieving raw data from endpoints. When MIG is
-  ran on laptops or phones, end-users can request reports on the operations
-  performed on their devices. The 2-man-rule for sensitive actions also protect
-  from rogue investigators invading privacy.
+  run on laptops or phones, end-users can request reports on the operations
+  performed on their devices. The 2-man-rule for sensitive actions also prevents
+  rogue investigators invading privacy.
 * **Reliability** is built in. No component is critical. If an agent crashes, it
   will attempt to recover and reconnect to the platform indefinitely. If the
   platform crashes, a new platform can be rebuilt rapidly without backups.
 
 MIG privileges a model where requesting information from endpoints is fast and
 simple. It does not attempt to record everything all the time. Instead, it
-assumes that when an information will be needed, it will be easy to retrieve it.
+assumes that when a piece of information is needed, it will be easy to retrieve it.
 
 It's an army of Sherlock Holmes, ready to interrogate your network within
 milliseconds.
@@ -35,7 +35,7 @@ Terminology:
 
 * **Investigators**: humans who use clients to investigate things on agents
 * **Agent**: a small program that runs on a remote endpoint. It receives commands
-  from the scheduler through the relays, execute those commands using modules,
+  from the scheduler through the relays, executes those commands using modules,
   and sends the results back to the relays.
 * **Module**: single feature Go program that does stuff, like inspecting a file
   system, listing connected IP addresses, creating user accounts or adding
@@ -78,9 +78,9 @@ Below is a high-level view of the architecture:
 Actions
 -------
 
-Actions are JSON files created by investigator to perform tasks on agents.
+Actions are JSON files created by investigators to perform tasks on agents.
 
-For example, an investigator who wants to verify than root passwords are hashed
+For example, an investigator who wants to verify that root passwords are hashed
 and salted on linux systems, would use the following action:
 
 .. code:: json
@@ -129,7 +129,7 @@ The parameters are:
   against an endpoint that has a given public IP, etc...
 
   The most simple query that targets all agents is `name like '%'` (the `%`
-  character is a wildcard in SQL pattern matching). Targetting by OS family can
+  character is a wildcard in SQL pattern matching). Targeting by OS family can
   be done on the `os` parameters such as `os='linux'` or `os='darwin'`.
 
   Combining conditions is also trivial: `version='201409171023+c4d6f50.prod'
@@ -159,9 +159,9 @@ Upon generation, additional fields are appended to the action:
 * **pgpsignatures**: all of the parameters above are concatenated into a string and
   signed with the investigator's private GPG key. The signature is part of the
   action, and used by agents to verify that an action comes from a trusted
-  investigator. `PGPSignatures` is an array that contains one or more signature
+  investigator. `PGPSignatures` is an array that contains one or more signatures
   from authorized investigators.
-* **validfrom** and **expireafter**: two dates that constrains the validity of the
+* **validfrom** and **expireafter**: two dates that constrain the validity of the
   action to a UTC time window.
 
 Investigation workflow
@@ -183,7 +183,7 @@ View `full size diagram`_.
 Access Control Lists
 --------------------
 
-Not all keys can perform all actions. The scheduler, for example, sometimes need
+Not all keys can perform all actions. The scheduler, for example, sometimes needs
 to issue specific actions to agents (such as during the upgrade protocol) but
 shouldn't be able to perform more dangerous actions. This is enforced by
 an Access Control List, or ACL, stored on the agents. An ACL describes who can
@@ -230,7 +230,7 @@ Kelso to sign his action as well. The weight of both investigators are then
 added, giving a total of 3, which satisfies the minimum weight of 2.
 
 This method gives ample flexibility to require multiple signatures on modules,
-and ensure that one investigator cannot perform sensitive actions on remote
+and ensures that one investigator cannot perform sensitive actions on remote
 endpoints without the permissions of others.
 
 The default permission `default` can be used as a default for all modules. It
@@ -263,7 +263,7 @@ could lead to a compromission of the endpoints.
 
 The architectural choices made in MIG diminish the exposure of the endpoints to
 a compromise. And while the risk cannot be reduced to zero entirely, it would
-take an attacker direct control on the investigators key material, or be root
+take an attacker direct control on the investigator's key material, or be root
 on the infrastructure in order to take control of MIG.
 
 MIG's security controls include:
@@ -290,19 +290,19 @@ an attacker taking control of the agents and compromising the endpoints.
 Infrastructure resiliency
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-One of the design goal of MIG is to make each components as stateless as
+One of the design goals of MIG is to make each components as stateless as
 possible. The database is used as a primary data store, and the schedulers and
 relays keep data in transit in their respective cache. But any of these
 components can go down and be rebuilt without compromising the resiliency of
-the platform. As a matter of fact, it is strongly recommended to rebuilt each
-of the platform component from scratch on a regular basis, and only keep the
+the platform. As a matter of fact, it is strongly recommended to rebuild each
+of the platform components from scratch on a regular basis, and only keep the
 database as a persistent storage.
 
 Unlike other systems that require constant network connectivity between the
 agents and the platform, MIG is designed to work with intermittent or unreliable
 connectivity with the agents. The rabbitmq relays will cache commands that are
 not consumed immediately by offline agents. These agents can connect to the
-relay whenever they chose to, and pick up outstanding tasks.
+relay whenever they choose to, and pick up outstanding tasks.
 
 If the relays go down for any period of time, the agents will attempt to
 reconnect at regular intervals continuously. It is trivial to rebuild
@@ -349,7 +349,7 @@ Randomization of the queue names
 
 The protections above limit the exposure of the AMQP endpoint, but since the
 secrets are shared across all agents, the possibility still exists that an
-attacker gains access to the secrets, and establish a connection to the relays.
+attacker gains access to the secrets, and establishes a connection to the relays.
 
 Such access would have very limited capabilities. It cannot be used to publish
 commands to the agents, because publication is ACL-limited to the scheduler.
@@ -392,9 +392,9 @@ responsibility of the investigators to limit the scope of their queries (ie, do
 not search for a root password by sending an action with the password in the
 regex).
 
-The goal here is to prevent a rogue investigator from dumping large amount of
+The goal here is to prevent a rogue investigator from dumping a large amount of
 data from an endpoint. MIG could trigger a memory dump of a process, but
-retrieve that data will require direct access to the endpoint.
+retrieving that data will require direct access to the endpoint.
 
 Note that MIG's database keeps records of all actions, commands and results. If
 sensitive data were to be collected by MIG, that data would be available in the

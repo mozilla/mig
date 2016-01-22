@@ -15,7 +15,7 @@ The base screen of the API presents a dashboard of the current state of the
 infrastructure. It includes the number of agents and endpoints, broken down
 by version of the agent ,and a list of the latest actions that have run.
 
-Underneath the dasboard, the user is invited to interact in a prompt that
+Underneath the dashboard, the user is invited to interact in a prompt that
 starts with **mig>**.
 
 .. code:: bash
