@@ -235,7 +235,7 @@ performs a very specific set of tasks. For example, the <code>file</code> module
 provides a way to scan a file system for files that contain regexes, match a
 checksum, ... Another module is called <code>netstat</code>, and looks for IP addresses
 currently connected to an endpoint. <code>ping</code> is a module to ping targets from
-endpoints, etc..</p><p>Module are somewhat autonomous. They can be developped outside of the MIG code
+endpoints, etc..</p><p>Modules are somewhat autonomous. They can be developed outside of the MIG code
 base, and only imported during compilation of the agent. Go does not provide a
 way to load modules dynamically, so modules are compiled into the agent's static
 binary, and not as separate files.</p><section id="module-logic"><header><h2><a href="#id3">1   Module logic</a></h2></header><section id="registration"><header><h3><a href="#id4">1.1   Registration</a></h3></header><p>A module must import <code>mig/modules</code>.</p><p>A module registers itself at runtime via its <code>init()</code> function which must
@@ -282,7 +282,7 @@ imported packages when a program starts. In the agents, modules are imported
 anonymously, which means that their <code>init()</code> function will be executed even if
 the modules are unused in the agent. Therefore, when MIG Agent starts, all
 modules execute their <code>init()</code> function, add their names and runner function to
-the global list of available module, and stop there.</p><p>The list of modules imported in the agent is maintained in
+the global list of available modules, and stop there.</p><p>The list of modules imported in the agent is maintained in
 <code>conf/available_modules.go</code>. You should use this file to add or remove modules.</p><pre><code class="code go"><span class="keyword namespace">import</span> <span class="punctuation">(</span>
         <span class="comment single">//_ "mig/modules/example"
 </span>        <span class="name other">_</span> <span class="literal string">"mig/modules/agentdestroy"</span>
@@ -297,7 +297,7 @@ the command, calls its runner function to get a new instance representing the ru
 and then calls that instance's <code>Run</code> method.</p><section id="runner-interface"><header><h4><a href="#id6">1.2.1   Runner Interface</a></h4></header><p>A mig module typically defines its own <code>run</code> struct implementing the
 <code>modules.Runner</code> interface and representing a single run of the module.  The
 <code>run</code> struct typically contains two fields: module parameters and module results.
-The former is any format the module choses to use, while the latter generally
+The former is any format the module chooses to use, while the latter generally
 implements the <code>modules.Result</code> struct (note that this is not required, but
 it is the easiest way to return a properly-formatted JSON result).</p><pre><code class="code go"><span class="keyword declaration">type</span> <span class="name other">run</span> <span class="keyword declaration">struct</span> <span class="punctuation">{</span>
         <span class="name other">Parameters</span> <span class="name other">myModuleParams</span>
@@ -330,7 +330,7 @@ formatting rules, performs work and returns results in a JSON string.</p><pre><c
 
         <span class="keyword">return</span> <span class="name other">r</span><span class="punctuation">.</span><span class="name other">doModuleStuff</span><span class="punctuation">()</span>
 <span class="punctuation">}</span></code></pre><p>The <code>defer</code> block in the sample above is used to catch potential panics and
-return a nicely formatted JSON error to the agent. This is a clean way to
+returns a nicely formatted JSON error to the agent. This is a clean way to
 indicate to the MIG platform that the module has failed to run on this agent.</p></section><section id="validate-parameters"><header><h4><a href="#id9">1.2.4   Validate Parameters</a></h4></header><p>A module must implement the <code>ValidateParameters()</code> method.</p><p>The role of that interface is to go through the parameters supplied to <code>Run</code>
 and verify that they follow a format expected by the module.  This method is
 useful during <code>Run</code> but is not called from outside the module.</p><p>Go is strongly typed, so there's no risk of finding a string when a float is
@@ -346,7 +346,7 @@ apply to the way fields in this struct must be set.</p><pre><code class="code go
         <span class="name other">Statistics</span>    <span class="keyword declaration">interface</span><span class="punctuation">{}</span> <span class="literal string">`json:"statistics"`</span>
         <span class="name other">Errors</span>        <span class="punctuation">[]</span><span class="keyword type">string</span>    <span class="literal string">`json:"errors"`</span>
 <span class="punctuation">}</span></code></pre><section id="success"><header><h4><a href="#id11">1.3.1   Success</a></h4></header><p><code>Success</code> must inform the investigator if the module has failed to complete its
-execution. It must be set to <code>true</code> only if the module has ran successfully. It
+execution. It must be set to <code>true</code> only if the module has run successfully. It
 does not indicate anything about the results returned by the module, just that
 it ran and finished.</p></section><section id="foundanything"><header><h4><a href="#id12">1.3.2   FoundAnything</a></h4></header><p><code>FoundAnything</code> must be set to <code>true</code> only when the module was tasked with
 finding something, and at least one instance of that something was found. If
@@ -376,7 +376,7 @@ interface because only the module knows how to parse its <code>Elements</code> a
 a boolean that indicates whether the printer should display errors and
 statistics or only found results. When that boolean is set to <code>true</code>, errors, stats
 and empty results are <strong>not</strong> displayed.  Note that the <code>result</code> argument is
-the result of unmarhsalling the marhsalled value returned from the <code>Run</code> method.</p><p>The function returns results into an array of strings.</p><pre><code class="code go"><span class="keyword declaration">func</span> <span class="punctuation">(</span><span class="name other">r</span> <span class="operator">*</span><span class="name other">run</span><span class="punctuation">)</span> <span class="name other">PrintResults</span><span class="punctuation">(</span><span class="name other">result</span> <span class="name other">modules</span><span class="punctuation">.</span><span class="name other">Result</span><span class="punctuation">,</span> <span class="name other">matchOnly</span> <span class="keyword type">bool</span><span class="punctuation">)</span> <span class="punctuation">(</span><span class="name other">prints</span> <span class="punctuation">[]</span><span class="keyword type">string</span><span class="punctuation">,</span> <span class="name other">err</span> <span class="keyword type">error</span><span class="punctuation">)</span> <span class="punctuation">{</span>
+the result of unmarshalling the marshalled value returned from the <code>Run</code> method.</p><p>The function returns results into an array of strings.</p><pre><code class="code go"><span class="keyword declaration">func</span> <span class="punctuation">(</span><span class="name other">r</span> <span class="operator">*</span><span class="name other">run</span><span class="punctuation">)</span> <span class="name other">PrintResults</span><span class="punctuation">(</span><span class="name other">result</span> <span class="name other">modules</span><span class="punctuation">.</span><span class="name other">Result</span><span class="punctuation">,</span> <span class="name other">matchOnly</span> <span class="keyword type">bool</span><span class="punctuation">)</span> <span class="punctuation">(</span><span class="name other">prints</span> <span class="punctuation">[]</span><span class="keyword type">string</span><span class="punctuation">,</span> <span class="name other">err</span> <span class="keyword type">error</span><span class="punctuation">)</span> <span class="punctuation">{</span>
         <span class="keyword declaration">var</span> <span class="punctuation">(</span>
                 <span class="name other">el</span>    <span class="name other">elements</span>
                 <span class="name other">stats</span> <span class="name other">statistics</span>
@@ -437,7 +437,7 @@ terminal using something like <code>fmt.Scanln()</code>.</p><p>The interface is 
         <span class="punctuation">}</span>
         <span class="name other">r</span><span class="punctuation">.</span><span class="name other">Parameters</span> <span class="punctuation">=</span> <span class="name other">p</span>
         <span class="keyword">return</span> <span class="name other">r</span><span class="punctuation">.</span><span class="name other">Parameters</span><span class="punctuation">,</span> <span class="name other">r</span><span class="punctuation">.</span><span class="name other">ValidateParameters</span><span class="punctuation">()</span>
-<span class="punctuation">}</span></code></pre><p>It is highly recommend to call <code>ValidateParameters</code> to verify that the
+<span class="punctuation">}</span></code></pre><p>It is highly recommended to call <code>ValidateParameters</code> to verify that the
 parameters supplied by the users are correct.</p></section><section id="hasparamsparser"><header><h4><a href="#id19">1.4.3   HasParamsParser</a></h4></header><p><code>HasParamsParser</code> is similar to <code>HasParamsCreator</code>, but implements a command
 line parameters parser instead of an interactive prompt. It is used by the MIG
 command line to parse module-specific flags into module Parameters. Each module
@@ -472,7 +472,7 @@ The interface is defined as:</p><pre><code class="code go"><span class="comment 
         <span class="punctuation">}</span>
         <span class="name other">r</span><span class="punctuation">.</span><span class="name other">Parameters</span><span class="punctuation">.</span><span class="name other">Drift</span> <span class="punctuation">=</span> <span class="name other">drift</span>
         <span class="keyword">return</span> <span class="name other">r</span><span class="punctuation">.</span><span class="name other">Parameters</span><span class="punctuation">,</span> <span class="name other">r</span><span class="punctuation">.</span><span class="name other">ValidateParameters</span><span class="punctuation">()</span>
-<span class="punctuation">}</span></code></pre><p>It is highly recommend to call <code>ValidateParameters</code> to verify that the
+<span class="punctuation">}</span></code></pre><p>It is highly recommended to call <code>ValidateParameters</code> to verify that the
 parameters supplied by the users are correct.</p></section></section></section><section id="the-example-module"><header><h2><a href="#id20">2   The Example module</a></h2></header><p>An example module that can be used as a template is available in
 <a class="reference external" href="https://github.com/mozilla/mig/blob/master/src/mig/modules/example/example.go">src/mig/modules/example/</a>. We will study its structure to understand how
 modules are written and executed.</p><section id="headers-and-structs"><header><h3><a href="#id21">2.1   Headers and structs</a></h3></header><p>The first part of the module takes care of the registration and declaration of
