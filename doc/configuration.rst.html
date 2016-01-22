@@ -247,7 +247,7 @@ and workers into a single DEB package. Otherwise, use the following make
 commands:</p><pre><code class="code bash"><span class="name variable">$ </span>make mig-scheduler
 <span class="name variable">$ </span>make mig-api
 <span class="name variable">$ </span>make worker-agent-intel
-<span class="name variable">$ </span>make worker-compliance-item</code></pre><p>Or just run <cite>make</cite> that will build everything and runs tests as well.</p><p>Note: running <cite>make</cite> will build everything including the mig-console which
+<span class="name variable">$ </span>make mig-runner</code></pre><p>Or just run <cite>make</cite> that will build everything and runs tests as well.</p><p>Note: running <cite>make</cite> will build everything including the mig-console which
 requires <strong>readline</strong> to be installed (<cite>readline-devel</cite> on rhel/fedora or
 <cite>libreadline-dev</cite> on debian/ubuntu).</p><pre><code class="code bash"><span class="name variable">$ </span>make</code></pre></section><section id="deploy-the-postgresql-database"><header><h2><a href="#id5">2   Deploy the Postgresql database</a></h2></header><p>Install postgres 9.3+ on a server and copy the scripts
 <cite>database/createlocaldb.sh</cite> and <cite>database/schema.sql</cite>. Make sure you have sudo

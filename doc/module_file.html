@@ -258,12 +258,13 @@ label (key) and search parameters (value).</p><p>A search label is a string betw
                             <span class="name tag">"modes"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
                                     <span class="literal string double">"^-r-xr-x--"</span>
                             <span class="punctuation">]</span>
-                            <span class="literal string double">"sha256"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+                            <span class="literal string double">"sha2"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
                                     <span class="literal string double">"fff415292dc59cc99d43e70fd69347d09b9bd7a581f4d77b6ec0fa902ebaaec8"</span>
                             <span class="punctuation">],</span>
                             <span class="name tag">"options"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
                                     <span class="name tag">"matchall"</span><span class="punctuation">:</span> <span class="keyword constant">true</span><span class="punctuation">,</span>
-                                    <span class="name tag">"maxdepth"</span><span class="punctuation">:</span> <span class="literal number integer">3</span>
+                                    <span class="name tag">"maxdepth"</span><span class="punctuation">:</span> <span class="literal number integer">3</span><span class="punctuation">,</span>
+                                    <span class="name tag">"decompress"</span><span class="punctuation">:</span> <span class="keyword constant">true</span>
                             <span class="punctuation">}</span>
                     <span class="punctuation">}</span>
     <span class="punctuation">}</span>
@@ -307,7 +308,8 @@ file. Inspection stops at the first occurence of the regular expression that
 matches on the file.
 If the regex is prefixed with "!", it will return files that do not have the
 content that matches the expression. ex: <cite>!^root:$6</cite> will return files that
-do not contain the string "root:$6".</p></li><li><p><strong>md5</strong>: a md5 checksum</p></li><li><p><strong>sha1</strong>: a sha1 checksum</p></li><li><p><strong>sha256</strong>: a sha256 checksum</p></li><li><p><strong>sha384</strong>: a sha384 checksum</p></li><li><p><strong>sha512</strong>: a sha512 checksum</p></li><li><p><strong>sha3_224</strong>: a sha3_224 checksum</p></li><li><p><strong>sha3_256</strong>: a sha3_256 checksum</p></li><li><p><strong>sha3_384</strong>: a sha3_384 checksum</p></li><li><p><strong>sha3_512</strong>: a sha3_512 checksum</p></li></ul></section><section id="search-options"><header><h3><a href="#id4">1.3   Search Options</a></h3></header><p>Several options can be applied to a search:</p><ul><li><p><strong>maxdepth</strong> controls the maximum number of directories that can be traversed
+do not contain the string "root:$6".</p></li><li><p><strong>md5</strong>: a md5 checksum</p></li><li><p><strong>sha1</strong>: a sha1 checksum</p></li><li><p><strong>sha2</strong>: a sha2 checksum (sha256/sha384/sha512 decided based on hash length)</p></li><li><p><strong>sha3</strong>: a sha3 checksum (sha3_224/sha3_256/sha3_384/sha3_512 decided based
+on hash length)</p></li></ul></section><section id="search-options"><header><h3><a href="#id4">1.3   Search Options</a></h3></header><p>Several options can be applied to a search:</p><ul><li><p><strong>maxdepth</strong> controls the maximum number of directories that can be traversed
 by a search. For example, is a search has path <cite>/home</cite>, and <cite>maxdepth</cite> is set
 to the value 3, the deepest directory that can be visited is
 <cite>/home/dir1/dir2/dir3</cite>.</p></li><li><p><strong>matchall</strong> indicates that within a given search, all search filters must
@@ -332,12 +334,18 @@ content. The <cite>macroal</cite> flag indicates that all lines of a file must m
 content regex. The <cite>mismatch</cite> flag inverses that logic, and thus if a least
 one line does not match the content regex, the file will be returned as a
 match.</p><p>The <cite>mismatch</cite> option can be applied to all check types: name, size, mode,
-mtime, content, md5, sha1, sha256, ... It can be specified multiple times:</p><p>example: <cite>-path /usr -name "^vim$" -content "linux-x86-64.so" -sha1 943633c85bb80d39532450decf1f723735313f1f -sha1 350ac204ac8084590b209c33f39f09986f0ba682 -mismatch=content -mismatch=sha1</cite></p></li><li><p><strong>matchlimit</strong> controls how many files can be returned by a single search.
+mtime, content, md5, sha1, sha2, ... It can be specified multiple times:</p><p>example: <cite>-path /usr -name "^vim$" -content "linux-x86-64.so" -sha1 943633c85bb80d39532450decf1f723735313f1f -sha1 350ac204ac8084590b209c33f39f09986f0ba682 -mismatch=content -mismatch=sha1</cite></p></li><li><p><strong>matchlimit</strong> controls how many files can be returned by a single search.
 This safeguard prevents a single run of the file module from crashing before
 of the amount of results it is returning. The default value is 1,000, which is
 already significant. If you plan on returning more than 1,000 results in a
 single file search, you should probably consider breaking it down into smaller
-searches, or running the search locally instead of through MIG.</p></li></ul></section></section><section id="search-algorithm"><header><h2><a href="#id5">2   Search algorithm</a></h2></header><p>FM traverse a directory tree starting from a root path and until no search are
+searches, or running the search locally instead of through MIG.</p></li><li><p><strong>returnsha256</strong> instructs the agent to return the SHA256 hash for any
+matched files. The client will display the hash with the file information
+in the result. As an example, this option can be used to do basic file
+integrity monitoring across actions.</p></li><li><p><strong>decompress</strong> tells the agent to decompress gzipped files prior to
+inspecting content or calculating hashes. Note that if the decompress flag
+is set for one search, all searches will involve a test for file
+decompression.</p></li></ul></section></section><section id="search-algorithm"><header><h2><a href="#id5">2   Search algorithm</a></h2></header><p>FM traverse a directory tree starting from a root path and until no search are
 longer active. FM traverses a given path only once, regardless of the number of
 searches that are being performed. When FM enters a directory, it activates
 searches that apply to the directory, and deactivates the ones that don't.
