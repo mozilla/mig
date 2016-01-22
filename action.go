@@ -7,6 +7,9 @@
 package mig /* import "mig.ninja/mig" */
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -74,12 +77,42 @@ type Threat struct {
 	Type   string `json:"type,omitempty"`
 }
 
-// an operation is an object that map to an agent module.
-// the parameters of the operation are passed to the module as argument,
-// and thus their format depend on the module itself.
+// an operation is an object that maps to an agent module.
+// the parameters of the operation are passed to the module as an argument,
+// and thus their format depends on the module itself.
 type Operation struct {
 	Module     string      `json:"module"`
 	Parameters interface{} `json:"parameters"`
+
+	// If IsCompressed is true, Parameters is a base64 encoded gzip
+	// stream of the marshaled parameters. If false, Parameters is
+	// JSON parameter data.
+	IsCompressed bool `json:"is_compressed"`
+}
+
+// Compress the parameters stored within an operation
+func (op *Operation) CompressOperationParam() (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("CompressOperationParam() -> %v", e)
+		}
+	}()
+	jb, err := json.Marshal(op.Parameters)
+	if err != nil {
+		panic(err)
+	}
+	var b bytes.Buffer
+	wb64 := base64.NewEncoder(base64.StdEncoding, &b)
+	w := gzip.NewWriter(wb64)
+	_, err = w.Write(jb)
+	if err != nil {
+		panic(err)
+	}
+	w.Close()
+	wb64.Close()
+	op.Parameters = string(b.Bytes())
+	op.IsCompressed = true
+	return
 }
 
 // ActionFromFile() reads an action from a local file on the file system

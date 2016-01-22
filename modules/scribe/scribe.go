@@ -88,7 +88,7 @@ func fileModuleLocator(pattern string, regex bool, root string, depth int) ([]st
 	args = append(args, "-maxdepth", strconv.Itoa(depth))
 	param, err := run.(modules.HasParamsParser).ParamsParser(args)
 
-	buf, err := modules.MakeMessage(modules.MsgClassParameters, param)
+	buf, err := modules.MakeMessage(modules.MsgClassParameters, param, false)
 	if err != nil {
 		return ret, nil
 	}

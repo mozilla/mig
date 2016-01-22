@@ -31,8 +31,9 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 		}
 	}()
 	var (
-		a      mig.Action
-		tcount int
+		a                mig.Action
+		paramCompression bool
+		tcount           int
 	)
 	if tpl.ID == 0 {
 		fmt.Println("Entering action launcher with empty template")
@@ -52,7 +53,7 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 	prompt := "\x1b[33;1mlauncher>\x1b[0m "
 	for {
 		// completion
-		var symbols = []string{"addoperation", "deloperation", "exit", "help", "init",
+		var symbols = []string{"addoperation", "compress", "deloperation", "exit", "help", "init",
 			"json", "launch", "listagents", "load", "details", "filechecker", "netstat",
 			"setname", "settarget", "settimes", "sign", "times"}
 		readline.Completer = func(query, ctx string) []string {
@@ -98,6 +99,13 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 					fmt.Printf("Parameters creation failed with error: %v\n", err)
 					break
 				}
+				if paramCompression {
+					err = operation.CompressOperationParam()
+					if err != nil {
+						fmt.Println("Compression failed: %v\n", err)
+					}
+					break
+				}
 				a.Operations = append(a.Operations, operation)
 				opjson, err := json.MarshalIndent(operation, "", "  ")
 				if err != nil {
@@ -107,6 +115,37 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 			} else {
 				fmt.Println("Module", operation.Module, "is not available in this console...")
 				fmt.Println("You can write your action by hand and import it using 'load <file>'")
+			}
+		case "compress":
+			if len(orders) != 2 {
+				fmt.Println("Wrong arguments: Expects 'compress <true|false>'")
+				fmt.Println("example: compress true")
+				break
+			}
+			switch strings.ToLower(orders[1]) {
+			case "false":
+				for _, x := range a.Operations {
+					if x.IsCompressed {
+						fmt.Println("Warning: some operations have already been compressed")
+						fmt.Println("Restart action creation if this is not desired")
+						break
+					}
+				}
+				paramCompression = false
+			case "true":
+				paramCompression = true
+				// Enable compression on all existing operations
+				for i := range a.Operations {
+					if a.Operations[i].IsCompressed {
+						continue
+					}
+					err = a.Operations[i].CompressOperationParam()
+					if err != nil {
+						panic(err)
+					}
+				}
+			default:
+				fmt.Println("Argument to compress must be true or false")
 			}
 		case "deloperation":
 			if len(orders) != 2 {
@@ -137,6 +176,7 @@ func actionLauncher(tpl mig.Action, cli client.Client) (err error) {
 		case "help":
 			fmt.Printf(`The following orders are available:
 addoperation <module>	append a new operation of type <module> to the action operations
+compress <false|true>   compress parameters in operations stored in action
 listagents		list agents targetted by an action
 deloperation <opnum>	remove operation numbered <opnum> from operations array, count starts at zero
 details			display the action details

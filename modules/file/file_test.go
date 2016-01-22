@@ -52,7 +52,7 @@ func TestNameSearch(t *testing.T) {
 		s.Names = append(s.Names, "!^"+tp.name+"FOOBAR$")
 		s.Options.MatchAll = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -85,7 +85,7 @@ func TestContentSearch(t *testing.T) {
 		s.Contents = append(s.Contents, "!^FOOBAR$")
 		s.Options.MatchAll = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -127,7 +127,7 @@ func TestDecompressedContentSearch(t *testing.T) {
 		s.Options.MatchAll = true
 		s.Options.Decompress = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -158,7 +158,7 @@ func TestSize(t *testing.T) {
 		s.Paths = append(s.Paths, basedir)
 		s.Sizes = append(s.Sizes, tp.size)
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -191,7 +191,7 @@ func TestMTime(t *testing.T) {
 		s.Mtimes = append(s.Mtimes, tp.mtime)
 		s.Options.MatchAll = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -224,7 +224,7 @@ func TestMode(t *testing.T) {
 		s.Modes = append(s.Modes, tp.mode)
 		s.Options.MatchAll = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -265,7 +265,7 @@ func TestHashes(t *testing.T) {
 				s.SHA3 = append(s.SHA3, tp.sha3)
 			}
 			r.Parameters.Searches["s1"] = s
-			msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+			msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -306,7 +306,7 @@ func TestDecompressedHash(t *testing.T) {
 		}
 		s.Options.Decompress = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -341,7 +341,7 @@ func TestAllHashes(t *testing.T) {
 		s.SHA3 = append(s.SHA3, tp.sha3)
 		s.Options.MatchAll = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -373,7 +373,7 @@ func TestMaxDepth(t *testing.T) {
 	s.Options.MatchAll = true
 	s.Options.MaxDepth = 5
 	r.Parameters.Searches["s1"] = s
-	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -443,7 +443,7 @@ func TestMacroal(t *testing.T) {
 		s.Options.MatchAll = true
 		s.Options.Macroal = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -591,7 +591,7 @@ func TestMismatch(t *testing.T) {
 		var r run
 		r.Parameters = *newParameters()
 		r.Parameters.Searches["s1"] = mt.search
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}

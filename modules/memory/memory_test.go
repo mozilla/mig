@@ -70,7 +70,7 @@ func TestFindGoTestProcess(t *testing.T) {
 	s.Options.MaxLength = 10000000
 	s.Options.LogFailures = true
 	r.Parameters.Searches["testsearch"] = s
-	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestSearches(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
