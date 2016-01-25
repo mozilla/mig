@@ -83,7 +83,7 @@ Module documentation is at http://mig.mozilla.org/doc/module_file.html
 Cheatsheet and examples are at http://mig.mozilla.org/doc/cheatsheet.rst.html
 `, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash,
 		dash, dash, dash, dash, dash, dash, dash, dash, dash,
-		dash, dash, dash, dash, dash, dash, dash, dash)
+		dash, dash, dash, dash, dash)
 
 	return
 }
