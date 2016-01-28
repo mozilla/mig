@@ -48,6 +48,9 @@ func init() {
 					"openat",
 					"socket",
 					"exit_group",
+
+					// Unknown origin
+					"fsetxattr",
 				},
 				Action: sandbox.ActAllow,
 			},

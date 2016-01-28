@@ -86,9 +86,6 @@ func init() {
 					// Used for pretty printing the violating syscall (rare)
 					"exit_group",      // Sandbox
 					"rt_sigreturn",    // Sandbox
-
-					// System calls with unknown origin as of yet
-					"fsetxattr",
 				},
 				Action: sandbox.ActAllow,
 			},
