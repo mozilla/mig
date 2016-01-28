@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"github.com/kardianos/osext"
 	"github.com/mozilla/mig-sandbox"
+	"github.com/seccomp/libseccomp-golang"
 	"io"
 	"mig.ninja/mig/modules"
 	"os"
@@ -35,7 +36,12 @@ func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 }
 
 func init() {
-	modules.Register("agentdestroy", new(module))
+	m := new(module)
+	sandbox := sandbox.SandboxProfile{
+		DefaultPolicy: seccomp.ActTrap,
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("agentdestroy", m)
 }
 
 type run struct {
