@@ -56,6 +56,8 @@ func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 	return m.SandboxProfile
 }
 
+// Comments marked with GO mark the fact that the system call is needed for the
+// Go runtime to be properly initialized
 func init() {
 	m := new(module)
 	sandbox := sandbox.SandboxProfile{
@@ -70,8 +72,8 @@ func init() {
 					"stat",
 					"readlinkat",
 					"write",
-					"mmap",  // GO
-					"futex", // GO
+					"mmap",            // GO
+					"futex",           // GO
 					"getdents64",
 					"read",
 					"sigaltstack",     // GO
@@ -81,9 +83,12 @@ func init() {
 					"sched_yield",     // GO
 
 					// Used for pretty printing the violating syscall (rare)
-					"exit_group",   // Sandbox
-					"rt_sigreturn", // Sandbox
+					"exit_group",      // Sandbox
+					"rt_sigreturn",    // Sandbox
 
+					// Uncertain origin for jail violation; could be the runtime or
+					// some specific interaction, such as symlinks, /proc or other.
+					"fsetxattr",      // Unknown
 				},
 				Action: sandbox.ActAllow,
 			},
