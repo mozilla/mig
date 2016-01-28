@@ -56,10 +56,10 @@ func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 	return m.SandboxProfile
 }
 
+// Comments marked with GO mark the fact that the system call is needed for the
+// Go runtime to be properly initialized
 func init() {
 	m := new(module)
-	// Comments marked with GO mark the fact that the system call is needed for the
-	// Go runtime to be properly initialized
 	sandbox := sandbox.SandboxProfile{
 		DefaultPolicy: sandbox.ActTrap,
 		Filters: []sandbox.FilterOperation{
