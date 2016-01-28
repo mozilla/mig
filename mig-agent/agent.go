@@ -147,7 +147,7 @@ func main() {
 			}
 		}
 	default:
-		fmt.Printf("%s", runModuleDirectly(*mode, nil, *pretty))
+		fmt.Printf("%s", runModuleDirectly(*mode, nil, *pretty, false))
 	}
 exit:
 }
@@ -190,7 +190,7 @@ func executeAction(action mig.Action, prettyPrint bool) (cmd mig.Command, err er
 
 	// launch each operation consecutively
 	for _, op := range action.Operations {
-		out := runModuleDirectly(op.Module, op.Parameters, prettyPrint)
+		out := runModuleDirectly(op.Module, op.Parameters, prettyPrint, true)
 		var res modules.Result
 		err = json.Unmarshal([]byte(out), &res)
 		if err != nil {
@@ -206,7 +206,7 @@ func executeAction(action mig.Action, prettyPrint bool) (cmd mig.Command, err er
 // paramargs allows the parameters to be specified as an argument to the
 // function, overriding the expectation parameters will be sent via
 // Stdin. If nil, the parameters will still be read on Stdin by the module.
-func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out string) {
+func runModuleDirectly(mode string, paramargs interface{}, pretty bool, disableSandbox bool) (out string) {
 	if _, ok := modules.Available[mode]; !ok {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
@@ -222,7 +222,9 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 	}
 	// instantiate and call module
 	run := modules.Available[mode].NewRun()
-	sandbox.Jail(modules.Available[mode].GetSandboxProfile())
+	if !disableSandbox {
+		sandbox.Jail(modules.Available[mode].GetSandboxProfile())
+	}
 	out = run.Run(infd)
 	if pretty {
 		var modres modules.Result
