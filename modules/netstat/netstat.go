@@ -48,9 +48,14 @@ func init() {
 					"openat",
 					"socket",
 					"exit_group",
+					"bind",
+					"sendto",
+					"recvfrom",
+					"getsockname",
 
-					// Unknown origin
-					"fsetxattr",
+					// Used for pretty printing the violating syscall (rare)
+					"exit_group",
+					"rt_sigreturn",
 				},
 				Action: sandbox.ActAllow,
 			},
