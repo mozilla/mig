@@ -46,7 +46,12 @@ func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 }
 
 func init() {
-	modules.Register("upgrade", new(module))
+	m := new(module)
+	sandbox := sandbox.SandboxProfile{
+		DefaultPolicy: sandbox.ActAllow,
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("upgrade", m)
 }
 
 type run struct {
