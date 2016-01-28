@@ -151,7 +151,8 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 	}
 
 	for _, x := range elem.Packages {
-		resStr := fmt.Sprintf("pkgmatch name=%v version=%v type=%v", x.Name, x.Version, x.Type)
+		resStr := fmt.Sprintf("pkgmatch name=%v version=%v type=%v arch=%v", x.Name, x.Version,
+			x.Type, x.Arch)
 		prints = append(prints, resStr)
 	}
 

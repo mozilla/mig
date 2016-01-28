@@ -31,3 +31,4 @@ script:
     - make
     - yes | bash tools/standalone_install.sh
     - ./bin/linux/amd64/mig-agent-latest -i actions/example_v2.json
+    - ./bin/linux/amd64/mig scribe -z -path actions/scribe/usn-2015.json -onlytrue -human

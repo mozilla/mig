@@ -52,7 +52,7 @@ func TestNameSearch(t *testing.T) {
 		s.Names = append(s.Names, "!^"+tp.name+"FOOBAR$")
 		s.Options.MatchAll = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -85,7 +85,49 @@ func TestContentSearch(t *testing.T) {
 		s.Contents = append(s.Contents, "!^FOOBAR$")
 		s.Options.MatchAll = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("%s\n", msg)
+		out := r.Run(bytes.NewBuffer(msg))
+		if len(out) == 0 {
+			t.Fatal("run failed")
+		}
+		t.Log(out)
+		err = evalResults([]byte(out), expectedfiles)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestDecompressedContentSearch(t *testing.T) {
+	for _, tp := range TESTDATA {
+		var (
+			r run
+			s search
+		)
+		var expectedfiles = []string{
+			basedir + "/" + tp.name,
+			basedir + subdirs + tp.name,
+		}
+		// testfile8 is a corrupt gzip and should fail to decompress
+		if tp.name == "testfile8" {
+			expectedfiles = []string{""}
+		}
+		r.Parameters = *newParameters()
+		s.Paths = append(s.Paths, basedir)
+		if tp.decompressedcontent != "" {
+			s.Contents = append(s.Contents, tp.decompressedcontent)
+		} else {
+			s.Contents = append(s.Contents, tp.content)
+		}
+		s.Contents = append(s.Contents, "!^FOOBAR$")
+		s.Options.MatchAll = true
+		s.Options.Decompress = true
+		r.Parameters.Searches["s1"] = s
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -116,7 +158,7 @@ func TestSize(t *testing.T) {
 		s.Paths = append(s.Paths, basedir)
 		s.Sizes = append(s.Sizes, tp.size)
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -149,7 +191,7 @@ func TestMTime(t *testing.T) {
 		s.Mtimes = append(s.Mtimes, tp.mtime)
 		s.Options.MatchAll = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -182,7 +224,7 @@ func TestMode(t *testing.T) {
 		s.Modes = append(s.Modes, tp.mode)
 		s.Options.MatchAll = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -200,8 +242,7 @@ func TestMode(t *testing.T) {
 }
 
 func TestHashes(t *testing.T) {
-	for _, hashtype := range []string{`md5`, `sha1`, `sha256`, `sha384`, `sha512`,
-		`sha3_224`, `sha3_256`, `sha3_384`, `sha3_512`} {
+	for _, hashtype := range []string{`md5`, `sha1`, `sha2`, `sha3`} {
 		for _, tp := range TESTDATA {
 			var (
 				r run
@@ -218,23 +259,13 @@ func TestHashes(t *testing.T) {
 				s.MD5 = append(s.MD5, tp.md5)
 			case `sha1`:
 				s.SHA1 = append(s.SHA1, tp.sha1)
-			case `sha256`:
-				s.SHA256 = append(s.SHA256, tp.sha256)
-			case `sha384`:
-				s.SHA384 = append(s.SHA384, tp.sha384)
-			case `sha512`:
-				s.SHA512 = append(s.SHA512, tp.sha512)
-			case `sha3_224`:
-				s.SHA3_224 = append(s.SHA3_224, tp.sha3_224)
-			case `sha3_256`:
-				s.SHA3_256 = append(s.SHA3_256, tp.sha3_256)
-			case `sha3_384`:
-				s.SHA3_384 = append(s.SHA3_384, tp.sha3_384)
-			case `sha3_512`:
-				s.SHA3_512 = append(s.SHA3_512, tp.sha3_512)
+			case `sha2`:
+				s.SHA2 = append(s.SHA2, tp.sha2)
+			case `sha3`:
+				s.SHA3 = append(s.SHA3, tp.sha3)
 			}
 			r.Parameters.Searches["s1"] = s
-			msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+			msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -248,6 +279,46 @@ func TestHashes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+		}
+	}
+}
+
+func TestDecompressedHash(t *testing.T) {
+	for _, tp := range TESTDATA {
+		var (
+			r run
+			s search
+		)
+		var expectedfiles = []string{
+			basedir + "/" + tp.name,
+			basedir + subdirs + tp.name,
+		}
+		// testfile8 is a corrupt gzip and should fail to decompress
+		if tp.name == "testfile8" {
+			expectedfiles = []string{""}
+		}
+		r.Parameters = *newParameters()
+		s.Paths = append(s.Paths, basedir)
+		if tp.decompressedmd5 != "" {
+			s.MD5 = append(s.MD5, tp.decompressedmd5)
+		} else {
+			s.MD5 = append(s.MD5, tp.md5)
+		}
+		s.Options.Decompress = true
+		r.Parameters.Searches["s1"] = s
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("%s\n", msg)
+		out := r.Run(bytes.NewBuffer(msg))
+		if len(out) == 0 {
+			t.Fatal("run failed")
+		}
+		t.Log(out)
+		err = evalResults([]byte(out), expectedfiles)
+		if err != nil {
+			t.Fatal(err)
 		}
 	}
 }
@@ -266,16 +337,11 @@ func TestAllHashes(t *testing.T) {
 		s.Paths = append(s.Paths, basedir)
 		s.MD5 = append(s.MD5, tp.md5)
 		s.SHA1 = append(s.SHA1, tp.sha1)
-		s.SHA256 = append(s.SHA256, tp.sha256)
-		s.SHA384 = append(s.SHA384, tp.sha384)
-		s.SHA512 = append(s.SHA512, tp.sha512)
-		s.SHA3_224 = append(s.SHA3_224, tp.sha3_224)
-		s.SHA3_256 = append(s.SHA3_256, tp.sha3_256)
-		s.SHA3_384 = append(s.SHA3_384, tp.sha3_384)
-		s.SHA3_512 = append(s.SHA3_512, tp.sha3_512)
+		s.SHA2 = append(s.SHA2, tp.sha2)
+		s.SHA3 = append(s.SHA3, tp.sha3)
 		s.Options.MatchAll = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -307,7 +373,7 @@ func TestMaxDepth(t *testing.T) {
 	s.Options.MatchAll = true
 	s.Options.MaxDepth = 5
 	r.Parameters.Searches["s1"] = s
-	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,7 +443,7 @@ func TestMacroal(t *testing.T) {
 		s.Options.MatchAll = true
 		s.Options.Macroal = true
 		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -403,7 +469,7 @@ type mismatchtest struct {
 func TestMismatch(t *testing.T) {
 	var MismatchTestCases = []mismatchtest{
 		mismatchtest{
-			desc: "want files that don't match name '^testfile0' with maxdept=1, should find testfile1 and testfile2",
+			desc: "want files that don't match name '^testfile0' with maxdepth=1, should find testfile1, 2, 3, 4, 5, 6, 7 & 8",
 			search: search{
 				Paths: []string{basedir},
 				Names: []string{"^" + TESTDATA[0].name + "$"},
@@ -414,10 +480,16 @@ func TestMismatch(t *testing.T) {
 			},
 			expectedfiles: []string{
 				basedir + "/" + TESTDATA[1].name,
-				basedir + "/" + TESTDATA[2].name},
+				basedir + "/" + TESTDATA[2].name,
+				basedir + "/" + TESTDATA[3].name,
+				basedir + "/" + TESTDATA[4].name,
+				basedir + "/" + TESTDATA[5].name,
+				basedir + "/" + TESTDATA[6].name,
+				basedir + "/" + TESTDATA[7].name,
+				basedir + "/" + TESTDATA[8].name},
 		},
 		mismatchtest{
-			desc: "want files that don't have a size of 190 bytes or larger than 10{k,m,g,t} or smaller than 10 bytes, should find testfile1 and testfile2",
+			desc: "want files that don't have a size of 190 bytes or larger than 10{k,m,g,t} or smaller than 10 bytes, should find testfile1, 2, 3, 4, 5, 6, 7 & 8",
 			search: search{
 				Paths: []string{basedir},
 				Sizes: []string{"190", ">10k", ">10m", ">10g", ">10t", "<10"},
@@ -429,7 +501,13 @@ func TestMismatch(t *testing.T) {
 			},
 			expectedfiles: []string{
 				basedir + "/" + TESTDATA[1].name,
-				basedir + "/" + TESTDATA[2].name},
+				basedir + "/" + TESTDATA[2].name,
+				basedir + "/" + TESTDATA[3].name,
+				basedir + "/" + TESTDATA[4].name,
+				basedir + "/" + TESTDATA[5].name,
+				basedir + "/" + TESTDATA[6].name,
+				basedir + "/" + TESTDATA[7].name,
+				basedir + "/" + TESTDATA[8].name},
 		},
 		mismatchtest{
 			desc: "want files that have not been modified in the last hour ago, should find nothing",
@@ -454,7 +532,7 @@ func TestMismatch(t *testing.T) {
 			expectedfiles: []string{""},
 		},
 		mismatchtest{
-			desc: "want files that don't a name different than testfile0, should find testfile0",
+			desc: "want files that don't have a name different than testfile0, should find testfile0",
 			search: search{
 				Paths: []string{basedir},
 				Names: []string{"!^testfile0$"},
@@ -483,28 +561,28 @@ func TestMismatch(t *testing.T) {
 				basedir + subdirs + TESTDATA[1].name},
 		},
 		mismatchtest{
-			desc: "want files that don't match the hashes of testfile2, should find testfile0 & 1",
+			desc: "want files that don't match the hashes of testfile2, should find testfile0, 1, 3, 4, 5, 6, 7 & 8",
 			search: search{
-				Paths:    []string{basedir},
-				MD5:      []string{TESTDATA[2].md5},
-				SHA1:     []string{TESTDATA[2].sha1},
-				SHA256:   []string{TESTDATA[2].sha256},
-				SHA384:   []string{TESTDATA[2].sha384},
-				SHA512:   []string{TESTDATA[2].sha512},
-				SHA3_224: []string{TESTDATA[2].sha3_224},
-				SHA3_256: []string{TESTDATA[2].sha3_256},
-				SHA3_384: []string{TESTDATA[2].sha3_384},
-				SHA3_512: []string{TESTDATA[2].sha3_512},
+				Paths: []string{basedir},
+				MD5:   []string{TESTDATA[2].md5},
+				SHA1:  []string{TESTDATA[2].sha1},
+				SHA2:  []string{TESTDATA[2].sha2},
+				SHA3:  []string{TESTDATA[2].sha3},
 				Options: options{
 					MaxDepth: 1,
 					MatchAll: true,
-					Mismatch: []string{`md5`, `sha1`, `sha256`, `sha384`, `sha512`,
-						`sha3_224`, `sha3_256`, `sha3_384`, `sha3_512`},
+					Mismatch: []string{`md5`, `sha1`, `sha2`, `sha3`},
 				},
 			},
 			expectedfiles: []string{
 				basedir + "/" + TESTDATA[0].name,
-				basedir + "/" + TESTDATA[1].name},
+				basedir + "/" + TESTDATA[1].name,
+				basedir + "/" + TESTDATA[3].name,
+				basedir + "/" + TESTDATA[4].name,
+				basedir + "/" + TESTDATA[5].name,
+				basedir + "/" + TESTDATA[6].name,
+				basedir + "/" + TESTDATA[7].name,
+				basedir + "/" + TESTDATA[8].name},
 		},
 	}
 
@@ -513,7 +591,7 @@ func TestMismatch(t *testing.T) {
 		var r run
 		r.Parameters = *newParameters()
 		r.Parameters.Searches["s1"] = mt.search
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -547,13 +625,8 @@ func TestParamsParser(t *testing.T) {
 	args = append(args, "-mtime", TESTDATA[0].mtime)
 	args = append(args, "-md5", TESTDATA[0].md5)
 	args = append(args, "-sha1", TESTDATA[0].sha1)
-	args = append(args, "-sha256", TESTDATA[0].sha256)
-	args = append(args, "-sha384", TESTDATA[0].sha384)
-	args = append(args, "-sha512", TESTDATA[0].sha512)
-	args = append(args, "-sha3_224", TESTDATA[0].sha3_224)
-	args = append(args, "-sha3_256", TESTDATA[0].sha3_256)
-	args = append(args, "-sha3_384", TESTDATA[0].sha3_384)
-	args = append(args, "-sha3_512", TESTDATA[0].sha3_512)
+	args = append(args, "-sha2", TESTDATA[0].sha2)
+	args = append(args, "-sha3", TESTDATA[0].sha3)
 	args = append(args, "-matchany")
 	args = append(args, "-matchall")
 	args = append(args, "-macroal")
@@ -561,6 +634,7 @@ func TestParamsParser(t *testing.T) {
 	args = append(args, "-matchlimit", "10")
 	args = append(args, "-maxdepth", "2")
 	args = append(args, "-verbose")
+	args = append(args, "-decompress")
 	t.Logf("%s\n", args)
 	_, err = r.ParamsParser(args)
 	if err != nil {
@@ -651,8 +725,8 @@ const subdirs string = `/a/b/c/d/e/f/g/h/i/j/k/l/m/n/`
 type testParams struct {
 	data []byte
 	name, size, mode, mtime, content,
-	md5, sha1, sha256, sha384, sha512,
-	sha3_224, sha3_256, sha3_384, sha3_512 string
+	md5, sha1, sha2, sha3,
+	decompressedcontent, decompressedmd5 string
 }
 
 var TESTDATA = []testParams{
@@ -665,44 +739,33 @@ var TESTDATA = []testParams{
 # above is an empty line, no spaces
 some text
 some other text`),
-		name:     `testfile0`,
-		size:     `190`,
-		mode:     `-rw-r--r--`,
-		mtime:    `<1m`,
-		content:  `^--- header for first file ---$`,
-		md5:      `e499c1912bd9af4f7e8ccaf27f7b04d2`,
-		sha1:     `d7bbc3dd7adf6e347c93a4c8b9bfb8ef4748c0fb`,
-		sha256:   `4d8ef27c4415d71cbbfad1eaa97d6f2a3ddacc9708b66efbb726133b9fd3d79a`,
-		sha384:   `8bf7ca66a8cd73b252e1431e350ef415034b211ea4d7711189b0b3f664c6fd372ed4a8f454ffc7e577a828a97a30074b`,
-		sha512:   `bd6e6a312a5fe4998df5d6ace15837355e1465ed3d32188ec56551279f70b51cf168e5c83d1f60bf66c15b70c0b2e51b4a728f3a0046d46db9a9e566c2db3daf`,
-		sha3_224: `a7ba1e66174848ecea143b612f22168b006979e3827e09f0ae6395e8`,
-		sha3_256: `091dbb7c04406fb5d95dc1c3c1fbc0378a63f19472f42fdd133b826a2a5ea3a7`,
-		sha3_384: `5b33c1fff06dff46b62b89922dfbab786a7763601028a741b7d7f1c75b584ae88acaf07f672bd4902929e7168fd9de28`,
-		sha3_512: `c9cf248748858b3b1ea752f9c778889a9cf0abc23529da20147b9ffbd7254a82d949c85a399730b40b3603bb2bc41b9585de147d2cd7080938388615501c4a5e`,
+		name:    `testfile0`,
+		size:    `190`,
+		mode:    `-rw-r--r--`,
+		mtime:   `<1m`,
+		content: `^--- header for first file ---$`,
+		md5:     `e499c1912bd9af4f7e8ccaf27f7b04d2`,
+		sha1:    `d7bbc3dd7adf6e347c93a4c8b9bfb8ef4748c0fb`,
+		sha2:    `4d8ef27c4415d71cbbfad1eaa97d6f2a3ddacc9708b66efbb726133b9fd3d79a`,
+		sha3:    `a7ba1e66174848ecea143b612f22168b006979e3827e09f0ae6395e8`,
 	},
 	testParams{
 		data: []byte(`--- header for second file ---
 # this is a comment
                                        
 # above is an line filled with spaces
-
 # above is an empty line, no spaces
 some text
 some other other text`),
-		name:     `testfile1`,
-		size:     `197`,
-		mode:     `-rw-r--r--`,
-		mtime:    `<1m`,
-		content:  `^--- header for second file ---$`,
-		md5:      `63c7fa8ec03e72343d434835ff95c8a7`,
-		sha1:     `14dcc657c3362bc9adb12ff8c23e14940df42b6f`,
-		sha256:   `b665fabb0c6c5cd9fabfd3fdd222aa4cd56dceda82485acc263546d30a825634`,
-		sha384:   `fdd9460795c000f9143e5bdd8d7ffb153f7541c154682179a131f557fa0a878db51f0046672e486a9bdcb64cdaf76ca1`,
-		sha512:   `e40b2f00f2a4097b3f53bc33c60cd04750ce87016ec3c6ef05bea05f0c5f49c56f7d634448012b2bbb879c2ede43d5bd3bc0ce20873129c2caad9cb4d8bbe6da`,
-		sha3_224: `bae8d23a49eb7ac8c5c8589e6d089d4b127478132711d164d92ad244`,
-		sha3_256: `92d0f8878baff9ff926bb752de4e830d60ef05146be90e0b857a58402940f839`,
-		sha3_384: `f8b736cdc7e14afb264bafb287805a2d05397142cabe3a8d1b17c13f6b5bf62006b413814fdb7d04cd63ebe7a8c59542`,
-		sha3_512: `c501a1809064bf480b6260c0af7430e81547a854a41ce900707134210123db4ddfefd58f73a41b3072cef0a034b39d8d4ce01265d3ce30d0bf11e0ea26ec2dbd`,
+		name:    `testfile1`,
+		size:    `196`,
+		mode:    `-rw-r--r--`,
+		mtime:   `<1m`,
+		content: `^--- header for second file ---$`,
+		md5:     `072841679be61acd27de062da1ad6fdf`,
+		sha1:    `21f4a0f1d86915f9fa676b96a823c4c3142eb22b`,
+		sha2:    `72573e5f095cb29afa2486b519928ed153558a8c036f15a9d1f790c8989e96c3`,
+		sha3:    `7ec2e3b36e220b3c5ea9ad0129a1cdcd6dd7f545c92a90f8419ea05d408ca9d5ec999452fd804df7ede9ca0f0647195ae03eba1be7fae0c2217a8f24eaf7cce0`,
 	},
 	testParams{
 		data: []byte("\x35\xF3\x40\xD8\xE9\xCE\x96\x38\xBD\x02\x80\xE4\xED\xA8\xCE\x5F\x5D\xEB\xDB\x92" +
@@ -757,19 +820,137 @@ some other other text`),
 			"\x00\xF3\x39\x34\x84\x6D\x76\x69\xF0\x7D\x90\x39\x16\x84\x37\x52\xA5\x79\xCF\x20" +
 			"\x18\xC2\x00\x31\xCD\x6C\x38\x25\x5D\x47\xB6\x2B\x3F\xA0\x7D\xB3\x69\x85\xBF\xF8" +
 			"\x25\x38\x32\x35"),
-		name:     `testfile2`,
-		size:     `1024`,
-		mode:     `-rw-r--r--`,
-		mtime:    `<1m`,
-		content:  `skZ0`,
-		md5:      `8d3a7afb7e59693b383d52396243a5b8`,
-		sha1:     `d82bc1145d471714b056940b268032f9ab0df2ae`,
-		sha256:   `3b495fae5bae9751ea4706c29e992002ba277bce30bd83a827b01ba977eabc2f`,
-		sha384:   `e778dda037764db51a4aaaf1511f8415aa9e6b5f9e012d1fef4cfe5492bf11410cb37a5db2acf3580460a265bd0ace2e`,
-		sha512:   `36d988e223f086c95d45c804f3d4b0ab95e74b69c36d5bc8801dcd9d71c0e252e4987d8e2bcab348811e559c454bd9e18527fd66c3b0be1d53463c5d7a80e9f2`,
-		sha3_224: `fdb23afa808c265284c3199013e4ded9704eebf54ffdc1f016dacc12`,
-		sha3_256: `bb84ecae0ebff542bef1478e4f19523c910905a88669abb38fe86f8b1b1cc7a8`,
-		sha3_384: `5053ccfd9cc72aead52742ea89ef4ab87c7e8fac92d09983d6ea0b43d8f1e247338c6460a66a7e5f53293888b82e2720`,
-		sha3_512: `674b6d6b4868e7bf848c4ce9be4fa964e3907a78c82152dd7f009778015043810e0e6fd75f58fb4a706893f22f70cabab449ebde37b88cb645675c3df16ea347`,
+		name:    `testfile2`,
+		size:    `1024`,
+		mode:    `-rw-r--r--`,
+		mtime:   `<1m`,
+		content: `skZ0`,
+		md5:     `8d3a7afb7e59693b383d52396243a5b8`,
+		sha1:    `d82bc1145d471714b056940b268032f9ab0df2ae`,
+		sha2:    `3b495fae5bae9751ea4706c29e992002ba277bce30bd83a827b01ba977eabc2f`,
+		sha3:    `fdb23afa808c265284c3199013e4ded9704eebf54ffdc1f016dacc12`,
+	},
+	testParams{
+		data: []byte(`--- header for fourth file ---
+# above is an line filled with spaces
+
+# above is an empty line, no spaces
+some text
+some other text`),
+		name:    `testfile3`,
+		size:    `131`,
+		mode:    `-rw-r--r--`,
+		mtime:   `<1m`,
+		content: `^--- header for fourth file ---$`,
+		md5:     `d6b008f34e7cf207cb9bc74a2153fffd`,
+		sha1:    `9ee0213f3227fe4f3658af0c3de315669b36ccf9`,
+		sha2:    `fb9758f30549a282d41a4eb125790704c17309e55443dbb54895379b8e33438f2825b78b938aa3735f99f3305d3b98e8`,
+		sha3:    `fe66d22caa59899c386e0a041f641d1c8130ded8f7365330957cbf69`,
+	},
+	testParams{
+		data: []byte(`--- header for fifth file ---
+# this is a comment
+                                       
+# above is an empty line, no spaces
+some text
+some other text`),
+		name:    `testfile4`,
+		size:    `151`,
+		mode:    `-rw-r--r--`,
+		mtime:   `<1m`,
+		content: `^--- header for fifth file ---$`,
+		md5:     `5d5a4fdeafc1677dca8255ef9624d522`,
+		sha1:    `caf4ce81c990785e5041bfc410526f471ea1ba6f`,
+		sha2:    `a4001843158a7a374e5ddcc22644c0e37738bc64ffd50179fc18fb443e0a62393b43384d9ac734e7a64c204e862ae3424094381afb33dfc639c52517afad1f32`,
+		sha3:    `2028feaccf974066aa7c47070f24c72d349ed6a6575cb801cc606c4a2b59020af4339b60dbedd0049a7341edde14133ee6f8b199f1a7c6ef36493fd217501607`,
+	},
+	testParams{
+		data: []byte(`--- header for sixth file ---
+# this is a comment
+                                       
+some text
+some other text`),
+		name:    `testfile5`,
+		size:    `115`,
+		mode:    `-rw-r--r--`,
+		mtime:   `<1m`,
+		content: `^--- header for sixth file ---$`,
+		md5:     `f9132062fccc09cba5f93474724a57e3`,
+		sha1:    `fb03d2d4ac2a82090bc29934f75c1d6914bacc91`,
+		sha2:    `8871b2ff047be05571549398e54c1f36163ae171e05a89900468688ea3bac4f9f3d7c922f0bebc24fdac28d0b2d38fb2718209fb5976c9245e7c837170b79819`,
+		sha3:    `cb086f02b728d57e299651f89e1fb0f89c659db50c7c780ec2689a8143e55c8e5e63ab47fe20897be7155e409151c190`,
+	},
+	testParams{
+		data: []byte("\x1f\x8b\x08\x08\xd9\xdc\x88\x56\x00\x03\x74\x65\x73\x74\x00\x8d" +
+			"\x8e\xcd\x0a\xc3\x30\x0c\x83\xef\x79\x0a\xc1\xae\xf3\x43\x65\xad" +
+			"\x4a\x0c\x49\x1c\x1a\xb3\xbf\xa7\x5f\x96\xb2\x4b\x4f\x33\x42\x18" +
+			"\xf3\x49\x58\x44\x90\x18\x57\xee\xd8\x6c\xc7\x5b\x5b\xe3\x8a\x4d" +
+			"\x33\x21\x22\xe1\x02\x4f\xda\x31\x14\xb1\x58\x29\xac\x1e\xf0\xdf" +
+			"\x8c\x6c\xbc\xd9\x9d\x33\x5c\x91\xb5\xf2\xdb\x9b\x47\xfd\x43\x3d" +
+			"\xa1\xb7\xb8\xb0\x87\x13\xc6\xd2\xfc\x35\xe1\x2b\xaa\xfd\xa0\x6e" +
+			"\x85\x70\x3e\xfd\xd8\xcc\xd3\xf8\xf7\xf0\x79\xfd\x00\x4c\x08\xa4" +
+			"\x7a\xc6\x00\x00\x00"),
+		name:                `testfile6`,
+		size:                `133`,
+		mode:                `-rw-r--r--`,
+		mtime:               `<1m`,
+		content:             `KO3B`,
+		md5:                 `31d38eee231318166538e1569631aba9`,
+		sha1:                `bd1f24d8cbb000bbf7bcd618c2aec73280388721`,
+		sha2:                `bb4e449df74edae0292d60d2733a3b1801d90ae23560484b1e04fb52f111a14f`,
+		sha3:                `433b84f162d1b00481e6da022c5738fb4d04c3bb4317f73266746dd1`,
+		decompressedcontent: `^--- header for zipped file ---$`,
+		decompressedmd5:     `5bb23d3b1eaaddc6e108e3fb0ee80a61`,
+	},
+	testParams{
+		data: []byte("\x1f\x8b\x08\x00\xd9\xe3\x8f\x56\x00\x03\xed\xd4\xcb\x6a\x84\x30" +
+			"\x14\x06\x60\xd7\xf3\x14\x07\xba\xad\x60\xe2\xed\x09\xfa\x02\x5d" +
+			"\x14\xba\x4c\xf5\x0c\x86\x6a\x22\xe6\xf4\xfa\xf4\x8d\xce\x74\x28" +
+			"\x03\x65\xba\xb1\x45\xfa\x7f\x44\x22\x7a\x12\x43\xf0\x8f\x70\x90" +
+			"\xbd\xed\x59\x25\xeb\xc9\xa2\xaa\x2a\xe6\x5e\xd5\x65\xf6\xb5\x5f" +
+			"\xe4\xaa\x4c\x94\xae\x8a\xbc\xae\x54\xa1\x55\x92\x29\xad\xeb\x2c" +
+			"\xa1\x6c\xc5\x35\x9d\x3c\x05\x31\x13\x51\xf2\x68\x43\xe7\xa7\xef" +
+			"\xeb\x2e\xbd\xdf\xa8\x34\x4d\xa9\x63\xd3\xf2\x44\x7b\x1f\x2f\x3b" +
+			"\x05\xa1\x77\x3b\x8e\xdc\xd2\xfc\x5f\x50\x2c\xd8\x5d\x91\x74\x36" +
+			"\x50\x6c\x86\x1a\x3f\x0c\xec\x64\x47\x3f\x13\xc7\x9a\x07\xff\xcc" +
+			"\xcb\x60\x47\xbd\x75\x3c\xcf\xdb\xc7\xe9\x5f\xac\x74\x14\x46\xd3" +
+			"\x70\xd8\x9d\x95\xf1\x30\xca\xdb\x52\x7c\x4d\xce\x7f\x16\x05\x3f" +
+			"\x30\x09\xbf\xca\xe1\xce\x4b\x17\x57\x3d\x19\xd7\xfa\xe1\xf0\xf8" +
+			"\xaf\x37\x73\x83\xe4\x98\x7f\xbd\xe2\x37\x2e\xe6\x5f\xe7\xa7\xfc" +
+			"\x97\xc5\x31\xff\x39\xf2\xff\x1b\xce\xf2\x1f\xb8\xf1\xae\xdd\xd4" +
+			"\x01\x70\x77\x73\x7b\x8f\x53\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+			"\x00\x00\x00\x00\x00\x00\x00\xfe\xaf\x0f\x60\x69\x1f\x15\x00\x28" +
+			"\x00\x00"),
+		name:                `testfile7`,
+		size:                `274`,
+		mode:                `-rw-r--r--`,
+		mtime:               `<1m`,
+		content:             `t6Pl`,
+		md5:                 `52fa96013b5c6aa9302d39ee7fe2f6a5`,
+		sha1:                `31952c0d2772c302ec94b303c2b80b67cf830060`,
+		sha2:                `f6032dc9b4ba112397a6f8bcb778ab10708c1acd38e48f637ace15c3ae417ded`,
+		sha3:                `3f4dacf0b2347d0a0ab6f09b7d7c98fd12cb2030d4af8baeacaf55a9`,
+		decompressedcontent: `ustar`,
+		decompressedmd5:     `7f82b4c1613fd10208ad1f71de17ebb5`,
+	},
+	testParams{
+		data: []byte("\x1f\x8b\x08\x08\x2c\xe8\x8f\x56\x00\x03\x74\x65\x73\x74\x66\x69" +
+			"\x6c\x65\x33\x00\x8d\x8e\x4b\x0a\x03\x31\x0c\x43\xf7\x73\x0a\x41" +
+			"\xb7\xf5\xa1\xd2\x19\x0d\x09\x24\x71\x48\xdc\xef\xe9\xeb\xa6\xcc" +
+			"\xa6\xab\x1a\x81\x6c\x78\x12\x16\x11\x44\x86\x8d\x1d\xbb\x76\xac" +
+			"\xda\xfb\xb5\x19\x37\xbc\x52\x6b\x00\x00\xca\x84\x88\x2c\x27\x58" +
+			"\x4c\x03\xae\xe0\x54\x29\xac\xb6\xe0\xbf\xf1\x6c\xb8\xe8\x8d\x33" +
+			"\x5c\x91\x53\xe5\xa7\x37\x7b\xfd\x3d\x59\xc4\x68\x61\xe5\x58\x7e" +
+			"\x30\x96\x66\xcf\x09\x9f\x51\xf5\x80\x86\x16\xc2\xf8\xb0\xef\xa6" +
+			"\x16\xfd\xf3\x79\xbf\x01\x7b\xae\xde\x84\xca\x00\x00\x00"),
+		name:    `testfile8`,
+		size:    `142`,
+		mode:    `-rw-r--r--`,
+		mtime:   `<1m`,
+		content: `,'XL`,
+		md5:     `df7b577ceb59f700d5b03db9d12d174e`,
+		sha1:    `ea033d30e996ac443bc50e9c37eb25b37505302e`,
+		sha2:    `2f4f81c0920501f178085032cd2784b8aa811b8c8e94da7ff85a43a361cd96cc`,
+		sha3:    `d171566f8026a4ca6b4cdf8e6491a651625f98fbc15f9cb601833b64`,
 	},
 }

@@ -20,7 +20,7 @@ func TestPackageQuery(t *testing.T) {
 	for _, x := range pinfo {
 		fmt.Println(x.Name, x.Version, x.Type)
 	}
-	if len(pinfo) != 5 {
+	if len(pinfo) != 7 {
 		t.FailNow()
 	}
 }

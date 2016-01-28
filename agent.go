@@ -36,14 +36,23 @@ type Agent struct {
 
 // AgentEnv stores basic information of the endpoint
 type AgentEnv struct {
-	Init      string   `json:"init,omitempty"`
-	Ident     string   `json:"ident,omitempty"`
-	OS        string   `json:"os,omitempty"`
-	Arch      string   `json:"arch,omitempty"`
-	IsProxied bool     `json:"isproxied"`
-	Proxy     string   `json:"proxy,omitempty"`
-	Addresses []string `json:"addresses,omitempty"`
-	PublicIP  string   `json:"publicip,omitempty"`
+	Init      string      `json:"init,omitempty"`
+	Ident     string      `json:"ident,omitempty"`
+	OS        string      `json:"os,omitempty"`
+	Arch      string      `json:"arch,omitempty"`
+	IsProxied bool        `json:"isproxied"`
+	Proxy     string      `json:"proxy,omitempty"`
+	Addresses []string    `json:"addresses,omitempty"`
+	PublicIP  string      `json:"publicip,omitempty"`
+	AWS       AgentEnvAWS `json:"aws,omitempty"`
+}
+
+// Stores AWS specific agent environment values
+type AgentEnvAWS struct {
+	InstanceID   string `json:"instanceid,omitempty"`
+	LocalIPV4    string `json:"localipv4,omitempty"`
+	AMIID        string `json:"amiid,omitempty"`
+	InstanceType string `json:"instancetype,omitempty"`
 }
 
 type AgentsStats struct {

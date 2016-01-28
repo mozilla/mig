@@ -9,6 +9,7 @@ package scribe
 
 import (
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -23,6 +24,7 @@ type pkgmgrInfo struct {
 	name    string
 	version string
 	pkgtype string
+	arch    string
 }
 
 // Package information from the system as returned by QueryPackages().
@@ -30,6 +32,7 @@ type PackageInfo struct {
 	Name    string `json:"name"`    // Package name.
 	Version string `json:"version"` // Package version.
 	Type    string `json:"type"`    // Package type.
+	Arch    string `json:"arch"`    // Package architecture
 }
 
 // Query packages on the system, returning a slice of all identified packages
@@ -41,20 +44,28 @@ func QueryPackages() []PackageInfo {
 		np.Name = x.name
 		np.Version = x.version
 		np.Type = x.pkgtype
+		np.Arch = x.arch
 		ret = append(ret, np)
 	}
 	return ret
 }
 
-func getPackage(name string) (ret pkgmgrResult) {
+func getPackage(name string, collectexp string) (ret pkgmgrResult) {
 	ret.results = make([]pkgmgrInfo, 0)
 	if !pkgmgrInitialized {
 		pkgmgrInit()
 	}
 	debugPrint("getPackage(): looking for \"%v\"\n", name)
 	for _, x := range pkgmgrCache {
-		if x.name != name {
-			continue
+		if collectexp == "" {
+			if x.name != name {
+				continue
+			}
+		} else {
+			mtch, err := regexp.MatchString(collectexp, x.name)
+			if err != nil || !mtch {
+				continue
+			}
 		}
 		debugPrint("getPackage(): found %v, %v, %v\n", x.name, x.version, x.pkgtype)
 		ret.results = append(ret.results, x)
@@ -91,7 +102,7 @@ func pkgmgrInit() {
 func rpmGetPackages() []pkgmgrInfo {
 	ret := make([]pkgmgrInfo, 0)
 
-	c := exec.Command("rpm", "-qa", "--queryformat", "%{NAME} %{EVR}\\n")
+	c := exec.Command("rpm", "-qa", "--queryformat", "%{NAME} %{EVR} %{ARCH}\\n")
 	buf, err := c.Output()
 	if err != nil {
 		return ret
@@ -101,12 +112,13 @@ func rpmGetPackages() []pkgmgrInfo {
 	for _, x := range slist {
 		s := strings.Fields(x)
 
-		if len(s) < 2 {
+		if len(s) < 3 {
 			continue
 		}
 		newpkg := pkgmgrInfo{}
 		newpkg.name = s[0]
 		newpkg.version = s[1]
+		newpkg.arch = s[2]
 		newpkg.pkgtype = "rpm"
 		ret = append(ret, newpkg)
 	}
@@ -126,7 +138,7 @@ func dpkgGetPackages() []pkgmgrInfo {
 	for _, x := range slist {
 		s := strings.Fields(x)
 
-		if len(s) < 3 {
+		if len(s) < 4 {
 			continue
 		}
 		// Only process packages that have been fully installed.
@@ -136,6 +148,7 @@ func dpkgGetPackages() []pkgmgrInfo {
 		newpkg := pkgmgrInfo{}
 		newpkg.name = s[1]
 		newpkg.version = s[2]
+		newpkg.arch = s[3]
 		newpkg.pkgtype = "dpkg"
 		ret = append(ret, newpkg)
 	}
@@ -153,6 +166,8 @@ var testPkgTable = []struct {
 	{"upstart", "1.13.2"},
 	{"grub-common", "2.02-beta2"},
 	{"libbind", "1:9.9.5.dfsg-4.3"},
+	{"kernel", "2.6.32-504.12.2.el6.x86_64"},
+	{"kernel", "2.6.32-573.8.1.el6.x86_64"},
 }
 
 func testGetPackages() []pkgmgrInfo {

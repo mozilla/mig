@@ -50,12 +50,13 @@ A search must have at least one search path.
 				"modes": [
 					"^-r-xr-x--"
 				]
-				"sha256": [
+				"sha2": [
 					"fff415292dc59cc99d43e70fd69347d09b9bd7a581f4d77b6ec0fa902ebaaec8"
 				],
 				"options": {
 					"matchall": true,
-					"maxdepth": 3
+					"maxdepth": 3,
+					"decompress": true
 				}
 			}
         }
@@ -137,19 +138,10 @@ Content filters:
 
 * **sha1**: a sha1 checksum
 
-* **sha256**: a sha256 checksum
+* **sha2**: a sha2 checksum (sha256/sha384/sha512 decided based on hash length)
 
-* **sha384**: a sha384 checksum
-
-* **sha512**: a sha512 checksum
-
-* **sha3_224**: a sha3_224 checksum
-
-* **sha3_256**: a sha3_256 checksum
-
-* **sha3_384**: a sha3_384 checksum
-
-* **sha3_512**: a sha3_512 checksum
+* **sha3**: a sha3 checksum (sha3_224/sha3_256/sha3_384/sha3_512 decided based
+  on hash length)
 
 Search Options
 ~~~~~~~~~~~~~~
@@ -207,7 +199,7 @@ Several options can be applied to a search:
   match.
 
   The `mismatch` option can be applied to all check types: name, size, mode,
-  mtime, content, md5, sha1, sha256, ... It can be specified multiple times:
+  mtime, content, md5, sha1, sha2, ... It can be specified multiple times:
 
   example: `-path /usr -name "^vim$" -content "linux-x86-64\.so" -sha1 943633c85bb80d39532450decf1f723735313f1f -sha1 350ac204ac8084590b209c33f39f09986f0ba682 -mismatch=content -mismatch=sha1`
 
@@ -222,6 +214,11 @@ Several options can be applied to a search:
   matched files. The client will display the hash with the file information
   in the result. As an example, this option can be used to do basic file
   integrity monitoring across actions.
+
+* **decompress** tells the agent to decompress gzipped files prior to
+  inspecting content or calculating hashes. Note that if the decompress flag
+  is set for one search, all searches will involve a test for file
+  decompression.
 
 Search algorithm
 ----------------

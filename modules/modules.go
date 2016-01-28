@@ -12,9 +12,13 @@ package modules /* import "mig.ninja/mig/modules" */
 
 import (
 	"bufio"
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 )
 
 // Message defines the input messages received by modules.
@@ -63,13 +67,41 @@ type Runner interface {
 
 // MakeMessage creates a new modules.Message with a given class and parameters and
 // return the byte slice of the json marshalled message
-func MakeMessage(class MessageClass, params interface{}) (rawMsg []byte, err error) {
+func MakeMessage(class MessageClass, params interface{}, comp bool) (rawMsg []byte, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("Failed to make modules.Message: %v", e)
+		}
+	}()
+
 	var msg Message
 	msg.Class = class
 	msg.Parameters = params
+	// If the compression flag is set, treat Parameters as a compressed
+	// byte string.
+	if comp {
+		pstr, ok := msg.Parameters.(string)
+		if !ok {
+			panic("Compressed parameter was not a string")
+		}
+		b := bytes.NewBuffer([]byte(pstr))
+		rb64 := base64.NewDecoder(base64.StdEncoding, b)
+		r, err := gzip.NewReader(rb64)
+		if err != nil {
+			panic(err)
+		}
+		rb, err := ioutil.ReadAll(r)
+		if err != nil {
+			panic(err)
+		}
+		err = json.Unmarshal(rb, &msg.Parameters)
+		if err != nil {
+			panic(err)
+		}
+	}
 	rawMsg, err = json.Marshal(msg)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to make modules.Message: %v", err)
+		panic(err)
 	}
 	return
 }

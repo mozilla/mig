@@ -45,7 +45,7 @@ INSTALL		:= install
 
 
 all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-action-generator mig-action-verifier worker-agent-intel \
-	runner-compliance
+	runner-compliance runner-scribe
 
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
@@ -93,6 +93,9 @@ worker-agent-intel: create-bindir
 runner-compliance: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-compliance $(GOLDFLAGS) mig.ninja/mig/runner-plugins/runner-compliance
 
+runner-scribe: create-bindir
+	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-scribe $(GOLDFLAGS) mig.ninja/mig/runner-plugins/runner-scribe
+
 go_vendor_dependencies:
 	GOOS="linux" $(GOGETTER) github.com/bobappleyard/readline
 	GOOS="darwin" $(GOGETTER) github.com/bobappleyard/readline
@@ -119,6 +122,7 @@ go_vendor_dependencies:
 	$(GOGETTER) golang.org/x/net/ipv4
 	$(GOGETTER) golang.org/x/net/ipv6
 	$(GOGETTER) gopkg.in/gcfg.v1
+	$(GOGETTER) github.com/cheggaaa/pb
 	echo 'removing .git from vendored pkg and moving them to vendor'
 	find .tmpdeps/src -type d -name ".git" ! -name ".gitignore" -exec rm -rf {} \; || exit 0
 	cp -ar .tmpdeps/src/* vendor/

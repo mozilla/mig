@@ -28,6 +28,7 @@ func main() {
 		showVersion  bool
 		lineFmt      bool
 		jsonFmt      bool
+		onlyTrue     bool
 	)
 
 	err := scribe.Bootstrap()
@@ -42,6 +43,7 @@ func main() {
 	flag.BoolVar(&lineFmt, "l", false, "output one result per line")
 	flag.BoolVar(&jsonFmt, "j", false, "JSON output mode")
 	flag.BoolVar(&testHooks, "t", false, "enable test hooks")
+	flag.BoolVar(&onlyTrue, "T", false, "only show true outcomes in results")
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.Parse()
 
@@ -92,6 +94,11 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error obtaining results for \"%v\": %v\n", x, err)
 			continue
+		}
+		if onlyTrue {
+			if !tr.MasterResult {
+				continue
+			}
 		}
 		if lineFmt {
 			for _, x := range tr.SingleLineResults() {

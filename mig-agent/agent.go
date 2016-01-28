@@ -39,13 +39,14 @@ type moduleResult struct {
 }
 
 type moduleOp struct {
-	err         error
-	id          float64
-	mode        string
-	params      interface{}
-	resultChan  chan moduleResult
-	position    int
-	expireafter time.Time
+	err          error
+	id           float64
+	mode         string
+	isCompressed bool
+	params       interface{}
+	resultChan   chan moduleResult
+	position     int
+	expireafter  time.Time
 }
 
 var runningOps = make(map[float64]moduleOp)
@@ -213,7 +214,7 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 	// If parameters are being supplied as an argument, use these vs.
 	// expecting parameters to be supplied on Stdin.
 	if paramargs != nil {
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, paramargs)
+		msg, err := modules.MakeMessage(modules.MsgClassParameters, paramargs, false)
 		if err != nil {
 			panic(err)
 		}
@@ -488,12 +489,13 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 	for counter, operation := range cmd.Action.Operations {
 		// create an module operation object
 		currentOp := moduleOp{
-			id:          mig.GenID(),
-			mode:        operation.Module,
-			params:      operation.Parameters,
-			resultChan:  resultChan,
-			position:    counter,
-			expireafter: cmd.Action.ExpireAfter,
+			id:           mig.GenID(),
+			mode:         operation.Module,
+			isCompressed: operation.IsCompressed,
+			params:       operation.Parameters,
+			resultChan:   resultChan,
+			position:     counter,
+			expireafter:  cmd.Action.ExpireAfter,
 		}
 
 		desc := fmt.Sprintf("sending operation %d to module %s", counter, operation.Module)
@@ -556,7 +558,7 @@ func runModule(ctx Context, op moduleOp) (err error) {
 	}
 
 	// Build parameters message
-	modParams, err := modules.MakeMessage(modules.MsgClassParameters, op.params)
+	modParams, err := modules.MakeMessage(modules.MsgClassParameters, op.params, op.isCompressed)
 	if err != nil {
 		panic(err)
 	}

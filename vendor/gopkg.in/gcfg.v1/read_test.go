@@ -69,7 +69,7 @@ type cMulti struct {
 }
 type cMultiS1 struct{ Multi []string }
 type cMultiS2 struct{ NonMulti nonMulti }
-type cMultiS3 struct{ MultiInt []int }
+type cMultiS3 struct{ PMulti *[]string }
 
 type cSubs struct{ Sub map[string]*cSubsS1 }
 type cSubsS1 struct{ Name string }
@@ -101,9 +101,8 @@ type readtest struct {
 	ok   bool
 }
 
-func newString(s string) *string {
-	return &s
-}
+func newString(s string) *string           { return &s }
+func newStringSlice(s ...string) *[]string { return &s }
 
 var readtests = []struct {
 	group string
@@ -188,6 +187,10 @@ var readtests = []struct {
 	// pointer
 	{"[section]", &cBasic{Section: cBasicS1{PName: nil}}, true},
 	{"[section]\npname=value", &cBasic{Section: cBasicS1{PName: newString("value")}}, true},
+	{"[m3]", &cMulti{M3: cMultiS3{PMulti: nil}}, true},
+	{"[m3]\npmulti", &cMulti{M3: cMultiS3{PMulti: newStringSlice()}}, true},
+	{"[m3]\npmulti=value", &cMulti{M3: cMultiS3{PMulti: newStringSlice("value")}}, true},
+	{"[m3]\npmulti=value1\npmulti=value2", &cMulti{M3: cMultiS3{PMulti: newStringSlice("value1", "value2")}}, true},
 	// section name not matched
 	{"\n[nonexistent]\nname=value", &cBasic{}, false},
 	// subsection name not matched

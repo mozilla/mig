@@ -238,7 +238,14 @@ func set(cfg interface{}, sect, sub, name string, blank bool, value string) erro
 	// vVal is either single-valued var, or newly allocated value within multi-valued var
 	var vVal reflect.Value
 	// multi-value if unnamed slice type
-	isMulti := vVar.Type().Name() == "" && vVar.Kind() == reflect.Slice
+	isMulti := vVar.Type().Name() == "" && vVar.Kind() == reflect.Slice ||
+		vVar.Type().Name() == "" && vVar.Kind() == reflect.Ptr && vVar.Type().Elem().Name() == "" && vVar.Type().Elem().Kind() == reflect.Slice
+	if isMulti && vVar.Kind() == reflect.Ptr {
+		if vVar.IsNil() {
+			vVar.Set(reflect.New(vVar.Type().Elem()))
+		}
+		vVar = vVar.Elem()
+	}
 	if isMulti && blank {
 		vVar.Set(reflect.Zero(vVar.Type()))
 		return nil

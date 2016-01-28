@@ -57,7 +57,7 @@ type run struct {
 	Results    modules.Result
 }
 
-func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
+func buildResults(e ScribeElements, r *modules.Result) (buf []byte, err error) {
 	r.Success = true
 	r.Elements = e
 	if len(e.Results) > 0 {
@@ -94,7 +94,7 @@ func fileModuleLocator(pattern string, regex bool, root string, depth int) ([]st
 	args = append(args, "-maxdepth", strconv.Itoa(depth))
 	param, err := run.(modules.HasParamsParser).ParamsParser(args)
 
-	buf, err := modules.MakeMessage(modules.MsgClassParameters, param)
+	buf, err := modules.MakeMessage(modules.MsgClassParameters, param, false)
 	if err != nil {
 		return ret, nil
 	}
@@ -163,7 +163,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	}
 
 	document := r.Parameters.ScribeDoc
-	e := &elements{}
+	e := &ScribeElements{}
 	e.HumanOutput = r.Parameters.HumanOutput
 	e.JSONOutput = r.Parameters.JSONOutput
 
@@ -198,7 +198,7 @@ func (r *run) ValidateParameters() (err error) {
 
 func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []string, err error) {
 	var (
-		elem  elements
+		elem  ScribeElements
 		stats statistics
 	)
 
@@ -231,7 +231,7 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 	return
 }
 
-type elements struct {
+type ScribeElements struct {
 	Results     []scribelib.TestResult `json:"results"`     // Results of evaluation.
 	HumanOutput bool                   `json:"humanoutput"` // Requested human output mode.
 	JSONOutput  bool                   `json:"jsonoutput"`  // Requested JSON output mode.

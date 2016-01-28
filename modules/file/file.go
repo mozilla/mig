@@ -7,7 +7,7 @@
 /* The file module provides functions to scan a file system. It can look into files
 using regexes. It can search files by name. It can match hashes in md5, sha1,
 sha256, sha384, sha512, sha3_224, sha3_256, sha3_384 and sha3_512.
-The filesystem can be searches using pattern, as described in the Parameters
+The filesystem can be searched using patterns, as described in the Parameters
 documentation at http://mig.mozilla.org/doc/module_file.html .
 */
 package file /* import "mig.ninja/mig/modules/file" */
@@ -34,9 +34,12 @@ import (
 	"github.com/mozilla/mig-sandbox"
 	"golang.org/x/crypto/sha3"
 	"mig.ninja/mig/modules"
+
+	"compress/gzip"
 )
 
 var debug bool = false
+var tryDecompress bool = false
 
 func debugprint(format string, a ...interface{}) {
 	if debug {
@@ -118,13 +121,8 @@ type search struct {
 	Mtimes       []string `json:"mtimes,omitempty"`
 	MD5          []string `json:"md5,omitempty"`
 	SHA1         []string `json:"sha1,omitempty"`
-	SHA256       []string `json:"sha256,omitempty"`
-	SHA384       []string `json:"sha384,omitempty"`
-	SHA512       []string `json:"sha512,omitempty"`
-	SHA3_224     []string `json:"sha3_224,omitempty"`
-	SHA3_256     []string `json:"sha3_256,omitempty"`
-	SHA3_384     []string `json:"sha3_384,omitempty"`
-	SHA3_512     []string `json:"sha3_512,omitempty"`
+	SHA2         []string `json:"sha2,omitempty"`
+	SHA3         []string `json:"sha3,omitempty"`
 	Options      options  `json:"options,omitempty"`
 	checks       []check
 	checkmask    checkType
@@ -142,6 +140,7 @@ type options struct {
 	MatchLimit   float64  `json:"matchlimit"`
 	Debug        string   `json:"debug,omitempty"`
 	ReturnSHA256 bool     `json:"returnsha256,omitempty"`
+	Decompress   bool     `json:"decompress,omitempty"`
 }
 
 type checkType uint64
@@ -280,72 +279,38 @@ func (s *search) makeChecks() (err error) {
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
-	for _, v := range s.SHA256 {
+	for _, v := range s.SHA2 {
 		var c check
-		c.code = checkSHA256
 		c.value = strings.ToUpper(v)
-		if s.hasMismatch("sha256") {
+		if s.hasMismatch("sha2") {
 			c.mismatch = true
+		}
+		switch len(v) {
+		case 64:
+			c.code = checkSHA256
+		case 96:
+			c.code = checkSHA384
+		case 128:
+			c.code = checkSHA512
 		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
-	for _, v := range s.SHA384 {
+	for _, v := range s.SHA3 {
 		var c check
-		c.code = checkSHA384
 		c.value = strings.ToUpper(v)
-		if s.hasMismatch("sha384") {
+		if s.hasMismatch("sha3") {
 			c.mismatch = true
 		}
-		s.checks = append(s.checks, c)
-		s.checkmask |= c.code
-	}
-	for _, v := range s.SHA512 {
-		var c check
-		c.code = checkSHA512
-		c.value = strings.ToUpper(v)
-		if s.hasMismatch("sha512") {
-			c.mismatch = true
-		}
-		s.checks = append(s.checks, c)
-		s.checkmask |= c.code
-	}
-	for _, v := range s.SHA3_224 {
-		var c check
-		c.code = checkSHA3_224
-		c.value = strings.ToUpper(v)
-		if s.hasMismatch("sha3_224") {
-			c.mismatch = true
-		}
-		s.checks = append(s.checks, c)
-		s.checkmask |= c.code
-	}
-	for _, v := range s.SHA3_256 {
-		var c check
-		c.code = checkSHA3_256
-		c.value = strings.ToUpper(v)
-		if s.hasMismatch("sha3_256") {
-			c.mismatch = true
-		}
-		s.checks = append(s.checks, c)
-		s.checkmask |= c.code
-	}
-	for _, v := range s.SHA3_384 {
-		var c check
-		c.code = checkSHA3_384
-		c.value = strings.ToUpper(v)
-		if s.hasMismatch("sha3_384") {
-			c.mismatch = true
-		}
-		s.checks = append(s.checks, c)
-		s.checkmask |= c.code
-	}
-	for _, v := range s.SHA3_512 {
-		var c check
-		c.code = checkSHA3_512
-		c.value = strings.ToUpper(v)
-		if s.hasMismatch("sha3_512") {
-			c.mismatch = true
+		switch len(v) {
+		case 56:
+			c.code = checkSHA3_224
+		case 64:
+			c.code = checkSHA3_256
+		case 96:
+			c.code = checkSHA3_384
+		case 128:
+			c.code = checkSHA3_512
 		}
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
@@ -551,51 +516,36 @@ func (r *run) ValidateParameters() (err error) {
 				return
 			}
 		}
-		for _, hash := range s.SHA256 {
+		for _, hash := range s.SHA2 {
 			debugprint("validating hash '%s'\n", hash)
-			err = validateHash(hash, checkSHA256)
+			switch len(hash) {
+			case 64:
+				err = validateHash(hash, checkSHA256)
+			case 96:
+				err = validateHash(hash, checkSHA384)
+			case 128:
+				err = validateHash(hash, checkSHA512)
+			default:
+				fmt.Printf("ERROR: Invalid hash length")
+			}
 			if err != nil {
 				return
 			}
 		}
-		for _, hash := range s.SHA384 {
+		for _, hash := range s.SHA3 {
 			debugprint("validating hash '%s'\n", hash)
-			err = validateHash(hash, checkSHA384)
-			if err != nil {
-				return
+			switch len(hash) {
+			case 56:
+				err = validateHash(hash, checkSHA3_224)
+			case 64:
+				err = validateHash(hash, checkSHA3_256)
+			case 96:
+				err = validateHash(hash, checkSHA3_384)
+			case 128:
+				err = validateHash(hash, checkSHA3_512)
+			default:
+				fmt.Printf("ERROR: Invalid hash length")
 			}
-		}
-		for _, hash := range s.SHA512 {
-			debugprint("validating hash '%s'\n", hash)
-			err = validateHash(hash, checkSHA512)
-			if err != nil {
-				return
-			}
-		}
-		for _, hash := range s.SHA3_224 {
-			debugprint("validating hash '%s'\n", hash)
-			err = validateHash(hash, checkSHA3_224)
-			if err != nil {
-				return
-			}
-		}
-		for _, hash := range s.SHA3_256 {
-			debugprint("validating hash '%s'\n", hash)
-			err = validateHash(hash, checkSHA3_256)
-			if err != nil {
-				return
-			}
-		}
-		for _, hash := range s.SHA3_384 {
-			debugprint("validating hash '%s'\n", hash)
-			err = validateHash(hash, checkSHA3_384)
-			if err != nil {
-				return
-			}
-		}
-		for _, hash := range s.SHA3_512 {
-			debugprint("validating hash '%s'\n", hash)
-			err = validateHash(hash, checkSHA3_512)
 			if err != nil {
 				return
 			}
@@ -606,6 +556,11 @@ func (r *run) ValidateParameters() (err error) {
 			if err != nil {
 				return
 			}
+		}
+		if s.Options.Decompress {
+			tryDecompress = true
+		} else {
+			tryDecompress = false
 		}
 	}
 	return
@@ -704,7 +659,7 @@ func validateMismatch(filter string) error {
 	if len(filter) < 1 {
 		return fmt.Errorf("empty filters are not permitted")
 	}
-	filterregexp := `^(name|size|mode|mtime|content|md5|sha1|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512)$`
+	filterregexp := `^(name|size|mode|mtime|content|md5|sha1|sha2|sha3)$`
 	re := regexp.MustCompile(filterregexp)
 	if !re.MatchString(filter) {
 		return fmt.Errorf("The syntax of filter '%s' is invalid. Must match regex %s", filter, filterregexp)
@@ -1027,6 +982,57 @@ func followSymLink(link string) (mode os.FileMode, path string, err error) {
 	return
 }
 
+type fileEntry struct {
+	filename string
+	fd       *os.File
+	compRdr  io.Reader
+}
+
+func (f *fileEntry) Close() {
+	f.fd.Close()
+}
+
+// getReader returns an appropriate reader for the file being checked.
+// This is done by checking whether the file is compressed or not
+func (f *fileEntry) getReader() io.Reader {
+	var (
+		err error
+	)
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("getReader() -> %v", err)
+		}
+	}()
+	f.fd, err = os.Open(f.filename)
+	if err != nil {
+		stats.Openfailed++
+		panic(err)
+	}
+	if tryDecompress != true {
+		return f.fd
+	}
+	magic := make([]byte, 2)
+	n, err := f.fd.Read(magic)
+	if err != nil {
+		panic(err)
+	}
+	if n != 2 {
+		return f.fd
+	}
+	_, err = f.fd.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+	if magic[0] == 0x1f && magic[1] == 0x8b {
+		f.compRdr, err = gzip.NewReader(f.fd)
+		if err != nil {
+			panic(err)
+		}
+		return f.compRdr
+	}
+	return f.fd
+}
+
 // evaluateFile takes a single file and applies searches to it
 func (r *run) evaluateFile(file string) (err error) {
 	var activeSearches []string
@@ -1083,16 +1089,17 @@ func (r *run) evaluateFile(file string) (err error) {
 	// Second pass: Enter all content & hash checks across all searches.
 	// Only perform the searches that are active.
 	// Optimize to only read a file once per check type
-	r.checkContent(file)
-	r.checkHash(file, checkMD5)
-	r.checkHash(file, checkSHA1)
-	r.checkHash(file, checkSHA256)
-	r.checkHash(file, checkSHA384)
-	r.checkHash(file, checkSHA512)
-	r.checkHash(file, checkSHA3_224)
-	r.checkHash(file, checkSHA3_256)
-	r.checkHash(file, checkSHA3_384)
-	r.checkHash(file, checkSHA3_512)
+	f := fileEntry{filename: file}
+	r.checkContent(f)
+	r.checkHash(f, checkMD5)
+	r.checkHash(f, checkSHA1)
+	r.checkHash(f, checkSHA256)
+	r.checkHash(f, checkSHA384)
+	r.checkHash(f, checkSHA512)
+	r.checkHash(f, checkSHA3_224)
+	r.checkHash(f, checkSHA3_256)
+	r.checkHash(f, checkSHA3_384)
+	r.checkHash(f, checkSHA3_512)
 	return
 }
 
@@ -1244,10 +1251,9 @@ func (s search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
 	return
 }
 
-func (r *run) checkContent(file string) {
+func (r *run) checkContent(f fileEntry) {
 	var (
 		err error
-		fd  *os.File
 	)
 	defer func() {
 		if e := recover(); e != nil {
@@ -1277,14 +1283,10 @@ func (r *run) checkContent(file string) {
 	if !continuereadingfile {
 		return
 	}
-	fd, err = os.Open(file)
-	if err != nil {
-		stats.Openfailed++
-		panic(err)
-	}
-	defer fd.Close()
 	// iterate over the file content
-	scanner := bufio.NewScanner(fd)
+	reader := f.getReader()
+	defer f.Close()
+	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
 			panic(err)
@@ -1339,7 +1341,7 @@ func (r *run) checkContent(file string) {
 							debugprint("checkContent: [pass] must match any line and current line matched. regex='%s', line='%s'\n",
 								c.value, scanner.Text())
 							if c.wantThis(true) {
-								c.storeMatch(file)
+								c.storeMatch(f.filename)
 							}
 						}
 					} else {
@@ -1348,7 +1350,7 @@ func (r *run) checkContent(file string) {
 								c.value, scanner.Text())
 							macroalstatus[label] = false
 							if c.wantThis(true) {
-								c.storeMatch(file)
+								c.storeMatch(f.filename)
 							}
 						} else {
 							debugprint("checkContent: [fail] must not match at least one line but current line matched. regex='%s', line='%s'\n",
@@ -1373,7 +1375,7 @@ func (r *run) checkContent(file string) {
 								c.value, scanner.Text())
 							macroalstatus[label] = false
 							if c.wantThis(false) {
-								c.storeMatch(file)
+								c.storeMatch(f.filename)
 							}
 						} else {
 							debugprint("checkContent: [fail] much match any line and current line didn't match. regex='%s', line='%s'\n",
@@ -1402,7 +1404,7 @@ func (r *run) checkContent(file string) {
 		// 1. if MACROAL is set and the search succeeded, store the file in each content check
 		if search.Options.Macroal && macroalstatus[label] {
 			debugprint("checkContent: macroal is set and search label '%s' passed on file '%s'\n",
-				label, file)
+				label, f.filename)
 			// we match all content regexes on all lines of the file,
 			// as requested via the Macroal flag
 			// now store the filename in all checks
@@ -1411,7 +1413,7 @@ func (r *run) checkContent(file string) {
 					continue
 				}
 				if c.wantThis(checksstatus[label][i]) {
-					c.storeMatch(file)
+					c.storeMatch(f.filename)
 				}
 				search.checks[i] = c
 			}
@@ -1425,9 +1427,9 @@ func (r *run) checkContent(file string) {
 			}
 			if !checksstatus[label][i] && c.inversematch {
 				debugprint("in search '%s' on file '%s', check '%s' has not matched and is set to inversematch, record this as a positive result\n",
-					label, file, c.value)
+					label, f.filename, c.value)
 				if c.wantThis(checksstatus[label][i]) {
-					c.storeMatch(file)
+					c.storeMatch(f.filename)
 				}
 				// adjust check status to true because the check did in fact match as an inverse
 				checksstatus[label][i] = true
@@ -1443,7 +1445,7 @@ func (r *run) checkContent(file string) {
 				// check hasn't matched, or has matched and we didn't want it to, deactivate the search
 				if !checksstatus[label][i] || (checksstatus[label][i] && c.inversematch) {
 					if c.wantThis(checksstatus[label][i]) {
-						c.storeMatch(file)
+						c.storeMatch(f.filename)
 						search.checks[i] = c
 					}
 					search.deactivate()
@@ -1455,7 +1457,7 @@ func (r *run) checkContent(file string) {
 	return
 }
 
-func (r *run) checkHash(file string, hashtype checkType) {
+func (r *run) checkHash(f fileEntry, hashtype checkType) {
 	var (
 		err error
 	)
@@ -1475,7 +1477,7 @@ func (r *run) checkHash(file string, hashtype checkType) {
 	if nothingToDo {
 		return
 	}
-	hash, err := getHash(file, hashtype)
+	hash, err := getHash(f, hashtype)
 	if err != nil {
 		panic(err)
 	}
@@ -1488,10 +1490,10 @@ func (r *run) checkHash(file string, hashtype checkType) {
 				match := false
 				if c.value == hash {
 					match = true
-					debugprint("checkHash: file '%s' matches checksum '%s'\n", file, c.value)
+					debugprint("checkHash: file '%s' matches checksum '%s'\n", f.filename, c.value)
 				}
 				if c.wantThis(match) {
-					c.storeMatch(file)
+					c.storeMatch(f.filename)
 				} else if search.Options.MatchAll {
 					search.deactivate()
 				}
@@ -1504,19 +1506,15 @@ func (r *run) checkHash(file string, hashtype checkType) {
 }
 
 // getHash calculates the hash of a file.
-func getHash(file string, hashType checkType) (hexhash string, err error) {
+func getHash(f fileEntry, hashType checkType) (hexhash string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("getHash() -> %v", e)
 		}
 	}()
-	fd, err := os.Open(file)
-	if err != nil {
-		stats.Openfailed++
-		panic(err)
-	}
-	defer fd.Close()
-	debugprint("getHash: computing hash for '%s'\n", fd.Name())
+	reader := f.getReader()
+	defer f.Close()
+	debugprint("getHash: computing hash for '%s'\n", f.fd.Name())
 	var h hash.Hash
 	switch hashType {
 	case checkMD5:
@@ -1542,9 +1540,8 @@ func getHash(file string, hashType checkType) (hexhash string, err error) {
 		panic(err)
 	}
 	buf := make([]byte, 4096)
-	var offset int64 = 0
 	for {
-		block, err := fd.ReadAt(buf, offset)
+		block, err := reader.Read(buf)
 		if err != nil && err != io.EOF {
 			panic(err)
 		}
@@ -1552,7 +1549,6 @@ func getHash(file string, hashType checkType) (hexhash string, err error) {
 			break
 		}
 		h.Write(buf[:block])
-		offset += int64(block)
 	}
 	hexhash = fmt.Sprintf("%X", h.Sum(nil))
 	return
@@ -1647,7 +1643,8 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 					mf.FileInfo.Mode = fi.Mode().String()
 					mf.FileInfo.Mtime = fi.ModTime().UTC().String()
 					if search.Options.ReturnSHA256 {
-						mf.FileInfo.SHA256, err = getHash(mf.File, checkSHA256)
+						f := fileEntry{filename: mf.File}
+						mf.FileInfo.SHA256, err = getHash(f, checkSHA256)
 						if err != nil {
 							panic(err)
 						}
@@ -1704,19 +1701,14 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 				case checkSHA1:
 					mf.Search.SHA1 = append(mf.Search.SHA1, c.value)
 				case checkSHA256:
-					mf.Search.SHA256 = append(mf.Search.SHA256, c.value)
 				case checkSHA384:
-					mf.Search.SHA384 = append(mf.Search.SHA384, c.value)
 				case checkSHA512:
-					mf.Search.SHA512 = append(mf.Search.SHA512, c.value)
+					mf.Search.SHA2 = append(mf.Search.SHA2, c.value)
 				case checkSHA3_224:
-					mf.Search.SHA3_224 = append(mf.Search.SHA3_224, c.value)
 				case checkSHA3_256:
-					mf.Search.SHA3_256 = append(mf.Search.SHA3_256, c.value)
 				case checkSHA3_384:
-					mf.Search.SHA3_384 = append(mf.Search.SHA3_384, c.value)
 				case checkSHA3_512:
-					mf.Search.SHA3_512 = append(mf.Search.SHA3_512, c.value)
+					mf.Search.SHA3 = append(mf.Search.SHA2, c.value)
 				}
 				sr = append(sr, mf)
 			}
@@ -1816,26 +1808,11 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 			for _, v := range mf.Search.SHA1 {
 				out += fmt.Sprintf(" sha1='%s'", v)
 			}
-			for _, v := range mf.Search.SHA256 {
-				out += fmt.Sprintf(" sha256='%s'", v)
+			for _, v := range mf.Search.SHA2 {
+				out += fmt.Sprintf(" sha2='%s'", v)
 			}
-			for _, v := range mf.Search.SHA384 {
-				out += fmt.Sprintf(" sha384='%s'", v)
-			}
-			for _, v := range mf.Search.SHA512 {
-				out += fmt.Sprintf(" sha512='%s'", v)
-			}
-			for _, v := range mf.Search.SHA3_224 {
-				out += fmt.Sprintf(" sha3_224='%s'", v)
-			}
-			for _, v := range mf.Search.SHA3_256 {
-				out += fmt.Sprintf(" sha3_256='%s'", v)
-			}
-			for _, v := range mf.Search.SHA3_384 {
-				out += fmt.Sprintf(" sha3_384='%s'", v)
-			}
-			for _, v := range mf.Search.SHA3_512 {
-				out += fmt.Sprintf(" sha3_512='%s'", v)
+			for _, v := range mf.Search.SHA3 {
+				out += fmt.Sprintf(" sha3='%s'", v)
 			}
 			prints = append(prints, out)
 		}

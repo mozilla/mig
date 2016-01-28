@@ -15,7 +15,7 @@ checksum, ... Another module is called ``netstat``, and looks for IP addresses
 currently connected to an endpoint. ``ping`` is a module to ping targets from
 endpoints, etc..
 
-Module are somewhat autonomous. They can be developped outside of the MIG code
+Modules are somewhat autonomous. They can be developed outside of the MIG code
 base, and only imported during compilation of the agent. Go does not provide a
 way to load modules dynamically, so modules are compiled into the agent's static
 binary, and not as separate files.
@@ -96,7 +96,7 @@ imported packages when a program starts. In the agents, modules are imported
 anonymously, which means that their ``init()`` function will be executed even if
 the modules are unused in the agent. Therefore, when MIG Agent starts, all
 modules execute their ``init()`` function, add their names and runner function to
-the global list of available module, and stop there.
+the global list of available modules, and stop there.
 
 The list of modules imported in the agent is maintained in
 ``conf/available_modules.go``. You should use this file to add or remove modules.
@@ -127,7 +127,7 @@ Runner Interface
 A mig module typically defines its own ``run`` struct implementing the
 ``modules.Runner`` interface and representing a single run of the module.  The
 ``run`` struct typically contains two fields: module parameters and module results.
-The former is any format the module choses to use, while the latter generally
+The former is any format the module chooses to use, while the latter generally
 implements the ``modules.Result`` struct (note that this is not required, but
 it is the easiest way to return a properly-formatted JSON result).
 
@@ -187,7 +187,7 @@ formatting rules, performs work and returns results in a JSON string.
 	}
 
 The ``defer`` block in the sample above is used to catch potential panics and
-return a nicely formatted JSON error to the agent. This is a clean way to
+returns a nicely formatted JSON error to the agent. This is a clean way to
 indicate to the MIG platform that the module has failed to run on this agent.
 
 Validate Parameters
@@ -229,7 +229,7 @@ apply to the way fields in this struct must be set.
 Success
 ~~~~~~~
 ``Success`` must inform the investigator if the module has failed to complete its
-execution. It must be set to ``true`` only if the module has ran successfully. It
+execution. It must be set to ``true`` only if the module has run successfully. It
 does not indicate anything about the results returned by the module, just that
 it ran and finished.
 
@@ -291,7 +291,7 @@ A typical implementation of ``PrintResults`` takes a ``modules.Result`` struct a
 a boolean that indicates whether the printer should display errors and
 statistics or only found results. When that boolean is set to ``true``, errors, stats
 and empty results are **not** displayed.  Note that the ``result`` argument is
-the result of unmarhsalling the marhsalled value returned from the ``Run`` method.
+the result of unmarshalling the marshalled value returned from the ``Run`` method.
 
 The function returns results into an array of strings.
 
@@ -379,7 +379,7 @@ A module implementation would have the function:
 		return r.Parameters, r.ValidateParameters()
 	}
 
-It is highly recommend to call ``ValidateParameters`` to verify that the
+It is highly recommended to call ``ValidateParameters`` to verify that the
 parameters supplied by the users are correct.
 
 HasParamsParser
@@ -431,7 +431,7 @@ A typical implementation from the ``timedrift`` module looks as follows:
 		return r.Parameters, r.ValidateParameters()
 	}
 
-It is highly recommend to call ``ValidateParameters`` to verify that the
+It is highly recommended to call ``ValidateParameters`` to verify that the
 parameters supplied by the users are correct.
 
 The Example module

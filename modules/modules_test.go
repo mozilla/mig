@@ -8,6 +8,10 @@ package modules /* import "mig.ninja/mig/modules" */
 
 import (
 	"github.com/mozilla/mig-sandbox"
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
+	"encoding/json"
 	"io"
 	"os"
 	"strings"
@@ -66,7 +70,7 @@ func TestRegister(t *testing.T) {
 func TestMakeMessage(t *testing.T) {
 	var p params
 	p.SomeParam = "foo"
-	raw, err := MakeMessage(MsgClassParameters, p)
+	raw, err := MakeMessage(MsgClassParameters, p, false)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -74,7 +78,29 @@ func TestMakeMessage(t *testing.T) {
 		t.Fatalf("Invalid module message class `parameters`")
 	}
 
-	raw, err = MakeMessage(MsgClassStop, nil)
+	// Test parameter decompression
+	jb, err := json.Marshal(p)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	var b bytes.Buffer
+	wb64 := base64.NewEncoder(base64.StdEncoding, &b)
+	w := gzip.NewWriter(wb64)
+	_, err = w.Write(jb)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	w.Close()
+	wb64.Close()
+	raw, err = MakeMessage(MsgClassParameters, string(b.Bytes()), true)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if string(raw) != `{"class":"parameters","parameters":{"someparam":"foo"}}` {
+		t.Fatalf("Invalid module message class `parameters`")
+	}
+
+	raw, err = MakeMessage(MsgClassStop, nil, false)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
