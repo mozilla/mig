@@ -7,12 +7,14 @@
 package database /* import "mig.ninja/mig/database" */
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"mig.ninja/mig"
+	"mig.ninja/mig/modules"
 
 	_ "github.com/lib/pq"
 )
@@ -150,6 +152,20 @@ func (db *DB) InsertCommands(cmds []mig.Command) (insertCount int64, err error) 
 	step := 0
 	for i, cmd := range cmds {
 		jRes, err := json.Marshal(cmd.Results)
+		if err != nil {
+			return int64(i), err
+		}
+		// XXX Filter any unicode NULL escape sequences present in the command
+		// results before we insert. Postgres disallows this value to be present;
+		// if an entry containing this value is present and JSON processing is done
+		// on the entry by the database it will result in an error.
+		//
+		// See Postgres 9.4.1 release notes for details:
+		// http://www.postgresql.org/docs/9.4/static/release-9-4-1.html
+		jRes = bytes.Replace(jRes, []byte("\\u0000"), []byte("NULL"), -1)
+		// Validate the result is still valid JSON before the insert
+		var tmpres []modules.Result
+		err = json.Unmarshal(jRes, &tmpres)
 		if err != nil {
 			return int64(i), err
 		}
