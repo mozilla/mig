@@ -12,12 +12,40 @@ import (
 	"mig.ninja/mig"
 )
 
+// The number of signatures required for a manifest to be marked as active.
+// XXX This should probably be somewhere else like in the configuration file.
+const REQUIRED_SIGNATURES int = 1
+
+// Add a signature to the database for an existing manifest
 func (db *DB) ManifestAddSignature(mid float64, sig string, invid float64) (err error) {
 	_, err = db.c.Exec(`INSERT INTO manifestsig
 		(manifestid, pgpsignature, investigatorid)
 		VALUES ($1, $2, $3)`, mid, sig, invid)
 	if err != nil {
 		return
+	}
+
+	err = db.ManifestUpdateStatus(mid)
+	return
+}
+
+// Update the status of a manifest based on the number of signatures it has
+func (db *DB) ManifestUpdateStatus(mid float64) (err error) {
+	var cnt int
+	row := db.c.QueryRow(`SELECT COUNT(*) FROM manifestsig
+		WHERE manifestid=$1`, mid)
+	err = row.Scan(&cnt)
+	if err != nil {
+		return err
+	}
+	status := "staged"
+	if cnt >= REQUIRED_SIGNATURES {
+		status = "active"
+	}
+	_, err = db.c.Exec(`UPDATE manifests SET status=$1 WHERE
+		id=$2`, status, mid)
+	if err != nil {
+		panic(err)
 	}
 	return
 }
