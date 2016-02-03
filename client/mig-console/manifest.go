@@ -32,6 +32,9 @@ func manifestReader(input string, cli client.Client) (err error) {
 		panic(err)
 	}
 	mr, err := cli.GetManifestRecord(mid)
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println("Entering manifest reader mode. Type \x1b[32;1mexit\x1b[0m or press \x1b[32;1mctrl+d\x1b[0m to leave. \x1b[32;1mhelp\x1b[0m may help.")
 	fmt.Printf("Manifest: '%s'.\nStatus '%s'.\n", mr.Name, mr.Status)

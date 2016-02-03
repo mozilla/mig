@@ -24,26 +24,15 @@ func (db *DB) ManifestAddSignature(mid float64, sig string, invid float64) (err 
 
 // Return the entire contents of manifest ID mid from the database
 func (db *DB) GetManifestFromID(mid float64) (ret mig.ManifestRecord, err error) {
-	rows, err := db.c.Query(`SELECT id, name, content, timestamp, status, target
+	row := db.c.QueryRow(`SELECT id, name, content, timestamp, status, target
 		FROM manifests WHERE id=$1`, mid)
+	err = row.Scan(&ret.ID, &ret.Name, &ret.Content, &ret.Timestamp, &ret.Status, &ret.Target)
 	if err != nil {
+		err = fmt.Errorf("Error while retrieving manifest: '%v'", err)
 		return
 	}
-	if rows != nil {
-		defer rows.Close()
-	}
-	if !rows.Next() {
-		err = fmt.Errorf("Manifest %v not found", mid)
-		return
-	}
-	err = rows.Scan(&ret.ID, &ret.Name, &ret.Content, &ret.Timestamp, &ret.Status, &ret.Target)
-	if err != nil {
-		return
-	}
-	rows.Close()
-
 	// Also add any signatures that exist for this manifest record
-	rows, err = db.c.Query(`SELECT pgpsignature FROM manifestsig
+	rows, err := db.c.Query(`SELECT pgpsignature FROM manifestsig
 		WHERE manifestid=$1`, mid)
 	if err != nil {
 		return

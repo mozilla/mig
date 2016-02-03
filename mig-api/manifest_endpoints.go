@@ -93,7 +93,15 @@ func getManifest(respWriter http.ResponseWriter, request *http.Request) {
 	if mid > 0 {
 		mr, err = ctx.DB.GetManifestFromID(mid)
 		if err != nil {
-			panic(err)
+			if fmt.Sprintf("%v", err) == "Error while retrieving manifest: 'sql: no rows in result set'" {
+				resource.SetError(cljs.Error{
+					Code:    fmt.Sprintf("%.0f", opid),
+					Message: fmt.Sprintf("Manifest ID '%.0f' not found", mid)})
+				respond(404, resource, respWriter, request)
+				return
+			} else {
+				panic(err)
+			}
 		}
 	} else {
 		// bad request, return 400
