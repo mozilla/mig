@@ -395,6 +395,7 @@ func (cli Client) GetManifestRecord(mid float64) (mr mig.ManifestRecord, err err
 	return
 }
 
+// Add a new signature to an existing manifest known to the API
 func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -417,13 +418,16 @@ func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err 
 	if err != nil {
 		panic(err)
 	}
-	if resp.StatusCode != 202 {
-		err = fmt.Errorf("error: HTTP %d. action creation failed.", resp.StatusCode)
-		panic(err)
-	}
 	var resource *cljs.Resource
-	err = json.Unmarshal(body, &resource)
-	if err != nil {
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("error: HTTP %d. Signature update failed with error '%v' (code %s).",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
 	return

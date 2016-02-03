@@ -99,7 +99,7 @@ func manifestReader(input string, cli client.Client) (err error) {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Printf("%s\n", sig)
+			fmt.Println("Manifest signature has been accepted")
 		case "":
 			break
 		default:
