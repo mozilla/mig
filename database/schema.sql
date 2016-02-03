@@ -125,6 +125,7 @@ CREATE TABLE manifestsig (
 	investigatorid numeric NOT NULL,
 	pgpsignature   character varying(4096) NOT NULL
 );
+CREATE UNIQUE INDEX manifestsig_manifestid_investigatorid_idx ON manifestsig USING btree(manifestid, investigatorid);
 
 CREATE SEQUENCE loaders_id_seq START 1;
 CREATE TABLE loaders (
