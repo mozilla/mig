@@ -73,6 +73,7 @@ func main() {
 	// Loader manifest endpoints
 	s.HandleFunc("/manifest", authenticate(getManifest)).Methods("GET")
 	s.HandleFunc("/manifest/sign/", authenticate(signManifest)).Methods("POST")
+	s.HandleFunc("/manifest/status/", authenticate(statusManifest)).Methods("POST")
 	s.HandleFunc("/manifest/agent/", getAgentManifest).Methods("POST")
 	s.HandleFunc("/manifest/fetch/", getManifestFile).Methods("POST")
 	// all other resources require authentication

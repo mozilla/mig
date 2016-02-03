@@ -41,7 +41,7 @@ func manifestReader(input string, cli client.Client) (err error) {
 
 	prompt := fmt.Sprintf("\x1b[31;1mmanifest %d>\x1b[0m ", uint64(mid)%1000)
 	for {
-		var symbols = []string{"entry", "exit", "json", "r", "sign"}
+		var symbols = []string{"entry", "exit", "json", "r", "reset", "sign"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -93,6 +93,12 @@ func manifestReader(input string, cli client.Client) (err error) {
 				panic(err)
 			}
 			fmt.Println("reloaded")
+		case "reset":
+			err = cli.ManifestRecordStatus(mr, "staged")
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Manifest record has been reset")
 		case "sign":
 			sig, err := cli.SignManifest(mr)
 			if err != nil {

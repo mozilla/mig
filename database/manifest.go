@@ -50,6 +50,12 @@ func (db *DB) ManifestUpdateStatus(mid float64) (err error) {
 	return
 }
 
+// Clear existing signatures for a manifest record
+func (db *DB) ManifestClearSignatures(mid float64) (err error) {
+	_, err = db.c.Exec(`DELETE FROM manifestsig WHERE manifestid=$1`, mid)
+	return err
+}
+
 // Return the entire contents of manifest ID mid from the database
 func (db *DB) GetManifestFromID(mid float64) (ret mig.ManifestRecord, err error) {
 	row := db.c.QueryRow(`SELECT id, name, content, timestamp, status, target

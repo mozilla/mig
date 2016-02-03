@@ -34,6 +34,51 @@ func locateManifestFromLoader(loaderid float64, agt mig.Agent) (mig.ManifestReco
 	return ret, nil
 }
 
+func statusManifest(respWriter http.ResponseWriter, request *http.Request) {
+	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
+	opid := getOpID(request)
+	resource := cljs.New(loc)
+	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
+			respond(500, resource, respWriter, request)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving statusManifest()"}.Debug()
+	}()
+
+	err := request.ParseForm()
+	if err != nil {
+		panic(err)
+	}
+
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received manifest status change request")}.Debug()
+
+	manifestid, err := strconv.ParseFloat(request.FormValue("manifestid"), 64)
+	if err != nil {
+		panic(err)
+	}
+	sts := request.FormValue("status")
+	// XXX We only support a change to staged here right now. Disabled
+	// could be added as well, active we don't want as this should
+	// always be set by the API based on the number of valid signatures
+	// applied to the record.
+	if sts != "staged" {
+		panic("Invalid status specified")
+	}
+
+	err = ctx.DB.ManifestClearSignatures(manifestid)
+	if err != nil {
+		panic(err)
+	}
+	err = ctx.DB.ManifestUpdateStatus(manifestid)
+	if err != nil {
+		panic(err)
+	}
+
+	respond(200, resource, respWriter, request)
+}
+
 func signManifest(respWriter http.ResponseWriter, request *http.Request) {
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	opid := getOpID(request)

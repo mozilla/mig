@@ -395,6 +395,44 @@ func (cli Client) GetManifestRecord(mid float64) (mr mig.ManifestRecord, err err
 	return
 }
 
+// Change the status of an existing manifest record
+func (cli Client) ManifestRecordStatus(mr mig.ManifestRecord, status string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("ResetManifestRecord() -> %v", e)
+		}
+	}()
+	data := url.Values{"manifestid": {fmt.Sprintf("%.0f", mr.ID)}, "status": {status}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"manifest/status/",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var resource *cljs.Resource
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s).",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	return
+}
+
 // Add a new signature to an existing manifest known to the API
 func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err error) {
 	defer func() {
