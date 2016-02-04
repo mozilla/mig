@@ -1,1 +1,1 @@
-../conf/mig-agent-conf.go.inc
+../conf/mig-loader-conf.go.inc

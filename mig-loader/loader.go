@@ -68,7 +68,7 @@ func requestManifest() (err error) {
 		}
 	}()
 
-	murl := APIURL + "manifest"
+	murl := APIURL + "manifest/agent/"
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("requesting manifest from %v", murl)}
 
 	mparam := mig.ManifestParameters{}
@@ -321,8 +321,7 @@ func initContext() (ctx Context, err error) {
 	}()
 
 	ctx.Channels.Log = make(chan mig.Log, 37)
-	ctx.Logging.Level = "debug"
-	ctx.Logging.Mode = "stdout"
+	ctx.Logging = LOGGINGCONF
 	ctx.Logging, err = mig.InitLogger(ctx.Logging, "mig-loader")
 	if err != nil {
 		panic(err)
