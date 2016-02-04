@@ -42,6 +42,9 @@ var APIURL string = "http://localhost:1664/api/v1/"
 // proxies listed below
 var PROXIES = [...]string{`proxy.example.net:3128`, `proxy2.example.net:8080`}
 
+// Number of valid manifest signatures required to be acceptable
+var REQUIREDSIGNATURES = 1
+
 // PGP keys we accept manifest signatures from
 var MANIFESTPGPKEYS = [...]string{
 `

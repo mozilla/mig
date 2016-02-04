@@ -49,7 +49,7 @@ func (m *ManifestRecord) Sign(keyid string, secring io.Reader) (sig string, err 
 	if err != nil {
 		panic(err)
 	}
-	me.Signatures = me.Signatures[:0]
+	me.Signatures = make([]string, 0)
 	buf, err := json.Marshal(me)
 	if err != nil {
 		panic(err)
@@ -211,6 +211,34 @@ type ManifestFetchResponse struct {
 type ManifestResponse struct {
 	Entries    []ManifestEntry `json:"entries"`
 	Signatures []string        `json:"signatures"`
+}
+
+// Validates signatures stored in the manifest against keys in keyring, returns
+// the number of valid signature matches
+func (m *ManifestResponse) VerifySignatures(keyring io.Reader) (validcnt int, err error) {
+	var sigs []string
+
+	// Copy signatures out of the response, and clear them as we do not
+	// include them as part of the JSON document in validation
+	sigs = make([]string, len(m.Signatures))
+	copy(sigs, m.Signatures)
+	m.Signatures = m.Signatures[:0]
+
+	buf, err := json.Marshal(m)
+	if err != nil {
+		return validcnt, err
+	}
+	for _, x := range sigs {
+		valid, _, err := pgp.Verify(string(buf), x, keyring)
+		if err != nil {
+			return validcnt, err
+		}
+		if valid {
+			validcnt++
+		}
+	}
+
+	return
 }
 
 // Describes individual file elements within a manifest

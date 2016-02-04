@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"mig.ninja/mig"
 	"mig.ninja/mig/mig-agent/agentcontext"
+	"mig.ninja/mig/pgp"
 	"net/http"
 	"net/url"
 	"os"
@@ -114,7 +115,7 @@ func requestManifest() (err error) {
 		panic(err)
 	}
 	apiManifest = &manifest
-	return
+	return checkManifestSignature(apiManifest)
 }
 
 func valueToManifest(v interface{}) (m mig.ManifestResponse, err error) {
@@ -316,6 +317,35 @@ func compareManifest(have []mig.BundleDictionaryEntry) (err error) {
 			panic(err)
 		}
 	}
+	return
+}
+
+func checkManifestSignature(mr *mig.ManifestResponse) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("checkManifestSignature() -> %v", e)
+		}
+	}()
+
+	var keys [][]byte
+	for _, pk := range MANIFESTPGPKEYS {
+		keys = append(keys, []byte(pk))
+	}
+	keyring, _, err := pgp.ArmoredKeysToKeyring(keys)
+	if err != nil {
+		panic(err)
+	}
+	cnt, err := mr.VerifySignatures(keyring)
+	if err != nil {
+		panic(err)
+	}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v valid signatures in manifest", cnt)}
+	if cnt < REQUIREDSIGNATURES {
+		err = fmt.Errorf("Not enough valid signatures (got %v, need %v), rejecting",
+			cnt, REQUIREDSIGNATURES)
+		panic(err)
+	}
+
 	return
 }
 
