@@ -45,7 +45,7 @@ func agentServices() (err error) {
 	var abe mig.BundleDictionaryEntry
 	found := false
 	for _, x := range hb {
-		if x.Name == "agent" {
+		if x.Name == "mig-agent" {
 			abe = x
 			found = true
 			break
@@ -78,7 +78,7 @@ func terminateAgent() (err error) {
 	var abe mig.BundleDictionaryEntry
 	found := false
 	for _, x := range hb {
-		if x.Name == "agent" {
+		if x.Name == "mig-agent" {
 			abe = x
 			found = true
 			break

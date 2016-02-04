@@ -142,7 +142,7 @@ func fetchFile(n string) (ret []byte, err error) {
 		}
 	}()
 
-	murl := APIURL + "manifest/fetch"
+	murl := APIURL + "manifest/fetch/"
 
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("fetching file from %v", murl)}
 	mparam := mig.ManifestParameters{}
