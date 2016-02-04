@@ -265,7 +265,12 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 	// Validate the loader key
 	loaderid, err := ctx.DB.GetLoaderEntryID(manifestParam.LoaderKey)
 	if err != nil {
-		panic(err)
+		// Invalid key, return 403
+		resource.SetError(cljs.Error{
+			Code:    fmt.Sprintf("%.0f", opid),
+			Message: fmt.Sprintf("Invalid loader key")})
+		respond(403, resource, respWriter, request)
+		return
 	}
 	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Loader request for entry %v", loaderid)}.Debug()
 

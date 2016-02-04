@@ -12,6 +12,7 @@ import (
 
 type Context struct {
 	AgentIdentifier mig.Agent
+	LoaderKey       string
 
 	Channels struct {
 		Log chan mig.Log

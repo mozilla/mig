@@ -72,7 +72,7 @@ func requestManifest() (err error) {
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("requesting manifest from %v", murl)}
 
 	mparam := mig.ManifestParameters{}
-	mparam.LoaderKey = "secret"
+	mparam.LoaderKey = ctx.LoaderKey
 	mparam.AgentIdentifier = ctx.AgentIdentifier
 	buf, err := json.Marshal(mparam)
 	if err != nil {
@@ -99,6 +99,12 @@ func requestManifest() (err error) {
 	var resource *cljs.Resource
 	err = json.Unmarshal(body, &resource)
 	if err != nil {
+		panic(err)
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("HTTP %v, API call failed with error '%v' (code %s)", resp.StatusCode,
+			resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
 
@@ -326,6 +332,7 @@ func initContext() (ctx Context, err error) {
 	if err != nil {
 		panic(err)
 	}
+	ctx.LoaderKey = LOADERKEY
 
 	hints := agentcontext.AgentContextHints{
 		DiscoverPublicIP: DISCOVERPUBLICIP,
