@@ -16,6 +16,14 @@ import (
 // XXX This should probably be somewhere else like in the configuration file.
 const REQUIRED_SIGNATURES int = 1
 
+// Add a new manifest record to the database
+func (db *DB) ManifestAdd(mr mig.ManifestRecord) (err error) {
+	_, err = db.c.Exec(`INSERT INTO manifests VALUES
+		(DEFAULT, $1, $2, now(), 'staged', $3)`, mr.Name,
+		mr.Content, mr.Target)
+	return
+}
+
 // Add a signature to the database for an existing manifest
 func (db *DB) ManifestAddSignature(mid float64, sig string, invid float64) (err error) {
 	_, err = db.c.Exec(`INSERT INTO manifestsig

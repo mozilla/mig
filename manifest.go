@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mig.ninja/mig/pgp"
 	"os"
 	"path"
@@ -36,6 +37,23 @@ type ManifestRecord struct {
 	Signatures []string  `json:"signatures"`        // Signatures applied to the record
 }
 
+// Validate an existing manifest record
+func (m *ManifestRecord) Validate() (err error) {
+	if m.Name == "" {
+		return fmt.Errorf("manifest has invalid name")
+	}
+	if m.Target == "" {
+		return fmt.Errorf("manifest has invalid target")
+	}
+	// Attempt to convert it to a response as part of validation
+	_, err = m.ManifestResponse()
+	if err != nil {
+		return
+	}
+	return
+}
+
+// Sign a manifest record
 func (m *ManifestRecord) Sign(keyid string, secring io.Reader) (sig string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -171,6 +189,27 @@ func (m *ManifestRecord) ManifestObject(obj string) ([]byte, error) {
 
 	ret = bufw.Bytes()
 	return ret, nil
+}
+
+func (m *ManifestRecord) ContentFromFile(path string) (err error) {
+	var buf bytes.Buffer
+	fd, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer fd.Close()
+	b64w := base64.NewEncoder(base64.StdEncoding, &buf)
+	b, err := ioutil.ReadAll(fd)
+	if err != nil {
+		return
+	}
+	_, err = b64w.Write(b)
+	if err != nil {
+		return
+	}
+	b64w.Close()
+	m.Content = buf.String()
+	return
 }
 
 // Manifest parameters are sent from the loader to the API as part of

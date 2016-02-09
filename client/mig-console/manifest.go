@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/bobappleyard/readline"
+	"mig.ninja/mig"
 	"mig.ninja/mig/client"
 )
 
@@ -119,5 +120,73 @@ func manifestReader(input string, cli client.Client) (err error) {
 
 exit:
 	fmt.Printf("\n")
+	return
+}
+
+// Prompts for input and creates a new manifest record through the API
+func manifestCreator(cli client.Client) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("manifestCreator() -> %v", e)
+		}
+	}()
+	var newmr mig.ManifestRecord
+	fmt.Println("Entering manifest creation mode.\nPlease provide the name" +
+		" of the new manifest")
+	newmr.Name, err = readline.String("name> ")
+	if err != nil {
+		panic(err)
+	}
+	if len(newmr.Name) < 3 {
+		panic("input name too short")
+	}
+	fmt.Printf("Name: '%s'\n", newmr.Name)
+	fmt.Println("Please provide loader targeting string for manifest.")
+	newmr.Target, err = readline.String("target> ")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Target: '%s'\n", newmr.Target)
+	fmt.Println("Please enter path to new manifest archive content.")
+	arcpath, err := readline.String("contentpath> ")
+	if err != nil {
+		panic(err)
+	}
+	// Load the content into the manifest record from the specified path,
+	// we assume the archive is a gzip compressed tar file; if not it will
+	// fail during validation later on.
+	err = newmr.ContentFromFile(arcpath)
+	if err != nil {
+		panic(err)
+	}
+	// Validate the new manifest record before sending it to the API
+	err = newmr.Validate()
+	if err != nil {
+		panic(err)
+	}
+	tmpmr := newmr
+	if len(tmpmr.Content) > 0 {
+		tmpmr.Content = "..."
+	} else {
+		tmpmr.Content = "None"
+	}
+	jsonmr, err := json.MarshalIndent(tmpmr, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%s\n", jsonmr)
+	input, err := readline.String("create manifest? (y/n)> ")
+	if err != nil {
+		panic(err)
+	}
+	if input != "y" {
+		fmt.Println("abort")
+		return
+	}
+	err = cli.PostNewManifest(newmr)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Manifest successfully created")
 	return
 }

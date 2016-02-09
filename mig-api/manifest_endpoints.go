@@ -34,6 +34,7 @@ func locateManifestFromLoader(loaderid float64, agt mig.Agent) (mig.ManifestReco
 	return ret, nil
 }
 
+// Manipulate the status of an existing manifest
 func statusManifest(respWriter http.ResponseWriter, request *http.Request) {
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	opid := getOpID(request)
@@ -79,6 +80,7 @@ func statusManifest(respWriter http.ResponseWriter, request *http.Request) {
 	respond(200, resource, respWriter, request)
 }
 
+// Request to sign an existing manifest
 func signManifest(respWriter http.ResponseWriter, request *http.Request) {
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	opid := getOpID(request)
@@ -116,6 +118,49 @@ func signManifest(respWriter http.ResponseWriter, request *http.Request) {
 	respond(200, resource, respWriter, request)
 }
 
+// Add a new manifest record
+func newManifest(respWriter http.ResponseWriter, request *http.Request) {
+	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
+	opid := getOpID(request)
+	resource := cljs.New(loc)
+	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
+			respond(500, resource, respWriter, request)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving newManifest()"}.Debug()
+	}()
+
+	err := request.ParseForm()
+	if err != nil {
+		panic(err)
+	}
+
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received new manifest request")}.Debug()
+
+	mrstr := request.FormValue("manifest")
+	if mrstr == "" {
+		panic("no manifest record specified in form")
+	}
+	var mr mig.ManifestRecord
+	err = json.Unmarshal([]byte(mrstr), &mr)
+	if err != nil {
+		panic(err)
+	}
+	err = mr.Validate()
+	if err != nil {
+		panic(err)
+	}
+	err = ctx.DB.ManifestAdd(mr)
+	if err != nil {
+		panic(err)
+	}
+
+	respond(200, resource, respWriter, request)
+}
+
+// Return information describing an existing manifest
 func getManifest(respWriter http.ResponseWriter, request *http.Request) {
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	opid := getOpID(request)
