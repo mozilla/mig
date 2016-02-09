@@ -37,6 +37,16 @@ func (db *DB) ManifestAddSignature(mid float64, sig string, invid float64) (err 
 	return
 }
 
+// Disable a manifest record
+func (db *DB) ManifestDisable(mid float64) (err error) {
+	_, err = db.c.Exec(`UPDATE manifests SET status='disabled' WHERE
+		id=$1`, mid)
+	if err != nil {
+		return
+	}
+	return
+}
+
 // Update the status of a manifest based on the number of signatures it has
 func (db *DB) ManifestUpdateStatus(mid float64) (err error) {
 	var cnt int
@@ -53,7 +63,7 @@ func (db *DB) ManifestUpdateStatus(mid float64) (err error) {
 	_, err = db.c.Exec(`UPDATE manifests SET status=$1 WHERE
 		id=$2`, status, mid)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	return
 }

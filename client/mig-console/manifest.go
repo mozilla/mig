@@ -42,7 +42,7 @@ func manifestReader(input string, cli client.Client) (err error) {
 
 	prompt := fmt.Sprintf("\x1b[31;1mmanifest %d>\x1b[0m ", uint64(mid)%1000)
 	for {
-		var symbols = []string{"entry", "exit", "json", "r", "reset", "sign"}
+		var symbols = []string{"disable", "entry", "exit", "json", "r", "reset", "sign"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -63,6 +63,12 @@ func manifestReader(input string, cli client.Client) (err error) {
 		}
 		orders := strings.Split(strings.TrimSpace(input), " ")
 		switch orders[0] {
+		case "disable":
+			err = cli.ManifestRecordStatus(mr, "disabled")
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Manifest record has been disabled")
 		case "entry":
 			mre, err := mr.ManifestResponse()
 			if err != nil {

@@ -64,17 +64,22 @@ func statusManifest(respWriter http.ResponseWriter, request *http.Request) {
 	// could be added as well, active we don't want as this should
 	// always be set by the API based on the number of valid signatures
 	// applied to the record.
-	if sts != "staged" {
-		panic("Invalid status specified")
-	}
-
-	err = ctx.DB.ManifestClearSignatures(manifestid)
-	if err != nil {
-		panic(err)
-	}
-	err = ctx.DB.ManifestUpdateStatus(manifestid)
-	if err != nil {
-		panic(err)
+	if sts == "staged" {
+		err = ctx.DB.ManifestClearSignatures(manifestid)
+		if err != nil {
+			panic(err)
+		}
+		err = ctx.DB.ManifestUpdateStatus(manifestid)
+		if err != nil {
+			panic(err)
+		}
+	} else if sts == "disabled" {
+		err = ctx.DB.ManifestDisable(manifestid)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		panic("Invalid status specified, must be disabled or staged")
 	}
 
 	respond(200, resource, respWriter, request)
