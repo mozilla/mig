@@ -244,10 +244,9 @@ func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
-	// Validate the loader key
-	loaderid, err := ctx.DB.GetLoaderEntryID(manifestParam.LoaderKey)
-	if err != nil {
-		panic(err)
+	loaderid := getLoaderID(request)
+	if loaderid == 0 {
+		panic("Request has no valid loader ID")
 	}
 	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Loader request for entry %v", loaderid)}.Debug()
 
@@ -312,17 +311,10 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received manifest request")}.Debug()
 
-	// Validate the loader key
-	loaderid, err := ctx.DB.GetLoaderEntryID(manifestParam.LoaderKey)
-	if err != nil {
-		// Invalid key, return 403
-		resource.SetError(cljs.Error{
-			Code:    fmt.Sprintf("%.0f", opid),
-			Message: fmt.Sprintf("Invalid loader key")})
-		respond(403, resource, respWriter, request)
-		return
+	loaderid := getLoaderID(request)
+	if loaderid == 0 {
+		panic("Request has no valid loader ID")
 	}
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Loader request for entry %v", loaderid)}.Debug()
 
 	// Update the loader entry with the parameters, and locate a valid manifest
 	mf, err := locateManifestFromLoader(loaderid, manifestParam.AgentIdentifier)

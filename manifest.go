@@ -215,16 +215,12 @@ func (m *ManifestRecord) ContentFromFile(path string) (err error) {
 // Manifest parameters are sent from the loader to the API as part of
 // a manifest request.
 type ManifestParameters struct {
-	AgentIdentifier Agent  `json:"agent"`     // Agent context information
-	LoaderKey       string `json:"loaderkey"` // Loader authorization key
-	Object          string `json:"object"`    // Object being requested
+	AgentIdentifier Agent  `json:"agent"`  // Agent context information
+	Object          string `json:"object"` // Object being requested
 }
 
 // Validate parameters included in a manifest request
 func (m *ManifestParameters) Validate() error {
-	if m.LoaderKey == "" {
-		return fmt.Errorf("manifest parameters with no loader key")
-	}
 	return nil
 }
 

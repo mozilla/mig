@@ -73,7 +73,6 @@ func requestManifest() (err error) {
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("requesting manifest from %v", murl)}
 
 	mparam := mig.ManifestParameters{}
-	mparam.LoaderKey = ctx.LoaderKey
 	mparam.AgentIdentifier = ctx.AgentIdentifier
 	buf, err := json.Marshal(mparam)
 	if err != nil {
@@ -86,6 +85,7 @@ func requestManifest() (err error) {
 		panic(err)
 	}
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Add("X-LOADERKEY", ctx.LoaderKey)
 	client := http.Client{}
 	resp, err := client.Do(r)
 	if err != nil {
@@ -149,7 +149,6 @@ func fetchFile(n string) (ret []byte, err error) {
 	mparam := mig.ManifestParameters{}
 	mparam.AgentIdentifier = ctx.AgentIdentifier
 	mparam.Object = n
-	mparam.LoaderKey = "secret"
 	buf, err := json.Marshal(mparam)
 	if err != nil {
 		panic(err)
@@ -161,6 +160,7 @@ func fetchFile(n string) (ret []byte, err error) {
 		panic(err)
 	}
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Add("X-LOADERKEY", ctx.LoaderKey)
 	client := http.Client{}
 	resp, err := client.Do(r)
 	if err != nil {

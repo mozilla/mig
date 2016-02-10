@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -70,9 +71,10 @@ func main() {
 	// unauthenticated endpoints
 	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")
 	s.HandleFunc("/ip", getIP).Methods("GET")
-	// Loader manifest endpoints
-	s.HandleFunc("/manifest/agent/", getAgentManifest).Methods("POST")
-	s.HandleFunc("/manifest/fetch/", getManifestFile).Methods("POST")
+	// Loader manifest endpoints, use loader specific authentication on
+	// the request
+	s.HandleFunc("/manifest/agent/", authenticateLoader(getAgentManifest)).Methods("POST")
+	s.HandleFunc("/manifest/fetch/", authenticateLoader(getManifestFile)).Methods("POST")
 	// all other resources require authentication
 	s.HandleFunc("/", authenticate(getHome)).Methods("GET")
 	s.HandleFunc("/manifest", authenticate(getManifest)).Methods("GET")
@@ -143,7 +145,20 @@ func getOpID(r *http.Request) float64 {
 	return mig.GenID()
 }
 
-// handler defines the type returned by the authenticate function
+// loaderIDType defines a type to store the loader ID
+type loaderIDType float64
+
+const loaderID loaderIDType = 0
+
+// getLoaderID returns the ID of the loader, 0 if not found
+func getLoaderID(r *http.Request) float64 {
+	if id := context.Get(r, loaderID); id != nil {
+		return id.(float64)
+	}
+	return 0.0
+}
+
+// handler defines the type returned by the authenticate and authenticateLoader functions
 type handler func(w http.ResponseWriter, r *http.Request)
 
 // authenticate is called prior to processing incoming requests. it implements the client
@@ -183,6 +198,42 @@ func authenticate(pass handler) handler {
 		// store investigator identity in request context
 		context.Set(r, authenticatedInvName, inv.Name)
 		context.Set(r, authenticatedInvID, inv.ID)
+		// accept request
+		pass(w, r)
+	}
+}
+
+// authenticateLoader is used to authenticate requests that are made to the
+// loader API endpoints. Rather than operate on GPG signatures, the
+// authentication instead uses the submitted loader key
+func authenticateLoader(pass handler) handler {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var (
+			loaderid float64
+			err      error
+		)
+		opid := getOpID(r)
+		context.Set(r, opID, opid)
+		lkey := r.Header.Get("X-LOADERKEY")
+		if lkey == "" {
+			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: "X-LOADERKEY header not found"})
+			respond(401, resource, w, r)
+			return
+		}
+		// Do a sanity check here on the submitted loader string before
+		// we attempt the authentication
+		lkeyok, err := regexp.MatchString("[A-Za-z0-9]{1,256}", lkey)
+		if err == nil && lkeyok {
+			loaderid, err = ctx.DB.GetLoaderEntryID(lkey)
+		}
+		if err != nil || !lkeyok {
+			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Loader authorization failed")})
+			respond(401, resource, w, r)
+			return
+		}
+		context.Set(r, loaderID, loaderid)
 		// accept request
 		pass(w, r)
 	}
