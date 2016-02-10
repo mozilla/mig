@@ -215,6 +215,8 @@ func getManifest(respWriter http.ResponseWriter, request *http.Request) {
 }
 
 // API entry point used to request a file be sent to the loader from the API.
+// This would typically be called from a loader after it has received a
+// manifest and determined updates to file system objects are required.
 func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	opid := getOpID(request)
@@ -248,7 +250,9 @@ func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 	if loaderid == 0 {
 		panic("Request has no valid loader ID")
 	}
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Loader request for entry %v", loaderid)}.Debug()
+	ctx.Channels.Log <- mig.Log{OpID: opid,
+		Desc: fmt.Sprintf("Loader request from %v for %v",
+			loaderid, manifestParam.Object)}.Debug()
 
 	// Update the loader entry with the parameters, and locate a valid manifest
 	mf, err := locateManifestFromLoader(loaderid, manifestParam.AgentIdentifier)
@@ -259,8 +263,7 @@ func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	fetchresp := mig.ManifestFetchResponse{}
-	fetchresp.Data = data
+	fetchresp := mig.ManifestFetchResponse{Data: data}
 
 	// Send the response to the loader
 	err = resource.AddItem(cljs.Item{
@@ -280,7 +283,7 @@ func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 // This API entry point is used by the loader to request a manifest file that
 // indicates the most current version of the agent to be used. The loader
 // sends some basic information in the request parameters so the API can decide
-// which manifest to send the loader, and authenticate the loader instance.
+// which manifest to send the loader.
 //
 // If the key passed in the request is not valid, the request will be rejected.
 func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
@@ -300,6 +303,8 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "Received manifest request"}.Debug()
+
 	var manifestParam mig.ManifestParameters
 	err = json.Unmarshal([]byte(request.FormValue("parameters")), &manifestParam)
 	if err != nil {
@@ -309,7 +314,6 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received manifest request")}.Debug()
 
 	loaderid := getLoaderID(request)
 	if loaderid == 0 {
