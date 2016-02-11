@@ -17,21 +17,26 @@ import (
 // Locate the manifest record that should be served to a given loader ID. Note
 // the agent environment is also passed in here so the API can update the loader
 // entry with the last-known state of the agent.
-func locateManifestFromLoader(loaderid float64, agt mig.Agent) (mig.ManifestRecord, error) {
-	var ret mig.ManifestRecord
-	err := ctx.DB.UpdateLoaderEntry(loaderid, agt)
+func locateManifestFromLoader(loaderid float64, agt mig.Agent) (mr mig.ManifestRecord, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("locateManifestFromLoader(): %v", e)}
+			err = fmt.Errorf("Unable to locate valid manifest for this loader entry")
+		}
+	}()
+	err = ctx.DB.UpdateLoaderEntry(loaderid, agt)
 	if err != nil {
-		return ret, err
+		panic(err)
 	}
 	manifestid, err := ctx.DB.ManifestIDFromLoaderID(loaderid)
 	if err != nil {
-		return ret, err
+		panic(err)
 	}
-	ret, err = ctx.DB.GetManifestFromID(manifestid)
+	mr, err = ctx.DB.GetManifestFromID(manifestid)
 	if err != nil {
-		return ret, err
+		panic(err)
 	}
-	return ret, nil
+	return
 }
 
 // Manipulate the status of an existing manifest
@@ -60,10 +65,8 @@ func statusManifest(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	sts := request.FormValue("status")
-	// XXX We only support a change to staged here right now. Disabled
-	// could be added as well, active we don't want as this should
-	// always be set by the API based on the number of valid signatures
-	// applied to the record.
+	// A manifest can only be marked as staged, or disabled. Once a
+	// manifest has been disabled, it's status can no longer be changed.
 	if sts == "staged" {
 		err = ctx.DB.ManifestClearSignatures(manifestid)
 		if err != nil {
