@@ -395,6 +395,28 @@ func (cli Client) GetManifestRecord(mid float64) (mr mig.ManifestRecord, err err
 	return
 }
 
+// Retrieve list of known loader entries that will match manifest mid
+func (cli Client) GetManifestLoaders(mid float64) (ldrs []mig.LoaderEntry, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("GetManifestLoaders() -> %v", e)
+		}
+	}()
+	target := fmt.Sprintf("manifest/loaders/?manifestid=%.0f", mid)
+	resource, err := cli.GetAPIResource(target)
+	if err != nil {
+		panic(err)
+	}
+	if resource.Collection.Items[0].Data[0].Name != "loaders" {
+		panic("API returned something that is not a loader list... something's wrong.")
+	}
+	ldrs, err = ValueToLoaderEntries(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
 // Change the status of an existing manifest record
 func (cli Client) ManifestRecordStatus(mr mig.ManifestRecord, status string) (err error) {
 	defer func() {
@@ -572,6 +594,23 @@ func ValueToAction(v interface{}) (a mig.Action, err error) {
 		panic(err)
 	}
 	err = json.Unmarshal(bData, &a)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+func ValueToLoaderEntries(v interface{}) (l []mig.LoaderEntry, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("ValueToLoaderEntries() -> %v", e)
+		}
+	}()
+	bData, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(bData, &l)
 	if err != nil {
 		panic(err)
 	}

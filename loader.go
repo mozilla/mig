@@ -6,7 +6,9 @@
 
 package mig /* import "mig.ninja/mig" */
 
+// Describes a loader entry stored in the database
 type LoaderEntry struct {
-	ID   float64
-	Name string
+	ID        float64 // Loader ID
+	Name      string  // Loader name
+	AgentName string  // Loader environment, agent name
 }

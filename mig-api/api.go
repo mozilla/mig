@@ -81,6 +81,7 @@ func main() {
 	s.HandleFunc("/manifest/sign/", authenticate(signManifest)).Methods("POST")
 	s.HandleFunc("/manifest/status/", authenticate(statusManifest)).Methods("POST")
 	s.HandleFunc("/manifest/new/", authenticate(newManifest)).Methods("POST")
+	s.HandleFunc("/manifest/loaders/", authenticate(manifestLoaders)).Methods("GET")
 	s.HandleFunc("/search", authenticate(search)).Methods("GET")
 	s.HandleFunc("/action", authenticate(getAction)).Methods("GET")
 	s.HandleFunc("/action/create/", authenticate(describeCreateAction)).Methods("GET")

@@ -91,6 +91,8 @@ exit            exit this mode (also works with ctrl+d)
 
 json            show json of manifest record stored in database
 
+loaders         show known loader entries that will match this manifest
+
 r               refresh the manifest (get latest version from database)
 
 reset           reset manifest status (marks manifest as staged, removes signatures)
@@ -112,6 +114,18 @@ sign            add a signature to the manifest record
 				panic(err)
 			}
 			fmt.Printf("%s\n", jsonmr)
+		case "loaders":
+			ldrs, err := cli.GetManifestLoaders(mid)
+			if err != nil {
+				panic(err)
+			}
+			for _, x := range ldrs {
+				buf, err := json.Marshal(x)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Printf("%v\n", string(buf))
+			}
 		case "r":
 			mr, err = cli.GetManifestRecord(mid)
 			if err != nil {

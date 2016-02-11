@@ -94,3 +94,30 @@ func (db *DB) ManifestIDFromLoaderID(lid float64) (ret float64, err error) {
 	err = fmt.Errorf("No matching manifest was found for loader entry")
 	return
 }
+
+// Return all the loader entries that match the targeting string for manifest mid
+func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err error) {
+	var mtarg string
+	err = db.c.QueryRow(`SELECT target FROM manifests
+		WHERE status='active' AND id=$1`, mid).Scan(&mtarg)
+	if err != nil {
+		return
+	}
+	qs := fmt.Sprintf("SELECT id, loadername, name FROM loaders WHERE %v", mtarg)
+	rows, err := db.c.Query(qs)
+	if err != nil {
+		return
+	}
+	if rows != nil {
+		defer rows.Close()
+	}
+	for rows.Next() {
+		nle := mig.LoaderEntry{}
+		err = rows.Scan(&nle.ID, &nle.Name, &nle.AgentName)
+		if err != nil {
+			return ret, err
+		}
+		ret = append(ret, nle)
+	}
+	return
+}

@@ -217,6 +217,59 @@ func getManifest(respWriter http.ResponseWriter, request *http.Request) {
 	respond(200, resource, respWriter, request)
 }
 
+// Given a manifest ID, return the list of known loaders which match the
+// targeting string
+func manifestLoaders(respWriter http.ResponseWriter, request *http.Request) {
+	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
+	opid := getOpID(request)
+	resource := cljs.New(loc)
+	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
+			respond(500, resource, respWriter, request)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving manifestLoaders()"}.Debug()
+	}()
+	mid, err := strconv.ParseFloat(request.URL.Query()["manifestid"][0], 64)
+	if err != nil {
+		err = fmt.Errorf("Wrong parameters 'manifestid': '%v'", err)
+		panic(err)
+	}
+
+	if mid > 0 {
+		_, err = ctx.DB.GetManifestFromID(mid)
+		if err != nil {
+			if fmt.Sprintf("%v", err) == "Error while retrieving manifest: 'sql: no rows in result set'" {
+				resource.SetError(cljs.Error{
+					Code:    fmt.Sprintf("%.0f", opid),
+					Message: fmt.Sprintf("Manifest ID '%.0f' not found", mid)})
+				respond(404, resource, respWriter, request)
+				return
+			} else {
+				panic(err)
+			}
+		}
+	} else {
+		// bad request, return 400
+		resource.SetError(cljs.Error{
+			Code:    fmt.Sprintf("%.0f", opid),
+			Message: fmt.Sprintf("Invalid Manifest ID '%.0f'", mid)})
+		respond(400, resource, respWriter, request)
+		return
+	}
+	ldrs, err := ctx.DB.AllLoadersFromManifestID(mid)
+	if err != nil {
+		panic(err)
+	}
+	li, err := loaderEntrysToItem(ldrs, mid, ctx)
+	if err != nil {
+		panic(err)
+	}
+	resource.AddItem(li)
+	respond(200, resource, respWriter, request)
+}
+
 // API entry point used to request a file be sent to the loader from the API.
 // This would typically be called from a loader after it has received a
 // manifest and determined updates to file system objects are required.
@@ -352,6 +405,14 @@ func manifestRecordToItem(mr mig.ManifestRecord, ctx Context) (item cljs.Item, e
 	item.Href = fmt.Sprintf("%s/manifest?manifestid=%.0f", ctx.Server.BaseURL, mr.ID)
 	item.Data = []cljs.Data{
 		{Name: "manifest", Value: mr},
+	}
+	return
+}
+
+func loaderEntrysToItem(ldrs []mig.LoaderEntry, mid float64, ctx Context) (item cljs.Item, err error) {
+	item.Href = fmt.Sprintf("%s/manifest/loaders?manifestid=%.0f", ctx.Server.BaseURL, mid)
+	item.Data = []cljs.Data{
+		{Name: "loaders", Value: ldrs},
 	}
 	return
 }
