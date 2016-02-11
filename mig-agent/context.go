@@ -76,7 +76,9 @@ func Init(foreground, upgrade bool, serviceInstall bool) (ctx Context, err error
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initAgent() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
+		if ctx.Channels.Log != nil {
+			ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
+		}
 	}()
 	ctx.Agent.Tags = TAGS
 

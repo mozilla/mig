@@ -332,7 +332,11 @@ func runAgent(runOpt runtimeOptions) (err error) {
 	// initialize the agent
 	ctx, err = Init(runOpt.foreground, runOpt.upgrading, runOpt.serviceInstall)
 	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
+		// Test if we have a valid log channel here, it's possible Init
+		// failed initializing the log in which case it could be nil
+		if ctx.Channels.Log != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
+		}
 		if runOpt.foreground {
 			// if in foreground mode, don't retry, just panic
 			time.Sleep(1 * time.Second)
@@ -340,7 +344,9 @@ func runAgent(runOpt runtimeOptions) (err error) {
 		}
 		if ctx.Agent.Respawn {
 			// if init fails, sleep for one minute and try again. forever.
-			ctx.Channels.Log <- mig.Log{Desc: "Sleep 60s and retry"}.Info()
+			if ctx.Channels.Log != nil {
+				ctx.Channels.Log <- mig.Log{Desc: "Sleep 60s and retry"}.Info()
+			}
 			time.Sleep(60 * time.Second)
 			cmd := exec.Command(ctx.Agent.BinPath)
 			_ = cmd.Start()
