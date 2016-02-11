@@ -886,7 +886,7 @@ func (db *DB) SearchManifests(p search.Parameters) (mrecords []mig.ManifestRecor
 		vals = append(vals, p.Status)
 		valctr += 1
 	}
-	query := fmt.Sprintf(`SELECT %s FROM manifests WHERE %s;`, columns, where)
+	query := fmt.Sprintf(`SELECT %s FROM manifests WHERE %s ORDER BY timestamp DESC;`, columns, where)
 	stmt, err := db.c.Prepare(query)
 	if err != nil {
 		err = fmt.Errorf("Error while preparing search statement: '%v' in '%s'", err, query)
