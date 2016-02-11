@@ -298,14 +298,22 @@ var bundleEntryLinux = []BundleDictionaryEntry{
 	{"configuration", "/etc/mig/mig-agent.cfg", ""},
 }
 
+var bundleEntryDarwin = []BundleDictionaryEntry{
+	{"mig-agent", "/sbin/mig-agent", ""},
+	{"configuration", "/etc/mig/mig-agent.cfg", ""},
+}
+
 var BundleDictionary = map[string][]BundleDictionaryEntry{
-	"linux": bundleEntryLinux,
+	"linux":  bundleEntryLinux,
+	"darwin": bundleEntryDarwin,
 }
 
 func GetHostBundle() ([]BundleDictionaryEntry, error) {
 	switch runtime.GOOS {
 	case "linux":
 		return bundleEntryLinux, nil
+	case "darwin":
+		return bundleEntryDarwin, nil
 	}
 	return nil, fmt.Errorf("no entry for %v in bundle dictionary", runtime.GOOS)
 }
