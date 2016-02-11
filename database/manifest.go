@@ -26,11 +26,20 @@ func (db *DB) ManifestAdd(mr mig.ManifestRecord) (err error) {
 
 // Add a signature to the database for an existing manifest
 func (db *DB) ManifestAddSignature(mid float64, sig string, invid float64) (err error) {
-	_, err = db.c.Exec(`INSERT INTO manifestsig
+	res, err := db.c.Exec(`INSERT INTO manifestsig
 		(manifestid, pgpsignature, investigatorid)
-		VALUES ($1, $2, $3)`, mid, sig, invid)
+		SELECT $1, $2, $3
+		WHERE EXISTS (SELECT id FROM manifests
+		WHERE id=$4 AND status!='disabled')`, mid, sig, invid, mid)
 	if err != nil {
 		return
+	}
+	ra, err := res.RowsAffected()
+	if err != nil {
+		return
+	}
+	if ra != 1 {
+		return fmt.Errorf("Manifest signing operation failed")
 	}
 
 	err = db.ManifestUpdateStatus(mid)
@@ -61,7 +70,7 @@ func (db *DB) ManifestUpdateStatus(mid float64) (err error) {
 		status = "active"
 	}
 	_, err = db.c.Exec(`UPDATE manifests SET status=$1 WHERE
-		id=$2`, status, mid)
+		id=$2 AND status!='disabled'`, status, mid)
 	if err != nil {
 		return err
 	}
