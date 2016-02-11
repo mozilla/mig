@@ -42,7 +42,7 @@ func manifestReader(input string, cli client.Client) (err error) {
 
 	prompt := fmt.Sprintf("\x1b[31;1mmanifest %d>\x1b[0m ", uint64(mid)%1000)
 	for {
-		var symbols = []string{"disable", "entry", "exit", "json", "r", "reset", "sign"}
+		var symbols = []string{"disable", "entry", "exit", "help", "json", "r", "reset", "sign"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -79,6 +79,24 @@ func manifestReader(input string, cli client.Client) (err error) {
 				panic(err)
 			}
 			fmt.Printf("%s\n", buf)
+		case "help":
+			fmt.Printf(`The following orders are avialable:
+disable         disables manifest and prevents future use
+
+entry           show the manifest for this record as would be sent to a loader
+
+help            show this help
+
+exit            exit this mode (also works with ctrl+d)
+
+json            show json of manifest record stored in database
+
+r               refresh the manifest (get latest version from database)
+
+reset           reset manifest status (marks manifest as staged, removes signatures)
+
+sign            add a signature to the manifest record
+`)
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
