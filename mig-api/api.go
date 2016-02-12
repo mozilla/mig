@@ -76,24 +76,24 @@ func main() {
 	s.HandleFunc("/manifest/agent/", authenticateLoader(getAgentManifest)).Methods("POST")
 	s.HandleFunc("/manifest/fetch/", authenticateLoader(getManifestFile)).Methods("POST")
 	// all other resources require authentication
-	s.HandleFunc("/", authenticate(getHome)).Methods("GET")
-	s.HandleFunc("/manifest", authenticate(getManifest)).Methods("GET")
-	s.HandleFunc("/manifest/sign/", authenticate(signManifest)).Methods("POST")
-	s.HandleFunc("/manifest/status/", authenticate(statusManifest)).Methods("POST")
-	s.HandleFunc("/manifest/new/", authenticate(newManifest)).Methods("POST")
-	s.HandleFunc("/manifest/loaders/", authenticate(manifestLoaders)).Methods("GET")
-	s.HandleFunc("/search", authenticate(search)).Methods("GET")
-	s.HandleFunc("/action", authenticate(getAction)).Methods("GET")
-	s.HandleFunc("/action/create/", authenticate(describeCreateAction)).Methods("GET")
-	s.HandleFunc("/action/create/", authenticate(createAction)).Methods("POST")
-	s.HandleFunc("/command", authenticate(getCommand)).Methods("GET")
-	s.HandleFunc("/agent", authenticate(getAgent)).Methods("GET")
-	s.HandleFunc("/investigator", authenticate(getInvestigator)).Methods("GET")
-	s.HandleFunc("/investigator/create/", authenticate(describeCreateInvestigator)).Methods("GET")
-	s.HandleFunc("/investigator/create/", authenticate(createInvestigator)).Methods("POST")
-	s.HandleFunc("/investigator/update/", authenticate(describeUpdateInvestigator)).Methods("GET")
-	s.HandleFunc("/investigator/update/", authenticate(updateInvestigator)).Methods("POST")
-	s.HandleFunc("/dashboard", authenticate(getDashboard)).Methods("GET")
+	s.HandleFunc("/", authenticate(getHome, false)).Methods("GET")
+	s.HandleFunc("/manifest", authenticate(getManifest, true)).Methods("GET")
+	s.HandleFunc("/manifest/sign/", authenticate(signManifest, true)).Methods("POST")
+	s.HandleFunc("/manifest/status/", authenticate(statusManifest, true)).Methods("POST")
+	s.HandleFunc("/manifest/new/", authenticate(newManifest, true)).Methods("POST")
+	s.HandleFunc("/manifest/loaders/", authenticate(manifestLoaders, true)).Methods("GET")
+	s.HandleFunc("/search", authenticate(search, false)).Methods("GET")
+	s.HandleFunc("/action", authenticate(getAction, false)).Methods("GET")
+	s.HandleFunc("/action/create/", authenticate(describeCreateAction, false)).Methods("GET")
+	s.HandleFunc("/action/create/", authenticate(createAction, false)).Methods("POST")
+	s.HandleFunc("/command", authenticate(getCommand, false)).Methods("GET")
+	s.HandleFunc("/agent", authenticate(getAgent, false)).Methods("GET")
+	s.HandleFunc("/investigator", authenticate(getInvestigator, true)).Methods("GET")
+	s.HandleFunc("/investigator/create/", authenticate(describeCreateInvestigator, true)).Methods("GET")
+	s.HandleFunc("/investigator/create/", authenticate(createInvestigator, true)).Methods("POST")
+	s.HandleFunc("/investigator/update/", authenticate(describeUpdateInvestigator, true)).Methods("GET")
+	s.HandleFunc("/investigator/update/", authenticate(updateInvestigator, true)).Methods("POST")
+	s.HandleFunc("/dashboard", authenticate(getDashboard, false)).Methods("GET")
 
 	ctx.Channels.Log <- mig.Log{Desc: "Starting HTTP handler"}
 
@@ -118,6 +118,19 @@ func getInvName(r *http.Request) string {
 		return name.(string)
 	}
 	return "noauth"
+}
+
+// invIsAdmin indicates if an investigator is an administrator or not
+type invIsAdminType bool
+
+const authenticatedInvIsAdmin invIsAdminType = false
+
+// getInvIsAdmin returns true of an authenticated investigator is an administrator
+func getInvIsAdmin(r *http.Request) bool {
+	if f := context.Get(r, authenticatedInvIsAdmin); f != nil {
+		return f.(bool)
+	}
+	return false
 }
 
 // invIDType defines a type to store the ID of an investigator in the request context
@@ -165,7 +178,7 @@ type handler func(w http.ResponseWriter, r *http.Request)
 // authenticate is called prior to processing incoming requests. it implements the client
 // authentication logic, which mostly consist of validating GPG signed tokens and setting the
 // identity of the signer in the request context
-func authenticate(pass handler) handler {
+func authenticate(pass handler, adminRequired bool) handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var (
 			err error
@@ -176,6 +189,7 @@ func authenticate(pass handler) handler {
 		if !ctx.Authentication.Enabled {
 			inv.Name = "authdisabled"
 			inv.ID = 0
+			inv.IsAdmin = true
 			goto authorized
 		}
 		if r.Header.Get("X-PGPAUTHORIZATION") == "" {
@@ -199,6 +213,19 @@ func authenticate(pass handler) handler {
 		// store investigator identity in request context
 		context.Set(r, authenticatedInvName, inv.Name)
 		context.Set(r, authenticatedInvID, inv.ID)
+		context.Set(r, authenticatedInvIsAdmin, inv.IsAdmin)
+		// Validate investigator is an administrator if required
+		if adminRequired {
+			if !inv.IsAdmin {
+				inv.Name = "authfailed"
+				inv.ID = -1
+				resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
+				resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid),
+					Message: "Insufficient privileges"})
+				respond(401, resource, w, r)
+				return
+			}
+		}
 		// accept request
 		pass(w, r)
 	}

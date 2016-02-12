@@ -19,6 +19,7 @@ type Investigator struct {
 	Status         string    `json:"status"`
 	CreatedAt      time.Time `json:"createdat"`
 	LastModified   time.Time `json:"lastmodified"`
+	IsAdmin        bool      `json:"isadmin"`
 }
 
 const (

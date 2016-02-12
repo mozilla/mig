@@ -100,7 +100,8 @@ CREATE TABLE investigators (
     privatekey      bytea,
     status          character varying(255) NOT NULL,
     createdat       timestamp with time zone NOT NULL,
-    lastmodified    timestamp with time zone NOT NULL
+    lastmodified    timestamp with time zone NOT NULL,
+    isadmin         boolean NOT NULL
 );
 ALTER TABLE public.investigators OWNER TO migadmin;
 ALTER TABLE ONLY investigators
