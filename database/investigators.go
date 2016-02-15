@@ -61,7 +61,7 @@ func (db *DB) InvestigatorByID(iid float64) (inv mig.Investigator, err error) {
 // has a given fingerprint
 func (db *DB) InvestigatorByFingerprint(fp string) (inv mig.Investigator, err error) {
 	err = db.c.QueryRow(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
-		investigators.publickey, investigators.status, investigators.createdat, investigators.lastmodified
+		investigators.publickey, investigators.status, investigators.createdat, investigators.lastmodified,
 		investigators.isadmin FROM investigators WHERE LOWER(pgpfingerprint)=LOWER($1)`,
 		fp).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status,
 		&inv.CreatedAt, &inv.LastModified, &inv.IsAdmin)
@@ -109,8 +109,8 @@ func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err 
 // or an error if the insertion failed, or if the investigator already exists
 func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) {
 	_, err = db.c.Exec(`INSERT INTO investigators
-		(name, pgpfingerprint, publickey, status, createdat, lastmodified, isadmin)
-		VALUES ($1, $2, $3, 'active', $4, $5, false)`,
+		(name, pgpfingerprint, publickey, status, createdat, lastmodified)
+		VALUES ($1, $2, $3, 'active', $4, $5)`,
 		inv.Name, inv.PGPFingerprint, inv.PublicKey, time.Now().UTC(), time.Now().UTC())
 	if err != nil {
 		if err.Error() == `pq: duplicate key value violates unique constraint "investigators_pgpfingerprint_idx"` {
