@@ -289,9 +289,11 @@ osx-loader-pkg:
 	       scriptstmp=$$(mktemp -d) && \
 	       $(INSTALL) -m 0755 -d $${tmpdir}/usr/local/bin && \
 	       $(INSTALL) -m 0750 -d $${tmpdir}/etc/mig && \
+	       $(INSTALL) -m 0755 -d $${tmpdir}/Library/LaunchAgents && \
 	       $(INSTALL) -m 0755 $(BINDIR)/mig-loader $${tmpdir}/usr/local/bin/mig-loader && \
 	       touch $${tmpdir}/etc/mig/mig-loader.key && \
 	       $(INSTALL) -m 0755 tools/osx-loader-pkg-postinstall.sh $${scriptstmp}/postinstall && \
+	       $(INSTALL) -m 0644 tools/com.mozilla.mig-loader.plist $${tmpdir}/Library/LaunchAgents/com.mozilla.mig-loader.plist && \
 	       pkgbuild --root $${tmpdir} --identifier org.mozilla.mig-loader --version $(BUILDREV) \
 	       --ownership recommended --scripts $${scriptstmp} ./mig-loader.pkg && \
 	       rm -rf $${tmpdir} && \

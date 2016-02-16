@@ -27,3 +27,10 @@ while true; do
 	fi
 done
 echo $buf > $loaderkeyfile
+
+pl=/Library/LaunchAgents/com.mozilla.mig-loader.plist
+launchctl unload $pl
+launchctl load $pl
+launchctl start mig-loader
+
+exit 0
