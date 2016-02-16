@@ -139,7 +139,8 @@ CREATE TABLE loaders (
 );
 ALTER TABLE ONLY loaders
     ADD CONSTRAINT loaders_pkey PRIMARY KEY (id);
-CREATE UNIQUE INDEX loaders_loadername_loaderkey_idx ON loaders USING btree(loadername, loaderkey);
+CREATE UNIQUE INDEX loaders_loadername_idx ON loaders USING btree(loadername);
+CREATE UNIQUE INDEX loaders_loaderkey_idx ON loaders USING btree(loaderkey);
 ALTER TABLE public.loaders OWNER TO migadmin;
 
 CREATE TABLE modules (
