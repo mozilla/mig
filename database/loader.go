@@ -18,19 +18,9 @@ func (db *DB) GetLoaderEntryID(key string) (ret float64, err error) {
 	if key == "" {
 		return ret, fmt.Errorf("key cannot be empty")
 	}
-	rows, err := db.c.Query("SELECT id FROM loaders WHERE loaderkey=$1", key)
+	err = db.c.QueryRow("SELECT id FROM loaders WHERE loaderkey=$1", key).Scan(&ret)
 	if err != nil {
-		return
-	}
-	if rows != nil {
-		defer rows.Close()
-	}
-	if !rows.Next() {
 		err = fmt.Errorf("No matching loader entry found for key")
-		return
-	}
-	err = rows.Scan(&ret)
-	if err != nil {
 		return
 	}
 	return
