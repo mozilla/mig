@@ -59,9 +59,8 @@ func (db *DB) ManifestDisable(mid float64) (err error) {
 // Update the status of a manifest based on the number of signatures it has
 func (db *DB) ManifestUpdateStatus(mid float64) (err error) {
 	var cnt int
-	row := db.c.QueryRow(`SELECT COUNT(*) FROM manifestsig
-		WHERE manifestid=$1`, mid)
-	err = row.Scan(&cnt)
+	err = db.c.QueryRow(`SELECT COUNT(*) FROM manifestsig
+		WHERE manifestid=$1`, mid).Scan(&cnt)
 	if err != nil {
 		return err
 	}
