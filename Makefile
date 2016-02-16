@@ -284,6 +284,18 @@ install-client:
 	$(INSTALL) -m 0755 $(BINDIR)/mig-console $(PREFIX)/bin/mig-console
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-search $(PREFIX)/bin/mig-agent-search
 
+osx-loader-pkg:
+	tmpdir=$$(mktemp -d) && \
+	       scriptstmp=$$(mktemp -d) && \
+	       $(INSTALL) -m 0755 -d $${tmpdir}/usr/local/bin && \
+	       $(INSTALL) -m 0750 -d $${tmpdir}/etc/mig && \
+	       $(INSTALL) -m 0755 $(BINDIR)/mig-loader $${tmpdir}/usr/local/bin/mig-loader && \
+	       touch $${tmpdir}/etc/mig/mig-loader.key && \
+	       $(INSTALL) -m 0755 tools/osx-loader-pkg-postinstall.sh $${scriptstmp}/postinstall && \
+	       pkgbuild --root $${tmpdir} --identifier org.mozilla.mig-loader --version $(BUILDREV) \
+	       --ownership recommended --scripts $${scriptstmp} ./mig-loader.pkg && \
+	       rm -rf $${tmpdir} && \
+	       rm -rf $${scriptstmp}
 
 doc:
 	make -C doc doc
