@@ -130,8 +130,8 @@ func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) 
 // and returns its ID, or an error if the insertion failed, or if the investigator already exists
 func (db *DB) InsertSchedulerInvestigator(inv mig.Investigator) (iid float64, err error) {
 	_, err = db.c.Exec(`INSERT INTO investigators
-		(name, pgpfingerprint, publickey, privatekey, status, createdat, lastmodified, isadmin)
-		VALUES ($1, $2, $3, $4, 'active', $5, $6, false)`,
+		(name, pgpfingerprint, publickey, privatekey, status, createdat, lastmodified)
+		VALUES ($1, $2, $3, $4, 'active', $5, $6)`,
 		inv.Name, inv.PGPFingerprint, inv.PublicKey, inv.PrivateKey, time.Now().UTC(), time.Now().UTC())
 	if err != nil {
 		if err.Error() == `pq: duplicate key value violates unique constraint "investigators_pgpfingerprint_idx"` {
