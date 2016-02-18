@@ -12,6 +12,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
@@ -385,9 +386,50 @@ func doExit(v int) {
 	os.Exit(v)
 }
 
+// Return the path to the expected loader key file location
+func getLoaderKeyfile() string {
+	switch runtime.GOOS {
+	case "linux":
+		return "/etc/mig/mig-loader.key"
+	case "darwin":
+		return "/etc/mig/mig-loader.key"
+	}
+	panic("loader does not support this operating system")
+	return ""
+}
+
+// Attempt to obtain the loader key from the file system and override the
+// built-in secret
+func loadLoaderKey() error {
+	fd, err := os.Open(getLoaderKeyfile())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer fd.Close()
+	buf, _, err := bufio.NewReader(fd).ReadLine()
+	if err != nil {
+		// Nothing in the loader key file
+		if err == io.EOF {
+			return nil
+		}
+		return err
+	}
+	LOADERKEY = string(buf)
+	return nil
+}
+
 func main() {
 	var err error
 	runtime.GOMAXPROCS(1)
+
+	err = loadLoaderKey()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		doExit(1)
+	}
 
 	ctx, err = initContext()
 	if err != nil {
