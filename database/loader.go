@@ -26,6 +26,16 @@ func (db *DB) GetLoaderEntryID(key string) (ret float64, err error) {
 	return
 }
 
+// Return a loader name given an ID
+func (db *DB) GetLoaderName(id float64) (ret string, err error) {
+	err = db.c.QueryRow("SELECT loadername FROM loaders WHERE id=$1", id).Scan(&ret)
+	if err != nil {
+		err = fmt.Errorf("Unable to locate name for loader ID")
+		return
+	}
+	return
+}
+
 // Update a given loader entry using supplied agent information (e.g., provided
 // during a manifest request by a loader instance
 func (db *DB) UpdateLoaderEntry(lid float64, agt mig.Agent) (err error) {

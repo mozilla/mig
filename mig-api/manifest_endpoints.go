@@ -386,6 +386,12 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
+	// Include the loader ID with the response
+	m.LoaderName, err = ctx.DB.GetLoaderName(loaderid)
+	if err != nil {
+		panic(err)
+	}
+
 	// Send the manifest to the loader
 	err = resource.AddItem(cljs.Item{
 		Href: request.URL.String(),
