@@ -313,7 +313,7 @@ var bundleEntryLinux = []BundleDictionaryEntry{
 }
 
 var bundleEntryDarwin = []BundleDictionaryEntry{
-	{"mig-agent", "/sbin/mig-agent", "", nil},
+	{"mig-agent", "/usr/local/bin/mig-agent", "", nil},
 	{"configuration", "/etc/mig/mig-agent.cfg", "", TransformAMQPAuth},
 	{"agentcert", "/etc/mig/agent.crt", "", nil},
 	{"agentkey", "/etc/mig/agent.key", "", nil},
