@@ -28,6 +28,9 @@ while true; do
 done
 echo $buf > $loaderkeyfile
 
+# Run the loader once as part of startup
+/usr/local/bin/mig-loader
+
 pl=/Library/LaunchAgents/com.mozilla.mig-loader.plist
 launchctl unload $pl
 launchctl load $pl
