@@ -55,7 +55,7 @@ func agentServices() (err error) {
 		panic("no agent entry in host bundle")
 	}
 
-	migcomm := exec.Command(abe.Path, "-s")
+	migcomm := exec.Command(abe.Path)
 	err = migcomm.Run()
 	if err != nil {
 		panic(err)
@@ -89,6 +89,40 @@ func terminateAgent() (err error) {
 	}
 
 	migcomm := exec.Command(abe.Path, "-q", "shutdown")
+	err = migcomm.Run()
+	if err != nil {
+		panic(err)
+	}
+
+	return
+}
+
+// Check if the agent is running or not using the pid status function, err
+// is non-nil if not
+func agentRunning() (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("agentRunning() -> %v", e)
+		}
+	}()
+	hb, err := mig.GetHostBundle()
+	if err != nil {
+		panic(err)
+	}
+	var abe mig.BundleDictionaryEntry
+	found := false
+	for _, x := range hb {
+		if x.Name == "mig-agent" {
+			abe = x
+			found = true
+			break
+		}
+	}
+	if !found {
+		panic("no agent entry in host bundle")
+	}
+
+	migcomm := exec.Command(abe.Path, "-q", "pid")
 	err = migcomm.Run()
 	if err != nil {
 		panic(err)

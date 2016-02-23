@@ -32,16 +32,15 @@ var publication sync.Mutex
 // Agent runtime options; stores command line flags used when the agent was
 // executed.
 type runtimeOptions struct {
-	debug          bool
-	mode           string
-	file           string
-	config         string
-	query          string
-	foreground     bool
-	upgrading      bool
-	serviceInstall bool
-	pretty         bool
-	showversion    bool
+	debug       bool
+	mode        string
+	file        string
+	config      string
+	query       string
+	foreground  bool
+	upgrading   bool
+	pretty      bool
+	showversion bool
 }
 
 type moduleResult struct {
@@ -86,7 +85,6 @@ func main() {
 	flag.StringVar(&runOpt.query, "q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
 	flag.BoolVar(&runOpt.foreground, "f", false, "Agent will fork into background by default. Except if this flag is set.")
 	flag.BoolVar(&runOpt.upgrading, "u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
-	flag.BoolVar(&runOpt.serviceInstall, "s", false, "Do not run agent, instead just install agent as a service.")
 	flag.BoolVar(&runOpt.pretty, "p", false, "When running a module, pretty print the results instead of returning JSON.")
 	flag.BoolVar(&runOpt.showversion, "V", false, "Print Agent version to stdout and exit.")
 
@@ -266,7 +264,7 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 func runAgentCheckin(runOpt runtimeOptions) (err error) {
 	var ctx Context
 	// initialize the agent
-	ctx, err = Init(runOpt.foreground, runOpt.upgrading, false)
+	ctx, err = Init(runOpt.foreground, runOpt.upgrading)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Init failed: '%v'", err)
 		os.Exit(0)
@@ -320,17 +318,13 @@ done:
 
 // runAgent is the startup function for agent mode. It only exits when the agent
 // must shut down.
-//
-// The serviceInstall flag indicates this is an attempt to install the agent as
-// a service, but not run it. This flag could replace the upgrading flag at
-// some point.
 func runAgent(runOpt runtimeOptions) (err error) {
 	var (
 		ctx        Context
 		exitReason string
 	)
 	// initialize the agent
-	ctx, err = Init(runOpt.foreground, runOpt.upgrading, runOpt.serviceInstall)
+	ctx, err = Init(runOpt.foreground, runOpt.upgrading)
 	if err != nil {
 		// Test if we have a valid log channel here, it's possible Init
 		// failed initializing the log in which case it could be nil

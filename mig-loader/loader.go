@@ -518,6 +518,21 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			doExit(1)
 		}
+	} else {
+		// If we don't have changes, just validate the agent is running,
+		// if it is not we will also execute the triggers to try to
+		// bump it.
+		err = agentRunning()
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: "agent does not appear to be running, trying to start"}
+			err = runTriggers()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				doExit(1)
+			}
+		} else {
+			ctx.Channels.Log <- mig.Log{Desc: "agent looks like it is running"}
+		}
 	}
 	doExit(0)
 }

@@ -71,7 +71,7 @@ type Context struct {
 
 // Init prepare the AMQP connections to the broker and launches the
 // goroutines that will process commands received by the MIG Scheduler
-func Init(foreground, upgrade bool, serviceInstall bool) (ctx Context, err error) {
+func Init(foreground, upgrade bool) (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initAgent() -> %v", e)
@@ -143,16 +143,6 @@ func Init(foreground, upgrade bool, serviceInstall bool) (ctx Context, err error
 
 	// build the agent message queue location
 	ctx.Agent.QueueLoc = fmt.Sprintf("%s.%s.%s", ctx.Agent.Env.OS, ctx.Agent.Hostname, ctx.Agent.UID)
-
-	// If we are in service install mode, don't go any further. Deploy the
-	// service and exit.
-	if serviceInstall {
-		_, err := serviceDeploy(ctx)
-		if err != nil {
-			os.Exit(1)
-		}
-		os.Exit(0)
-	}
 
 	// daemonize if not in foreground mode
 	if !foreground {
