@@ -335,6 +335,8 @@ func GetHostBundle() ([]BundleDictionaryEntry, error) {
 	return nil, fmt.Errorf("no entry for %v in bundle dictionary", runtime.GOOS)
 }
 
+// Populates a slice of BundleDictionaryEntrys, adding the SHA256 checksums
+// from the file system
 func HashBundle(b []BundleDictionaryEntry) ([]BundleDictionaryEntry, error) {
 	ret := b
 	for i := range ret {
@@ -384,10 +386,13 @@ func HashBundle(b []BundleDictionaryEntry) ([]BundleDictionaryEntry, error) {
 	return ret, nil
 }
 
+// Transforms a byte string containing the agent configuration file, removing
+// AMQP credentials and replacing them with a place holder. This is used during
+// manifest comparison operations, as configuration files can be loader
+// specific but we want to compare against the manifests template configuration.
 func TransformAMQPAuth(in []byte) (out []byte) {
 	r := regexp.MustCompile("(amqps://)\\S+?:[^@]+")
 	rstr := "$1<<AMQPCRED>>"
 	out = r.ReplaceAll(in, []byte(rstr))
-	fmt.Println(string(out))
 	return
 }
