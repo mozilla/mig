@@ -192,6 +192,8 @@ func (m *ManifestRecord) ManifestObject(obj string) ([]byte, error) {
 	return ret, nil
 }
 
+// Load manifest content from a file on the file system (a gzip'd tar file),
+// primarily utilized by mig-console during manifest creation operations.
 func (m *ManifestRecord) ContentFromFile(path string) (err error) {
 	var buf bytes.Buffer
 	fd, err := os.Open(path)
