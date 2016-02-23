@@ -99,7 +99,7 @@ func (db *DB) ManifestIDFromLoaderID(lid float64) (ret float64, err error) {
 func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err error) {
 	var mtarg string
 	err = db.c.QueryRow(`SELECT target FROM manifests
-		WHERE status='active' AND id=$1`, mid).Scan(&mtarg)
+		WHERE (status='active' OR status='staged') AND id=$1`, mid).Scan(&mtarg)
 	if err != nil {
 		return
 	}
