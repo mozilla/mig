@@ -197,6 +197,7 @@ func manifestCreator(cli client.Client) (err error) {
 	if err != nil {
 		panic(err)
 	}
+	newmr.Status = "staged"
 	// Validate the new manifest record before sending it to the API
 	err = newmr.Validate()
 	if err != nil {

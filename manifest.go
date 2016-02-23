@@ -46,6 +46,9 @@ func (m *ManifestRecord) Validate() (err error) {
 	if m.Target == "" {
 		return fmt.Errorf("manifest has invalid target")
 	}
+	if m.Status != "staged" && m.Status != "active" && m.Status != "disabled" {
+		return fmt.Errorf("manifest has invalid status")
+	}
 	// Attempt to convert it to a response as part of validation
 	_, err = m.ManifestResponse()
 	if err != nil {
