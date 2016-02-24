@@ -260,7 +260,17 @@ func manifestLoaders(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	ldrs, err := ctx.DB.AllLoadersFromManifestID(mid)
 	if err != nil {
-		panic(err)
+		// If we fail here, it could be because no matching loaders were
+		// found or the where clause specified withi the manifest is
+		// invalid. Just return a generic error message here but also
+		// log the actual error.
+		ctx.Channels.Log <- mig.Log{OpID: opid,
+			Desc: fmt.Sprintf("Error selecting loaders from manifest %v: %v", mid, err)}
+		resource.SetError(cljs.Error{
+			Code:    fmt.Sprintf("%.0f", opid),
+			Message: fmt.Sprintf("No matching loaders for manifest '%.0f'", mid)})
+		respond(404, resource, respWriter, request)
+		return
 	}
 	li, err := loaderEntrysToItem(ldrs, mid, ctx)
 	if err != nil {
