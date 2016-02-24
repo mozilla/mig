@@ -16,31 +16,49 @@ example RPM or deb. When the agent needs to be updated, the older agent package
 is removed from the system and a new package is installed.
 
 This approach works well for systems under some form of configuration
-management (e.g., services) as it is easy to deploy newer package versions
+management (e.g., servers) as it is easy to deploy newer package versions
 to these devices. This approach does not work well with devices such as user
 workstations, as typically they are not managed in the same way.
 
-`mig-loader` is intended to act as bootstrapping function for the agent. The
-idea is, rather than install an agent on a system, `mig-loader` will be
-installed instead, and will manage the agent software on an on-going basis.
+mig-loader is intended to act as bootstrapping function for the agent. The
+idea is, rather than install an agent on a system, mig-loader will be
+installed instead, and will manage the agent software on an on-going basis,
+looking after updates.
+
+Using mig-loader
+----------------
+The following high level steps are part of deploying and using mig-loader:
+
+* Configure the loader and build it
+* Create a manifest containing the agent and other support files, and make it avialable through the API
+* Install the loader on systems you wish to run the agent on
+
+From this point on, the loader will automatically fetch the agent and manage it.
 
 Building the loader and configuration
 -------------------------------------
 If the loader is to be used, it needs to be built with some basic configuration
 that indicates how it should operate. This is done by editing the built-in
-configuration source file for the loader. Here you would indicate where the API
-is, include any tags (similar to agent tags) that should be included with this
-loader type, and you would also build in any GPG keys that should be used as
-part of validation of manifest signatures by the loader.
+configuration source file for the loader (``mig-loader/configuration.go``).
+
+Here you would indicate where the API is, include any tags (similar to agent tags)
+that should be included with this loader type, and you would also build in any
+GPG keys that should be used as part of validation of manifest signatures
+by the loader. The configuration file also contains variables used in environment
+discovery similar to those available for the agent. The agent and loader both use
+the same environment discovery functions, and the environment is provided to the API
+by the loader to help the API determine which manifest it should provide to the loader.
 
 OSX specific notes
 ~~~~~~~~~~~~~~~~~~
 The loader can be packaged up for OSX after it has been compiled using the
-osx-loader-pkg target. This will built a standalone OSX installer, that when
+``osx-loader-pkg`` target. This will build a standalone OSX installer, that when
 run will prompt the user for a loader registration key, and configure the
 loader to run periodically on the target system.
 
-The installer creates a launchd job which runs periodically.
+The installer creates a launchd job which runs periodically. In a typical scenario
+once the loader has run successfully once on the target system, you would have
+2 launchd jobs related to mig; the loader job and the agent itself.
 
 Windows specific notes
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -48,14 +66,16 @@ Support for Windows has not yet been added.
 
 Linux specific notes
 ~~~~~~~~~~~~~~~~~~~~
-The loader functions on Linux but not automated installation is available, but
-it can be configured to run with a few steps.
+The loader functions on Linux but no automated installation is available,
+it can be configured to run with a few steps. The loader binary needs to be
+installed, and the loader registration key for this instance needs to be in
+``/etc/mig/mig-loader.key``. Following this, the loader just needs to be
+setup in cron to run periodically as root.
 
 Operation
 ---------
 The general operating methodology is as follows:
 
-As an example, the loader would operate as follows.
 * Once the loader is installed, it periodically requests manifests from the API
 * The loader validates the signature on the manifests using the built-in GPG keys
 * The loader compares these manifests with MIG related files installed
