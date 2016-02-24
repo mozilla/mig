@@ -24,58 +24,89 @@ workstations, as typically they are not managed in the same way.
 idea is, rather than install an agent on a system, `mig-loader` will be
 installed instead, and will manage the agent software on an on-going basis.
 
+Building the loader and configuration
+-------------------------------------
+If the loader is to be used, it needs to be built with some basic configuration
+that indicates how it should operate. This is done by editing the built-in
+configuration source file for the loader. Here you would indicate where the API
+is, include any tags (similar to agent tags) that should be included with this
+loader type, and you would also build in any GPG keys that should be used as
+part of validation of manifest signatures by the loader.
+
+OSX specific notes
+~~~~~~~~~~~~~~~~~~
+The loader can be packaged up for OSX after it has been compiled using the
+osx-loader-pkg target. This will built a standalone OSX installer, that when
+run will prompt the user for a loader registration key, and configure the
+loader to run periodically on the target system.
+
+The installer creates a launchd job which runs periodically.
+
+Windows specific notes
+~~~~~~~~~~~~~~~~~~~~~~
+Support for Windows has not yet been added.
+
+Linux specific notes
+~~~~~~~~~~~~~~~~~~~~
+The loader functions on Linux but not automated installation is available, but
+it can be configured to run with a few steps.
+
 Operation
 ---------
+The general operating methodology is as follows:
+
 As an example, the loader would operate as follows.
+* Once the loader is installed, it periodically requests manifests from the API
+* The loader validates the signature on the manifests using the built-in GPG keys
+* The loader compares these manifests with MIG related files installed
+* The loader fetches any files from the API indicated in the manifest that do not match what is installed on the system
+* The loader looks after restarting the MIG agent if needed
 
-The loader binary would be installed on a client system using a package in the
-same way the agent would be installed now. This package would also be
-responsible for adding an operation to the scheduling facility on the system
-(for example, cron, Windows Scheduler) to run `mig-loader` on a periodic basis
-on the system.
+Loader authentication
+~~~~~~~~~~~~~~~~~~~~~
+The loader authenticates against the API differently than the MIG client
+applications. Specifically, the client applications use GPG signatures as part
+of authentication, where the loader uses registration keys (API keys) to
+authenticate with the API. These keys uniquely identify a loader instance, and
+only permit access to manifest related API endpoints.
 
-When the loader is run by the scheduler, it will create a manifest based on
-what MIG components/configuration files are present on the system. It is likely
-this will be limited to the agent itself, and configuration files used by the
-agent. This manifest will include information such as the SHA256 checksum of
-any present MIG files.
+Each loader that is provisioning an agent should have it's own unique
+registration key. These would typically be provided to a user along with
+the installation package.
 
-Next, the loader will generate an agent environment structure. This will
-include the same information the agent typically sends as part of it's
-environment (e.g., the system hostname, operator identifier, others).
+Each loader must have an entry in the loaders table in the database. When the
+loader configures MIG on a target system, it will also use the registration
+key along with the loader name indicated in the MIG database as the AMQP
+relay credentials. The loader learns the AMQP user component as it is included
+in part of the response sent to the loader from the API.
 
-Once the loader has this information, it will request the current manifest
-from the API by sending it's environment. The API will look at the environment,
-and determine the current manifest for use on this particular system. It is
-intended this information will be stored in the MIG database. Once the API
-has made this determination, it will respond to the loader with what the
-manifest should be.
+To prevent a loader instance from future API access, the entry can be removed
+from the MIG database, and from the RabbitMQ user database.
 
-When the loader recieves this manifest, it will compare it with the manifest
-it generated using local information from the system. If there are mismatches,
-the loader will make a request to the API to fetch the files which are not
-current, stage the files on the file system, and eventually replace the files
-with the new versions.
+Manifest management
+-------------------
+Manifests represent a set of files that a loader can request and deploy to
+the target system. Manifests are stored in the MIG database. To control
+which manifest a loader will receive, targetting strings are used similar to
+how specific agents would be targetted with an action using MIG client
+applications.
 
-In cases where there are changes, the loader will need to look after initiating
-the new agent code. This would for example involve spawning a new mig-agent
-process, which in turn will result in the old agent being killed. In cases
-where it is a new system (no current mig-agent) this would also cause the agent
-to self-install itself in the service manager for the OS.
+The mig loader generates an environment string using the same code the agent
+uses.
+
+When the manifest is created, the targetting string is associated with it.
+Once the manifest is active, any loader manifest requests will recieve the
+manifest which matches loader using the targetting string. The most recent
+manifest that is active that matches is sent.
+
+Adding and managing manifests
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Manifests can be managed using the API. The manifest reader can be used to
+modify and sign an existing manifest. The create manifest function can be
+used to send a new manifest to the API for storage in the database.
 
 Loader updates
 --------------
 It is anticipated the loader will requires updates far less likely than the
 agent itself. However, it may be useful to support the loader having the
 ability to update itself in addition to the agent.
-
-Cryptographic considerations
-----------------------------
-All stages of the process will need to be authenticated. This will include:
-
-* Authenticating the loader with the API, to ensure manifest requests or file requests can only originate from valid sources for that manifest. This will likely involve requiring some form of secret on the loader system (e.g., a GPG key to use similar authentication as clients do with the API).
-* Authentication of manifests and files sent from the API; this will involve validating signatures on the manifest/files/etc. This will likely involve the addition of a signing key in the API.
-
-Other considerations
---------------
-* Although the target platform is workstations, in the future this approach could be used for servers as well.
