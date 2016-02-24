@@ -117,6 +117,10 @@ func requestManifest() (err error) {
 		panic(err)
 	}
 	apiManifest = &manifest
+	err = apiManifest.Validate()
+	if err != nil {
+		panic(err)
+	}
 	return checkManifestSignature(apiManifest)
 }
 

@@ -255,6 +255,14 @@ type ManifestResponse struct {
 	Signatures []string        `json:"signatures"`
 }
 
+// Validate a manifest response
+func (m *ManifestResponse) Validate() error {
+	if m.LoaderName == "" {
+		return fmt.Errorf("manifest response has no loader name")
+	}
+	return nil
+}
+
 // Validates signatures stored in the manifest against keys in keyring, returns
 // the number of valid signature matches
 func (m *ManifestResponse) VerifySignatures(keyring io.Reader) (validcnt int, err error) {
