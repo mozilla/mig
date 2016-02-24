@@ -250,7 +250,7 @@ type ManifestFetchResponse struct {
 
 // The response to a standard manifest request
 type ManifestResponse struct {
-	LoaderName string          `json:"name"`
+	LoaderName string          `json:"loader_name"`
 	Entries    []ManifestEntry `json:"entries"`
 	Signatures []string        `json:"signatures"`
 }
