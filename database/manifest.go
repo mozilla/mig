@@ -12,10 +12,6 @@ import (
 	"mig.ninja/mig"
 )
 
-// The number of signatures required for a manifest to be marked as active.
-// XXX This should probably be somewhere else like in the configuration file.
-const REQUIRED_SIGNATURES int = 1
-
 // Add a new manifest record to the database
 func (db *DB) ManifestAdd(mr mig.ManifestRecord) (err error) {
 	_, err = db.c.Exec(`INSERT INTO manifests VALUES
@@ -25,7 +21,7 @@ func (db *DB) ManifestAdd(mr mig.ManifestRecord) (err error) {
 }
 
 // Add a signature to the database for an existing manifest
-func (db *DB) ManifestAddSignature(mid float64, sig string, invid float64) (err error) {
+func (db *DB) ManifestAddSignature(mid float64, sig string, invid float64, reqsig int) (err error) {
 	res, err := db.c.Exec(`INSERT INTO manifestsig
 		(manifestid, pgpsignature, investigatorid)
 		SELECT $1, $2, $3
@@ -42,7 +38,7 @@ func (db *DB) ManifestAddSignature(mid float64, sig string, invid float64) (err 
 		return fmt.Errorf("Manifest signing operation failed")
 	}
 
-	err = db.ManifestUpdateStatus(mid)
+	err = db.ManifestUpdateStatus(mid, reqsig)
 	return
 }
 
@@ -56,8 +52,10 @@ func (db *DB) ManifestDisable(mid float64) (err error) {
 	return
 }
 
-// Update the status of a manifest based on the number of signatures it has
-func (db *DB) ManifestUpdateStatus(mid float64) (err error) {
+// Update the status of a manifest based on the number of signatures it has,
+// reqsig is passed as an argument that indicates the number of signatures
+// a manifest must have to be considered active
+func (db *DB) ManifestUpdateStatus(mid float64, reqsig int) (err error) {
 	var cnt int
 	err = db.c.QueryRow(`SELECT COUNT(*) FROM manifestsig
 		WHERE manifestid=$1`, mid).Scan(&cnt)
@@ -65,7 +63,7 @@ func (db *DB) ManifestUpdateStatus(mid float64) (err error) {
 		return err
 	}
 	status := "staged"
-	if cnt >= REQUIRED_SIGNATURES {
+	if cnt >= reqsig {
 		status = "active"
 	}
 	_, err = db.c.Exec(`UPDATE manifests SET status=$1 WHERE

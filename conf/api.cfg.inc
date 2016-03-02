@@ -9,6 +9,11 @@
     # within this duration of the local clock
     tokenduration = 10m
 
+[manifest]
+    # used with mig manifests, this indicates the number of valid signatures
+    # that must be applied to a manifest for the api to mark it as active
+    requiredsignatures = 2
+
 [server]
     # local listening ip
     ip = "127.0.0.1"

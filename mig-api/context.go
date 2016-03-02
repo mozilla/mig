@@ -34,6 +34,9 @@ type Context struct {
 		Mutex      sync.Mutex
 		UpdateTime time.Time
 	}
+	Manifest struct {
+		RequiredSignatures int
+	}
 	Postgres struct {
 		Host, User, Password, DBName, SSLMode string
 		Port, MaxConn                         int
@@ -78,6 +81,10 @@ func Init(path string, debug bool) (ctx Context, err error) {
 	ctx.Logging, err = mig.InitLogger(ctx.Logging, "mig-api")
 	if err != nil {
 		panic(err)
+	}
+
+	if ctx.Manifest.RequiredSignatures < 1 {
+		panic("manifest:requiredsignatures must be at least 1 in config file")
 	}
 
 	ctx, err = initDB(ctx)

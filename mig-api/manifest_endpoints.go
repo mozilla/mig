@@ -72,7 +72,7 @@ func statusManifest(respWriter http.ResponseWriter, request *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		err = ctx.DB.ManifestUpdateStatus(manifestid)
+		err = ctx.DB.ManifestUpdateStatus(manifestid, ctx.Manifest.RequiredSignatures)
 		if err != nil {
 			panic(err)
 		}
@@ -118,7 +118,8 @@ func signManifest(respWriter http.ResponseWriter, request *http.Request) {
 		panic("Invalid signature specified")
 	}
 
-	err = ctx.DB.ManifestAddSignature(manifestid, sig, getInvID(request))
+	err = ctx.DB.ManifestAddSignature(manifestid, sig, getInvID(request),
+		ctx.Manifest.RequiredSignatures)
 	if err != nil {
 		panic(err)
 	}
