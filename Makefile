@@ -162,6 +162,15 @@ deb-agent: mig-agent
 		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
 		-s dir -t deb .
 
+deb-loader: mig-loader
+	rm -fr tmp
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-loader tmp/sbin/mig-loader
+	$(MKDIR) -p tmp/var/lib/mig
+	$(MKDIR) -p tmp/etc/mig
+	fpm -C tmp -n mig-loader --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent Loader" \
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		-s dir -t deb .
+
 dmg-agent: mig-agent
 ifneq ($(OS),darwin)
 	echo 'you must be on MacOS and set OS=darwin on the make command line to build an OSX package'
