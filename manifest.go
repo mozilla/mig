@@ -283,8 +283,17 @@ func (m *ManifestResponse) VerifySignatures(keyring io.Reader) (validcnt int, er
 	if err != nil {
 		return validcnt, err
 	}
+	// Create a copy of the keyring we can use during validation of each
+	// signature. We don't want to use the keyring directly as it is
+	// backed by a buffer and will be drained after verification of the
+	// first signature.
+	keycopy, err := ioutil.ReadAll(keyring)
+	if err != nil {
+		return validcnt, err
+	}
 	for _, x := range sigs {
-		valid, _, err := pgp.Verify(string(buf), x, keyring)
+		keyreader := bytes.NewBuffer(keycopy)
+		valid, _, err := pgp.Verify(string(buf), x, keyreader)
 		if err != nil {
 			return validcnt, err
 		}
