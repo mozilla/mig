@@ -413,7 +413,7 @@ func HashBundle(b []BundleDictionaryEntry) ([]BundleDictionaryEntry, error) {
 // manifest comparison operations, as configuration files can be loader
 // specific but we want to compare against the manifests template configuration.
 func TransformAMQPAuth(in []byte) (out []byte) {
-	r := regexp.MustCompile("(amqps://)\\S+?:[^@]+")
+	r := regexp.MustCompile("(amqps?://)\\S+?:[^@]+")
 	rstr := "$1<<AMQPCRED>>"
 	out = r.ReplaceAll(in, []byte(rstr))
 	return
