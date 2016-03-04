@@ -441,6 +441,34 @@ func getLoaderKeyfile() string {
 	return ""
 }
 
+func loaderInitializePathLinux() error {
+	path := os.Getenv("PATH")
+	if path != "" {
+		path = path + ":"
+	}
+	path = path + "/bin:/sbin:/usr/bin:/usr/sbin"
+	return os.Setenv("PATH", path)
+}
+
+func loaderInitializePathDarwin() error {
+	path := os.Getenv("PATH")
+	if path != "" {
+		path = path + ":"
+	}
+	path = path + "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
+	return os.Setenv("PATH", path)
+}
+
+func loaderInitializePath() error {
+	switch runtime.GOOS {
+	case "linux":
+		return loaderInitializePathLinux()
+	case "darwin":
+		return loaderInitializePathDarwin()
+	}
+	return fmt.Errorf("loader does not support this operating system")
+}
+
 // Attempt to obtain the loader key from the file system and override the
 // built-in secret
 func loadLoaderKey() error {
@@ -467,6 +495,14 @@ func loadLoaderKey() error {
 func main() {
 	var err error
 	runtime.GOMAXPROCS(1)
+
+	err = loaderInitializePath()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		doExit(1)
+	}
+	fmt.Println(os.Getenv("PATH"))
+	os.Exit(0)
 
 	err = loadLoaderKey()
 	if err != nil {
