@@ -176,7 +176,8 @@ ifneq ($(OS),darwin)
 	echo 'you must be on MacOS and set OS=darwin on the make command line to build an OSX package'
 else
 	rm -fr tmp tmpdmg
-	mkdir 'tmp' 'tmp/sbin' 'tmpdmg'
+	mkdir -p tmp/usr/local/bin
+	mkdir tmpdmg
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/usr/local/bin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p 'tmp/Library/Preferences/mig/'
 	make agent-install-script-osx
