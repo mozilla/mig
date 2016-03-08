@@ -144,8 +144,8 @@ rpm-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/lib/mig
-	make agent-install-script
-	make agent-remove-script
+	make agent-install-script-linux
+	make agent-remove-script-linux
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
@@ -155,8 +155,8 @@ deb-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/lib/mig
-	make agent-install-script
-	make agent-remove-script
+	make agent-install-script-linux
+	make agent-remove-script-linux
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
@@ -177,10 +177,9 @@ ifneq ($(OS),darwin)
 else
 	rm -fr tmp tmpdmg
 	mkdir 'tmp' 'tmp/sbin' 'tmpdmg'
-	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
+	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/usr/local/bin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p 'tmp/Library/Preferences/mig/'
-	make agent-install-script
-	make agent-remove-script
+	make agent-install-script-osx
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-install tmp/agent_install.sh \
@@ -189,14 +188,21 @@ else
 		-o ./mig-agent-$(BUILDREV)-$(FPMARCH).dmg tmpdmg
 endif
 
-agent-install-script:
-	echo '#!/bin/sh'															> tmp/agent_install.sh
-	echo 'chmod 500 /sbin/mig-agent-$(BUILDREV)'								>> tmp/agent_install.sh
-	echo 'chown root:root /sbin/mig-agent-$(BUILDREV)'							>> tmp/agent_install.sh
-	echo 'rm /sbin/mig-agent; ln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent'>> tmp/agent_install.sh
+agent-install-script-linux:
+	echo '#!/bin/sh'								> tmp/agent_install.sh
+	echo 'chmod 500 /sbin/mig-agent-$(BUILDREV)'					>> tmp/agent_install.sh
+	echo 'chown root:root /sbin/mig-agent-$(BUILDREV)'				>> tmp/agent_install.sh
+	echo 'rm /sbin/mig-agent; ln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent'	>> tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 
-agent-remove-script:
+agent-install-script-osx:
+	echo '#!/bin/sh'											> tmp/agent_install.sh
+	echo 'chmod 500 /usr/local/bin/mig-agent-$(BUILDREV)'							>> tmp/agent_install.sh
+	echo 'chown root:root /usr/local/bin/mig-agent-$(BUILDREV)'						>> tmp/agent_install.sh
+	echo 'rm /usr/local/bin/mig-agent; ln -s /usr/local/bin/mig-agent-$(BUILDREV) /usr/local/bin/mig-agent' >> tmp/agent_install.sh
+	chmod 0755 tmp/agent_install.sh
+
+agent-remove-script-linux:
 	echo '#!/bin/sh'																> tmp/agent_remove.sh
 	echo 'for f in "/etc/cron.d/mig-agent" "/etc/init/mig-agent.conf" "/etc/init.d/mig-agent" "/etc/systemd/system/mig-agent.service"; do' >> tmp/agent_remove.sh
 	echo '    [ -e "$$f" ] && rm -f "$$f"'											>> tmp/agent_remove.sh
