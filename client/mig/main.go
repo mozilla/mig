@@ -45,6 +45,9 @@ usage: %s <module> <global options> <module parameters>
 		* proxied linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
 		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
 		* run on local system:	 -t local
+-target-found <action ID> targets agents that have found results in a previous action. ex: -target-found 123456
+-target-foundnothing <action ID> targets agents that did not find results in a previous action.
+		Both -target-found and -target-foundnothing cannot be used simultaneously.
 -v		verbose output, includes debug information and raw queries
 -V		print version
 -z <bool>       compress action before sending it to agents
@@ -69,17 +72,18 @@ func continueOnFlagError() {
 
 func main() {
 	var (
-		conf                                           client.Configuration
-		cli                                            client.Client
-		err                                            error
-		op                                             mig.Operation
-		a                                              mig.Action
-		migrc, show, render, target, expiration, afile string
-		printAndExit                                   bool
-		verbose, showversion                           bool
-		compressAction                                 bool
-		modargs                                        []string
-		run                                            interface{}
+		conf                                    client.Configuration
+		cli                                     client.Client
+		err                                     error
+		op                                      mig.Operation
+		a                                       mig.Action
+		migrc, show, render, target, expiration string
+		afile, targetfound, targetnotfound      string
+		printAndExit                            bool
+		verbose, showversion                    bool
+		compressAction                          bool
+		modargs                                 []string
+		run                                     interface{}
 	)
 	defer func() {
 		if e := recover(); e != nil {
@@ -94,6 +98,8 @@ func main() {
 	fs.StringVar(&show, "show", "found", "type of results to show")
 	fs.StringVar(&render, "render", "text", "results rendering mode")
 	fs.StringVar(&target, "t", fmt.Sprintf("status='%s' AND mode='daemon'", mig.AgtStatusOnline), "action target")
+	fs.StringVar(&targetfound, "target-found", "", "targets agents that have found results in a previous action.")
+	fs.StringVar(&targetnotfound, "target-foundnothing", "", "targets agents that haven't found results in a previous action.")
 	fs.StringVar(&expiration, "e", "300s", "expiration")
 	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
 	fs.BoolVar(&verbose, "v", false, "Enable verbose output")
@@ -222,6 +228,20 @@ func main() {
 
 	for _, arg := range os.Args[1:] {
 		a.Name += arg + " "
+	}
+
+	if targetfound != "" && targetnotfound != "" {
+		panic("Both -target-found and -target-foundnothing cannot be used simultaneously")
+	}
+	if targetfound != "" {
+		targetQuery := fmt.Sprintf(`id IN (select agentid from commands, json_array_elements(commands.results) as `+
+			`r where actionid=%s and r#>>'{foundanything}' = 'true')`, targetfound)
+		target = targetQuery + " AND " + target
+	}
+	if targetnotfound != "" {
+		targetQuery := fmt.Sprintf(`id NOT IN (select agentid from commands, json_array_elements(commands.results) as `+
+			`r where actionid=%s and r#>>'{foundanything}' = 'true')`, targetnotfound)
+		target = targetQuery + " AND " + target
 	}
 	a.Target = target
 
