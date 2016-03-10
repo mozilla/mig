@@ -25,18 +25,24 @@ usage: %s <module> <global options> <module parameters>
 
 --- Global options ---
 
--c <path>	path to an alternative config file. If not set, use ~/.migrc
+-c <path>	path to an alternative confiig file. If not set, use ~/.migrc
+
 -e <duration>	time after which the action expires. 60 seconds by default.
 		example: -e 300s (5 minutes)
+
 -i <file>	load and run action from a file. supersedes other action flags.
+
 -p <bool>       display action json that would be used and exit
+
 -show <mode>	type of results to show. if not set, default is 'found'.
 		* found: 	only print positive results
 		* notfound: 	only print negative results
 		* all: 		print all results
+
 -render <mode>	defines how results should be rendered:
 		* text (default):	results are printed to the console
 		* map:			results are geolocated and a google map is generated
+
 -t <target>	target to launch the action on. The default targets all online agents.
 		(idle and offline agents are ignored).
 		examples:
@@ -45,11 +51,16 @@ usage: %s <module> <global options> <module parameters>
 		* proxied linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
 		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
 		* run on local system:	 -t local
--target-found <action ID> targets agents that have found results in a previous action. ex: -target-found 123456
--target-foundnothing <action ID> targets agents that did not find results in a previous action.
-		Both -target-found and -target-foundnothing cannot be used simultaneously.
+
+-targetfound <action ID>
+-targetnotfound <action ID>
+		targets agents that have eiher found or not found results in a previous action.
+		example: -target-found 123456
+
 -v		verbose output, includes debug information and raw queries
+
 -V		print version
+
 -z <bool>       compress action before sending it to agents
 
 Progress information is sent to stderr, silence it with "2>/dev/null".
@@ -99,7 +110,7 @@ func main() {
 	fs.StringVar(&render, "render", "text", "results rendering mode")
 	fs.StringVar(&target, "t", fmt.Sprintf("status='%s' AND mode='daemon'", mig.AgtStatusOnline), "action target")
 	fs.StringVar(&targetfound, "target-found", "", "targets agents that have found results in a previous action.")
-	fs.StringVar(&targetnotfound, "target-foundnothing", "", "targets agents that haven't found results in a previous action.")
+	fs.StringVar(&targetnotfound, "target-notfound", "", "targets agents that haven't found results in a previous action.")
 	fs.StringVar(&expiration, "e", "300s", "expiration")
 	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
 	fs.BoolVar(&verbose, "v", false, "Enable verbose output")
@@ -240,7 +251,7 @@ func main() {
 	}
 	if targetnotfound != "" {
 		targetQuery := fmt.Sprintf(`id NOT IN (select agentid from commands, json_array_elements(commands.results) as `+
-			`r where actionid=%s and r#>>'{foundanything}' = 'true')`, targetnotfound)
+			`r where actionid=%s and r#>>'{foundanything}' = 'false')`, targetnotfound)
 		target = targetQuery + " AND " + target
 	}
 	a.Target = target
