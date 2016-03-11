@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/mozilla/mig-sandbox"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
@@ -26,14 +27,56 @@ import (
 )
 
 type module struct {
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
+func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
+	return m.SandboxProfile
+}
+
 func init() {
-	modules.Register("ping", new(module))
+	m := new(module)
+	sandbox := sandbox.SandboxProfile{
+		DefaultPolicy: sandbox.ActTrap,
+		Filters: []sandbox.FilterOperation{
+			sandbox.FilterOperation{
+				FilterOn: []string{
+					"epoll_ctl",
+					"select",
+					"setsockopt",
+					"close",
+					"socket",
+					"connect",
+					"futex",
+					"getsockname",
+					"getpeername",
+					"write",
+					"epoll_wait",
+					"read",
+					"mmap",
+					"rt_sigprocmask",
+					"mprotect",
+					"openat", // Used for DNS resolution
+					"getsockopt",
+					"clone",
+					"stat",
+					"epoll_create1",
+					"getpid", // Necessary for ICMP ping
+
+					// Used for pretty printing the violating syscall (rare)
+					"exit_group",
+					"rt_sigreturn",
+				},
+				Action: sandbox.ActAllow,
+			},
+		},
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("ping", m)
 }
 
 type run struct {

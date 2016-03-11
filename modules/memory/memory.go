@@ -19,6 +19,7 @@ import (
 	"github.com/mozilla/masche/listlibs"
 	"github.com/mozilla/masche/memaccess"
 	"github.com/mozilla/masche/process"
+	"github.com/mozilla/mig-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"regexp"
@@ -28,14 +29,50 @@ import (
 var debug bool = false
 
 type module struct {
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
+func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
+	return m.SandboxProfile
+}
+
 func init() {
-	modules.Register("memory", new(module))
+	m := new(module)
+	sandbox := sandbox.SandboxProfile{
+		DefaultPolicy: sandbox.ActTrap,
+		Filters: []sandbox.FilterOperation{
+			sandbox.FilterOperation{
+				FilterOn: []string{
+					"openat",
+					"close",
+					"pread64",
+					"read",
+					"futex",
+					"lstat",
+					"sched_yield", // GO
+					"readlinkat",
+					"write",
+					"mmap",
+					"sigaltstack",     // GO
+					"gettid",          // GO
+					"set_robust_list", // GO
+					"getdents64",
+					"clone", // GO
+
+					// Used for pretty printing the violating syscall (rare)
+					"exit_group",
+					"rt_sigreturn",
+				},
+				Action: sandbox.ActAllow,
+			},
+		},
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("memory", m)
 }
 
 type run struct {

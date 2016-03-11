@@ -12,6 +12,7 @@ package netstat /* import "mig.ninja/mig/modules/netstat" */
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mozilla/mig-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"net"
@@ -22,14 +23,46 @@ import (
 )
 
 type module struct {
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
+func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
+	return m.SandboxProfile
+}
+
 func init() {
-	modules.Register("netstat", new(module))
+	m := new(module)
+	sandbox := sandbox.SandboxProfile{
+		DefaultPolicy: sandbox.ActTrap,
+		Filters: []sandbox.FilterOperation{
+			sandbox.FilterOperation{
+				FilterOn: []string{
+					"write",
+					"read",
+					"close",
+					"futex",
+					"openat",
+					"socket",
+					"exit_group",
+					"bind",
+					"sendto",
+					"recvfrom",
+					"getsockname",
+
+					// Used for pretty printing the violating syscall (rare)
+					"exit_group",
+					"rt_sigreturn",
+				},
+				Action: sandbox.ActAllow,
+			},
+		},
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("netstat", m)
 }
 
 type run struct {
