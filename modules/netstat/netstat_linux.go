@@ -584,3 +584,121 @@ func procNetNSEntries(fname string, nsEntrych chan string, nsErrch chan error) {
 	}
 	close(nsEntrych)
 }
+
+// HasSeenIP on linux looks for a matching IP address in /proc/net/arp or
+// in individual processes <pid>/net/arp, and returns its MAC and IP address
+// if found
+func HasSeenIP(val string) (found bool, elements []element, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("HasSeenIP(): %v", e)
+		}
+	}()
+	found = false
+	var ip net.IP
+	var ipnet *net.IPNet
+	// if val contains a /, treat it as a cidr
+	if strings.IndexAny(val, "/") > 0 {
+		ip, ipnet, err = net.ParseCIDR(val)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		ip = net.ParseIP(val)
+		if ip == nil {
+			panic("Invalid IP")
+		}
+	}
+	// test if we have an ipv4
+	if ip.To4() != nil {
+		found, elements, err = hasSeenIP4(ip, ipnet)
+		if err != nil {
+			panic(err)
+		}
+		// or an ipv6
+	} else {
+		found, elements, err = hasSeenIP6(ip, ipnet)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return
+}
+
+func hasSeenIP4(ip net.IP, ipnet *net.IPNet) (found bool, elements []element, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("hasSeenIP4(): %v", e)
+		}
+	}()
+	lns, err := procArpEntries()
+	if err != nil {
+		panic(err)
+	}
+	// if the ipnet is nil, assume that its a full 32bits mask
+	if ipnet == nil {
+		ipnet = new(net.IPNet)
+		ipnet.IP = ip
+		ipnet.Mask = net.CIDRMask(net.IPv4len*8, net.IPv4len*8)
+	}
+	for _, arpent := range lns {
+		fields := strings.Fields(arpent.line)
+		if len(fields) < 4 {
+			continue
+		}
+		remoteIP := net.ParseIP(fields[0])
+		if remoteIP == nil {
+			panic("failed to convert remote IP")
+		}
+		// if we've got a match, store the element
+		if ipnet.Contains(remoteIP) {
+			var el element
+			el.RemoteAddr = remoteIP.String()
+			el.RemoteMACAddr = fields[3]
+			el.Namespace = arpent.nsIdentifier
+			elements = append(elements, el)
+			found = true
+		}
+		stats.Examined++
+	}
+	return
+}
+
+func hasSeenIP6(ip net.IP, ipnet *net.IPNet) (found bool, elements []element, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("hasSeenIP6(): %v", e)
+		}
+	}()
+	lns, err := procArpEntries()
+	if err != nil {
+		panic(err)
+	}
+	// if the ipnet is nil, assume that its a full 128bits mask
+	if ipnet == nil {
+		ipnet = new(net.IPNet)
+		ipnet.IP = ip
+		ipnet.Mask = net.CIDRMask(net.IPv6len*8, net.IPv6len*8)
+	}
+	for _, arpent := range lns {
+		fields := strings.Fields(arpent.line)
+		if len(fields) < 4 {
+			continue
+		}
+		remoteIP := net.ParseIP(fields[0])
+		if remoteIP == nil {
+			panic("failed to convert remote IP")
+		}
+		// if we've got a match, store the element
+		if ipnet.Contains(remoteIP) {
+			var el element
+			el.RemoteAddr = remoteIP.String()
+			el.RemoteMACAddr = fields[3]
+			el.Namespace = arpent.nsIdentifier
+			elements = append(elements, el)
+			found = true
+		}
+		stats.Examined++
+	}
+	return
+}
