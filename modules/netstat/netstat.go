@@ -13,12 +13,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mig.ninja/mig/modules"
 	"net"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"mig.ninja/mig/modules"
 )
 
 type module struct {
@@ -100,6 +101,12 @@ func (r *run) ValidateParameters() (err error) {
 	}
 	for _, val := range r.Parameters.NeighborMAC {
 		err = validateMAC(val)
+		if err != nil {
+			return
+		}
+	}
+	for _, val := range r.Parameters.NeighborIP {
+		err = validateIP(val)
 		if err != nil {
 			return
 		}
@@ -189,7 +196,6 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	}
 
 	els := *newElements()
-
 	for _, val := range r.Parameters.LocalMAC {
 		found, el, err := HasLocalMAC(val)
 		if err != nil {
@@ -206,6 +212,16 @@ func (r *run) Run(in io.Reader) (resStr string) {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
 		}
 		els.NeighborMAC[val] = el
+		if found {
+			r.Results.FoundAnything = true
+		}
+	}
+	for _, val := range r.Parameters.NeighborIP {
+		found, el, err := HasSeenIP(val)
+		if err != nil {
+			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", err))
+		}
+		els.NeighborIP[val] = el
 		if found {
 			r.Results.FoundAnything = true
 		}
@@ -374,6 +390,22 @@ func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []stri
 		}
 		if len(res) == 0 {
 			resStr := fmt.Sprintf("did not find anything for netstat neighbormac:'%s'", val)
+			prints = append(prints, resStr)
+		}
+	}
+
+	for val, res := range el.NeighborIP {
+		if matchOnly && len(res) < 1 {
+			continue
+		}
+		for _, el := range res {
+			resStr := fmt.Sprintf("found neighbor IP %s %s for netstat neighborIP:'%s'",
+				el.RemoteAddr, el.RemoteMACAddr, val)
+			resStr += printNamespaceId(el.Namespace)
+			prints = append(prints, resStr)
+		}
+		if len(res) == 0 {
+			resStr := fmt.Sprintf("did not find anything for netstat neighborIP:'%s'", val)
 			prints = append(prints, resStr)
 		}
 	}
