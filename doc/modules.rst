@@ -441,7 +441,7 @@ An example module that can be used as a template is available in
 `src/mig/modules/example/`_. We will study its structure to understand how
 modules are written and executed.
 
-.. _`src/mig/modules/example/`: https://github.com/mozilla/mig/blob/master/src/mig/modules/example/example.go
+.. _`src/mig/modules/example/`: https://github.com/mozilla/mig/blob/master/modules/example/example.go
 
 Headers and structs
 -------------------
