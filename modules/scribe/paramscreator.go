@@ -10,9 +10,10 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	scribelib "github.com/mozilla/scribe/src/scribe"
 	"os"
 	"strings"
+
+	scribelib "github.com/mozilla/scribe"
 )
 
 func printHelp(isCmd bool) {

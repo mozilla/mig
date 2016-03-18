@@ -11,13 +11,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	scribelib "github.com/mozilla/scribe/src/scribe"
 	"io"
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/modules/file"
 	"runtime"
 	"strconv"
 	"time"
+
+	scribelib "github.com/mozilla/scribe"
+	"mig.ninja/mig/modules"
+	"mig.ninja/mig/modules/file"
 )
 
 var stats statistics
