@@ -1,0 +1,10 @@
+All of these but the City file are JSON dumps of the databases
+created by the GeoIP2 build integration tests
+(TestFor::MM::Integration::GeoIP2::Build).
+
+Additional data was added to match our legacy test databases.
+
+The City file is of unknown origin.
+
+The Precision files is the normal GeoIP2 files with an additional marker
+(128.101.101.101) to differentiate the two.

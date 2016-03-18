@@ -9,12 +9,13 @@ package pkg /* import "mig.ninja/mig/modules/pkg" */
 import (
 	"encoding/json"
 	"fmt"
-	scribelib "github.com/mozilla/scribe/src/scribe"
 	"io"
-	"mig.ninja/mig/modules"
 	"regexp"
 	"runtime"
 	"time"
+
+	scribelib "github.com/mozilla/scribe"
+	"mig.ninja/mig/modules"
 )
 
 var stats Statistics

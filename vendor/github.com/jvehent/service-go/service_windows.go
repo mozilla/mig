@@ -1,11 +1,12 @@
 package service
 
 import (
-	"code.google.com/p/winsvc/eventlog"
-	"code.google.com/p/winsvc/mgr"
-	"code.google.com/p/winsvc/svc"
 	"fmt"
+
 	"github.com/kardianos/osext"
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/eventlog"
+	"golang.org/x/sys/windows/svc/mgr"
 )
 
 func newService(c *Config) (*windowsService, error) {
@@ -142,7 +143,7 @@ func (ws *windowsService) Start() error {
 		return err
 	}
 	defer s.Close()
-	return s.Start([]string{})
+	return s.Start()
 }
 
 func (ws *windowsService) Stop() error {
