@@ -109,10 +109,8 @@ go_vendor_dependencies:
 	$(GOGETTER) github.com/mozilla/masche/listlibs
 	$(GOGETTER) github.com/mozilla/masche/memsearch
 	$(GOGETTER) github.com/mozilla/masche/process
-	$(GOGETTER) github.com/mozilla/scribe/src/scribe
-	# go 1.5 vendoring and submodules don't work well, so comment this deps out
-	# https://github.com/oschwald/geoip2-golang/issues/13
-	#$(GOGETTER) github.com/oschwald/geoip2-golang
+	$(GOGETTER) github.com/mozilla/scribe
+	$(GOGETTER) github.com/oschwald/geoip2-golang
 	$(GOGETTER) github.com/streadway/amqp
 	$(GOGETTER) github.com/gorhill/cronexpr
 	$(GOGETTER) golang.org/x/crypto/openpgp
@@ -123,8 +121,11 @@ go_vendor_dependencies:
 	$(GOGETTER) gopkg.in/gcfg.v1
 	$(GOGETTER) github.com/cheggaaa/pb
 	echo 'removing .git from vendored pkg and moving them to vendor'
-	find .tmpdeps/src -type d -name ".git" ! -name ".gitignore" -exec rm -rf {} \; || exit 0
+	find .tmpdeps/src -name ".git" ! -name ".gitignore" -exec rm -rf {} \; || exit 0
+	[ -d vendor ] && git rm -rf vendor/ || exit 0
+	mkdir vendor/ || exit 0
 	cp -ar .tmpdeps/src/* vendor/
+	git add vendor/
 	rm -rf .tmpdeps
 
 rpm: rpm-agent rpm-scheduler
