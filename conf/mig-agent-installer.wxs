@@ -36,10 +36,17 @@
 				<Directory Id='INSTALLDIR' Name='mig'>
                     <Component Id='MainExecutable' Guid='9525c416-04b8-4bed-9567-ff6fb7dd4ea9'>
                         <File Name='mig-agent-$(var.ProductVersion).exe'
-                              Id='25ac5e4f-3f70-4e21-9389-7e5fcd6fde9d'
+                              Id='MIGAgentBinary'
                               DiskId='1'
                               Source='mig-agent-$(var.ProductVersion).exe'
                               KeyPath='yes'/>
+                    </Component>
+                    <Component Id='MainExecutableShortcut' Guid='1ee43c48-8f05-4a1f-9745-ee1849018d3e'>
+			    <Shortcut Id='MIGAgentShortcut'
+				    Name='mig-agent.exe'
+				    Description='MIG Agent'
+				    Target='[#MIGAgentBinary]'
+				    WorkingDirectory='INSTALLDIR' />
                     </Component>
 			    </Directory>
 			</Directory>
@@ -47,16 +54,7 @@
 
 		<Feature Id='Complete' Level='1'>
 			<ComponentRef Id='MainExecutable' />
+			<ComponentRef Id='MainExecutableShortcut' />
 		</Feature>
-        <!--
-        <Binary Id="MIGAgent" SourceFile="mig-agent-$(var.ProductVersion).exe" />
-		<CustomAction Id='ExecMigAgent'
-					  Execute='deferred'
-					  BinaryKey="MIGAgent"
-					  Return='ignore'/>
-		<InstallExecuteSequence>
-			<Custom Action='ExecMigAgent' Before="InstallFinalize"/>
-		</InstallExecuteSequence>
-        -->
 	</Product>
 </Wix>
