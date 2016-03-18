@@ -2,6 +2,6 @@ language: go
 notifications:
     email: false
 go:
-    - 1.4.2
+    - 1.6
 script:
-    - make runtests
+    - make
