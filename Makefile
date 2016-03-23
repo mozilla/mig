@@ -32,6 +32,7 @@ BINDIR		:= bin/$(OS)/$(ARCH)
 AGTCONF		:= conf/mig-agent-conf.go.inc
 LOADERCONF	:= conf/mig-loader-conf.go.inc
 MSICONF		:= mig-agent-installer.wxs
+SIGNFLAGS	:=
 
 GCC			:= gcc
 CFLAGS		:=
@@ -311,7 +312,9 @@ osx-loader-pkg:
 	       $(INSTALL) -m 0755 tools/osx-loader-pkg-postinstall.sh $${scriptstmp}/postinstall && \
 	       $(INSTALL) -m 0644 tools/com.mozilla.mig-loader.plist $${tmpdir}/Library/LaunchAgents/com.mozilla.mig-loader.plist && \
 	       pkgbuild --root $${tmpdir} --identifier org.mozilla.mig-loader --version $(BUILDREV) \
-	       --ownership recommended --scripts $${scriptstmp} ./mig-loader-$(BUILDREV)-darwin.pkg && \
+	       --ownership recommended --scripts $${scriptstmp} \
+	       $(SIGNFLAGS) \
+	       ./mig-loader-$(BUILDREV)-darwin.pkg && \
 	       rm -rf $${tmpdir} && \
 	       rm -rf $${scriptstmp}
 
