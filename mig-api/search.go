@@ -73,6 +73,8 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		results, err = ctx.DB.SearchCommands(p, filterFound)
 	case "investigator":
 		results, err = ctx.DB.SearchInvestigators(p)
+	case "manifest":
+		results, err = ctx.DB.SearchManifests(p)
 	default:
 		panic("search type is invalid")
 	}
@@ -198,6 +200,24 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 					break
 				}
 			}
+		case "manifest":
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d manifests", len(results.([]mig.ManifestRecord)))}
+			if len(results.([]mig.ManifestRecord)) == 0 {
+				panic("no results found")
+			}
+			for i, r := range results.([]mig.ManifestRecord) {
+				err = resource.AddItem(cljs.Item{
+					Href: fmt.Sprintf("%s%s/manifest?manifestid=%.0f",
+						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
+					Data: []cljs.Data{{Name: p.Type, Value: r}},
+				})
+				if err != nil {
+					panic(err)
+				}
+				if float64(i) > p.Limit {
+					break
+				}
+			}
 		}
 	}
 	// if needed, add pagination info
@@ -284,6 +304,10 @@ func parseSearchParameters(qp url.Values) (p migdbsearch.Parameters, filterFound
 			if err != nil {
 				panic("invalid limit parameter")
 			}
+		case "manifestname":
+			p.ManifestName = qp["manifestname"][0]
+		case "manifestid":
+			p.ManifestID = qp["manifestid"][0]
 		case "offset":
 			p.Offset, err = strconv.ParseFloat(qp["offset"][0], 64)
 			if err != nil {

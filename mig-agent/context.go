@@ -14,18 +14,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jvehent/service-go"
-	"github.com/kardianos/osext"
 	"github.com/streadway/amqp"
 	"io/ioutil"
 	mrand "math/rand"
 	"mig.ninja/mig"
+	"mig.ninja/mig/mig-agent/agentcontext"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -78,7 +76,9 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initAgent() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
+		if ctx.Channels.Log != nil {
+			ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
+		}
 	}()
 	ctx.Agent.Tags = TAGS
 
@@ -102,53 +102,38 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "Logging routine initialized."}.Debug()
 
+	// Gather new agent context information to use as the context for this
+	// agent invocation
+	hints := agentcontext.AgentContextHints{
+		DiscoverPublicIP: DISCOVERPUBLICIP,
+		DiscoverAWSMeta:  DISCOVERAWSMETA,
+		APIUrl:           APIURL,
+		Proxies:          PROXIES[:],
+	}
+	actx, err := agentcontext.NewAgentContext(ctx.Channels.Log, hints)
+	if err != nil {
+		panic(err)
+	}
+
 	// defines whether the agent should respawn itself or not
 	// this value is overriden in the daemonize calls if the agent
 	// is controlled by systemd, upstart or launchd
 	ctx.Agent.Respawn = ISIMMORTAL
 
-	// get the path of the executable
-	ctx.Agent.BinPath, err = osext.Executable()
-	if err != nil {
-		panic(err)
-	}
-
-	// retrieve the hostname
-	ctx, err = findHostname(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// retrieve information about the operating system
-	ctx.Agent.Env.OS = runtime.GOOS
-	ctx.Agent.Env.Arch = runtime.GOARCH
-	ctx, err = findOSInfo(ctx)
-	if err != nil {
-		panic(err)
-	}
-	ctx, err = findLocalIPs(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// Attempt to discover the public IP
-	if DISCOVERPUBLICIP {
-		ctx, err = findPublicIP(ctx)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	// Discover AWS instance metadata
-	if DISCOVERAWSMETA {
-		ctx, err = addAWSMetadata(ctx)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	// find the run directory
-	ctx.Agent.RunDir = getRunDir()
+	// Assign the values based on the context we retrieved
+	ctx.Agent.BinPath = actx.BinPath
+	ctx.Agent.Hostname = actx.Hostname
+	ctx.Agent.RunDir = actx.RunDir
+	ctx.Agent.Env.OS = actx.OS
+	ctx.Agent.Env.Arch = actx.Architecture
+	ctx.Agent.Env.Ident = actx.OSIdent
+	ctx.Agent.Env.Init = actx.Init
+	ctx.Agent.Env.Addresses = actx.Addresses
+	ctx.Agent.Env.PublicIP = actx.PublicIP
+	ctx.Agent.Env.AWS.InstanceID = actx.AWS.InstanceID
+	ctx.Agent.Env.AWS.LocalIPV4 = actx.AWS.LocalIPV4
+	ctx.Agent.Env.AWS.AMIID = actx.AWS.AMIID
+	ctx.Agent.Env.AWS.InstanceType = actx.AWS.InstanceType
 
 	// get the agent ID
 	ctx, err = initAgentID(ctx)
@@ -575,44 +560,4 @@ func serviceDeploy(orig_ctx Context) (ctx Context, err error) {
 	}
 	ctx.Channels.Log <- mig.Log{Desc: "Started mig-agent service"}.Info()
 	return
-}
-
-// cleanString removes spaces, quotes and newlines
-func cleanString(str string) string {
-	if len(str) < 1 {
-		return str
-	}
-	if str[len(str)-1] == '\n' {
-		str = str[0 : len(str)-1]
-	}
-	// remove heading whitespaces and quotes
-	for {
-		if len(str) < 2 {
-			break
-		}
-		switch str[0] {
-		case ' ', '"', '\'':
-			str = str[1:len(str)]
-		default:
-			goto trailing
-		}
-	}
-trailing:
-	// remove trailing whitespaces, quotes and linebreaks
-	for {
-		if len(str) < 2 {
-			break
-		}
-		switch str[len(str)-1] {
-		case ' ', '"', '\'', '\r', '\n':
-			str = str[0 : len(str)-1]
-		default:
-			goto exit
-		}
-	}
-exit:
-	// remove in-string linebreaks
-	str = strings.Replace(str, "\n", " ", -1)
-	str = strings.Replace(str, "\r", " ", -1)
-	return str
 }

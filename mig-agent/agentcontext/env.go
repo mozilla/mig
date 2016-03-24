@@ -4,7 +4,7 @@
 //
 // Contributor:
 // - Julien Vehent jvehent@mozilla.com [:ulfr]
-package main
+package agentcontext
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ import (
 )
 
 // findLocalIPs updates the given context with the IP Addresses found in the machine.
-func findLocalIPs(orig_ctx Context) (ctx Context, err error) {
+func findLocalIPs(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	// grab the local ip addresses
 	addresses, err := net.InterfaceAddrs()
@@ -29,44 +29,44 @@ func findLocalIPs(orig_ctx Context) (ctx Context, err error) {
 		if addr.String() == "127.0.0.1/8" || addr.String() == "::1/128" {
 			continue
 		}
-		ctx.Agent.Env.Addresses = append(ctx.Agent.Env.Addresses, addr.String())
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Found local address %s", addr.String())}.Debug()
+		ctx.Addresses = append(ctx.Addresses, addr.String())
+		logChan <- mig.Log{Desc: fmt.Sprintf("Found local address %s", addr.String())}.Debug()
 	}
 	return
 }
 
 // findPublicIP queries the ip endpoint of the mig api to discover the
 // public ip of the agent
-func findPublicIP(orig_ctx Context) (ctx Context, err error) {
+func findPublicIP(orig_ctx AgentContext, hints AgentContextHints) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 
 	tr := &http.Transport{
 		Dial: (&net.Dialer{Timeout: 10 * time.Second}).Dial,
 	}
 	client := &http.Client{Transport: tr}
-	resp, err := client.Get(APIURL + "/ip")
+	resp, err := client.Get(hints.APIUrl + "/ip")
 	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Public IP retrieval from API failed. Trying with proxy next. Error was: %v", err)}.Info()
+		logChan <- mig.Log{Desc: fmt.Sprintf("Public IP retrieval from API failed. Trying with proxy next. Error was: %v", err)}.Info()
 	} else {
 		goto parseBody
 	}
-	for _, proxy := range PROXIES {
+	for _, proxy := range hints.Proxies {
 		pu, err := url.Parse("http://" + proxy)
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to parse proxy url http://%s - %v", proxy, err)}.Info()
+			logChan <- mig.Log{Desc: fmt.Sprintf("Failed to parse proxy url http://%s - %v", proxy, err)}.Info()
 			continue
 		}
 		tr.Proxy = http.ProxyURL(pu)
-		resp, err = client.Get(APIURL + "/ip")
+		resp, err = client.Get(hints.APIUrl + "/ip")
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Public IP retrieval failed through proxy http://%s - %v", proxy, err)}.Info()
+			logChan <- mig.Log{Desc: fmt.Sprintf("Public IP retrieval failed through proxy http://%s - %v", proxy, err)}.Info()
 			continue
 		} else {
 			goto parseBody
 		}
 	}
 	// exit here if no connection succeeded
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to retrieve public ip from api: %v", err)}.Err()
+	logChan <- mig.Log{Desc: fmt.Sprintf("Failed to retrieve public ip from api: %v", err)}.Err()
 	return
 
 parseBody:
@@ -75,10 +75,10 @@ parseBody:
 	ip := net.ParseIP(string(body))
 	if ip == nil {
 		err = fmt.Errorf("Public IP API returned bad results")
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+		logChan <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
 		return
 	}
-	ctx.Agent.Env.PublicIP = ip.String()
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Found public ip %s", ctx.Agent.Env.PublicIP)}.Debug()
+	ctx.PublicIP = ip.String()
+	logChan <- mig.Log{Desc: fmt.Sprintf("Found public ip %s", ctx.PublicIP)}.Debug()
 	return
 }

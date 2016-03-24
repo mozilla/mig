@@ -87,7 +87,8 @@ func main() {
 	for {
 		// completion
 		var symbols = []string{"action", "agent", "create", "command", "help", "history",
-			"exit", "showcfg", "status", "investigator", "search", "query", "where", "and"}
+			"exit", "manifest", "showcfg", "status", "investigator", "search", "query",
+			"where", "and"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -130,6 +131,8 @@ func main() {
 					err = actionLauncher(a, cli)
 				case "investigator":
 					err = investigatorCreator(cli)
+				case "manifest":
+					err = manifestCreator(cli)
 				default:
 					fmt.Printf("unknown order 'create %s'\n", orders[1])
 				}
@@ -153,11 +156,13 @@ action <id>		enter interactive action reader mode for action <id>
 agent <id>		enter interactive agent reader mode for agent <id>
 create action		create a new action
 create investigator	create a new investigator, will prompt for name and public key
+create manifest         create a new manifest
 command <id>		enter command reader mode for command <id>
 exit			leave
 help			show this help
 history <count>		print last <count> entries in history. count=10 by default.
 investigator <id>	enter interactive investigator management mode for investigator <id>
+manifest <id>           enter manifest management mode for manifest <id>
 query <uri>		send a raw query string, without the base url, to the api
 search <search>		perform a search. see "search help" for more information.
 showcfg			display running configuration
@@ -177,6 +182,11 @@ status			display platform status: connected agents, latest actions, ...
 			}
 		case "investigator":
 			err = investigatorReader(input, cli)
+			if err != nil {
+				log.Println(err)
+			}
+		case "manifest":
+			err = manifestReader(input, cli)
 			if err != nil {
 				log.Println(err)
 			}

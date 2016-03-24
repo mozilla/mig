@@ -30,7 +30,9 @@ PREFIX		:= /usr/local/
 DESTDIR		:= /
 BINDIR		:= bin/$(OS)/$(ARCH)
 AGTCONF		:= conf/mig-agent-conf.go.inc
+LOADERCONF	:= conf/mig-loader-conf.go.inc
 MSICONF		:= mig-agent-installer.wxs
+SIGNFLAGS	:=
 
 GCC			:= gcc
 CFLAGS		:=
@@ -45,7 +47,7 @@ INSTALL		:= install
 
 
 all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-action-generator mig-action-verifier worker-agent-intel \
-	runner-compliance runner-scribe
+	runner-compliance runner-scribe mig-loader
 
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
@@ -71,6 +73,13 @@ mig-runner: create-bindir
 
 mig-action-generator: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
+
+mig-loader: create-bindir
+	if [ ! -r $(LOADERCONF) ]; then echo "$(LOADERCONF) configuration file does not exist" ; exit 1; fi
+	# test if the loader configuration variable contains something different than the default value
+	# and if so, replace the link to the default configuration with the provided configuration
+	if [ $(LOADERCONF) != "conf/mig-loader-conf.go.inc" ]; then rm mig-loader/configuration.go; cp $(LOADERCONF) mig-loader/configuration.go; fi
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader $(GOLDFLAGS) mig.ninja/mig/mig-loader
 
 mig-action-verifier: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
@@ -136,8 +145,8 @@ rpm-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/lib/mig
-	make agent-install-script
-	make agent-remove-script
+	make agent-install-script-linux
+	make agent-remove-script-linux
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
@@ -147,11 +156,20 @@ deb-agent: mig-agent
 	rm -fr tmp
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p tmp/var/lib/mig
-	make agent-install-script
-	make agent-remove-script
+	make agent-install-script-linux
+	make agent-remove-script-linux
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
+		-s dir -t deb .
+
+deb-loader: mig-loader
+	rm -fr tmp
+	$(INSTALL) -D -m 0755 $(BINDIR)/mig-loader tmp/sbin/mig-loader
+	$(MKDIR) -p tmp/var/lib/mig
+	$(MKDIR) -p tmp/etc/mig
+	fpm -C tmp -n mig-loader --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent Loader" \
+		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		-s dir -t deb .
 
 dmg-agent: mig-agent
@@ -159,11 +177,11 @@ ifneq ($(OS),darwin)
 	echo 'you must be on MacOS and set OS=darwin on the make command line to build an OSX package'
 else
 	rm -fr tmp tmpdmg
-	mkdir 'tmp' 'tmp/sbin' 'tmpdmg'
-	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
+	mkdir -p tmp/usr/local/bin
+	mkdir tmpdmg
+	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/usr/local/bin/mig-agent-$(BUILDREV)
 	$(MKDIR) -p 'tmp/Library/Preferences/mig/'
-	make agent-install-script
-	make agent-remove-script
+	make agent-install-script-osx
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-install tmp/agent_install.sh \
@@ -172,14 +190,21 @@ else
 		-o ./mig-agent-$(BUILDREV)-$(FPMARCH).dmg tmpdmg
 endif
 
-agent-install-script:
-	echo '#!/bin/sh'															> tmp/agent_install.sh
-	echo 'chmod 500 /sbin/mig-agent-$(BUILDREV)'								>> tmp/agent_install.sh
-	echo 'chown root:root /sbin/mig-agent-$(BUILDREV)'							>> tmp/agent_install.sh
-	echo 'rm /sbin/mig-agent; ln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent'>> tmp/agent_install.sh
+agent-install-script-linux:
+	echo '#!/bin/sh'								> tmp/agent_install.sh
+	echo 'chmod 500 /sbin/mig-agent-$(BUILDREV)'					>> tmp/agent_install.sh
+	echo 'chown root:root /sbin/mig-agent-$(BUILDREV)'				>> tmp/agent_install.sh
+	echo 'rm /sbin/mig-agent; ln -s /sbin/mig-agent-$(BUILDREV) /sbin/mig-agent'	>> tmp/agent_install.sh
 	chmod 0755 tmp/agent_install.sh
 
-agent-remove-script:
+agent-install-script-osx:
+	echo '#!/bin/sh'											> tmp/agent_install.sh
+	echo 'chmod 500 /usr/local/bin/mig-agent-$(BUILDREV)'							>> tmp/agent_install.sh
+	echo 'chown root:root /usr/local/bin/mig-agent-$(BUILDREV)'						>> tmp/agent_install.sh
+	echo 'rm /usr/local/bin/mig-agent; ln -s /usr/local/bin/mig-agent-$(BUILDREV) /usr/local/bin/mig-agent' >> tmp/agent_install.sh
+	chmod 0755 tmp/agent_install.sh
+
+agent-remove-script-linux:
 	echo '#!/bin/sh'																> tmp/agent_remove.sh
 	echo 'for f in "/etc/cron.d/mig-agent" "/etc/init/mig-agent.conf" "/etc/init.d/mig-agent" "/etc/systemd/system/mig-agent.service"; do' >> tmp/agent_remove.sh
 	echo '    [ -e "$$f" ] && rm -f "$$f"'											>> tmp/agent_remove.sh
@@ -263,6 +288,36 @@ deb-server: mig-scheduler mig-api mig-runner worker-agent-intel
 	fpm -C tmp -n mig-server --license GPL --vendor mozilla --description "Mozilla InvestiGator Server" \
 		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
 
+install: install-server install-client
+
+install-server:
+	$(INSTALL) -m 0755 $(BINDIR)/mig-scheduler $(PREFIX)/bin/mig-scheduler
+	$(INSTALL) -m 0755 $(BINDIR)/mig-api $(PREFIX)/bin/mig-api
+	$(INSTALL) -m 0755 $(BINDIR)/mig-runner $(PREFIX)/bin/mig-runner
+	$(INSTALL) -m 0755 $(BINDIR)/mig-worker-agent-intel $(PREFIX)/bin/mig-worker-agent-intel
+
+install-client:
+	$(INSTALL) -m 0755 $(BINDIR)/mig $(PREFIX)/bin/mig
+	$(INSTALL) -m 0755 $(BINDIR)/mig-console $(PREFIX)/bin/mig-console
+	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-search $(PREFIX)/bin/mig-agent-search
+
+osx-loader-pkg:
+	tmpdir=$$(mktemp -d) && \
+	       scriptstmp=$$(mktemp -d) && \
+	       $(INSTALL) -m 0755 -d $${tmpdir}/usr/local/bin && \
+	       $(INSTALL) -m 0750 -d $${tmpdir}/etc/mig && \
+	       $(INSTALL) -m 0755 -d $${tmpdir}/Library/LaunchAgents && \
+	       $(INSTALL) -m 0755 $(BINDIR)/mig-loader $${tmpdir}/usr/local/bin/mig-loader && \
+	       touch $${tmpdir}/etc/mig/mig-loader.key && \
+	       $(INSTALL) -m 0755 tools/osx-loader-pkg-postinstall.sh $${scriptstmp}/postinstall && \
+	       $(INSTALL) -m 0644 tools/com.mozilla.mig-loader.plist $${tmpdir}/Library/LaunchAgents/com.mozilla.mig-loader.plist && \
+	       pkgbuild --root $${tmpdir} --identifier org.mozilla.mig-loader --version $(BUILDREV) \
+	       --ownership recommended --scripts $${scriptstmp} \
+	       $(SIGNFLAGS) \
+	       ./mig-loader-$(BUILDREV)-darwin.pkg && \
+	       rm -rf $${tmpdir} && \
+	       rm -rf $${scriptstmp}
+
 doc:
 	make -C doc doc
 
@@ -271,6 +326,7 @@ test:  test-modules
 	$(GO) test mig.ninja/mig/mig-scheduler/...
 	$(GO) test mig.ninja/mig/mig-api/...
 	$(GO) test mig.ninja/mig/mig-runner/...
+	$(GO) test mig.ninja/mig/mig-loader/...
 	$(GO) test mig.ninja/mig/client/...
 	$(GO) test mig.ninja/mig/database/...
 	$(GO) test mig.ninja/mig/workers/...

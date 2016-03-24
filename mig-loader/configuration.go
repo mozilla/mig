@@ -1,0 +1,1 @@
+../conf/mig-loader-conf.go.inc

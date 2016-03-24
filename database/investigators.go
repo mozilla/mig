@@ -45,8 +45,10 @@ func (db *DB) ActiveInvestigatorsKeys() (keys [][]byte, err error) {
 
 // InvestigatorByID searches the database for an investigator with a given ID
 func (db *DB) InvestigatorByID(iid float64) (inv mig.Investigator, err error) {
-	err = db.c.QueryRow("SELECT id, name, pgpfingerprint, publickey, status, createdat, lastmodified FROM investigators WHERE id=$1",
-		iid).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status, &inv.CreatedAt, &inv.LastModified)
+	err = db.c.QueryRow(`SELECT id, name, pgpfingerprint, publickey, status,
+		createdat, lastmodified, isadmin FROM investigators WHERE id=$1`,
+		iid).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey,
+		&inv.Status, &inv.CreatedAt, &inv.LastModified, &inv.IsAdmin)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving investigator: '%v'", err)
 		return
@@ -61,10 +63,11 @@ func (db *DB) InvestigatorByID(iid float64) (inv mig.Investigator, err error) {
 // has a given fingerprint
 func (db *DB) InvestigatorByFingerprint(fp string) (inv mig.Investigator, err error) {
 	err = db.c.QueryRow(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
-		investigators.publickey, investigators.status, investigators.createdat, investigators.lastmodified
+		investigators.publickey, investigators.status, investigators.createdat,
+		investigators.lastmodified, investigators.isadmin
 		FROM investigators WHERE LOWER(pgpfingerprint)=LOWER($1)`,
 		fp).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status,
-		&inv.CreatedAt, &inv.LastModified)
+		&inv.CreatedAt, &inv.LastModified, &inv.IsAdmin)
 	if err != nil && err != sql.ErrNoRows {
 		err = fmt.Errorf("Error while finding investigator: '%v'", err)
 		return
@@ -79,7 +82,8 @@ func (db *DB) InvestigatorByFingerprint(fp string) (inv mig.Investigator, err er
 //InvestigatorByActionID returns the list of investigators that signed a given action
 func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err error) {
 	rows, err := db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
-		investigators.status, investigators.createdat, investigators.lastmodified
+		investigators.status, investigators.createdat, investigators.lastmodified,
+		investigators.isadmin
 		FROM investigators, signatures
 		WHERE signatures.actionid=$1
 		AND signatures.investigatorid=investigators.id`, aid)
@@ -92,7 +96,7 @@ func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err 
 	}
 	for rows.Next() {
 		var inv mig.Investigator
-		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status, &inv.CreatedAt, &inv.LastModified)
+		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status, &inv.CreatedAt, &inv.LastModified, &inv.IsAdmin)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve investigator data: '%v'", err)
 			return
@@ -110,7 +114,7 @@ func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err 
 func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) {
 	_, err = db.c.Exec(`INSERT INTO investigators
 		(name, pgpfingerprint, publickey, status, createdat, lastmodified)
-		VALUES ($1, $2, $3, 'active', $4, $5 )`,
+		VALUES ($1, $2, $3, 'active', $4, $5)`,
 		inv.Name, inv.PGPFingerprint, inv.PublicKey, time.Now().UTC(), time.Now().UTC())
 	if err != nil {
 		if err.Error() == `pq: duplicate key value violates unique constraint "investigators_pgpfingerprint_idx"` {
