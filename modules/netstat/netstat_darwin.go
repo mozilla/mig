@@ -173,3 +173,9 @@ func HasListeningPort(port string) (found bool, elements []element, err error) {
 	err = fmt.Errorf("HasListeningPort() is not implemented on %s", runtime.GOOS)
 	return
 }
+
+func HasSeenIP(val string) (found bool, elements []element, err error) {
+	// XXX Currently not implemented for darwin.
+	err = fmt.Errorf("HasSeenIP(): operation is not implemented on darwin")
+	return
+}
