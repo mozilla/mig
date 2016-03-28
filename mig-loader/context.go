@@ -25,6 +25,21 @@ type Context struct {
 	Logging mig.Logging
 }
 
+func getLoggingConf() (ret mig.Logging, err error) {
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+		return getLoggingConfPosix()
+	}
+	err = fmt.Errorf("unable to obtain logging configuration for platform")
+	return
+}
+
+func getLoggingConfPosix() (ret mig.Logging, err error) {
+	ret.Mode = "file"
+	ret.Level = "info"
+	ret.File = "/var/log/mig-loader.log"
+	return
+}
+
 func serviceDeployInterval() error {
 	svc, err := service.NewService("mig-loader", "MIG Loader", "Mozilla InvestiGator Loader")
 	if err != nil {

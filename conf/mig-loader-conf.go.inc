@@ -5,10 +5,6 @@
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 package main
 
-import(
-	"mig.ninja/mig"
-)
-
 // some tags that are useful to differentiate agents. You can add whatever
 // you want in this struct, it will be sent by the agent in each heartbeat
 var TAGS = struct {
@@ -25,15 +21,6 @@ var DISCOVERAWSMETA = true
 
 // loader key
 var LOADERKEY = "secret"
-
-var LOGGINGCONF = mig.Logging{
-	Mode:	"stdout",	// stdout | file | syslog
-	Level:	"debug",	// debug | info | ...
-	//File:	"/tmp/migagt.log",
-	//Host:	"syslog_hostname",
-	//Port:	514,
-	//Protocol: "udp",
-}
 
 // location of the MIG API, used for discovering the public IP
 var APIURL string = "http://localhost:1664/api/v1/"

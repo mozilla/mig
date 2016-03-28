@@ -18,10 +18,10 @@ func runTriggers() (err error) {
 			err = fmt.Errorf("runTriggers() -> %v", e)
 		}
 	}()
-	ctx.Channels.Log <- mig.Log{Desc: "running triggers due to modification"}
+	logInfo("running triggers due to modification")
 	err = terminateAgent()
 	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v (ignored)", err)}
+		logInfo("%v (ignored)", err)
 	}
 	err = agentServices()
 	if err != nil {
