@@ -17,6 +17,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/jvehent/cljs"
 	"io"
@@ -493,8 +494,14 @@ func loadLoaderKey() error {
 }
 
 func main() {
-	var err error
+	var (
+		initialMode bool
+		err         error
+	)
 	runtime.GOMAXPROCS(1)
+
+	flag.BoolVar(&initialMode, "i", false, "initialization mode")
+	flag.Parse()
 
 	err = loaderInitializePath()
 	if err != nil {
@@ -529,6 +536,15 @@ func main() {
 		wg.Done()
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "logging routine started"}
+
+	// Do any service installation that might be required for this platform
+	if initialMode {
+		err = serviceDeploy()
+		if err != nil {
+			logError("%v", err)
+			doExit(1)
+		}
+	}
 
 	// Get our current status from the file system.
 	have, err := initializeHaveBundle()
