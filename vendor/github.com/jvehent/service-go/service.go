@@ -20,6 +20,9 @@ func NewService(name, displayName, description string) (Service, error) {
 type Config struct {
 	Name, DisplayName, Description string
 
+	DarwinIntervalJob bool // Job is an interval job in launchd
+	DarwinInterval    int  // Interval to use for interval job
+
 	UserName  string   // Run as username.
 	Arguments []string // Run with arguments.
 
@@ -88,6 +91,7 @@ type Service interface {
 	Installer
 	Controller
 	Runner
+	Parameters
 	Logger
 	String() string
 }
@@ -102,6 +106,15 @@ type Runner interface {
 	// an error from Run.
 	// Both callbacks should return quickly and not block.
 	Run(onStart, onStop func() error) error
+}
+
+// Functions that control the parameters applied to a service
+type Parameters interface {
+	// Mark as service as an interval type service rather than a
+	// persistently running service.
+	//
+	// XXX Only applicable for Darwin launchd services.
+	IntervalMode(int) error
 }
 
 // Simple install and remove commands.
