@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	"code.google.com/p/winsvc/eventlog"
 )
@@ -26,10 +27,12 @@ type Logging struct {
 	// configuration
 	Mode, Level, File, Host, Protocol, Facility string
 	Port                                        int
+	MaxFileSize                                 int64
 	// internal
-	logmode int
-	maxlvl  int
-	fd      *eventlog.Log
+	logmode      int
+	maxlvl       int
+	fd           *eventlog.Log
+	rotateWriter rotateLogWriter
 }
 
 // Log defines a log entry
@@ -93,6 +96,83 @@ func (l Log) Debug() (mlog Log) {
 	mlog = l
 	mlog.Priority = 999
 	mlog.Sev = "debug"
+	return
+}
+
+// Custom type to satisfy io.Writer to use as file logging output, handles
+// log file rotation
+type rotateLogWriter struct {
+	sync.Mutex
+	filename string
+	fd       *os.File
+	maxBytes int64 // Maximum size for log file, 0 means no rotation
+}
+
+func (r *rotateLogWriter) new(filename string, maxbytes int64) error {
+	r.filename = filename
+	r.maxBytes = maxbytes
+	return r.initAndCheck()
+}
+
+func (r *rotateLogWriter) Write(output []byte) (int, error) {
+	var err error
+	err = r.initAndCheck()
+	if err != nil {
+		return 0, err
+	}
+	return r.fd.Write(output)
+}
+
+func (r *rotateLogWriter) initAndCheck() (err error) {
+	defer func() {
+		r.Unlock()
+		if e := recover(); e != nil {
+			err = fmt.Errorf("initAndCheck() -> %v", e)
+		}
+	}()
+	r.Lock()
+	// If we haven't initialized yet, open the log file
+	if r.fd == nil {
+		r.fd, err = os.OpenFile(r.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0640)
+		if err != nil {
+			panic(err)
+		}
+	}
+	// If the maximum file size is set to 0 we will never rotate
+	if r.maxBytes == 0 {
+		return nil
+	}
+	// Check the size of the existing log file, and rotate it if required.
+	// We only keep the current log file and one older one.
+	var fi os.FileInfo
+	fi, err = r.fd.Stat()
+	if err != nil {
+		panic(err)
+	}
+	if fi.Size() < r.maxBytes {
+		return
+	}
+	// Rotate the log and reinitialize it
+	// If the old file already exists remove it
+	rotatefile := r.filename + ".1"
+	_, err = os.Stat(rotatefile)
+	if err == nil || !os.IsNotExist(err) {
+		err = os.Remove(rotatefile)
+		if err != nil {
+			panic(err)
+		}
+	}
+	// Rename existing log file
+	err = os.Rename(r.filename, rotatefile)
+	if err != nil {
+		panic(err)
+	}
+	// Close existing descriptor and reinitialize
+	r.fd.Close()
+	r.fd, err = os.OpenFile(r.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0640)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
@@ -188,11 +268,11 @@ func initLogFile(orig_logctx Logging) (logctx Logging, err error) {
 	}()
 
 	logctx = orig_logctx
-	fd, err := os.OpenFile(logctx.File, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0640)
+	err = logctx.rotateWriter.new(logctx.File, logctx.MaxFileSize)
 	if err != nil {
 		panic(err)
 	}
-	log.SetOutput(fd)
+	log.SetOutput(&logctx.rotateWriter)
 	return
 }
 

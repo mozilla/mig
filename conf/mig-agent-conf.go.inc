@@ -38,6 +38,7 @@ var LOGGINGCONF = mig.Logging{
 	Mode:	"stdout",	// stdout | file | syslog
 	Level:	"debug",	// debug | info | ...
 	//File:	"/tmp/migagt.log",
+	//MaxFileSize: 0,
 	//Host:	"syslog_hostname",
 	//Port:	514,
 	//Protocol: "udp",

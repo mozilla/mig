@@ -42,6 +42,7 @@
 
 ; for file logging
 ;   file = "mig_scheduler.log"
+;   maxfilesize = 0 ; if > 0, log file will be rotated once it reaches size
 
 ; for syslog, logs go into local3
 ;    host   = "localhost"

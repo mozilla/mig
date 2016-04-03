@@ -37,6 +37,7 @@ func getLoggingConfPosix() (ret mig.Logging, err error) {
 	ret.Mode = "file"
 	ret.Level = "info"
 	ret.File = "/var/log/mig-loader.log"
+	ret.MaxFileSize = 10485760
 	return
 }
 
