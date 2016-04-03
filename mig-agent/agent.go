@@ -459,6 +459,10 @@ func getCommands(ctx Context) (err error) {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("received message. queued in position %d", len(ctx.Channels.NewCommand))}
 	}
 	ctx.Channels.Log <- mig.Log{Desc: "closing getCommands goroutine"}.Emerg()
+	// If the getCommands goroutine fails, we have no way to receive incoming AMQP
+	// messages. Treat this in the same way we treat publication failures, and send
+	// a termination note.
+	ctx.Channels.Terminate <- "Collection from relay is failing"
 	return
 }
 
