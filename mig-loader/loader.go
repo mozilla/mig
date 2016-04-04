@@ -223,7 +223,8 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) (err error) {
 	//
 	// Append .loader to the file name to use as the staged file path.
 	reppath := entry.Path + ".loader"
-	fd, err := os.OpenFile(reppath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0700)
+	fd, err := os.OpenFile(reppath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
+		entry.Perm)
 	if err != nil {
 		panic(err)
 	}
@@ -334,14 +335,37 @@ func checkEntry(entry mig.BundleDictionaryEntry) (err error) {
 	logInfo("we have %v", hv)
 	logInfo("they have %v", compare.SHA256)
 	if entry.SHA256 == compare.SHA256 {
-		logInfo("nothing to do here")
-		return
+		logInfo("we have correct file, no need to replace")
+		return entryPermCheck(entry)
 	}
 	haveChanges = true
 	logInfo("refreshing %v", entry.Name)
 	err = fetchAndReplace(entry, compare.SHA256)
 	if err != nil {
 		panic(err)
+	}
+	return
+}
+
+// Check the file permissions set on a bundle entry and if they are
+// incorrect fix the permissions
+func entryPermCheck(entry mig.BundleDictionaryEntry) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("entryPermCheck() -> %v", e)
+		}
+	}()
+	var fi os.FileInfo
+	fi, err = os.Stat(entry.Path)
+	if err != nil {
+		panic(err)
+	}
+	if fi.Mode() != entry.Perm {
+		logInfo("%v has incorrect permissions, fixing", entry.Path)
+		err = os.Chmod(entry.Path, entry.Perm)
+		if err != nil {
+			panic(err)
+		}
 	}
 	return
 }

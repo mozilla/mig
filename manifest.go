@@ -324,22 +324,23 @@ type BundleDictionaryEntry struct {
 	Path          string
 	SHA256        string
 	TransformFunc func([]byte) []byte
+	Perm          os.FileMode
 }
 
 var bundleEntryLinux = []BundleDictionaryEntry{
-	{"mig-agent", "/sbin/mig-agent", "", nil},
-	{"configuration", "/etc/mig/mig-agent.cfg", "", TransformAMQPAuth},
-	{"agentcert", "/etc/mig/agent.crt", "", nil},
-	{"agentkey", "/etc/mig/agent.key", "", nil},
-	{"cacert", "/etc/mig/ca.crt", "", nil},
+	{"mig-agent", "/sbin/mig-agent", "", nil, 0700},
+	{"configuration", "/etc/mig/mig-agent.cfg", "", TransformAMQPAuth, 0600},
+	{"agentcert", "/etc/mig/agent.crt", "", nil, 0644},
+	{"agentkey", "/etc/mig/agent.key", "", nil, 0600},
+	{"cacert", "/etc/mig/ca.crt", "", nil, 0644},
 }
 
 var bundleEntryDarwin = []BundleDictionaryEntry{
-	{"mig-agent", "/usr/local/bin/mig-agent", "", nil},
-	{"configuration", "/etc/mig/mig-agent.cfg", "", TransformAMQPAuth},
-	{"agentcert", "/etc/mig/agent.crt", "", nil},
-	{"agentkey", "/etc/mig/agent.key", "", nil},
-	{"cacert", "/etc/mig/ca.crt", "", nil},
+	{"mig-agent", "/usr/local/bin/mig-agent", "", nil, 0700},
+	{"configuration", "/etc/mig/mig-agent.cfg", "", TransformAMQPAuth, 0600},
+	{"agentcert", "/etc/mig/agent.crt", "", nil, 0644},
+	{"agentkey", "/etc/mig/agent.key", "", nil, 0600},
+	{"cacert", "/etc/mig/ca.crt", "", nil, 0644},
 }
 
 var BundleDictionary = map[string][]BundleDictionaryEntry{
