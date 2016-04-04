@@ -51,6 +51,10 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
 			}
 		}
+		// Reset the value of err here; since we continue if the cron installation fails,
+		// we don't want subsequent bare returns in this function returning the cron
+		// installation error.
+		err = nil
 		// We are not upgrading, and parent is init. We must decide how to handle
 		// respawns based on the type of init system: upstart and systemd will
 		// take care of respawning agents automatically. sysvinit won't.
