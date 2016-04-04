@@ -17,13 +17,14 @@ while true; do
 	return ret
 	EOF
 	)
+	if [ $? -eq 1 ]; then exit 1; fi
 	cnt=`expr $cnt + 1`
 	chk $buf
 	if [[ $? == "1" ]]; then
 		break
 	fi
 	if [[ $cnt -eq 3 ]]; then
-		break
+		exit 1
 	fi
 done
 echo $buf > $loaderkeyfile
