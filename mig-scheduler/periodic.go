@@ -61,7 +61,13 @@ func cleanDir(ctx Context, targetDir string) (err error) {
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving cleanDir()"}.Debug()
 	}()
 	deletionPoint, err := time.ParseDuration(ctx.Periodic.DeleteAfter)
+	if err != nil {
+		panic(err)
+	}
 	dir, err := os.Open(targetDir)
+	if err != nil {
+		panic(err)
+	}
 	dirContent, err := dir.Readdir(-1)
 	if err != nil {
 		panic(err)
