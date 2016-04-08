@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"strconv"
 	"sync"
 	"time"
@@ -188,7 +189,7 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	}
 
 	// build the agent message queue location
-	ctx.Agent.QueueLoc = fmt.Sprintf("%s.%s.%s", ctx.Agent.Env.OS, ctx.Agent.Hostname, ctx.Agent.UID)
+	ctx.Agent.QueueLoc = fmt.Sprintf("%s.%s", ctx.Agent.Env.OS, ctx.Agent.UID)
 
 	// daemonize if not in foreground mode
 	if !foreground {
@@ -304,6 +305,19 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 			panic(err)
 		}
 	}
+	// Make sure the obtained queue location matches the format that we expect, if
+	// it doesn't create a new one
+	mtch, err := regexp.Match("^\\S+\\.\\S+$", id)
+	if err != nil {
+		panic(err)
+	}
+	if !mtch {
+		ctx.Channels.Log <- mig.Log{Desc: "invalid or deprecated agent ID, recreating"}.Info()
+		id, err = createIDFile(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}
 	ctx.Agent.UID = fmt.Sprintf("%s", id)
 	os.Chmod(idFile, 0400)
 	return
@@ -320,6 +334,11 @@ func createIDFile(ctx Context) (id []byte, err error) {
 	// generate an ID
 	r := mrand.New(mrand.NewSource(time.Now().UnixNano()))
 	sid := strconv.FormatUint(uint64(r.Int63()), 36)
+	sid += strconv.FormatUint(uint64(r.Int63()), 36)
+	sid += strconv.FormatUint(uint64(r.Int63()), 36)
+	sid += strconv.FormatUint(uint64(r.Int63()), 36)
+	sid += "."
+	sid += strconv.FormatUint(uint64(r.Int63()), 36)
 	sid += strconv.FormatUint(uint64(r.Int63()), 36)
 	sid += strconv.FormatUint(uint64(r.Int63()), 36)
 	sid += strconv.FormatUint(uint64(r.Int63()), 36)
