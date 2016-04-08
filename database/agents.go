@@ -20,10 +20,10 @@ import (
 // AgentByQueueAndPID returns a single agent that is located at a given queueloc and has a given PID
 func (db *DB) AgentByQueueAndPID(queueloc string, pid int) (agent mig.Agent, err error) {
 	err = db.c.QueryRow(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime,
-		status FROM agents WHERE queueloc=$1 AND pid=$2 AND status!=$3`,
+		refreshtime, status FROM agents WHERE queueloc=$1 AND pid=$2 AND status!=$3`,
 		queueloc, pid, mig.AgtStatusOffline).Scan(
 		&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version, &agent.PID,
-		&agent.StartTime, &agent.HeartBeatTS, &agent.Status)
+		&agent.StartTime, &agent.HeartBeatTS, &agent.RefreshTS, &agent.Status)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving agent: '%v'", err)
 		return
@@ -38,9 +38,10 @@ func (db *DB) AgentByQueueAndPID(queueloc string, pid int) (agent mig.Agent, err
 func (db *DB) AgentByID(id float64) (agent mig.Agent, err error) {
 	var jTags, jEnv []byte
 	err = db.c.QueryRow(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime,
-		status, tags, environment FROM agents WHERE id=$1`, id).Scan(
+		refreshtime, status, tags, environment FROM agents WHERE id=$1`, id).Scan(
 		&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version, &agent.PID,
-		&agent.StartTime, &agent.HeartBeatTS, &agent.Status, &jTags, &jEnv)
+		&agent.StartTime, &agent.HeartBeatTS, &agent.RefreshTS, &agent.Status,
+		&jTags, &jEnv)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving agent: '%v'", err)
 		return
@@ -90,7 +91,10 @@ func (db *DB) AgentsActiveSince(pointInTime time.Time) (agents []mig.Agent, err 
 }
 
 // InsertAgent creates a new agent in the database
-func (db *DB) InsertAgent(agt mig.Agent) (err error) {
+//
+// If useTx is not nil, the transaction will be used instead of the standard
+// connection
+func (db *DB) InsertAgent(agt mig.Agent, useTx *sql.Tx) (err error) {
 	jEnv, err := json.Marshal(agt.Env)
 	if err != nil {
 		err = fmt.Errorf("Failed to marshal agent environment: '%v'", err)
@@ -102,12 +106,23 @@ func (db *DB) InsertAgent(agt mig.Agent) (err error) {
 		return
 	}
 	agtid := mig.GenID()
-	_, err = db.c.Exec(`INSERT INTO agents
+	if useTx != nil {
+		_, err = useTx.Exec(`INSERT INTO agents
 		(id, name, queueloc, mode, version, pid, starttime, destructiontime,
-		heartbeattime, status, environment, tags)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-		agtid, agt.Name, agt.QueueLoc, agt.Mode, agt.Version, agt.PID,
-		agt.StartTime, agt.DestructionTime, agt.HeartBeatTS, agt.Status, jEnv, jTags)
+		heartbeattime, refreshtime, status, environment, tags)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+			agtid, agt.Name, agt.QueueLoc, agt.Mode, agt.Version, agt.PID,
+			agt.StartTime, agt.DestructionTime, agt.HeartBeatTS, agt.RefreshTS,
+			agt.Status, jEnv, jTags)
+	} else {
+		_, err = db.c.Exec(`INSERT INTO agents
+		(id, name, queueloc, mode, version, pid, starttime, destructiontime,
+		heartbeattime, refreshtime, status, environment, tags)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+			agtid, agt.Name, agt.QueueLoc, agt.Mode, agt.Version, agt.PID,
+			agt.StartTime, agt.DestructionTime, agt.HeartBeatTS, agt.RefreshTS,
+			agt.Status, jEnv, jTags)
+	}
 	if err != nil {
 		return fmt.Errorf("Failed to insert agent in database: '%v'", err)
 	}
@@ -121,6 +136,35 @@ func (db *DB) UpdateAgentHeartbeat(agt mig.Agent) (err error) {
 		mig.AgtStatusOnline, agt.HeartBeatTS, agt.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to update agent in database: '%v'", err)
+	}
+	return
+}
+
+// Replace an existing agent in the database with newer environment information. This
+// should be called when we receive a heartbeat for an active agent, but the refresh
+// time indicates newer environment information exists.
+func (db *DB) ReplaceRefreshedAgent(agt mig.Agent) (err error) {
+	// Do this in a transaction to ensure other parts of the scheduler don't
+	// pick up invalid information
+	tx, err := db.c.Begin()
+	if err != nil {
+		return
+	}
+	_, err = tx.Exec(`UPDATE agents SET status=$1 WHERE id=$2`,
+		mig.AgtStatusOffline, agt.ID)
+	if err != nil {
+		_ = tx.Rollback()
+		return
+	}
+	err = db.InsertAgent(agt, tx)
+	if err != nil {
+		_ = tx.Rollback()
+		return
+	}
+	err = tx.Commit()
+	if err != nil {
+		_ = tx.Rollback()
+		return
 	}
 	return
 }
@@ -154,8 +198,10 @@ func (db *DB) ListMultiAgentsQueues(pointInTime time.Time) (queues []string, err
 
 // ActiveAgentsByQueue retrieves an array of agents identified by their QueueLoc value
 func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agents []mig.Agent, err error) {
-	rows, err := db.c.Query(`SELECT id, name, queueloc, mode, version, pid, starttime, heartbeattime, status
-		FROM agents WHERE agents.heartbeattime > $1 AND agents.queueloc=$2`, pointInTime, queueloc)
+	rows, err := db.c.Query(`SELECT id, name, queueloc, mode, version, pid, starttime,
+		heartbeattime, refreshtime, status
+		FROM agents WHERE agents.heartbeattime > $1 AND agents.queueloc=$2`,
+		pointInTime, queueloc)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -166,7 +212,8 @@ func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agent
 	for rows.Next() {
 		var agent mig.Agent
 		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version,
-			&agent.PID, &agent.StartTime, &agent.HeartBeatTS, &agent.Status)
+			&agent.PID, &agent.StartTime, &agent.HeartBeatTS,
+			&agent.RefreshTS, &agent.Status)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
 			return
@@ -199,7 +246,8 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 		return
 	}
 	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc,
-		version, pid, starttime, destructiontime, heartbeattime, status, mode, environment, tags
+		version, pid, starttime, destructiontime, heartbeattime, refreshtime, status,
+		mode, environment, tags
 		FROM agents WHERE agents.status IN ('%s', '%s') AND (%s)
 		ORDER BY agents.queueloc ASC`, mig.AgtStatusOnline, mig.AgtStatusIdle, target))
 	if rows != nil {
@@ -214,7 +262,7 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 		var agent mig.Agent
 		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Version,
 			&agent.PID, &agent.StartTime, &agent.DestructionTime, &agent.HeartBeatTS,
-			&agent.Status, &agent.Mode, &jEnv, &jTags)
+			&agent.RefreshTS, &agent.Status, &agent.Mode, &jEnv, &jTags)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
 			return

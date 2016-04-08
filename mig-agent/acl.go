@@ -16,7 +16,7 @@ import (
 
 // checkActionAuthorization verifies the PGP signatures of a given action
 // against the Access Control List of the agent.
-func checkActionAuthorization(a mig.Action, ctx Context) (err error) {
+func checkActionAuthorization(a mig.Action, ctx *Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("checkActionAuthorization() -> %v", e)

@@ -272,12 +272,14 @@ func runAgentCheckin(runOpt runtimeOptions) (err error) {
 
 	ctx.Agent.Mode = "checkin"
 
-	err = startRoutines(ctx)
+	err = startRoutines(&ctx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to start agent routines: '%v'", err)
 		os.Exit(0)
 	}
+	ctx.Agent.Lock()
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s in checkin mode", mig.Version, ctx.Agent.Hostname)}
+	ctx.Agent.Unlock()
 
 	// The loop below retrieves messages from the relay. If no message is available,
 	// it will timeout and break out of the loop after 10 seconds, causing the agent to exit
@@ -350,14 +352,16 @@ func runAgent(runOpt runtimeOptions) (err error) {
 	ctx.Agent.Mode = "daemon"
 
 	// Goroutine that receives messages from AMQP
-	go getCommands(ctx)
+	go getCommands(&ctx)
 
-	err = startRoutines(ctx)
+	err = startRoutines(&ctx)
 	if err != nil {
 		panic(err)
 	}
 
+	ctx.Agent.Lock()
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Mozilla InvestiGator version %s: started agent %s", mig.Version, ctx.Agent.Hostname)}
+	ctx.Agent.Unlock()
 
 	// The agent blocks here until a termination order is received
 	// The order is then evaluated to decide if a new agent must be respawned, or the agent
@@ -396,8 +400,9 @@ func runAgent(runOpt runtimeOptions) (err error) {
 	return
 }
 
-// startRoutines starts the goroutines that process commands and heartbeats
-func startRoutines(ctx Context) (err error) {
+// startRoutines starts the goroutines that process commands, heartbeats, and look after
+// refreshing the agent environment.
+func startRoutines(ctx *Context) (err error) {
 	// GoRoutine that parses and validates incoming commands
 	go func() {
 		for msg := range ctx.Channels.NewCommand {
@@ -438,11 +443,19 @@ func startRoutines(ctx Context) (err error) {
 	// GoRoutine that sends heartbeat messages to scheduler
 	go heartbeat(ctx)
 
+	// GoRoutine that updates the agent environment
+	if REFRESHENV != 0 {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("environment will refresh every %v", REFRESHENV)}
+		go refreshAgentEnvironment(ctx)
+	} else {
+		ctx.Channels.Log <- mig.Log{Desc: "periodic environment refresh is disabled"}
+	}
+
 	return
 }
 
 // getCommands receives AMQP messages, and feed them to the action chan
-func getCommands(ctx Context) (err error) {
+func getCommands(ctx *Context) (err error) {
 	for m := range ctx.MQ.Bind.Chan {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("received message '%s'", m.Body)}.Debug()
 
@@ -468,7 +481,7 @@ func getCommands(ctx Context) (err error) {
 
 // parseCommands transforms a message into a MIG Command struct, performs validation
 // and run the command
-func parseCommands(ctx Context, msg []byte) (err error) {
+func parseCommands(ctx *Context, msg []byte) (err error) {
 	var cmd mig.Command
 	cmd.ID = 0 // safety net
 	defer func() {
@@ -549,7 +562,7 @@ func parseCommands(ctx Context, msg []byte) (err error) {
 // execution and kills the module if needed. On success, it stores the output from
 // the module in a moduleResult struct and passes it along to the function that aggregates
 // all results
-func runModule(ctx Context, op moduleOp) (err error) {
+func runModule(ctx *Context, op moduleOp) (err error) {
 	var result moduleResult
 	result.id = op.id
 	result.position = op.position
@@ -659,7 +672,7 @@ func runModule(ctx Context, op moduleOp) (err error) {
 
 // receiveResult listens on a temporary channels for results coming from modules. It aggregates them, and
 // when all are received, it builds a response that is passed to the Result channel
-func receiveModuleResults(ctx Context, cmd mig.Command, resultChan chan moduleResult, opsCounter int) (err error) {
+func receiveModuleResults(ctx *Context, cmd mig.Command, resultChan chan moduleResult, opsCounter int) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("receiveModuleResults() -> %v", e)
@@ -722,7 +735,7 @@ finish:
 }
 
 // sendResults builds a message body and send the command results back to the scheduler
-func sendResults(ctx Context, result mig.Command) (err error) {
+func sendResults(ctx *Context, result mig.Command) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("sendResults() -> %v", e)
@@ -746,21 +759,23 @@ func sendResults(ctx Context, result mig.Command) (err error) {
 
 // hearbeat will send heartbeats messages to the scheduler at regular intervals
 // and also store that heartbeat on disc
-func heartbeat(ctx Context) (err error) {
-	// declare an Agent registration message
-	HeartBeat := mig.Agent{
-		Name:      ctx.Agent.Hostname,
-		Mode:      ctx.Agent.Mode,
-		Version:   mig.Version,
-		PID:       os.Getpid(),
-		QueueLoc:  ctx.Agent.QueueLoc,
-		StartTime: time.Now(),
-		Env:       ctx.Agent.Env,
-		Tags:      ctx.Agent.Tags,
-	}
-
+func heartbeat(ctx *Context) (err error) {
 	// loop forever
 	for {
+		ctx.Agent.Lock()
+		// declare an Agent registration message
+		HeartBeat := mig.Agent{
+			Name:      ctx.Agent.Hostname,
+			Mode:      ctx.Agent.Mode,
+			Version:   mig.Version,
+			PID:       os.Getpid(),
+			QueueLoc:  ctx.Agent.QueueLoc,
+			StartTime: time.Now(),
+			Env:       ctx.Agent.Env,
+			Tags:      ctx.Agent.Tags,
+			RefreshTS: ctx.Agent.RefreshTS,
+		}
+
 		// make a heartbeat
 		HeartBeat.HeartBeatTS = time.Now()
 		body, err := json.Marshal(HeartBeat)
@@ -777,13 +792,14 @@ func heartbeat(ctx Context) (err error) {
 			ctx.Channels.Log <- mig.Log{Desc: "Failed to write mig-agent.ok to disk"}.Err()
 		}
 		os.Chmod(ctx.Agent.RunDir+"mig-agent.ok", 0644)
+		ctx.Agent.Unlock()
 		time.Sleep(ctx.Sleeper)
 	}
 	return
 }
 
 // publish is a generic function that sends messages to an AMQP exchange
-func publish(ctx Context, exchange, routingKey string, body []byte) (err error) {
+func publish(ctx *Context, exchange, routingKey string, body []byte) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("publish() -> %v", e)

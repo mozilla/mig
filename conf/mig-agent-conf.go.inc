@@ -34,6 +34,10 @@ var DISCOVERAWSMETA = true
 // and exits. this mode is used to run the agent as a cron job, not a daemon.
 var CHECKIN = false
 
+// how often the agent will refresh its environment. if 0 agent
+// will only update environment at initialization.
+var REFRESHENV time.Duration = 0
+
 var LOGGINGCONF = mig.Logging{
 	Mode:	"stdout",	// stdout | file | syslog
 	Level:	"debug",	// debug | info | ...

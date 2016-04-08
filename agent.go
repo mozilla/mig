@@ -28,6 +28,7 @@ type Agent struct {
 	StartTime       time.Time   `json:"starttime,omitempty"`
 	DestructionTime time.Time   `json:"destructiontime,omitempty"`
 	HeartBeatTS     time.Time   `json:"heartbeatts,omitempty"`
+	RefreshTS       time.Time   `json:"refreshts,omitempty"`
 	Status          string      `json:"status,omitempty"`
 	Authorized      bool        `json:"authorized,omitempty"`
 	Env             AgentEnv    `json:"environment,omitempty"`
