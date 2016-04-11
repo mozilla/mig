@@ -74,6 +74,10 @@ func QueuesCleanup(ctx Context) (err error) {
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("QueuesCleanup(): QueueInspect failed with error '%v'. Continuing.", err)}.Warning()
 				makeamqpchan = true
 			}
+			// Make sure we reset err to nil here before continuing, if this is the last iteration in
+			// the loop and we do not reset it, it will result in the function returning the error
+			// condition at the end
+			err = nil
 			continue
 		}
 		_, err = tmpctx.MQ.Chan.QueueDelete("mig.agt."+queue, false, false, false)
@@ -81,6 +85,7 @@ func QueuesCleanup(ctx Context) (err error) {
 			desc := fmt.Sprintf("error while deleting queue mig.agt.%s: %v", queue, err)
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Err()
 			makeamqpchan = true
+			err = nil
 		} else {
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("removed endpoint queue %s", queue)}
 			// throttling. looks like iterating too fast on queuedelete eventually locks the connection
