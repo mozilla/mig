@@ -275,7 +275,7 @@ mqdone:
 
 func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
-	ctx.Channels.Terminate = make(chan string)
+	ctx.Channels.Terminate = make(chan string, 12)
 	ctx.Channels.NewCommand = make(chan []byte, 7)
 	ctx.Channels.RunAgentCommand = make(chan moduleOp, 5)
 	ctx.Channels.RunExternalCommand = make(chan moduleOp, 5)
