@@ -46,6 +46,7 @@ func init() {
 				FilterOn: []string{
 					"select",
 					"futex",
+
 					"write",
 					"read",
 					"epoll_ctl",
