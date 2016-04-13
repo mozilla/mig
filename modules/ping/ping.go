@@ -54,6 +54,7 @@ func init() {
 					"futex",
 					"getsockname",
 					"getpeername",
+					// UNSAFE openat() with write() - we shouldn't be able to call write() in the file module but is currently needed for things to work
 					"write",
 					"epoll_wait",
 					"read",
