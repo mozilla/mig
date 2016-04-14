@@ -88,7 +88,7 @@ func main() {
 		// completion
 		var symbols = []string{"action", "agent", "create", "command", "help", "history",
 			"exit", "manifest", "showcfg", "status", "investigator", "search", "query",
-			"where", "and"}
+			"where", "and", "loader"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {

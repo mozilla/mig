@@ -273,11 +273,13 @@ func manifestLoaders(respWriter http.ResponseWriter, request *http.Request) {
 		respond(404, resource, respWriter, request)
 		return
 	}
-	li, err := loaderEntrysToItem(ldrs, mid, ctx)
-	if err != nil {
-		panic(err)
+	for _, ldr := range ldrs {
+		item, err := loaderEntryToItem(ldr, mid, ctx)
+		if err != nil {
+			panic(err)
+		}
+		resource.AddItem(item)
 	}
-	resource.AddItem(li)
 	respond(200, resource, respWriter, request)
 }
 
@@ -426,10 +428,11 @@ func manifestRecordToItem(mr mig.ManifestRecord, ctx Context) (item cljs.Item, e
 	return
 }
 
-func loaderEntrysToItem(ldrs []mig.LoaderEntry, mid float64, ctx Context) (item cljs.Item, err error) {
+func loaderEntryToItem(ldr mig.LoaderEntry, mid float64, ctx Context) (item cljs.Item, err error) {
+	// XXX This Href doesn't properly represent the item and needs to be fixed
 	item.Href = fmt.Sprintf("%s/manifest/loaders?manifestid=%.0f", ctx.Server.BaseURL, mid)
 	item.Data = []cljs.Data{
-		{Name: "loaders", Value: ldrs},
+		{Name: "loader", Value: ldr},
 	}
 	return
 }

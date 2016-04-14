@@ -51,7 +51,9 @@ func (db *DB) UpdateLoaderEntry(lid float64, agt mig.Agent) (err error) {
 		return
 	}
 	_, err = db.c.Exec(`UPDATE loaders
-		SET name=$1, env=$2, tags=$3 WHERE id=$4`,
+		SET name=$1, env=$2, tags=$3,
+		lastused=now()
+		WHERE id=$4`,
 		agt.Name, jEnv, jTags, lid)
 	if err != nil {
 		return err
@@ -103,7 +105,7 @@ func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err 
 	if err != nil {
 		return
 	}
-	qs := fmt.Sprintf("SELECT id, loadername, name FROM loaders WHERE %v", mtarg)
+	qs := fmt.Sprintf("SELECT id, loadername, name, lastused FROM loaders WHERE %v", mtarg)
 	rows, err := db.c.Query(qs)
 	if err != nil {
 		return
@@ -113,7 +115,7 @@ func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err 
 	}
 	for rows.Next() {
 		nle := mig.LoaderEntry{}
-		err = rows.Scan(&nle.ID, &nle.Name, &nle.AgentName)
+		err = rows.Scan(&nle.ID, &nle.Name, &nle.AgentName, &nle.LastUsed)
 		if err != nil {
 			return ret, err
 		}

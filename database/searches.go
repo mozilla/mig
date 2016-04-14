@@ -916,3 +916,84 @@ func (db *DB) SearchManifests(p search.Parameters) (mrecords []mig.ManifestRecor
 	}
 	return
 }
+
+func (db *DB) SearchLoaders(p search.Parameters) (lrecords []mig.LoaderEntry, err error) {
+	var rows *sql.Rows
+	ids, err := makeIDsFromParams(p)
+	columns := `loaders.id, loaders.loadername, loaders.name, loaders.lastused`
+	where := ""
+	vals := []interface{}{}
+	valctr := 0
+	if p.Before.Before(time.Now().Add(search.DefaultWindow - time.Hour)) {
+		where += fmt.Sprintf(`loaders.lastused <= $%d `, valctr+1)
+		vals = append(vals, p.Before)
+		valctr += 1
+	}
+	if p.After.After(time.Now().Add(-(search.DefaultWindow - time.Hour))) {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`loaders.lastused >= $%d `, valctr+1)
+		vals = append(vals, p.After)
+		valctr += 1
+	}
+	if p.LoaderName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`loaders.loadername ILIKE $%d`, valctr+1)
+		vals = append(vals, p.LoaderName)
+		valctr += 1
+	}
+	if p.AgentName != "%" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`loaders.name ILIKE $%d`, valctr+1)
+		vals = append(vals, p.AgentName)
+		valctr += 1
+	}
+	if p.LoaderID != "∞" {
+		if valctr > 0 {
+			where += " AND "
+		}
+		where += fmt.Sprintf(`loaders.id >= $%d AND loaders.id <= $%d`,
+			valctr+1, valctr+2)
+		vals = append(vals, ids.minManID, ids.maxManID)
+		valctr += 2
+	}
+	query := fmt.Sprintf(`SELECT %s FROM loaders WHERE %s ORDER BY loadername;`, columns, where)
+	stmt, err := db.c.Prepare(query)
+	if err != nil {
+		err = fmt.Errorf("Error while preparing search statement: '%v' in '%s'", err, query)
+		return
+	}
+	if stmt != nil {
+		defer stmt.Close()
+	}
+	rows, err = stmt.Query(vals...)
+	if err != nil {
+		err = fmt.Errorf("Error while finding loaders: '%v'", err)
+	}
+	if rows != nil {
+		defer rows.Close()
+	}
+	for rows.Next() {
+		var le mig.LoaderEntry
+		var agtnameNull sql.NullString
+		err = rows.Scan(&le.ID, &le.Name, &agtnameNull, &le.LastUsed)
+		if err != nil {
+			err = fmt.Errorf("Failed to retrieve loader data: '%v'", err)
+			return
+		}
+		le.AgentName = "unset"
+		if agtnameNull.Valid {
+			le.AgentName = agtnameNull.String
+		}
+		lrecords = append(lrecords, le)
+	}
+	if err := rows.Err(); err != nil {
+		err = fmt.Errorf("Failed to complete database query: '%v'", err)
+	}
+	return
+}

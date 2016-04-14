@@ -407,12 +407,18 @@ func (cli Client) GetManifestLoaders(mid float64) (ldrs []mig.LoaderEntry, err e
 	if err != nil {
 		panic(err)
 	}
-	if resource.Collection.Items[0].Data[0].Name != "loaders" {
-		panic("API returned something that is not a loader list... something's wrong.")
-	}
-	ldrs, err = ValueToLoaderEntries(resource.Collection.Items[0].Data[0].Value)
-	if err != nil {
-		panic(err)
+	for _, item := range resource.Collection.Items {
+		for _, data := range item.Data {
+			if data.Name != "loader" {
+				continue
+			}
+			ldr, err := ValueToLoaderEntry(data.Value)
+			if err != nil {
+				panic(err)
+			}
+			ldrs = append(ldrs, ldr)
+			break
+		}
 	}
 	return
 }
@@ -600,7 +606,7 @@ func ValueToAction(v interface{}) (a mig.Action, err error) {
 	return
 }
 
-func ValueToLoaderEntries(v interface{}) (l []mig.LoaderEntry, err error) {
+func ValueToLoaderEntry(v interface{}) (l mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("ValueToLoaderEntries() -> %v", e)
