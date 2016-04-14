@@ -783,6 +783,10 @@ func heartbeat(ctx *Context) (err error) {
 		if err != nil {
 			desc := fmt.Sprintf("heartbeat failed with error '%v'", err)
 			ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
+			// Don't treat this error as fatal, sleep for a period of time
+			// (as occurs at the end of this loop) and retry
+			time.Sleep(ctx.Sleeper)
+			continue
 		}
 		desc := fmt.Sprintf("heartbeat %q", body)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
