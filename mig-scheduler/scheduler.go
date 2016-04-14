@@ -306,15 +306,6 @@ func updateAction(cmds []mig.Command, ctx Context) (err error) {
 
 		// store action in the map
 		actions[a.ID] = a
-
-		// slightly unrelated to updating the action:
-		// in case the action is about upgrading agents, do some magical stuff
-		// to continue the upgrade protocol
-		if cmd.Status == mig.StatusSuccess && len(a.Operations) > 0 {
-			if a.Operations[0].Module == "upgrade" {
-				go markUpgradedAgents(cmd, ctx)
-			}
-		}
 	}
 	for _, a := range actions {
 		a.Counters, err = ctx.DB.GetActionCounters(a.ID)
