@@ -234,7 +234,7 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 					target = target[0:27] + "..."
 				}
 				fmt.Printf("%6.0f   %s   %s   %s   %s\n", mr.ID, name,
-					status, target, mr.Timestamp)
+					status, target, mr.Timestamp.UTC().Format(time.RFC3339))
 			case "loader":
 				le, err := client.ValueToLoaderEntry(data.Value)
 				if err != nil {
