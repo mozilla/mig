@@ -77,6 +77,9 @@ func main() {
 	s.HandleFunc("/manifest/fetch/", authenticateLoader(getManifestFile)).Methods("POST")
 	// all other resources require authentication
 	s.HandleFunc("/", authenticate(getHome, false)).Methods("GET")
+	s.HandleFunc("/loader", authenticate(getLoader, true)).Methods("GET")
+	s.HandleFunc("/loader/status/", authenticate(statusLoader, true)).Methods("POST")
+	s.HandleFunc("/loader/new/", authenticate(newLoader, true)).Methods("POST")
 	s.HandleFunc("/manifest", authenticate(getManifest, true)).Methods("GET")
 	s.HandleFunc("/manifest/sign/", authenticate(signManifest, true)).Methods("POST")
 	s.HandleFunc("/manifest/status/", authenticate(statusManifest, true)).Methods("POST")

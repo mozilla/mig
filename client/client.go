@@ -541,6 +541,112 @@ func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err 
 	return
 }
 
+// GetLoaderEntry retrieves a MIG loader entry from the API using the record ID
+func (cli Client) GetLoaderEntry(lid float64) (le mig.LoaderEntry, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("GetLoaderEntry() -> %v", e)
+		}
+	}()
+	target := fmt.Sprintf("loader?loaderid=%.0f", lid)
+	resource, err := cli.GetAPIResource(target)
+	if err != nil {
+		panic(err)
+	}
+	if resource.Collection.Items[0].Data[0].Name != "loader" {
+		panic("API returned something that is not a loader... something's wrong.")
+	}
+	le, err = ValueToLoaderEntry(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+// Change the status of an existing loader entry
+func (cli Client) LoaderEntryStatus(le mig.LoaderEntry, status bool) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("LoaderEntryStatus() -> %v", e)
+		}
+	}()
+	statusval := "disabled"
+	if status {
+		statusval = "enabled"
+	}
+	data := url.Values{"loaderid": {fmt.Sprintf("%.0f", le.ID)}, "status": {statusval}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"loader/status/",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var resource *cljs.Resource
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s).",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	return
+}
+
+// Post a new loader entry for storage through the API
+func (cli Client) PostNewLoader(le mig.LoaderEntry) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("PostNewLoader() -> %v", e)
+		}
+	}()
+	lebuf, err := json.Marshal(le)
+	if err != nil {
+		panic(err)
+	}
+	data := url.Values{"loader": {string(lebuf)}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"loader/new/",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var resource *cljs.Resource
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != http.StatusCreated {
+		err = fmt.Errorf("error: HTTP %d. Loader create failed with error '%v' (code %s).",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	return
+}
+
 // PostAction submits a MIG Action to the API and returns the reflected action with API ID
 func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	defer func() {

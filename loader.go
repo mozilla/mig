@@ -14,6 +14,12 @@ import (
 type LoaderEntry struct {
 	ID        float64   // Loader ID
 	Name      string    // Loader name
+	Key       string    // Loader key (only populated during creation)
 	AgentName string    // Loader environment, agent name
 	LastUsed  time.Time // Last time loader was used
+	Enabled   bool      // Loader entry is active
+}
+
+func (le *LoaderEntry) Validate() error {
+	return nil
 }
