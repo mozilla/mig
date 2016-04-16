@@ -267,18 +267,16 @@ func startRoutines(ctx Context) {
 	ctx.Channels.Log <- mig.Log{Desc: "queue cleanup routine started"}
 
 	// launch the routine that handles multi agents on same queue
-	if ctx.Agent.KillDupAgents {
-		go func() {
-			for queueLoc := range ctx.Channels.DetectDupAgents {
-				ctx.OpID = mig.GenID()
-				err = killDupAgents(queueLoc, ctx)
-				if err != nil {
-					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
-				}
+	go func() {
+		for queueLoc := range ctx.Channels.DetectDupAgents {
+			ctx.OpID = mig.GenID()
+			err = killDupAgents(queueLoc, ctx)
+			if err != nil {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
 			}
-		}()
-		ctx.Channels.Log <- mig.Log{Desc: "killDupAgents() routine started"}
-	}
+		}
+	}()
+	ctx.Channels.Log <- mig.Log{Desc: "killDupAgents() routine started"}
 
 	// launch the routine that heartbeats the relays and terminates if connection is lost
 	go func() {

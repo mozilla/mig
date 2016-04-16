@@ -133,9 +133,9 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 			}
 		} else {
 			// the agent exists in database. reuse the existing ID, and keep the status if it was
-			// previously set to destroyed or upgraded. otherwise set status to online
+			// previously set to destroyed, otherwise set status to online
 			agt.ID = agent.ID
-			if agent.Status == mig.AgtStatusDestroyed || agent.Status == mig.AgtStatusUpgraded {
+			if agt.Status == mig.AgtStatusDestroyed {
 				agt.Status = agent.Status
 			} else {
 				agt.Status = mig.AgtStatusOnline
