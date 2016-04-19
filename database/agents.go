@@ -200,8 +200,9 @@ func (db *DB) ListMultiAgentsQueues(pointInTime time.Time) (queues []string, err
 func (db *DB) ActiveAgentsByQueue(queueloc string, pointInTime time.Time) (agents []mig.Agent, err error) {
 	rows, err := db.c.Query(`SELECT id, name, queueloc, mode, version, pid, starttime,
 		heartbeattime, refreshtime, status
-		FROM agents WHERE agents.heartbeattime > $1 AND agents.queueloc=$2`,
-		pointInTime, queueloc)
+		FROM agents WHERE agents.heartbeattime > $1 AND agents.queueloc=$2
+		AND agents.status!=$3`,
+		pointInTime, queueloc, mig.AgtStatusOffline)
 	if rows != nil {
 		defer rows.Close()
 	}
