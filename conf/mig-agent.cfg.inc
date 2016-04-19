@@ -31,6 +31,13 @@
     ; and exits. this mode is used to run the agent as a cron job, not a daemon.
     checkin = off
 
+    ; how often should the agent refresh its own environment (for example, to update
+    ; the environment if the system changes ip addresses. leave unset or "" to disable
+    ; periodic environment refresh. on workstations or other devices that may be
+    ; obtaining dhcp leases and moving around, you might want to start with something
+    ; like "5m"
+    refreshenv = ""
+
 [certs]
     ca  = "/path/to/ca/cert"
     cert= "/path/to/client/cert"
@@ -42,6 +49,7 @@
 
 ; for file logging
 ;   file = "mig_scheduler.log"
+;   maxfilesize = 0 ; if > 0, log file will be rotated once it reaches size
 
 ; for syslog, logs go into local3
 ;    host   = "localhost"

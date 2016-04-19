@@ -17,23 +17,19 @@ while true; do
 	return ret
 	EOF
 	)
+	if [ $? -eq 1 ]; then exit 1; fi
 	cnt=`expr $cnt + 1`
 	chk $buf
 	if [[ $? == "1" ]]; then
 		break
 	fi
 	if [[ $cnt -eq 3 ]]; then
-		break
+		exit 1
 	fi
 done
 echo $buf > $loaderkeyfile
 
 # Run the loader once as part of startup
-/usr/local/bin/mig-loader
-
-pl=/Library/LaunchAgents/com.mozilla.mig-loader.plist
-launchctl unload $pl
-launchctl load $pl
-launchctl start mig-loader
+/usr/local/bin/mig-loader -i
 
 exit 0

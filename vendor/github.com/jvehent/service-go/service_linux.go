@@ -227,6 +227,10 @@ func (s *linuxService) Stop() error {
 	}
 }
 
+func (s *linuxService) IntervalMode(interval int) error {
+	return fmt.Errorf("interval mode service only supported on darwin")
+}
+
 func (s *linuxService) Error(format string, a ...interface{}) error {
 	return s.logger.Err(fmt.Sprintf(format, a...))
 }

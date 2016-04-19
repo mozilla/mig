@@ -28,6 +28,7 @@ type config struct {
 		HeartbeatFreq    string
 		ModuleTimeout    string
 		Api              string
+		RefreshEnv       string
 	}
 	Certs struct {
 		Ca, Cert, Key string
@@ -67,6 +68,13 @@ func configLoad(path string) (err error) {
 	if err != nil {
 		panic(err)
 	}
+	var refreshenv time.Duration
+	if config.Agent.RefreshEnv != "" {
+		refreshenv, err = time.ParseDuration(config.Agent.RefreshEnv)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	ISIMMORTAL = config.Agent.IsImmortal
 	MUSTINSTALLSERVICE = config.Agent.InstallService
@@ -81,5 +89,6 @@ func configLoad(path string) (err error) {
 	CACERT = cacert
 	AGENTCERT = agentcert
 	AGENTKEY = agentkey
+	REFRESHENV = refreshenv
 	return
 }

@@ -122,7 +122,7 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 			agt.Status = mig.AgtStatusOnline
 			// create a new agent, set starttime to now
 			agt.StartTime = time.Now()
-			err = ctx.DB.InsertAgent(agt)
+			err = ctx.DB.InsertAgent(agt, nil)
 			if err != nil {
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Heartbeat DB insertion failed with error '%v' for agent '%s'", err, agt.Name)}.Err()
 			}
@@ -140,9 +140,29 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 			} else {
 				agt.Status = mig.AgtStatusOnline
 			}
-			err = ctx.DB.UpdateAgentHeartbeat(agt)
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Heartbeat DB update failed with error '%v' for agent '%s'", err, agt.Name)}.Err()
+			// If the refresh time is newer than what we know for the agent, replace
+			// the agent in the database with the newer information. We want to keep
+			// history here, so don't want to just update the information in the
+			// existing row.
+			//
+			// Note: with older agents which might not send a refresh time, the refresh
+			// time will be interpreted as the zero value, and the agents should just
+			// update using UpdateAgentHeartbeat()
+			if agt.RefreshTS.IsZero() {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("agent '%v' not sending refresh time, perhaps an older version?", agt.Name)}.Warning()
+			}
+			cutoff := agent.RefreshTS.Add(15 * time.Second)
+			if !agt.RefreshTS.IsZero() && agt.RefreshTS.After(cutoff) {
+				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("replacing refreshed agent for agent '%v'", agt.Name)}.Info()
+				err = ctx.DB.ReplaceRefreshedAgent(agt)
+				if err != nil {
+					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Heartbeat DB update failed (refresh) with error '%v' for agent '%s'", err, agt.Name)}.Err()
+				}
+			} else {
+				err = ctx.DB.UpdateAgentHeartbeat(agt)
+				if err != nil {
+					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Heartbeat DB update failed with error '%v' for agent '%s'", err, agt.Name)}.Err()
+				}
 			}
 			// if the agent that exists in the database has a status of 'destroyed'
 			// we should not be received a heartbeat from it. so, if detectmultiagents

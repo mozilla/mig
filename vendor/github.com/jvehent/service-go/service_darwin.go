@@ -71,14 +71,16 @@ func (s *darwinLaunchdService) Install() error {
 
 	var to = &struct {
 		*Config
-		Path string
+		Path           string
+		DarwinInterval int
 
 		KeepAlive, RunAtLoad bool
 	}{
-		Config:    s.Config,
-		Path:      path,
-		KeepAlive: s.KV.bool("KeepAlive", true),
-		RunAtLoad: s.KV.bool("RunAtLoad", false),
+		Config:         s.Config,
+		Path:           path,
+		DarwinInterval: s.DarwinInterval,
+		KeepAlive:      s.KV.bool("KeepAlive", true),
+		RunAtLoad:      s.KV.bool("RunAtLoad", false),
 	}
 
 	functions := template.FuncMap{
@@ -89,7 +91,12 @@ func (s *darwinLaunchdService) Install() error {
 			return "false"
 		},
 	}
-	t := template.Must(template.New("launchdConfig").Funcs(functions).Parse(launchdConfig))
+	var t *template.Template
+	if s.DarwinIntervalJob {
+		t = template.Must(template.New("launchdConfig").Funcs(functions).Parse(launchdConfigInterval))
+	} else {
+		t = template.Must(template.New("launchdConfig").Funcs(functions).Parse(launchdConfigPersistent))
+	}
 	return t.Execute(f, to)
 }
 
@@ -137,6 +144,16 @@ func (s *darwinLaunchdService) Run(onStart, onStop func() error) error {
 	return onStop()
 }
 
+func (s *darwinLaunchdService) IntervalMode(interval int) error {
+	// Validate interval with some arbitary value
+	if interval < 10 {
+		return fmt.Errorf("interval must be >= 10")
+	}
+	s.DarwinIntervalJob = true
+	s.DarwinInterval = interval
+	return nil
+}
+
 func (s *darwinLaunchdService) Error(format string, a ...interface{}) error {
 	return s.logger.Err(fmt.Sprintf(format, a...))
 }
@@ -148,7 +165,7 @@ func (s *darwinLaunchdService) Info(format string, a ...interface{}) error {
 	return s.logger.Notice(fmt.Sprintf(format, a...))
 }
 
-var launchdConfig = `<?xml version='1.0' encoding='UTF-8'?>
+var launchdConfigPersistent = `<?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN"
 "http://www.apple.com/DTDs/PropertyList-1.0.dtd" >
 <plist version='1.0'>
@@ -161,6 +178,21 @@ var launchdConfig = `<?xml version='1.0' encoding='UTF-8'?>
 <key>KeepAlive</key><{{bool .KeepAlive}}/>
 <key>RunAtLoad</key><{{bool .RunAtLoad}}/>
 <key>Disabled</key><false/>
+</dict>
+</plist>
+`
+
+var launchdConfigInterval = `<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN"
+"http://www.apple.com/DTDs/PropertyList-1.0.dtd" >
+<plist version='1.0'>
+<dict>
+<key>Label</key><string>{{.Name}}</string>
+<key>ProgramArguments</key>
+<array>
+        <string>{{.Path}}</string>
+</array>
+<key>StartInterval</key><integer>{{.DarwinInterval}}</integer>
 </dict>
 </plist>
 `

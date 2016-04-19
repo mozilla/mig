@@ -162,6 +162,10 @@ func (ws *windowsService) Stop() error {
 	return err
 }
 
+func (s *windowsService) IntervalMode(interval int) error {
+	return fmt.Errorf("interval mode service only supported on darwin")
+}
+
 func (ws *windowsService) Error(format string, a ...interface{}) error {
 	if ws.logger == nil {
 		return nil

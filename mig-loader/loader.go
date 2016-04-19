@@ -17,6 +17,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/jvehent/cljs"
 	"io"
@@ -53,13 +54,13 @@ func initializeHaveBundle() (ret []mig.BundleDictionaryEntry, err error) {
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: "initialized local bundle information"}
+	logInfo("initialized local bundle information")
 	for _, x := range ret {
 		hv := x.SHA256
 		if hv == "" {
 			hv = "not found"
 		}
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v %v -> %v", x.Name, x.Path, hv)}
+		logInfo("%v %v -> %v", x.Name, x.Path, hv)
 	}
 	return
 }
@@ -72,7 +73,7 @@ func requestManifest() (err error) {
 	}()
 
 	murl := APIURL + "manifest/agent/"
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("requesting manifest from %v", murl)}
+	logInfo("requesting manifest from %v", murl)
 
 	mparam := mig.ManifestParameters{}
 	mparam.AgentIdentifier = ctx.AgentIdentifier
@@ -151,7 +152,7 @@ func fetchFile(n string) (ret []byte, err error) {
 
 	murl := APIURL + "manifest/fetch/"
 
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("fetching file from %v", murl)}
+	logInfo("fetching file from %v", murl)
 	mparam := mig.ManifestParameters{}
 	mparam.AgentIdentifier = ctx.AgentIdentifier
 	mparam.Object = n
@@ -222,7 +223,8 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) (err error) {
 	//
 	// Append .loader to the file name to use as the staged file path.
 	reppath := entry.Path + ".loader"
-	fd, err := os.OpenFile(reppath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0700)
+	fd, err := os.OpenFile(reppath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
+		entry.Perm)
 	if err != nil {
 		panic(err)
 	}
@@ -233,7 +235,7 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) (err error) {
 	fd.Close()
 
 	// Validate the signature on the new file.
-	ctx.Channels.Log <- mig.Log{Desc: "validating staged file signature"}
+	logInfo("validating staged file signature")
 	h := sha256.New()
 	fd, err = os.Open(reppath)
 	if err != nil {
@@ -268,7 +270,7 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) (err error) {
 	}
 
 	// Got this far, OK to proceed with the replacement.
-	ctx.Channels.Log <- mig.Log{Desc: "installing staged file"}
+	logInfo("installing staged file")
 	err = os.Rename(reppath, entry.Path)
 	if err != nil {
 		panic(err)
@@ -313,7 +315,7 @@ func checkEntry(entry mig.BundleDictionaryEntry) (err error) {
 	}()
 
 	var compare mig.ManifestEntry
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("comparing %v %v", entry.Name, entry.Path)}
+	logInfo("comparing %v %v", entry.Name, entry.Path)
 	found := false
 	for _, x := range apiManifest.Entries {
 		if x.Name == entry.Name {
@@ -323,24 +325,47 @@ func checkEntry(entry mig.BundleDictionaryEntry) (err error) {
 		}
 	}
 	if !found {
-		ctx.Channels.Log <- mig.Log{Desc: "entry not in API manifest, ignoring"}
+		logInfo("entry not in API manifest, ignoring")
 		return
 	}
 	hv := entry.SHA256
 	if hv == "" {
 		hv = "not found"
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("we have %v", hv)}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("they have %v", compare.SHA256)}
+	logInfo("we have %v", hv)
+	logInfo("they have %v", compare.SHA256)
 	if entry.SHA256 == compare.SHA256 {
-		ctx.Channels.Log <- mig.Log{Desc: "nothing to do here"}
-		return
+		logInfo("we have correct file, no need to replace")
+		return entryPermCheck(entry)
 	}
 	haveChanges = true
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("refreshing %v", entry.Name)}
+	logInfo("refreshing %v", entry.Name)
 	err = fetchAndReplace(entry, compare.SHA256)
 	if err != nil {
 		panic(err)
+	}
+	return
+}
+
+// Check the file permissions set on a bundle entry and if they are
+// incorrect fix the permissions
+func entryPermCheck(entry mig.BundleDictionaryEntry) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("entryPermCheck() -> %v", e)
+		}
+	}()
+	var fi os.FileInfo
+	fi, err = os.Stat(entry.Path)
+	if err != nil {
+		panic(err)
+	}
+	if fi.Mode() != entry.Perm {
+		logInfo("%v has incorrect permissions, fixing", entry.Path)
+		err = os.Chmod(entry.Path, entry.Perm)
+		if err != nil {
+			panic(err)
+		}
 	}
 	return
 }
@@ -383,7 +408,7 @@ func checkManifestSignature(mr *mig.ManifestResponse) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v valid signatures in manifest", cnt)}
+	logInfo("%v valid signatures in manifest", cnt)
 	if cnt < REQUIREDSIGNATURES {
 		err = fmt.Errorf("Not enough valid signatures (got %v, need %v), rejecting",
 			cnt, REQUIREDSIGNATURES)
@@ -393,7 +418,7 @@ func checkManifestSignature(mr *mig.ManifestResponse) (err error) {
 	return
 }
 
-func initContext() (ctx Context, err error) {
+func initContext() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("initContext() -> %v", e)
@@ -401,11 +426,34 @@ func initContext() (ctx Context, err error) {
 	}()
 
 	ctx.Channels.Log = make(chan mig.Log, 37)
-	ctx.Logging = LOGGINGCONF
+	ctx.Logging, err = getLoggingConf()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
 	ctx.Logging, err = mig.InitLogger(ctx.Logging, "mig-loader")
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
 	}
+	wg.Add(1)
+	go func() {
+		var stop bool
+		for event := range ctx.Channels.Log {
+			// Also write the message to stderr to ease debugging
+			fmt.Fprintf(os.Stderr, "%v\n", event.Desc)
+			stop, err = mig.ProcessLog(ctx.Logging, event)
+			if err != nil {
+				panic("unable to process log")
+			}
+			if stop {
+				break
+			}
+		}
+		wg.Done()
+	}()
+	logInfo("logging routine started")
+
 	ctx.LoaderKey = LOADERKEY
 
 	hints := agentcontext.AgentContextHints{
@@ -421,6 +469,14 @@ func initContext() (ctx Context, err error) {
 	ctx.AgentIdentifier = actx.ToAgent()
 
 	return
+}
+
+func logInfo(s string, args ...interface{}) {
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf(s, args...)}.Info()
+}
+
+func logError(s string, args ...interface{}) {
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf(s, args...)}.Err()
 }
 
 func doExit(v int) {
@@ -489,71 +545,70 @@ func loadLoaderKey() error {
 		return err
 	}
 	LOADERKEY = string(buf)
+	ctx.LoaderKey = LOADERKEY
 	return nil
 }
 
 func main() {
-	var err error
+	var (
+		initialMode bool
+		err         error
+	)
 	runtime.GOMAXPROCS(1)
+
+	flag.BoolVar(&initialMode, "i", false, "initialization mode")
+	flag.Parse()
+
+	err = initContext()
+	if err != nil {
+		logError("%v", err)
+		doExit(1)
+	}
 
 	err = loaderInitializePath()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		logError("%v", err)
 		doExit(1)
 	}
-
 	err = loadLoaderKey()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		logError("%v", err)
 		doExit(1)
 	}
 
-	ctx, err = initContext()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-
-	wg.Add(1)
-	go func() {
-		var stop bool
-		for event := range ctx.Channels.Log {
-			stop, err = mig.ProcessLog(ctx.Logging, event)
-			if err != nil {
-				panic("unable to process log")
-			}
-			if stop {
-				break
-			}
+	// Do any service installation that might be required for this platform
+	if initialMode {
+		err = serviceDeploy()
+		if err != nil {
+			logError("%v", err)
+			doExit(1)
 		}
-		wg.Done()
-	}()
-	ctx.Channels.Log <- mig.Log{Desc: "logging routine started"}
+	}
 
 	// Get our current status from the file system.
 	have, err := initializeHaveBundle()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		logError("%v", err)
 		doExit(1)
 	}
 
 	// Retrieve our manifest from the API.
 	err = requestManifest()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		logError("%v", err)
 		doExit(1)
 	}
 
 	err = compareManifest(have)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		logError("%v", err)
 		doExit(1)
 	}
 
 	if haveChanges {
 		err = runTriggers()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
+			logError("%v", err)
 			doExit(1)
 		}
 	} else {
@@ -562,14 +617,14 @@ func main() {
 		// bump it.
 		err = agentRunning()
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: "agent does not appear to be running, trying to start"}
+			logInfo("agent does not appear to be running, trying to start")
 			err = runTriggers()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v\n", err)
+				logError("%v", err)
 				doExit(1)
 			}
 		} else {
-			ctx.Channels.Log <- mig.Log{Desc: "agent looks like it is running"}
+			logInfo("agent looks like it is running")
 		}
 	}
 	doExit(0)

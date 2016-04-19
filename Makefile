@@ -148,28 +148,34 @@ rpm-agent: mig-agent
 	make agent-install-script-linux
 	make agent-remove-script-linux
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
 		-s dir -t rpm .
 
 deb-agent: mig-agent
 	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
+	$(INSTALL) -s -D -m 0755 $(BINDIR)/mig-agent-$(BUILDREV) tmp/sbin/mig-agent-$(BUILDREV)
+	$(INSTALL) -D -m 0644 LICENSE tmp/usr/share/doc/mig-agent/copyright
 	$(MKDIR) -p tmp/var/lib/mig
 	make agent-install-script-linux
 	make agent-remove-script-linux
-	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+	fpm -C tmp -n mig-agent --license GPL --vendor mozilla \
+		--description "Mozilla InvestiGator Agent\nAgent binary" \
+		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org \
+		--architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
 		-s dir -t deb .
 
 deb-loader: mig-loader
 	rm -fr tmp
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-loader tmp/sbin/mig-loader
+	$(INSTALL) -s -D -m 0755 $(BINDIR)/mig-loader tmp/sbin/mig-loader
+	$(INSTALL) -D -m 0644 LICENSE tmp/usr/share/doc/mig-loader/copyright
 	$(MKDIR) -p tmp/var/lib/mig
 	$(MKDIR) -p tmp/etc/mig
-	fpm -C tmp -n mig-loader --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent Loader" \
-		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+	fpm -C tmp -n mig-loader --license GPL --vendor mozilla \
+		--description "Mozilla InvestiGator Agent Loader\nAgent loader binary" \
+		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org \
+		--architecture $(FPMARCH) -v $(BUILDREV) \
 		-s dir -t deb .
 
 dmg-agent: mig-agent
@@ -183,7 +189,7 @@ else
 	$(MKDIR) -p 'tmp/Library/Preferences/mig/'
 	make agent-install-script-osx
 	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--after-install tmp/agent_install.sh \
 		-s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig -p tmpdmg/mig-agent-$(BUILDREV)-$(FPMARCH).pkg .
 	hdiutil makehybrid -hfs -hfs-volume-name "Mozilla InvestiGator Agent" \
@@ -241,13 +247,13 @@ rpm-clients: prepare-clients-packaging
 #  %_signature gpg
 #  %_gpg_name  Julien Vehent
 	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
-		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		--rpm-digest sha512 --rpm-sign \
 		-s dir -t rpm .
 
 deb-clients: prepare-clients-packaging
 	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
-		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		-s dir -t deb .
 # require dpkg-sig, it's a perl script, take it from any debian box and copy it in your PATH
 	dpkg-sig -k E60892BB9BD89A69F759A1A0A3D652173B763E8F --sign jvehent -m "Julien Vehent" mig-clients_$(BUILDREV)_$(ARCH).deb
@@ -262,7 +268,7 @@ else
 	$(INSTALL) -m 0755 $(BINDIR)/mig-console tmp/usr/local/bin/mig-console
 	$(INSTALL) -m 0755 $(BINDIR)/mig-action-generator tmp/usr/local/bin/mig-action-generator
 	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
-		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
+		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		-s dir -t osxpkg --osxpkg-identifier-prefix org.mozilla.mig -p tmpdmg/mig-clients-$(BUILDREV)-$(FPMARCH).pkg .
 	hdiutil makehybrid -hfs -hfs-volume-name "Mozilla InvestiGator Clients" \
 		-o ./mig-clients-$(BUILDREV)-$(FPMARCH).dmg tmpdmg
@@ -286,7 +292,7 @@ deb-server: mig-scheduler mig-api mig-runner worker-agent-intel
 	$(INSTALL) -D -m 0640 conf/upstart/mig-agent-intel-worker.conf tmp/etc/init/mig-agent-intel-worker.conf
 	$(MKDIR) -p tmp/var/cache/mig
 	fpm -C tmp -n mig-server --license GPL --vendor mozilla --description "Mozilla InvestiGator Server" \
-		-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
+		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
 
 install: install-server install-client
 
@@ -310,7 +316,6 @@ osx-loader-pkg:
 	       $(INSTALL) -m 0755 $(BINDIR)/mig-loader $${tmpdir}/usr/local/bin/mig-loader && \
 	       touch $${tmpdir}/etc/mig/mig-loader.key && \
 	       $(INSTALL) -m 0755 tools/osx-loader-pkg-postinstall.sh $${scriptstmp}/postinstall && \
-	       $(INSTALL) -m 0644 tools/com.mozilla.mig-loader.plist $${tmpdir}/Library/LaunchAgents/com.mozilla.mig-loader.plist && \
 	       pkgbuild --root $${tmpdir} --identifier org.mozilla.mig-loader --version $(BUILDREV) \
 	       --ownership recommended --scripts $${scriptstmp} \
 	       $(SIGNFLAGS) \

@@ -35,6 +35,47 @@ type AgentContext struct {
 	AWS AWSContext // AWS specific information
 }
 
+func (ctx *AgentContext) IsZero() bool {
+	// If we don't have an OS treat it as unset
+	if ctx.OS == "" {
+		return true
+	}
+	return false
+}
+
+// Check of any values in the AgentContext differ from those in comp
+func (ctx *AgentContext) Differs(comp AgentContext) bool {
+	if ctx.Hostname != comp.Hostname ||
+		ctx.BinPath != comp.BinPath ||
+		ctx.RunDir != comp.RunDir ||
+		ctx.OS != comp.OS ||
+		ctx.OSIdent != comp.OSIdent ||
+		ctx.Init != comp.Init ||
+		ctx.Architecture != comp.Architecture ||
+		ctx.PublicIP != comp.PublicIP ||
+		ctx.AWS.InstanceID != comp.AWS.InstanceID ||
+		ctx.AWS.LocalIPV4 != comp.AWS.LocalIPV4 ||
+		ctx.AWS.AMIID != comp.AWS.AMIID ||
+		ctx.AWS.InstanceType != comp.AWS.InstanceType {
+		return true
+	}
+	if ctx.Addresses == nil && comp.Addresses == nil {
+		return false
+	}
+	if ctx.Addresses == nil || comp.Addresses == nil {
+		return true
+	}
+	if len(ctx.Addresses) != len(comp.Addresses) {
+		return true
+	}
+	for i := range ctx.Addresses {
+		if ctx.Addresses[i] != comp.Addresses[i] {
+			return true
+		}
+	}
+	return false
+}
+
 func (ctx *AgentContext) ToAgent() (ret mig.Agent) {
 	ret.Name = ctx.Hostname
 	ret.PID = os.Getpid()
