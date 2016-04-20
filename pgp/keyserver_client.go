@@ -29,7 +29,7 @@ func GetArmoredKeyFromKeyServer(keyid, keyserver string) (key []byte, err error)
 		panic(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		panic("keyserver lookup error: " + http.StatusText(resp.StatusCode))
 	}
 	key, err = ioutil.ReadAll(resp.Body)

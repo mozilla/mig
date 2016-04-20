@@ -106,7 +106,7 @@ func requestManifest() (err error) {
 		panic(err)
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("HTTP %v, API call failed with error '%v' (code %s)", resp.StatusCode,
 			resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)

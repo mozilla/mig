@@ -48,7 +48,7 @@ func statusManifest(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving statusManifest()"}.Debug()
 	}()
@@ -85,7 +85,7 @@ func statusManifest(respWriter http.ResponseWriter, request *http.Request) {
 		panic("Invalid status specified, must be disabled or staged")
 	}
 
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // Request to sign an existing manifest
@@ -97,7 +97,7 @@ func signManifest(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving signManifest()"}.Debug()
 	}()
@@ -124,7 +124,7 @@ func signManifest(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // Add a new manifest record
@@ -136,7 +136,7 @@ func newManifest(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving newManifest()"}.Debug()
 	}()
@@ -166,7 +166,7 @@ func newManifest(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // Return information describing an existing manifest
@@ -178,7 +178,7 @@ func getManifest(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getManifest()"}.Debug()
 	}()
@@ -196,7 +196,7 @@ func getManifest(respWriter http.ResponseWriter, request *http.Request) {
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),
 					Message: fmt.Sprintf("Manifest ID '%.0f' not found", mid)})
-				respond(404, resource, respWriter, request)
+				respond(http.StatusNotFound, resource, respWriter, request)
 				return
 			} else {
 				panic(err)
@@ -207,7 +207,7 @@ func getManifest(respWriter http.ResponseWriter, request *http.Request) {
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("Invalid Manifest ID '%.0f'", mid)})
-		respond(400, resource, respWriter, request)
+		respond(http.StatusBadRequest, resource, respWriter, request)
 		return
 	}
 	mi, err := manifestRecordToItem(mr, ctx)
@@ -215,7 +215,7 @@ func getManifest(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(mi)
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // Given a manifest ID, return the list of known loaders which match the
@@ -228,7 +228,7 @@ func manifestLoaders(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving manifestLoaders()"}.Debug()
 	}()
@@ -245,7 +245,7 @@ func manifestLoaders(respWriter http.ResponseWriter, request *http.Request) {
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),
 					Message: fmt.Sprintf("Manifest ID '%.0f' not found", mid)})
-				respond(404, resource, respWriter, request)
+				respond(http.StatusNotFound, resource, respWriter, request)
 				return
 			} else {
 				panic(err)
@@ -256,7 +256,7 @@ func manifestLoaders(respWriter http.ResponseWriter, request *http.Request) {
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("Invalid Manifest ID '%.0f'", mid)})
-		respond(400, resource, respWriter, request)
+		respond(http.StatusBadRequest, resource, respWriter, request)
 		return
 	}
 	ldrs, err := ctx.DB.AllLoadersFromManifestID(mid)
@@ -270,7 +270,7 @@ func manifestLoaders(respWriter http.ResponseWriter, request *http.Request) {
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("No matching loaders for manifest '%.0f'", mid)})
-		respond(404, resource, respWriter, request)
+		respond(http.StatusNotFound, resource, respWriter, request)
 		return
 	}
 	for _, ldr := range ldrs {
@@ -280,7 +280,7 @@ func manifestLoaders(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		resource.AddItem(item)
 	}
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // API entry point used to request a file be sent to the loader from the API.
@@ -294,7 +294,7 @@ func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getManifestFile()"}.Debug()
 	}()
@@ -346,7 +346,7 @@ func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // This API entry point is used by the loader to request a manifest file that
@@ -363,7 +363,7 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAgentManifest()"}.Debug()
 	}()
@@ -417,7 +417,7 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // Return information describing an existing loader entry
@@ -429,7 +429,7 @@ func getLoader(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getLoader()"}.Debug()
 	}()
@@ -447,7 +447,7 @@ func getLoader(respWriter http.ResponseWriter, request *http.Request) {
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),
 					Message: fmt.Sprintf("Loader ID '%.0f' not found", lid)})
-				respond(404, resource, respWriter, request)
+				respond(http.StatusNotFound, resource, respWriter, request)
 				return
 			} else {
 				panic(err)
@@ -458,7 +458,7 @@ func getLoader(respWriter http.ResponseWriter, request *http.Request) {
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("Invalid Loader ID '%.0f'", lid)})
-		respond(400, resource, respWriter, request)
+		respond(http.StatusBadRequest, resource, respWriter, request)
 		return
 	}
 	li, err := loaderEntryToItem(le, ctx)
@@ -466,7 +466,7 @@ func getLoader(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(li)
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // Enable or disable a loader entry
@@ -478,7 +478,7 @@ func statusLoader(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving statusLoader()"}.Debug()
 	}()
@@ -504,7 +504,7 @@ func statusLoader(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // Add a new loader entry
@@ -516,7 +516,7 @@ func newLoader(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving newLoader()"}.Debug()
 	}()

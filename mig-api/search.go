@@ -44,9 +44,9 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			})
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			if fmt.Sprintf("%v", e) == "no results found" {
-				respond(404, resource, respWriter, request)
+				respond(http.StatusNotFound, resource, respWriter, request)
 			} else {
-				respond(500, resource, respWriter, request)
+				respond(http.StatusInternalServerError, resource, respWriter, request)
 			}
 
 		}
@@ -266,7 +266,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // truere is a case insensitive regex that matches the string 'true'

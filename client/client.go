@@ -276,7 +276,7 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 	}
 	// if the request failed because of an auth issue, it may be that the auth token has expired.
 	// try the request again with a fresh token
-	if resp.StatusCode == 401 {
+	if resp.StatusCode == http.StatusUnauthorized {
 		resp.Body.Close()
 		cli.Token, err = cli.MakeSignedToken()
 		if err != nil {
@@ -314,7 +314,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 		panic(err)
 	}
 	hasResource := false
-	if resp.Body != nil && resp.StatusCode < 500 {
+	if resp.Body != nil && resp.StatusCode < http.StatusInternalServerError {
 		defer resp.Body.Close()
 		// unmarshal the body. don't attempt to interpret it, as long as it
 		// fits into a cljs.Resource, it's acceptable
@@ -337,7 +337,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 			}
 		}
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		if hasResource {
 			err = fmt.Errorf("error: HTTP %d. API call failed with error '%v' (code %s)",
 				resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
@@ -453,7 +453,7 @@ func (cli Client) ManifestRecordStatus(mr mig.ManifestRecord, status string) (er
 			panic(err)
 		}
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s).",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
@@ -495,7 +495,7 @@ func (cli Client) PostNewManifest(mr mig.ManifestRecord) (err error) {
 			panic(err)
 		}
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("error: HTTP %d. Manifest create failed with error '%v' (code %s).",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
@@ -533,7 +533,7 @@ func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err 
 			panic(err)
 		}
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("error: HTTP %d. Signature update failed with error '%v' (code %s).",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
@@ -679,7 +679,7 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	if err != nil {
 		panic(err)
 	}
-	if resp.StatusCode != 202 {
+	if resp.StatusCode != http.StatusAccepted {
 		err = fmt.Errorf("error: HTTP %d. action creation failed.", resp.StatusCode)
 		panic(err)
 	}
@@ -892,7 +892,7 @@ func (cli Client) PostInvestigator(name string, pubkey []byte) (inv mig.Investig
 	if err != nil {
 		panic(err)
 	}
-	if resp.StatusCode != 201 {
+	if resp.StatusCode != http.StatusCreated {
 		err = fmt.Errorf("HTTP %d: %v (code %s)", resp.StatusCode,
 			resource.Collection.Error.Message, resource.Collection.Error.Code)
 		return
@@ -933,7 +933,7 @@ func (cli Client) PostInvestigatorStatus(iid float64, newstatus string) (err err
 			panic(err)
 		}
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("error: HTTP %d. status update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)

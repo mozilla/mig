@@ -22,7 +22,7 @@ func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAgentsDashboard()"}.Debug()
 	}()
@@ -42,7 +42,7 @@ func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),
 					Message: fmt.Sprintf("Agent ID '%.0f' not found", agentID)})
-				respond(404, resource, respWriter, request)
+				respond(http.StatusNotFound, resource, respWriter, request)
 				return
 			} else {
 				panic(err)
@@ -53,7 +53,7 @@ func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("Invalid Agent ID '%.0f'", agentID)})
-		respond(400, resource, respWriter, request)
+		respond(http.StatusBadRequest, resource, respWriter, request)
 		return
 	}
 	// store the results in the resource
@@ -62,7 +62,7 @@ func getAgent(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(agentItem)
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // agentToItem receives an agent and returns an Item in Collection+JSON

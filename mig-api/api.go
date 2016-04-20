@@ -200,7 +200,7 @@ func authenticate(pass handler, adminRequired bool) handler {
 			inv.ID = -1
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: "X-PGPAUTHORIZATION header not found"})
-			respond(401, resource, w, r)
+			respond(http.StatusUnauthorized, resource, w, r)
 			return
 		}
 		inv, err = verifySignedToken(r.Header.Get("X-PGPAUTHORIZATION"))
@@ -209,7 +209,7 @@ func authenticate(pass handler, adminRequired bool) handler {
 			inv.ID = -1
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Authorization verification failed with error '%v'", err)})
-			respond(401, resource, w, r)
+			respond(http.StatusUnauthorized, resource, w, r)
 			return
 		}
 	authorized:
@@ -225,7 +225,7 @@ func authenticate(pass handler, adminRequired bool) handler {
 				resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 				resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid),
 					Message: "Insufficient privileges"})
-				respond(401, resource, w, r)
+				respond(http.StatusUnauthorized, resource, w, r)
 				return
 			}
 		}
@@ -249,7 +249,7 @@ func authenticateLoader(pass handler) handler {
 		if lkey == "" {
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: "X-LOADERKEY header not found"})
-			respond(401, resource, w, r)
+			respond(http.StatusUnauthorized, resource, w, r)
 			return
 		}
 		// Do a sanity check here on the submitted loader string before
@@ -261,7 +261,7 @@ func authenticateLoader(pass handler) handler {
 		if err != nil || !lkeyok {
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Loader authorization failed")})
-			respond(401, resource, w, r)
+			respond(http.StatusUnauthorized, resource, w, r)
 			return
 		}
 		context.Set(r, loaderID, loaderid)
@@ -328,7 +328,7 @@ func getHeartbeat(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getHeartbeat()"}.Debug()
 	}()
@@ -343,7 +343,7 @@ func getHeartbeat(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // getIP returns a the public IP of the caller as read from X-Forwarded-For
@@ -353,10 +353,10 @@ func getIP(respWriter http.ResponseWriter, request *http.Request) {
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getIP()"}.Debug()
 	}()
 	if request.Header.Get("X-FORWARDED-FOR") != "" {
-		respond(200, []byte(request.Header.Get("X-FORWARDED-FOR")), respWriter, request)
+		respond(http.StatusOK, []byte(request.Header.Get("X-FORWARDED-FOR")), respWriter, request)
 	} else {
 		// request.RemoteAddr contains IP:Port, so strip the port and return just the IP
-		respond(200, []byte(request.RemoteAddr[:strings.LastIndex(request.RemoteAddr, ":")]), respWriter, request)
+		respond(http.StatusOK, []byte(request.RemoteAddr[:strings.LastIndex(request.RemoteAddr, ":")]), respWriter, request)
 	}
 }
 
@@ -371,7 +371,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getHome()"}.Debug()
 	}()
@@ -484,7 +484,7 @@ func getHome(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
@@ -499,7 +499,7 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getDashboard()"}.Debug()
 	}()
@@ -537,5 +537,5 @@ func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		resource.AddItem(actionItem)
 	}
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
