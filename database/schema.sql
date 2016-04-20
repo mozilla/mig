@@ -137,7 +137,7 @@ CREATE TABLE loaders (
 	name          character varying(2048),
 	env           json,
 	tags          json,
-	lastused      timestamp with time zone NOT NULL,
+	lastseen      timestamp with time zone NOT NULL,
 	enabled       boolean NOT NULL DEFAULT false
 );
 ALTER TABLE ONLY loaders

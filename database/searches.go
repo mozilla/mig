@@ -981,7 +981,7 @@ func (db *DB) SearchLoaders(p search.Parameters) (lrecords []mig.LoaderEntry, er
 	for rows.Next() {
 		var le mig.LoaderEntry
 		var agtnameNull sql.NullString
-		err = rows.Scan(&le.ID, &le.Name, &agtnameNull, &le.LastUsed)
+		err = rows.Scan(&le.ID, &le.Name, &agtnameNull, &le.LastSeen)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve loader data: '%v'", err)
 			return

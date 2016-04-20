@@ -55,7 +55,7 @@ func (db *DB) UpdateLoaderEntry(lid float64, agt mig.Agent) (err error) {
 	}
 	_, err = db.c.Exec(`UPDATE loaders
 		SET name=$1, env=$2, tags=$3,
-		lastused=now()
+		lastseen=now()
 		WHERE id=$4`,
 		agt.Name, jEnv, jTags, lid)
 	if err != nil {
@@ -108,7 +108,7 @@ func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err 
 	if err != nil {
 		return
 	}
-	qs := fmt.Sprintf(`SELECT id, loadername, name, lastused, enabled
+	qs := fmt.Sprintf(`SELECT id, loadername, name, lastseen, enabled
 		FROM loaders WHERE enabled=TRUE AND %v`, mtarg)
 	rows, err := db.c.Query(qs)
 	if err != nil {
@@ -120,7 +120,7 @@ func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err 
 	for rows.Next() {
 		var agtname sql.NullString
 		nle := mig.LoaderEntry{}
-		err = rows.Scan(&nle.ID, &nle.Name, &agtname, &nle.LastUsed, &nle.Enabled)
+		err = rows.Scan(&nle.ID, &nle.Name, &agtname, &nle.LastSeen, &nle.Enabled)
 		if err != nil {
 			return ret, err
 		}
@@ -138,9 +138,9 @@ func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err 
 // Return a loader entry given an ID
 func (db *DB) GetLoaderFromID(lid float64) (ret mig.LoaderEntry, err error) {
 	var name sql.NullString
-	err = db.c.QueryRow(`SELECT id, loadername, name, lastused, enabled
+	err = db.c.QueryRow(`SELECT id, loadername, name, lastseen, enabled
 		FROM loaders WHERE id=$1`, lid).Scan(&ret.ID, &ret.Name, &name,
-		&ret.LastUsed, &ret.Enabled)
+		&ret.LastSeen, &ret.Enabled)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving loader: '%v'", err)
 		return

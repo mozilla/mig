@@ -260,7 +260,7 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 				}
 				fmt.Printf("%6.0f   %s   %s   %s\n", le.ID, loadername,
 					agtname,
-					le.LastUsed.UTC().Format(time.RFC3339))
+					le.LastSeen.UTC().Format(time.RFC3339))
 			}
 		}
 	}

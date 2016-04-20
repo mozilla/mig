@@ -16,7 +16,7 @@ type LoaderEntry struct {
 	Name      string    // Loader name
 	Key       string    // Loader key (only populated during creation)
 	AgentName string    // Loader environment, agent name
-	LastUsed  time.Time // Last time loader was used
+	LastSeen  time.Time // Last time loader was used
 	Enabled   bool      // Loader entry is active
 }
 
