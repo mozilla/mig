@@ -276,7 +276,7 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 	}
 	// if the request failed because of an auth issue, it may be that the auth token has expired.
 	// try the request again with a fresh token
-	if resp.StatusCode == 401 {
+	if resp.StatusCode == http.StatusUnauthorized {
 		resp.Body.Close()
 		cli.Token, err = cli.MakeSignedToken()
 		if err != nil {
@@ -314,7 +314,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 		panic(err)
 	}
 	hasResource := false
-	if resp.Body != nil && resp.StatusCode < 500 {
+	if resp.Body != nil && resp.StatusCode < http.StatusInternalServerError {
 		defer resp.Body.Close()
 		// unmarshal the body. don't attempt to interpret it, as long as it
 		// fits into a cljs.Resource, it's acceptable
@@ -337,7 +337,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 			}
 		}
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		if hasResource {
 			err = fmt.Errorf("error: HTTP %d. API call failed with error '%v' (code %s)",
 				resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
@@ -407,12 +407,18 @@ func (cli Client) GetManifestLoaders(mid float64) (ldrs []mig.LoaderEntry, err e
 	if err != nil {
 		panic(err)
 	}
-	if resource.Collection.Items[0].Data[0].Name != "loaders" {
-		panic("API returned something that is not a loader list... something's wrong.")
-	}
-	ldrs, err = ValueToLoaderEntries(resource.Collection.Items[0].Data[0].Value)
-	if err != nil {
-		panic(err)
+	for _, item := range resource.Collection.Items {
+		for _, data := range item.Data {
+			if data.Name != "loader" {
+				continue
+			}
+			ldr, err := ValueToLoaderEntry(data.Value)
+			if err != nil {
+				panic(err)
+			}
+			ldrs = append(ldrs, ldr)
+			break
+		}
 	}
 	return
 }
@@ -447,7 +453,7 @@ func (cli Client) ManifestRecordStatus(mr mig.ManifestRecord, status string) (er
 			panic(err)
 		}
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s).",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
@@ -489,7 +495,7 @@ func (cli Client) PostNewManifest(mr mig.ManifestRecord) (err error) {
 			panic(err)
 		}
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("error: HTTP %d. Manifest create failed with error '%v' (code %s).",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
@@ -527,8 +533,114 @@ func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err 
 			panic(err)
 		}
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("error: HTTP %d. Signature update failed with error '%v' (code %s).",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	return
+}
+
+// GetLoaderEntry retrieves a MIG loader entry from the API using the record ID
+func (cli Client) GetLoaderEntry(lid float64) (le mig.LoaderEntry, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("GetLoaderEntry() -> %v", e)
+		}
+	}()
+	target := fmt.Sprintf("loader?loaderid=%.0f", lid)
+	resource, err := cli.GetAPIResource(target)
+	if err != nil {
+		panic(err)
+	}
+	if resource.Collection.Items[0].Data[0].Name != "loader" {
+		panic("API returned something that is not a loader... something's wrong.")
+	}
+	le, err = ValueToLoaderEntry(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+// Change the status of an existing loader entry
+func (cli Client) LoaderEntryStatus(le mig.LoaderEntry, status bool) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("LoaderEntryStatus() -> %v", e)
+		}
+	}()
+	statusval := "disabled"
+	if status {
+		statusval = "enabled"
+	}
+	data := url.Values{"loaderid": {fmt.Sprintf("%.0f", le.ID)}, "status": {statusval}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"loader/status/",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var resource *cljs.Resource
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s).",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	return
+}
+
+// Post a new loader entry for storage through the API
+func (cli Client) PostNewLoader(le mig.LoaderEntry) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("PostNewLoader() -> %v", e)
+		}
+	}()
+	lebuf, err := json.Marshal(le)
+	if err != nil {
+		panic(err)
+	}
+	data := url.Values{"loader": {string(lebuf)}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"loader/new/",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var resource *cljs.Resource
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != http.StatusCreated {
+		err = fmt.Errorf("error: HTTP %d. Loader create failed with error '%v' (code %s).",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -567,7 +679,7 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	if err != nil {
 		panic(err)
 	}
-	if resp.StatusCode != 202 {
+	if resp.StatusCode != http.StatusAccepted {
 		err = fmt.Errorf("error: HTTP %d. action creation failed.", resp.StatusCode)
 		panic(err)
 	}
@@ -600,7 +712,7 @@ func ValueToAction(v interface{}) (a mig.Action, err error) {
 	return
 }
 
-func ValueToLoaderEntries(v interface{}) (l []mig.LoaderEntry, err error) {
+func ValueToLoaderEntry(v interface{}) (l mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("ValueToLoaderEntries() -> %v", e)
@@ -780,7 +892,7 @@ func (cli Client) PostInvestigator(name string, pubkey []byte) (inv mig.Investig
 	if err != nil {
 		panic(err)
 	}
-	if resp.StatusCode != 201 {
+	if resp.StatusCode != http.StatusCreated {
 		err = fmt.Errorf("HTTP %d: %v (code %s)", resp.StatusCode,
 			resource.Collection.Error.Message, resource.Collection.Error.Code)
 		return
@@ -821,7 +933,7 @@ func (cli Client) PostInvestigatorStatus(iid float64, newstatus string) (err err
 			panic(err)
 		}
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("error: HTTP %d. status update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)

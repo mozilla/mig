@@ -26,6 +26,8 @@ type Parameters struct {
 	InvestigatorID   string    `json:"investigatorid"`
 	InvestigatorName string    `json:"investigatorname"`
 	Limit            float64   `json:"limit"`
+	LoaderID         string    `json:"loaderid"`
+	LoaderName       string    `json:"loadername"`
 	ManifestID       string    `json:"manifestid"`
 	ManifestName     string    `json:"manifestname"`
 	Offset           float64   `json:"offset"`
@@ -52,6 +54,8 @@ func NewParameters() (p Parameters) {
 	p.InvestigatorID = "∞"
 	p.InvestigatorName = "%"
 	p.Limit = 100
+	p.LoaderID = "∞"
+	p.LoaderName = "%"
 	p.ManifestID = "∞"
 	p.ManifestName = "%"
 	p.Offset = 0
@@ -87,6 +91,12 @@ func (p Parameters) String() (query string) {
 	}
 	if p.InvestigatorName != "%" {
 		query += fmt.Sprintf("&investigatorname=%s", p.InvestigatorName)
+	}
+	if p.LoaderID != "∞" {
+		query += fmt.Sprintf("&loaderid=%s", p.LoaderID)
+	}
+	if p.LoaderName != "%" {
+		query += fmt.Sprintf("&loadername=%s", p.LoaderName)
 	}
 	if p.ManifestName != "%" {
 		query += fmt.Sprintf("&manifestname=%s", p.ManifestName)

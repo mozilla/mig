@@ -82,8 +82,18 @@ func killDupAgents(queueLoc string, ctx Context) (err error) {
 			// throttling to prevent issuing too many kill orders at the same time
 			time.Sleep(5 * time.Second)
 		} else {
-			desc := fmt.Sprintf("found '%d' agents running on '%s'. Require "+
-				"manual inspection.", remainingAgents, queueLoc)
+			// Build a list of relevant agent names to include in the manual inspection
+			// notification
+			var namelist string
+			for _, agent := range agents {
+				if namelist == "" {
+					namelist = agent.Name
+				} else {
+					namelist += ", " + agent.Name
+				}
+			}
+			desc := fmt.Sprintf("found %v agents running on %v. Require "+
+				"manual inspection (%v).", remainingAgents, queueLoc, namelist)
 			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: desc}.Warning()
 		}
 	}

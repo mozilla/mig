@@ -775,6 +775,7 @@ func heartbeat(ctx *Context) (err error) {
 			Tags:      ctx.Agent.Tags,
 			RefreshTS: ctx.Agent.RefreshTS,
 		}
+		ctx.Agent.Unlock()
 
 		// make a heartbeat
 		HeartBeat.HeartBeatTS = time.Now()
@@ -782,6 +783,10 @@ func heartbeat(ctx *Context) (err error) {
 		if err != nil {
 			desc := fmt.Sprintf("heartbeat failed with error '%v'", err)
 			ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
+			// Don't treat this error as fatal, sleep for a period of time
+			// (as occurs at the end of this loop) and retry
+			time.Sleep(ctx.Sleeper)
+			continue
 		}
 		desc := fmt.Sprintf("heartbeat %q", body)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
@@ -792,7 +797,6 @@ func heartbeat(ctx *Context) (err error) {
 			ctx.Channels.Log <- mig.Log{Desc: "Failed to write mig-agent.ok to disk"}.Err()
 		}
 		os.Chmod(ctx.Agent.RunDir+"mig-agent.ok", 0644)
-		ctx.Agent.Unlock()
 		time.Sleep(ctx.Sleeper)
 	}
 	return

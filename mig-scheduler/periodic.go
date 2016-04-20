@@ -254,8 +254,8 @@ func computeAgentsStats(ctx Context) (err error) {
 }
 
 // detectMultiAgents lists endpoint queues that are running more than one agent, and sends
-// the queues names to a channel were destruction orders can be emitted to shut down
-// duplication agents
+// the queue names to a channel where destruction orders can be emitted to shut down
+// duplicate agents
 func detectMultiAgents(ctx Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {

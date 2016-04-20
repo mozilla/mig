@@ -26,7 +26,7 @@ func describeCreateAction(respWriter http.ResponseWriter, request *http.Request)
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCreateAction()"}.Debug()
 	}()
@@ -39,7 +39,7 @@ func describeCreateAction(respWriter http.ResponseWriter, request *http.Request)
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // createAction receives a signed action in a POST request, validates it,
@@ -56,7 +56,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, ActionID: action.ID, Desc: "leaving createAction()"}.Debug()
 	}()
@@ -135,7 +135,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	// return a 202 Accepted. the action will be processed asynchronously, and may fail later.
-	respond(202, resource, respWriter, request)
+	respond(http.StatusAccepted, resource, respWriter, request)
 }
 
 // describeCancelAction returns a resource that describes how to cancel an action
@@ -148,7 +148,7 @@ func describeCancelAction(respWriter http.ResponseWriter, request *http.Request)
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCancelAction()"}.Debug()
 	}()
@@ -161,7 +161,7 @@ func describeCancelAction(respWriter http.ResponseWriter, request *http.Request)
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // getAction queries the database and retrieves the detail of an action
@@ -175,7 +175,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 			emsg := fmt.Sprintf("%v", e)
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAction()"}.Debug()
 	}()
@@ -195,7 +195,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),
 					Message: fmt.Sprintf("Action ID '%.0f' not found", actionID)})
-				respond(404, resource, respWriter, request)
+				respond(http.StatusNotFound, resource, respWriter, request)
 				return
 			} else {
 				panic(err)
@@ -206,7 +206,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("Invalid Action ID '%.0f'", actionID)})
-		respond(400, resource, respWriter, request)
+		respond(http.StatusBadRequest, resource, respWriter, request)
 		return
 	}
 
@@ -221,7 +221,7 @@ func getAction(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(actionItem)
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // actionToItem receives an Action and returns an Item

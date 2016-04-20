@@ -44,9 +44,9 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 			})
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			if fmt.Sprintf("%v", e) == "no results found" {
-				respond(404, resource, respWriter, request)
+				respond(http.StatusNotFound, resource, respWriter, request)
 			} else {
-				respond(500, resource, respWriter, request)
+				respond(http.StatusInternalServerError, resource, respWriter, request)
 			}
 
 		}
@@ -75,6 +75,8 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		results, err = ctx.DB.SearchInvestigators(p)
 	case "manifest":
 		results, err = ctx.DB.SearchManifests(p)
+	case "loader":
+		results, err = ctx.DB.SearchLoaders(p)
 	default:
 		panic("search type is invalid")
 	}
@@ -218,6 +220,25 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 					break
 				}
 			}
+		case "loader":
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d loaders", len(results.([]mig.LoaderEntry)))}
+			if len(results.([]mig.LoaderEntry)) == 0 {
+				panic("no results found")
+			}
+			for i, r := range results.([]mig.LoaderEntry) {
+				err = resource.AddItem(cljs.Item{
+					// XXX This should be an Href to fetch the entry
+					Href: fmt.Sprintf("%s%s", ctx.Server.Host,
+						ctx.Server.BaseRoute),
+					Data: []cljs.Data{{Name: p.Type, Value: r}},
+				})
+				if err != nil {
+					panic(err)
+				}
+				if float64(i) > p.Limit {
+					break
+				}
+			}
 		}
 	}
 	// if needed, add pagination info
@@ -245,7 +266,7 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // truere is a case insensitive regex that matches the string 'true'
@@ -304,6 +325,10 @@ func parseSearchParameters(qp url.Values) (p migdbsearch.Parameters, filterFound
 			if err != nil {
 				panic("invalid limit parameter")
 			}
+		case "loadername":
+			p.LoaderName = qp["loadername"][0]
+		case "loaderid":
+			p.LoaderID = qp["loaderid"][0]
 		case "manifestname":
 			p.ManifestName = qp["manifestname"][0]
 		case "manifestid":

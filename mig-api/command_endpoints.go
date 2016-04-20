@@ -25,7 +25,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 			emsg := fmt.Sprintf("%v", e)
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getCommand()"}.Debug()
 	}()
@@ -45,7 +45,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 				resource.SetError(cljs.Error{
 					Code:    fmt.Sprintf("%.0f", opid),
 					Message: fmt.Sprintf("Command ID '%.0f' not found", commandID)})
-				respond(404, resource, respWriter, request)
+				respond(http.StatusNotFound, resource, respWriter, request)
 				return
 			} else {
 				panic(err)
@@ -56,7 +56,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 		resource.SetError(cljs.Error{
 			Code:    fmt.Sprintf("%.0f", opid),
 			Message: fmt.Sprintf("Invalid Command ID '%.0f'", commandID)})
-		respond(400, resource, respWriter, request)
+		respond(http.StatusBadRequest, resource, respWriter, request)
 		return
 	}
 	// store the results in the resource
@@ -65,7 +65,7 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(commandItem)
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // describeCancelCommand returns a resource that describes how to cancel a command
@@ -78,7 +78,7 @@ func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request
 		if e := recover(); e != nil {
 			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(500, resource, respWriter, request)
+			respond(http.StatusInternalServerError, resource, respWriter, request)
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCancelCommand()"}.Debug()
 	}()
@@ -91,7 +91,7 @@ func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request
 	if err != nil {
 		panic(err)
 	}
-	respond(200, resource, respWriter, request)
+	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // commandToItem receives a command and returns an Item in Collection+JSON

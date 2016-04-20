@@ -6,9 +6,20 @@
 
 package mig /* import "mig.ninja/mig" */
 
+import (
+	"time"
+)
+
 // Describes a loader entry stored in the database
 type LoaderEntry struct {
-	ID        float64 // Loader ID
-	Name      string  // Loader name
-	AgentName string  // Loader environment, agent name
+	ID        float64   // Loader ID
+	Name      string    // Loader name
+	Key       string    // Loader key (only populated during creation)
+	AgentName string    // Loader environment, agent name
+	LastSeen  time.Time // Last time loader was used
+	Enabled   bool      // Loader entry is active
+}
+
+func (le *LoaderEntry) Validate() error {
+	return nil
 }

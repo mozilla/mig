@@ -88,7 +88,7 @@ func main() {
 		// completion
 		var symbols = []string{"action", "agent", "create", "command", "help", "history",
 			"exit", "manifest", "showcfg", "status", "investigator", "search", "query",
-			"where", "and"}
+			"where", "and", "loader"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -131,6 +131,8 @@ func main() {
 					err = actionLauncher(a, cli)
 				case "investigator":
 					err = investigatorCreator(cli)
+				case "loader":
+					err = loaderCreator(cli)
 				case "manifest":
 					err = manifestCreator(cli)
 				default:
@@ -156,6 +158,7 @@ action <id>		enter interactive action reader mode for action <id>
 agent <id>		enter interactive agent reader mode for agent <id>
 create action		create a new action
 create investigator	create a new investigator, will prompt for name and public key
+create loader           create a new loader entry
 create manifest         create a new manifest
 command <id>		enter command reader mode for command <id>
 exit			leave
@@ -182,6 +185,11 @@ status			display platform status: connected agents, latest actions, ...
 			}
 		case "investigator":
 			err = investigatorReader(input, cli)
+			if err != nil {
+				log.Println(err)
+			}
+		case "loader":
+			err = loaderReader(input, cli)
 			if err != nil {
 				log.Println(err)
 			}

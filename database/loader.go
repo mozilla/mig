@@ -7,6 +7,7 @@
 package database /* import "mig.ninja/mig/database" */
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	_ "github.com/lib/pq"
@@ -18,7 +19,8 @@ func (db *DB) GetLoaderEntryID(key string) (ret float64, err error) {
 	if key == "" {
 		return ret, fmt.Errorf("key cannot be empty")
 	}
-	err = db.c.QueryRow("SELECT id FROM loaders WHERE loaderkey=$1", key).Scan(&ret)
+	err = db.c.QueryRow(`SELECT id FROM loaders WHERE
+		loaderkey=$1 AND enabled=TRUE`, key).Scan(&ret)
 	if err != nil {
 		err = fmt.Errorf("No matching loader entry found for key")
 		return
@@ -28,7 +30,8 @@ func (db *DB) GetLoaderEntryID(key string) (ret float64, err error) {
 
 // Return a loader name given an ID
 func (db *DB) GetLoaderName(id float64) (ret string, err error) {
-	err = db.c.QueryRow("SELECT loadername FROM loaders WHERE id=$1", id).Scan(&ret)
+	err = db.c.QueryRow(`SELECT loadername FROM loaders 
+		WHERE id=$1 AND enabled=TRUE`, id).Scan(&ret)
 	if err != nil {
 		err = fmt.Errorf("Unable to locate name for loader ID")
 		return
@@ -51,7 +54,9 @@ func (db *DB) UpdateLoaderEntry(lid float64, agt mig.Agent) (err error) {
 		return
 	}
 	_, err = db.c.Exec(`UPDATE loaders
-		SET name=$1, env=$2, tags=$3 WHERE id=$4`,
+		SET name=$1, env=$2, tags=$3,
+		lastseen=now()
+		WHERE id=$4`,
 		agt.Name, jEnv, jTags, lid)
 	if err != nil {
 		return err
@@ -103,7 +108,8 @@ func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err 
 	if err != nil {
 		return
 	}
-	qs := fmt.Sprintf("SELECT id, loadername, name FROM loaders WHERE %v", mtarg)
+	qs := fmt.Sprintf(`SELECT id, loadername, name, lastseen, enabled
+		FROM loaders WHERE enabled=TRUE AND %v`, mtarg)
 	rows, err := db.c.Query(qs)
 	if err != nil {
 		return
@@ -112,12 +118,53 @@ func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err 
 		defer rows.Close()
 	}
 	for rows.Next() {
+		var agtname sql.NullString
 		nle := mig.LoaderEntry{}
-		err = rows.Scan(&nle.ID, &nle.Name, &nle.AgentName)
+		err = rows.Scan(&nle.ID, &nle.Name, &agtname, &nle.LastSeen, &nle.Enabled)
 		if err != nil {
 			return ret, err
 		}
+		// This should always be valid, if it is not that means we have a loader
+		// entry updated with a valid env, but a NULL agent name. In that case we
+		// just don't set the agent name in the loader entry.
+		if agtname.Valid {
+			nle.AgentName = agtname.String
+		}
 		ret = append(ret, nle)
 	}
+	return
+}
+
+// Return a loader entry given an ID
+func (db *DB) GetLoaderFromID(lid float64) (ret mig.LoaderEntry, err error) {
+	var name sql.NullString
+	err = db.c.QueryRow(`SELECT id, loadername, name, lastseen, enabled
+		FROM loaders WHERE id=$1`, lid).Scan(&ret.ID, &ret.Name, &name,
+		&ret.LastSeen, &ret.Enabled)
+	if err != nil {
+		err = fmt.Errorf("Error while retrieving loader: '%v'", err)
+		return
+	}
+	if name.Valid {
+		ret.AgentName = name.String
+	}
+	return
+}
+
+// Enable or disable a loader entry in the database
+func (db *DB) LoaderUpdateStatus(lid float64, status bool) (err error) {
+	_, err = db.c.Exec(`UPDATE loaders SET enabled=$1 WHERE
+		id=$2`, status, lid)
+	if err != nil {
+		return err
+	}
+	return
+}
+
+// Add a new loader entry to the database
+func (db *DB) LoaderAdd(le mig.LoaderEntry) (err error) {
+	_, err = db.c.Exec(`INSERT INTO loaders VALUES
+		(DEFAULT, $1, $2, NULL, NULL, NULL, now(), FALSE)`, le.Name,
+		le.Key)
 	return
 }
