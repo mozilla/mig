@@ -13,7 +13,7 @@ import (
 	"os"
 	"sync"
 
-	"code.google.com/p/winsvc/eventlog"
+	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 const (
