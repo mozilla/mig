@@ -4,7 +4,7 @@
 //
 // Contributor:
 // - Julien Vehent jvehent@mozilla.com [:ulfr]
-package main
+package agentcontext
 
 import (
 	"bufio"
@@ -15,13 +15,13 @@ import (
 	"strings"
 )
 
-func findHostname(orig_ctx Context) (ctx Context, err error) {
+func findHostname(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("findHostname() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving findHostname()"}.Debug()
+		logChan <- mig.Log{Desc: "leaving findHostname()"}.Debug()
 	}()
 
 	// get the hostname
@@ -30,25 +30,25 @@ func findHostname(orig_ctx Context) (ctx Context, err error) {
 		panic(err)
 	}
 	// remove trailing newline
-	ctx.Agent.Hostname = fmt.Sprintf("%s", out[0:len(out)-1])
+	ctx.Hostname = fmt.Sprintf("%s", out[0:len(out)-1])
 	return
 }
 
-func findOSInfo(orig_ctx Context) (ctx Context, err error) {
+func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("findOSInfo() -> %v", e)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving findOSInfo()"}.Debug()
+		logChan <- mig.Log{Desc: "leaving findOSInfo()"}.Debug()
 	}()
 	hostname, domain, osname, osversion, err := getSysInfo()
 	if err != nil {
 		panic(err)
 	}
-	ctx.Agent.Hostname = hostname + "." + domain
-	ctx.Agent.Env.Ident = osname + " " + osversion
-	ctx.Agent.Env.Init = "windows"
+	ctx.Hostname = hostname + "." + domain
+	ctx.OSIdent = osname + " " + osversion
+	ctx.Init = "windows"
 	return
 }
 
@@ -105,6 +105,6 @@ exit:
 	return
 }
 
-func getRunDir() string {
+func GetRunDir() string {
 	return `C:\Program Files\mig\`
 }
