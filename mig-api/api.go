@@ -222,6 +222,10 @@ func authenticate(pass handler, adminRequired bool) handler {
 			if !inv.IsAdmin {
 				inv.Name = "authfailed"
 				inv.ID = -1
+				ctx.Channels.Log <- mig.Log{
+					OpID: getOpID(r),
+					Desc: fmt.Sprintf("Investigator '%v' %v has insufficient privileges to access API function", getInvName(r), getInvID(r)),
+				}.Info()
 				resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 				resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid),
 					Message: "Insufficient privileges"})
