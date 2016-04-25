@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"regexp"
 	"runtime"
 	"strings"
 
@@ -258,11 +257,11 @@ func authenticateLoader(pass handler) handler {
 		}
 		// Do a sanity check here on the submitted loader string before
 		// we attempt the authentication
-		lkeyok, err := regexp.MatchString("[A-Za-z0-9]{1,256}", lkey)
-		if err == nil && lkeyok {
+		err = mig.ValidateLoaderKey(lkey)
+		if err == nil {
 			loaderid, err = ctx.DB.GetLoaderEntryID(lkey)
 		}
-		if err != nil || !lkeyok {
+		if err != nil {
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Loader authorization failed")})
 			respond(http.StatusUnauthorized, resource, w, r)
