@@ -277,6 +277,12 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 	// if the request failed because of an auth issue, it may be that the auth token has expired.
 	// try the request again with a fresh token
 	if resp.StatusCode == http.StatusUnauthorized {
+		// Make sure we read the entire response body from the previous request before we close it
+		// to avoid connection cancellation issues and a panic in API.Do()
+		_, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
 		resp.Body.Close()
 		cli.Token, err = cli.MakeSignedToken()
 		if err != nil {
