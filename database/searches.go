@@ -920,12 +920,12 @@ func (db *DB) SearchManifests(p search.Parameters) (mrecords []mig.ManifestRecor
 func (db *DB) SearchLoaders(p search.Parameters) (lrecords []mig.LoaderEntry, err error) {
 	var rows *sql.Rows
 	ids, err := makeIDsFromParams(p)
-	columns := `loaders.id, loaders.loadername, loaders.name, loaders.lastused`
+	columns := `loaders.id, loaders.loadername, loaders.name, loaders.lastseen`
 	where := ""
 	vals := []interface{}{}
 	valctr := 0
 	if p.Before.Before(time.Now().Add(search.DefaultWindow - time.Hour)) {
-		where += fmt.Sprintf(`loaders.lastused <= $%d `, valctr+1)
+		where += fmt.Sprintf(`loaders.lastseen <= $%d `, valctr+1)
 		vals = append(vals, p.Before)
 		valctr += 1
 	}
@@ -933,7 +933,7 @@ func (db *DB) SearchLoaders(p search.Parameters) (lrecords []mig.LoaderEntry, er
 		if valctr > 0 {
 			where += " AND "
 		}
-		where += fmt.Sprintf(`loaders.lastused >= $%d `, valctr+1)
+		where += fmt.Sprintf(`loaders.lastseen >= $%d `, valctr+1)
 		vals = append(vals, p.After)
 		valctr += 1
 	}
