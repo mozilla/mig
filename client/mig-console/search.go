@@ -129,7 +129,7 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 	case "manifest":
 		fmt.Println("- ID - + ----      Name      ---- + -- Status -- + -------------- Target -------- + ---- Timestamp ---")
 	case "loader":
-		fmt.Println("- ID - + ----      Name      ---- + ----   Agent Name   ---- + -- Last Used ---")
+		fmt.Println("- ID - + ----      Name      ---- + ----   Agent Name   ---- + -- Enabled - + -- Last Used ---")
 	}
 	for _, item := range resources.Collection.Items {
 		for _, data := range item.Data {
@@ -258,8 +258,12 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 				if len(agtname) > 24 {
 					agtname = agtname[0:21] + "..."
 				}
-				fmt.Printf("%6.0f   %s   %s   %s\n", le.ID, loadername,
-					agtname,
+				loaderstatus := fmt.Sprintf("%v", le.Enabled)
+				for i := len(loaderstatus); i < 12; i++ {
+					loaderstatus += " "
+				}
+				fmt.Printf("%6.0f   %s   %s   %s   %s\n", le.ID, loadername,
+					agtname, loaderstatus,
 					le.LastSeen.UTC().Format(time.RFC3339))
 			}
 		}

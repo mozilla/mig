@@ -930,7 +930,7 @@ func (db *DB) SearchManifests(p search.Parameters) (mrecords []mig.ManifestRecor
 func (db *DB) SearchLoaders(p search.Parameters) (lrecords []mig.LoaderEntry, err error) {
 	var rows *sql.Rows
 	ids, err := makeIDsFromParams(p)
-	columns := `loaders.id, loaders.loadername, loaders.name, loaders.lastseen`
+	columns := `loaders.id, loaders.loadername, loaders.name, loaders.lastseen, loaders.enabled`
 	where := ""
 	vals := []interface{}{}
 	valctr := 0
@@ -991,7 +991,7 @@ func (db *DB) SearchLoaders(p search.Parameters) (lrecords []mig.LoaderEntry, er
 	for rows.Next() {
 		var le mig.LoaderEntry
 		var agtnameNull sql.NullString
-		err = rows.Scan(&le.ID, &le.Name, &agtnameNull, &le.LastSeen)
+		err = rows.Scan(&le.ID, &le.Name, &agtnameNull, &le.LastSeen, &le.Enabled)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve loader data: '%v'", err)
 			return
