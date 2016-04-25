@@ -507,6 +507,48 @@ func statusLoader(respWriter http.ResponseWriter, request *http.Request) {
 	respond(http.StatusOK, resource, respWriter, request)
 }
 
+// Change key set on a loader entry
+func keyLoader(respWriter http.ResponseWriter, request *http.Request) {
+	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
+	opid := getOpID(request)
+	resource := cljs.New(loc)
+	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
+			respond(http.StatusInternalServerError, resource, respWriter, request)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving keyLoader()"}.Debug()
+	}()
+
+	err := request.ParseForm()
+	if err != nil {
+		panic(err)
+	}
+
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received loader key change request")}.Debug()
+
+	loaderid, err := strconv.ParseFloat(request.FormValue("loaderid"), 64)
+	if err != nil {
+		panic(err)
+	}
+	lkey := request.FormValue("loaderkey")
+	if lkey == "" {
+		// bad request, return 400
+		resource.SetError(cljs.Error{
+			Code:    fmt.Sprintf("%.0f", opid),
+			Message: "Invalid key specified"})
+		respond(http.StatusBadRequest, resource, respWriter, request)
+		return
+	}
+	err = ctx.DB.LoaderUpdateKey(loaderid, lkey)
+	if err != nil {
+		panic(err)
+	}
+
+	respond(http.StatusOK, resource, respWriter, request)
+}
+
 // Add a new loader entry
 func newLoader(respWriter http.ResponseWriter, request *http.Request) {
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())

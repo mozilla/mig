@@ -605,6 +605,47 @@ func (cli Client) LoaderEntryStatus(le mig.LoaderEntry, status bool) (err error)
 	return
 }
 
+// Change the key on an existing loader entry
+func (cli Client) LoaderEntryKey(le mig.LoaderEntry, key string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("LoaderEntryKey() -> %v", e)
+		}
+	}()
+	if key == "" {
+		panic("invalid loader key specified")
+	}
+	data := url.Values{"loaderid": {fmt.Sprintf("%.0f", le.ID)}, "loaderkey": {key}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"loader/key/",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var resource *cljs.Resource
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("error: HTTP %d. Key update failed with error '%v' (code %s).",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	return
+}
+
 // Post a new loader entry for storage through the API
 func (cli Client) PostNewLoader(le mig.LoaderEntry) (err error) {
 	defer func() {
