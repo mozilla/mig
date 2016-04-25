@@ -25,6 +25,7 @@ type IDs struct {
 	minAgentID, maxAgentID     float64
 	minInvID, maxInvID         float64
 	minManID, maxManID         float64
+	minLdrID, maxLdrID         float64
 }
 
 const MAXFLOAT64 float64 = 9007199254740991 // 2^53-1
@@ -74,6 +75,15 @@ func makeIDsFromParams(p search.Parameters) (ids IDs, err error) {
 			return
 		}
 		ids.maxManID = ids.minManID
+	}
+	ids.minLdrID = 0
+	ids.maxLdrID = MAXFLOAT64
+	if p.LoaderID != "∞" {
+		ids.minLdrID, err = strconv.ParseFloat(p.LoaderID, 64)
+		if err != nil {
+			return
+		}
+		ids.maxLdrID = ids.minLdrID
 	}
 	return
 }
@@ -959,7 +969,7 @@ func (db *DB) SearchLoaders(p search.Parameters) (lrecords []mig.LoaderEntry, er
 		}
 		where += fmt.Sprintf(`loaders.id >= $%d AND loaders.id <= $%d`,
 			valctr+1, valctr+2)
-		vals = append(vals, ids.minManID, ids.maxManID)
+		vals = append(vals, ids.minLdrID, ids.maxLdrID)
 		valctr += 2
 	}
 	query := fmt.Sprintf(`SELECT %s FROM loaders WHERE %s ORDER BY loadername;`, columns, where)
