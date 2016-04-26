@@ -7,6 +7,8 @@
 package mig /* import "mig.ninja/mig" */
 
 import (
+	"errors"
+	"regexp"
 	"time"
 )
 
@@ -21,5 +23,13 @@ type LoaderEntry struct {
 }
 
 func (le *LoaderEntry) Validate() error {
+	return nil
+}
+
+func ValidateLoaderKey(key string) error {
+	ok, err := regexp.MatchString("^[A-Za-z0-9]{1,256}$", key)
+	if err != nil || !ok {
+		return errors.New("loader key format is invalid")
+	}
 	return nil
 }

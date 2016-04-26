@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"regexp"
 	"runtime"
 	"strings"
 
@@ -223,6 +222,10 @@ func authenticate(pass handler, adminRequired bool) handler {
 			if !inv.IsAdmin {
 				inv.Name = "authfailed"
 				inv.ID = -1
+				ctx.Channels.Log <- mig.Log{
+					OpID: getOpID(r),
+					Desc: fmt.Sprintf("Investigator '%v' %v has insufficient privileges to access API function", getInvName(r), getInvID(r)),
+				}.Info()
 				resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 				resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid),
 					Message: "Insufficient privileges"})
@@ -255,11 +258,11 @@ func authenticateLoader(pass handler) handler {
 		}
 		// Do a sanity check here on the submitted loader string before
 		// we attempt the authentication
-		lkeyok, err := regexp.MatchString("[A-Za-z0-9]{1,256}", lkey)
-		if err == nil && lkeyok {
+		err = mig.ValidateLoaderKey(lkey)
+		if err == nil {
 			loaderid, err = ctx.DB.GetLoaderEntryID(lkey)
 		}
-		if err != nil || !lkeyok {
+		if err != nil {
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Loader authorization failed")})
 			respond(http.StatusUnauthorized, resource, w, r)

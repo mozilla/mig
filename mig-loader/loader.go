@@ -544,7 +544,12 @@ func loadLoaderKey() error {
 		}
 		return err
 	}
-	LOADERKEY = string(buf)
+	// Also trim any leading and trailing spaces from the loader key
+	LOADERKEY = strings.Trim(string(buf), " ")
+	err = mig.ValidateLoaderKey(LOADERKEY)
+	if err != nil {
+		return err
+	}
 	ctx.LoaderKey = LOADERKEY
 	return nil
 }
