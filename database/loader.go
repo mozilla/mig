@@ -161,6 +161,16 @@ func (db *DB) LoaderUpdateStatus(lid float64, status bool) (err error) {
 	return
 }
 
+// Change loader key
+func (db *DB) LoaderUpdateKey(lid float64, key string) (err error) {
+	_, err = db.c.Exec(`UPDATE loaders SET loaderkey=$1 WHERE
+		id=$2`, key, lid)
+	if err != nil {
+		return err
+	}
+	return
+}
+
 // Add a new loader entry to the database
 func (db *DB) LoaderAdd(le mig.LoaderEntry) (err error) {
 	_, err = db.c.Exec(`INSERT INTO loaders VALUES

@@ -204,7 +204,7 @@ GRANT INSERT ON actions, signatures, manifests, manifestsig, loaders TO migapi;
 GRANT DELETE ON manifestsig TO migapi;
 GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified) ON investigators TO migapi;
 GRANT UPDATE (status, lastmodified) ON investigators TO migapi;
-GRANT UPDATE (name, env, tags, lastused, enabled) ON loaders TO migapi;
+GRANT UPDATE (name, env, tags, loaderkey, lastseen, enabled) ON loaders TO migapi;
 GRANT UPDATE (status) ON manifests TO migapi;
 GRANT USAGE ON SEQUENCE investigators_id_seq TO migapi;
 GRANT USAGE ON SEQUENCE loaders_id_seq TO migapi;

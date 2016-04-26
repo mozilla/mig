@@ -49,7 +49,7 @@ func loaderReader(input string, cli client.Client) (err error) {
 			}
 			fmt.Println("reloaded")
 		}
-		var symbols = []string{"disable", "enable", "exit", "help", "json", "r"}
+		var symbols = []string{"disable", "enable", "exit", "help", "json", "key", "r"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -96,6 +96,8 @@ exit            exit this mode (also works with ctrl+d)
 
 json            show json of loader entry stored in database
 
+key             change loader key
+
 r               refresh the loader entry (get latest version from database)
 `)
 		case "exit":
@@ -107,6 +109,19 @@ r               refresh the loader entry (get latest version from database)
 				panic(err)
 			}
 			fmt.Printf("%v\n", string(jsonle))
+		case "key":
+			lkey, err := readline.String("New key for loader> ")
+			if err != nil {
+				panic(err)
+			}
+			if lkey == "" {
+				panic("invalid key specified")
+			}
+			err = cli.LoaderEntryKey(le, lkey)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Loader key changed")
 		case "r":
 			reloadfunc()
 		case "":
