@@ -127,8 +127,24 @@ func HasIPConnected(val string) (found bool, elements []element, err error) {
 		if err != nil {
 			panic(err)
 		}
-		// or an ipv6
-	} else {
+		// Also search for the IPv4 address as an IPv4-mapped
+		// IPv6 address; IPv4 peers connected to a e.g. a tcp6 socket will
+		// be found in the IPv6 related proc net files (e.g., /proc/net/tcp6)
+		// if this is the case, so we also want to check there.
+		//
+		// net.IP already stores the IPv4 address internally in the
+		// format we need, so just pass it into the IP6 function
+		found2, elements2, err := hasIP6Connected(ip, ipnet)
+		if err != nil {
+			panic(err)
+		}
+		if found2 {
+			found = true
+			for _, x := range elements2 {
+				elements = append(elements, x)
+			}
+		}
+	} else { // or an ipv6
 		found, elements, err = hasIP6Connected(ip, ipnet)
 		if err != nil {
 			panic(err)
