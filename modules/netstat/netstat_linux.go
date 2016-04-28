@@ -384,21 +384,24 @@ func procIP6EntriesNS() (ret []procNetLine, err error) {
 
 // hexToIP6 converts the hexadecimal representation of an IP address as found in
 // /proc/net/tcp6, into a net.IP byte slice as defined in the net package
+//
+// the hex address as found in tcp6 is stored as 4 words of 4 bytes each, where in
+// each word the bytes are in reverse order.
 func hexToIP6(hexIP string) net.IP {
 	ip := make(net.IP, net.IPv6len)
-	ipPos := 15
-	pos := 0
-	for {
-		if ipPos < 0 {
-			break
+	ipPos := 0
+	// Loop through the hex string, and grab 8 bytes of the hex string
+	// (4 bytes of the address) at a time
+	for i := 0; i < 32; i += 8 {
+		// Reverse the byte order in the word and store it in ip
+		for lctr := i + 8; lctr > i; lctr -= 2 {
+			b, err := strconv.ParseUint(string(hexIP[lctr-2:lctr]), 16, 8)
+			if err != nil {
+				return nil
+			}
+			ip[ipPos] = uint8(b)
+			ipPos++
 		}
-		currentByte, err := strconv.ParseUint(string(hexIP[pos:pos+2]), 16, 8)
-		if err != nil {
-			return nil
-		}
-		ip[ipPos] = uint8(currentByte)
-		ipPos--
-		pos += 2
 	}
 	return ip
 }
