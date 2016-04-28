@@ -329,6 +329,7 @@ type BundleDictionaryEntry struct {
 
 var bundleEntryLinux = []BundleDictionaryEntry{
 	{"mig-agent", "/sbin/mig-agent", "", nil, 0700},
+	{"mig-loader", "/sbin/mig-loader", "", nil, 0700},
 	{"configuration", "/etc/mig/mig-agent.cfg", "", TransformAMQPAuth, 0600},
 	{"agentcert", "/etc/mig/agent.crt", "", nil, 0644},
 	{"agentkey", "/etc/mig/agent.key", "", nil, 0600},
@@ -337,6 +338,7 @@ var bundleEntryLinux = []BundleDictionaryEntry{
 
 var bundleEntryDarwin = []BundleDictionaryEntry{
 	{"mig-agent", "/usr/local/bin/mig-agent", "", nil, 0700},
+	{"mig-loader", "/usr/local/bin/mig-loader", "", nil, 0700},
 	{"configuration", "/etc/mig/mig-agent.cfg", "", TransformAMQPAuth, 0600},
 	{"agentcert", "/etc/mig/agent.crt", "", nil, 0644},
 	{"agentkey", "/etc/mig/agent.key", "", nil, 0600},

@@ -397,6 +397,12 @@ func runAgent(runOpt runtimeOptions) (err error) {
 			os.Exit(0)
 		}
 	}
+	// If we get this far, it could be because:
+	// - shutdown was requested, but the service manager did not stop the process after being asked to
+	// - we are exiting due to an error condition
+	//
+	// Exit returning 1 here, so service managers know this is an error condition
+	os.Exit(1)
 	return
 }
 

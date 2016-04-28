@@ -223,6 +223,7 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) (err error) {
 	//
 	// Append .loader to the file name to use as the staged file path.
 	reppath := entry.Path + ".loader"
+	oldpath := entry.Path + ".old"
 	fd, err := os.OpenFile(reppath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		entry.Perm)
 	if err != nil {
@@ -270,6 +271,13 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) (err error) {
 	}
 
 	// Got this far, OK to proceed with the replacement.
+	// Rename existing file first
+	logInfo("renaming existing file")
+	err = os.Rename(entry.Path, oldpath)
+	if err != nil {
+		panic(err)
+	}
+	// Replace target file
 	logInfo("installing staged file")
 	err = os.Rename(reppath, entry.Path)
 	if err != nil {
