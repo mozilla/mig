@@ -115,11 +115,16 @@ func HasIPConnected(val string) (found bool, elements []element, err error) {
 		}
 		ipnet = new(net.IPNet)
 		ipnet.IP = ip
-		ipnet.Mask = net.CIDRMask(len(ip), len(ip))
+		// See if it's an IPv4 address, set our mask
+		if ipnet.IP.To4() != nil {
+			ipnet.Mask = net.CIDRMask(net.IPv4len*8, net.IPv4len*8)
+		} else {
+			ipnet.Mask = net.CIDRMask(net.IPv6len*8, net.IPv6len*8)
+		}
 	}
 
 	var fam string
-	if len(ipnet.IP) == 4 {
+	if ipnet.IP.To4() != nil {
 		fam = "inet"
 	} else {
 		fam = "inet6"
