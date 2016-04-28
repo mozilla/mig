@@ -127,8 +127,24 @@ func HasIPConnected(val string) (found bool, elements []element, err error) {
 		if err != nil {
 			panic(err)
 		}
-		// or an ipv6
-	} else {
+		// Also search for the IPv4 address as an IPv4-mapped
+		// IPv6 address; IPv4 peers connected to a e.g. a tcp6 socket will
+		// be found in the IPv6 related proc net files (e.g., /proc/net/tcp6)
+		// if this is the case, so we also want to check there.
+		//
+		// net.IP already stores the IPv4 address internally in the
+		// format we need, so just pass it into the IP6 function
+		found2, elements2, err := hasIP6Connected(ip, ipnet)
+		if err != nil {
+			panic(err)
+		}
+		if found2 {
+			found = true
+			for _, x := range elements2 {
+				elements = append(elements, x)
+			}
+		}
+	} else { // or an ipv6
 		found, elements, err = hasIP6Connected(ip, ipnet)
 		if err != nil {
 			panic(err)
@@ -384,21 +400,24 @@ func procIP6EntriesNS() (ret []procNetLine, err error) {
 
 // hexToIP6 converts the hexadecimal representation of an IP address as found in
 // /proc/net/tcp6, into a net.IP byte slice as defined in the net package
+//
+// the hex address as found in tcp6 is stored as 4 words of 4 bytes each, where in
+// each word the bytes are in reverse order.
 func hexToIP6(hexIP string) net.IP {
 	ip := make(net.IP, net.IPv6len)
-	ipPos := 15
-	pos := 0
-	for {
-		if ipPos < 0 {
-			break
+	ipPos := 0
+	// Loop through the hex string, and grab 8 bytes of the hex string
+	// (4 bytes of the address) at a time
+	for i := 0; i < 32; i += 8 {
+		// Reverse the byte order in the word and store it in ip
+		for lctr := i + 8; lctr > i; lctr -= 2 {
+			b, err := strconv.ParseUint(string(hexIP[lctr-2:lctr]), 16, 8)
+			if err != nil {
+				return nil
+			}
+			ip[ipPos] = uint8(b)
+			ipPos++
 		}
-		currentByte, err := strconv.ParseUint(string(hexIP[pos:pos+2]), 16, 8)
-		if err != nil {
-			return nil
-		}
-		ip[ipPos] = uint8(currentByte)
-		ipPos--
-		pos += 2
 	}
 	return ip
 }
