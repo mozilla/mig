@@ -833,18 +833,22 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 		// loop over the content of the directory
 		for _, dirEntry := range dirContent {
 			entryAbsPath := path
-			// append path separator if missing
-			if entryAbsPath[len(entryAbsPath)-1] != os.PathSeparator {
+			// append path separator if missing & not a symlink
+			// (maybe useless, directories are tested in next block)
+			if entryAbsPath[len(entryAbsPath)-1] != os.PathSeparator && (dirEntry.Mode()&os.ModeSymlink != os.ModeSymlink) {
 				entryAbsPath += string(os.PathSeparator)
 			}
 			entryAbsPath += dirEntry.Name()
 			// this entry is a subdirectory, keep it for later
 			if dirEntry.IsDir() {
-				// append trailing slash
-				if entryAbsPath[len(entryAbsPath)-1] != os.PathSeparator {
-					entryAbsPath += string(os.PathSeparator)
+				// if not symlinked directory, don't put symlinked directory in subdirectories to follow
+				if dirEntry.Mode()&os.ModeSymlink != os.ModeSymlink {
+					// append trailing slash
+					if entryAbsPath[len(entryAbsPath)-1] != os.PathSeparator {
+						entryAbsPath += string(os.PathSeparator)
+					}
+					subdirs = append(subdirs, entryAbsPath)
 				}
-				subdirs = append(subdirs, entryAbsPath)
 				continue
 			}
 			// if entry is a symlink, evaluate the target
@@ -902,7 +906,8 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 	for _, dir := range subdirs {
 		traversed, err = r.pathWalk(dir, roots)
 		if err != nil {
-			panic(err)
+			walkingErrors = append(walkingErrors, err.Error())
+			continue
 		}
 	}
 finish:
