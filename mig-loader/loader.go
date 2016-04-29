@@ -273,10 +273,7 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) (err error) {
 	// Got this far, OK to proceed with the replacement.
 	// Rename existing file first
 	logInfo("renaming existing file")
-	err = os.Rename(entry.Path, oldpath)
-	if err != nil {
-		panic(err)
-	}
+	os.Rename(entry.Path, oldpath)
 	// Replace target file
 	logInfo("installing staged file")
 	err = os.Rename(reppath, entry.Path)
