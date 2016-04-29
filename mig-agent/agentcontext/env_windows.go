@@ -60,7 +60,7 @@ func getSysInfo() (hostname, domain, osname, osversion string, err error) {
 		}
 	}()
 	// get data from the systeminfo
-	out, err := exec.Command("systeminfo").Output()
+	out, err := exec.Command("cmd","/C", "wmic.exe os get Caption, Version /format:list & wmic.exe computersystem get Name, domain /format:list").Output()
 	if err != nil {
 		panic(err)
 	}
@@ -69,31 +69,31 @@ func getSysInfo() (hostname, domain, osname, osversion string, err error) {
 	iter := 0
 	for {
 		lineBytes, _, err := reader.ReadLine()
-		// don't loop more than 2000 times
-		if err != nil || iter > 2000 {
+		// don't loop more than 200 times
+		if err != nil || iter > 200 {
 			goto exit
 		}
 		line := fmt.Sprintf("%s", lineBytes)
-		if strings.Contains(line, "OS Name:") {
-			out := strings.SplitN(line, ":", 2)
+		if strings.Contains(line, "Caption=") {
+			out := strings.SplitN(line, "=", 2)
 			if len(out) == 2 {
 				osname = out[1]
 			}
 			osname = cleanString(osname)
-		} else if strings.Contains(line, "OS Version:") {
-			out := strings.SplitN(line, ":", 2)
+		} else if strings.Contains(line, "Version=") {
+			out := strings.SplitN(line, "=", 2)
 			if len(out) == 2 {
 				osversion = out[1]
 			}
 			osversion = cleanString(osversion)
-		} else if strings.Contains(line, "Domain:") {
-			out := strings.SplitN(line, ":", 2)
+		} else if strings.Contains(line, "Domain=") {
+			out := strings.SplitN(line, "=", 2)
 			if len(out) == 2 {
 				domain = out[1]
 			}
 			domain = cleanString(domain)
-		} else if strings.Contains(line, "Host Name:") {
-			out := strings.SplitN(line, ":", 2)
+		} else if strings.Contains(line, "Name=") {
+			out := strings.SplitN(line, "=", 2)
 			if len(out) == 2 {
 				hostname = out[1]
 			}
