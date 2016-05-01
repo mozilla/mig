@@ -308,7 +308,7 @@ func initAgentID(orig_ctx Context) (ctx Context, err error) {
 	}
 	// Make sure the obtained queue location matches the format that we expect, if
 	// it doesn't create a new one
-	mtch, err := regexp.Match("^\\S+\\.\\S+$", id)
+	mtch, err := regexp.Match("^[0-9a-zA-Z]{80,}$", id)
 	if err != nil {
 		panic(err)
 	}
