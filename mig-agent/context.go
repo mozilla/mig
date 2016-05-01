@@ -13,12 +13,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/jvehent/service-go"
-	"github.com/streadway/amqp"
 	"io/ioutil"
 	mrand "math/rand"
-	"mig.ninja/mig"
-	"mig.ninja/mig/mig-agent/agentcontext"
 	"net"
 	"net/http"
 	"os"
@@ -27,6 +23,11 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/jvehent/service-go"
+	"github.com/streadway/amqp"
+	"mig.ninja/mig"
+	"mig.ninja/mig/mig-agent/agentcontext"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -331,17 +332,12 @@ func createIDFile(ctx Context) (id []byte, err error) {
 			err = fmt.Errorf("createIDFile() -> %v", e)
 		}
 	}()
-	// generate an ID
+	// generate an ID with 512 bits of entropy
 	r := mrand.New(mrand.NewSource(time.Now().UnixNano()))
-	sid := strconv.FormatUint(uint64(r.Int63()), 36)
-	sid += strconv.FormatUint(uint64(r.Int63()), 36)
-	sid += strconv.FormatUint(uint64(r.Int63()), 36)
-	sid += strconv.FormatUint(uint64(r.Int63()), 36)
-	sid += "."
-	sid += strconv.FormatUint(uint64(r.Int63()), 36)
-	sid += strconv.FormatUint(uint64(r.Int63()), 36)
-	sid += strconv.FormatUint(uint64(r.Int63()), 36)
-	sid += strconv.FormatUint(uint64(r.Int63()), 36)
+	var sid string
+	for i := 0; i < 8; i++ {
+		sid += strconv.FormatUint(uint64(r.Int63()), 36)
+	}
 
 	// check that the storage DIR exist, and that it's a dir
 	tdir, err := os.Open(ctx.Agent.RunDir)
