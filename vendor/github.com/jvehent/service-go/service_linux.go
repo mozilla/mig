@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log/syslog"
@@ -27,7 +28,9 @@ func getFlavor() (initFlavor, error) {
 	if err != nil {
 		return initSystemV, err
 	}
-	init := fmt.Sprintf("%s", initCmd[:len(initCmd)-1])
+	// Trim any nul bytes from the result, which are present with some
+	// kernels but not others
+	init := string(bytes.TrimRight(initCmd, "\x00"))
 	if strings.Contains(init, "init [") {
 		return initSystemV, nil
 	}
