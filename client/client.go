@@ -1277,10 +1277,12 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 		resource, err := cli.GetAPIResource(target)
 		// because we query using pagination, the last query will return a 404 with no result.
 		// When that happens, GetAPIResource returns an error which we do not report to the user
-		if resource.Collection.Error.Message == "no results found" {
+		switch resource.Collection.Error.Message {
+		case "", "no results found":
 			err = nil
-			break
-		} else if err != nil {
+		case "maxmind database not initialized":
+			panic("Maxmind database not configured in the API, geolocations cannot be displayed")
+		default:
 			panic(err)
 		}
 		count := 0
@@ -1322,6 +1324,9 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 	}
 	switch render {
 	case "map":
+		if len(locs) < 1 {
+			break
+		}
 		title := fmt.Sprintf("Geolocation of %s results for action ID %.0f %s", show, a.ID, a.Name)
 		err = PrintMap(locs, title)
 		if err != nil {
@@ -1345,10 +1350,12 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 				resource, err := cli.GetAPIResource(target)
 				// because we query using pagination, the last query will return a 404 with no result.
 				// When that happens, GetAPIResource returns an error which we do not report to the user
-				if resource.Collection.Error.Message == "no results found" {
+				switch resource.Collection.Error.Message {
+				case "", "no results found":
 					err = nil
-					break
-				} else if err != nil {
+				case "maxmind database not initialized":
+					panic("Maxmind database not configured in the API, geolocations cannot be displayed")
+				default:
 					panic(err)
 				}
 				for _, item := range resource.Collection.Items {
