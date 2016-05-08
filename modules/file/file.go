@@ -150,12 +150,13 @@ func (s *search) makeChecks() (err error) {
 		debug = true
 	}
 	if s.Options.MaxDepth == 0 {
-		s.Options.MaxDepth = 1000
+		s.Options.MaxDepth = unlimited
+	}
 	if s.Options.MaxErrors == 0 {
 		s.Options.MaxErrors = unlimited
 	}
 	if s.Options.MatchLimit == 0 {
-		s.Options.MatchLimit = 1000
+		s.Options.MatchLimit = unlimited
 	}
 	for _, v := range s.Contents {
 		var c check

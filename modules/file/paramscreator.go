@@ -58,6 +58,7 @@ func printHelp(isCmd bool) {
 Options
 -------
 %smaxdepth <int>	- limit search depth to <int> levels. default to 1000.
+%smaxdepth <int>	- limit search depth to <int> levels. default to 1000, 0 means no limit.
 			  ex: %smaxdepth 3
 %smatchall		- all search parameters must match on a given file for it to
 			  return as a match. off by default. deactivates 'matchany' if set.
@@ -73,7 +74,7 @@ Options
 			  ex: %smismatch content
 %smatchlimit <int>	- limit the number of files that can be matched by a search.
 			  the default limit is set to 1000. search will stop once the limit
-			  is reached.
+			  is reached. 0 means no limit.
 %sreturnsha256		- include sha256 hash for matched files.
 			  ex: %sreturnsha256
 %sdecompress		- decompress file before inspection
