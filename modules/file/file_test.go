@@ -633,6 +633,7 @@ func TestParamsParser(t *testing.T) {
 	args = append(args, "-mismatch", "content")
 	args = append(args, "-matchlimit", "10")
 	args = append(args, "-maxdepth", "2")
+	args = append(args, "-maxerrors", "31")
 	args = append(args, "-verbose")
 	args = append(args, "-decompress")
 	t.Logf("%s\n", args)

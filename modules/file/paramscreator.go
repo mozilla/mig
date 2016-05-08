@@ -79,6 +79,10 @@ Options
 %sdecompress		- decompress file before inspection
 			  ex: %sdecompress
 
+%smaxerrors <int>	- limit walking errors returned during search to <int>.
+			  default to 30, 0 means no walking error is returned.
+			  ex: %smaxerrors 1000
+
 Module documentation is at http://mig.mozilla.org/doc/module_file.html
 Cheatsheet and examples are at http://mig.mozilla.org/doc/cheatsheet.rst.html
 `, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash,
@@ -101,6 +105,7 @@ func (r *run) ParamsCreator() (interface{}, error) {
 		// sane defaults
 		search.Options.MatchAll = true
 		search.Options.MaxDepth = 1000
+		search.Options.MaxDepth = 30
 		search.Options.MatchLimit = 1000
 		search.Options.Decompress = false
 		for {
@@ -303,6 +308,17 @@ func (r *run) ParamsCreator() (interface{}, error) {
 					fmt.Println("Missing parameter, try again")
 					continue
 				}
+			case "maxerrors":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
+				v, err := strconv.ParseFloat(checkValue, 64)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Options.MaxErrors = v
 			case "matchall":
 				if checkValue != "" {
 					fmt.Println("This option doesn't take arguments, try again")
@@ -378,7 +394,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 		err error
 		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha2s,
 		sha3s, mismatch flagParam
-		maxdepth, matchlimit                                           float64
+		maxdepth, maxerrors, matchlimit                                float64
 		returnsha256, matchall, matchany, macroal, verbose, decompress bool
 		fs                                                             flag.FlagSet
 	)
@@ -399,6 +415,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.Var(&sha3s, "sha3", "see help")
 	fs.Var(&mismatch, "mismatch", "see help")
 	fs.Float64Var(&maxdepth, "maxdepth", 1000, "see help")
+	fs.Float64Var(&maxerrors, "maxerrors", 30, "see help")
 	fs.Float64Var(&matchlimit, "matchlimit", 1000, "see help")
 	fs.BoolVar(&matchall, "matchall", true, "see help")
 	fs.BoolVar(&matchany, "matchany", false, "see help")
@@ -422,6 +439,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	s.SHA2 = sha2s
 	s.SHA3 = sha3s
 	s.Options.MaxDepth = maxdepth
+	s.Options.MaxErrors = maxerrors
 	s.Options.MatchLimit = matchlimit
 	s.Options.Macroal = macroal
 	s.Options.Mismatch = mismatch

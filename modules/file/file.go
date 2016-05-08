@@ -94,6 +94,7 @@ type search struct {
 
 type options struct {
 	MaxDepth     float64  `json:"maxdepth"`
+	MaxErrors    float64  `json:"maxerrors"`
 	RemoteFS     bool     `json:"remotefs,omitempty"`
 	MatchAll     bool     `json:"matchall"`
 	Macroal      bool     `json:"macroal"`
@@ -136,6 +137,9 @@ type check struct {
 	inversematch, mismatch bool
 }
 
+// pretty much infinity when it comes to file searches
+const unlimited float64 = 1125899906842624
+
 func (s *search) makeChecks() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -147,6 +151,8 @@ func (s *search) makeChecks() (err error) {
 	}
 	if s.Options.MaxDepth == 0 {
 		s.Options.MaxDepth = 1000
+	if s.Options.MaxErrors == 0 {
+		s.Options.MaxErrors = unlimited
 	}
 	if s.Options.MatchLimit == 0 {
 		s.Options.MatchLimit = 1000
@@ -1550,6 +1556,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 	}()
 	res := newResults()
 	elements := res.Elements.(SearchResults)
+	var maxerrors int
 	for label, search := range r.Parameters.Searches {
 		var sr searchresult
 		// first pass on the results: if matchall is set, verify that all
@@ -1618,7 +1625,14 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 				}
 				mf.Search = search
 				mf.Search.Options.MatchLimit = 0
+				// store the value of maxerrors if greater than the one
+				// we already have, we'll need it further down to return
+				// the right number of walking errors
+				if int(mf.Search.Options.MaxDepth) > maxerrors {
+					maxerrors = int(mf.Search.Options.MaxDepth)
+				}
 				mf.Search.Options.MaxDepth = 0
+				mf.Search.Options.MaxErrors = 0
 				mf.Search.Options.MatchAll = search.Options.MatchAll
 				sr = append(sr, mf)
 			}
@@ -1649,7 +1663,14 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 					mf.Search.Paths = search.Paths
 				}
 				mf.Search.Options.MatchLimit = 0
+				// store the value of maxerrors if greater than the one
+				// we already have, we'll need it further down to return
+				// the right number of walking errors
+				if int(mf.Search.Options.MaxDepth) > maxerrors {
+					maxerrors = int(mf.Search.Options.MaxDepth)
+				}
 				mf.Search.Options.MaxDepth = 0
+				mf.Search.Options.MaxErrors = 0
 				mf.Search.Options.MatchAll = search.Options.MatchAll
 				switch c.code {
 				case checkContent:
@@ -1691,8 +1712,17 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 	res.Statistics = stats
 
 	// store the errors encountered along the way
+	var errctr int
 	for _, we := range walkingErrors {
 		res.Errors = append(res.Errors, we)
+		errctr++
+		if errctr >= maxerrors {
+			break
+		}
+	}
+	if len(walkingErrors) > int(maxerrors) {
+		res.Errors = append(res.Errors, fmt.Sprintf("%d errors were not returned (max errors = %d)",
+			len(walkingErrors)-maxerrors, maxerrors))
 	}
 	// execution succeeded, set Success to true
 	res.Success = true
