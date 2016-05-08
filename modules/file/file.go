@@ -1688,14 +1688,9 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 					mf.Search.MD5 = append(mf.Search.MD5, c.value)
 				case checkSHA1:
 					mf.Search.SHA1 = append(mf.Search.SHA1, c.value)
-				case checkSHA256:
-				case checkSHA384:
-				case checkSHA512:
+				case checkSHA256, checkSHA384, checkSHA512:
 					mf.Search.SHA2 = append(mf.Search.SHA2, c.value)
-				case checkSHA3_224:
-				case checkSHA3_256:
-				case checkSHA3_384:
-				case checkSHA3_512:
+				case checkSHA3_224, checkSHA3_256, checkSHA3_384, checkSHA3_512:
 					mf.Search.SHA3 = append(mf.Search.SHA2, c.value)
 				}
 				sr = append(sr, mf)
