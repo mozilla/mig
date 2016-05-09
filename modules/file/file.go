@@ -1629,8 +1629,8 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 				// store the value of maxerrors if greater than the one
 				// we already have, we'll need it further down to return
 				// the right number of walking errors
-				if int(mf.Search.Options.MaxDepth) > maxerrors {
-					maxerrors = int(mf.Search.Options.MaxDepth)
+				if int(mf.Search.Options.MaxErrors) > maxerrors {
+					maxerrors = int(mf.Search.Options.MaxErrors)
 				}
 				mf.Search.Options.MaxDepth = 0
 				mf.Search.Options.MaxErrors = 0
@@ -1667,8 +1667,8 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 				// store the value of maxerrors if greater than the one
 				// we already have, we'll need it further down to return
 				// the right number of walking errors
-				if int(mf.Search.Options.MaxDepth) > maxerrors {
-					maxerrors = int(mf.Search.Options.MaxDepth)
+				if int(mf.Search.Options.MaxErrors) > maxerrors {
+					maxerrors = int(mf.Search.Options.MaxErrors)
 				}
 				mf.Search.Options.MaxDepth = 0
 				mf.Search.Options.MaxErrors = 0
