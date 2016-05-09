@@ -220,6 +220,12 @@ Several options can be applied to a search:
   is set for one search, all searches will involve a test for file
   decompression.
 
+* **maxerrors** sets the maximum number of walking errors returned by the file
+  module while searching a path. Walking errors can rapidly increase when
+  scanning pseudo file systems like /proc, and limiting them to a sensible
+  number reduces noise. The default is set to 30. A value of 0 removes the limit
+  and will return all walking errors.
+
 Search algorithm
 ----------------
 

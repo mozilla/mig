@@ -22,68 +22,80 @@ func printHelp(isCmd bool) {
 	}
 	fmt.Printf(`Search parameters
 -----------------
-%spath <string>	- search path
-		  ex: path /etc
-		  note that the file module will follow symlinks, but only if the linked
-		  path is located within the base path search
-		  ex: if path is set to /sys/bus/usb/devices/, it will not follow symlinks
-		  located in /sys/devices.
+%spath <string>	- search down a given path until the end or maxdepth is reached.
+		  follow symlinks if the linked path is located within the base path
+		  (search path /sys/bus/usb/devices/ won't symlink to /sys/devices).
+		  ex: %spath /etc
 
 %sname <regex>	- regex to match against the name of a file. use !<regex> to inverse it.
-		  ex: name \.sql$
+		  ex: %sname \.sql$
+		      %sname !^backup.+\.sql$
 
 %ssize <size>	- match files with a size smaller or greater that <size>
 		  prefix with '<' for lower than, and '>' for greater than
 		  suffix with k, m, g or t for kilo, mega, giga and terabytes
-		  ex: size <10m (match files larger than 10 megabytes)
+		  ex: %ssize <10m     (match files larger than 10 megabytes)
 
 %smode <regex>	- filter on the filemode, provided as a regex on the mode string
-		  ex: mode -r(w|-)xr-x---
+		  ex: %smode -r(w|-)xr-x---
 
 %smtime <period>  - match files modified before or since <period>
 		  prefix with '<' for modified since, and '>' for modified before
 		  suffix with d, h, m for days, hours and minutes
-		  ex: mtime <90d (match files modified since last 90 days)
+		  ex: %smtime <90d (match files modified since last 90 days)
 
 %scontent <regex> - regex to match against file content. use !<regex> to inverse it.
-		  ex: content ^root:\$1\$10CXRS19\$/h
+		  ex: %scontent ^root:\$1\$10CXRS19\$/h
 
 %smd5 <hash>      .
 %ssha1 <hash>     .
 %ssha2 <hash>     .
-%ssha3 <hash>     - compare file against given hash
- 
-
+%ssha3 <hash>     - search file that matches a given hash
 
 Options
 -------
-%smaxdepth <int>	- limit search depth to <int> levels. default to 1000.
+%smaxdepth <int>	- limit search depth to <int> levels. default to 1000, 0 means no limit.
 			  ex: %smaxdepth 3
+
 %smatchall		- all search parameters must match on a given file for it to
 			  return as a match. off by default. deactivates 'matchany' if set.
 			  ex: %smatchall
+
 %smatchany		- any search parameter must match on a given file for it to
 			  return as a match. on by default. deactivates 'matchall' if set.
 			  ex: %smatchany
-%smacroal		- match all contents regexes on all lines. off by default.
+
+%smacroal		- by default, a 'content' regex only need to match one line of a file
+			  to return a match. With the 'macroal' option set, all line of a file
+			  must match a content regex for the file to match. default is off.
 			  ex: %smacroal
-%smismatch=<filter>	- inverts the results for the given filter, used to list files
-			  that did not match a given expression, instead of the default
-			  instead of files that match it.
+
+%smismatch <filter>	- invert the results for the a parameter. Mismatch is used to list
+			  files that **did not** match a given expression. Use it is cooperation
+			  with a search parameter:
 			  ex: %smismatch content
+
 %smatchlimit <int>	- limit the number of files that can be matched by a search.
 			  the default limit is set to 1000. search will stop once the limit
-			  is reached.
+			  is reached. 0 means no limit.
+
 %sreturnsha256		- include sha256 hash for matched files.
 			  ex: %sreturnsha256
+
 %sdecompress		- decompress file before inspection
 			  ex: %sdecompress
 
+%smaxerrors <int>	- limit walking errors returned during search to <int>.
+			  default to 30, 0 means no walking error is returned.
+			  ex: %smaxerrors 1000
+
 Module documentation is at http://mig.mozilla.org/doc/module_file.html
 Cheatsheet and examples are at http://mig.mozilla.org/doc/cheatsheet.rst.html
-`, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash, dash,
+`,
 		dash, dash, dash, dash, dash, dash, dash, dash, dash,
-		dash, dash, dash, dash, dash)
+		dash, dash, dash, dash, dash, dash, dash, dash, dash,
+		dash, dash, dash, dash, dash, dash, dash, dash, dash,
+		dash, dash, dash, dash, dash, dash, dash)
 
 	return
 }
@@ -101,6 +113,7 @@ func (r *run) ParamsCreator() (interface{}, error) {
 		// sane defaults
 		search.Options.MatchAll = true
 		search.Options.MaxDepth = 1000
+		search.Options.MaxDepth = 30
 		search.Options.MatchLimit = 1000
 		search.Options.Decompress = false
 		for {
@@ -303,6 +316,23 @@ func (r *run) ParamsCreator() (interface{}, error) {
 					fmt.Println("Missing parameter, try again")
 					continue
 				}
+				v, err := strconv.ParseFloat(checkValue, 64)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Options.MaxDepth = v
+			case "maxerrors":
+				if checkValue == "" {
+					fmt.Println("Missing parameter, try again")
+					continue
+				}
+				v, err := strconv.ParseFloat(checkValue, 64)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Options.MaxErrors = v
 			case "matchall":
 				if checkValue != "" {
 					fmt.Println("This option doesn't take arguments, try again")
@@ -378,7 +408,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 		err error
 		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha2s,
 		sha3s, mismatch flagParam
-		maxdepth, matchlimit                                           float64
+		maxdepth, maxerrors, matchlimit                                float64
 		returnsha256, matchall, matchany, macroal, verbose, decompress bool
 		fs                                                             flag.FlagSet
 	)
@@ -399,6 +429,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.Var(&sha3s, "sha3", "see help")
 	fs.Var(&mismatch, "mismatch", "see help")
 	fs.Float64Var(&maxdepth, "maxdepth", 1000, "see help")
+	fs.Float64Var(&maxerrors, "maxerrors", 30, "see help")
 	fs.Float64Var(&matchlimit, "matchlimit", 1000, "see help")
 	fs.BoolVar(&matchall, "matchall", true, "see help")
 	fs.BoolVar(&matchany, "matchany", false, "see help")
@@ -422,6 +453,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	s.SHA2 = sha2s
 	s.SHA3 = sha3s
 	s.Options.MaxDepth = maxdepth
+	s.Options.MaxErrors = maxerrors
 	s.Options.MatchLimit = matchlimit
 	s.Options.Macroal = macroal
 	s.Options.Mismatch = mismatch
