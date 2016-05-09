@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
+
 package main
 
 import (
@@ -20,6 +21,7 @@ import (
 	"time"
 
 	"github.com/jvehent/service-go"
+	"github.com/mozilla/mig-sandbox"
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
@@ -41,6 +43,7 @@ type runtimeOptions struct {
 	upgrading   bool
 	pretty      bool
 	showversion bool
+	disablesandbox bool
 }
 
 type moduleResult struct {
@@ -87,6 +90,7 @@ func main() {
 	flag.BoolVar(&runOpt.upgrading, "u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
 	flag.BoolVar(&runOpt.pretty, "p", false, "When running a module, pretty print the results instead of returning JSON.")
 	flag.BoolVar(&runOpt.showversion, "V", false, "Print Agent version to stdout and exit.")
+	flag.BoolVar(&runOpt.disablesandbox, "s", false, "Disable Agent module sandboxing.")
 
 	flag.Parse()
 
@@ -161,7 +165,7 @@ func main() {
 			}
 		}
 	default:
-		fmt.Printf("%s", runModuleDirectly(runOpt.mode, nil, runOpt.pretty))
+		fmt.Printf("%s", runModuleDirectly(runOpt.mode, nil, runOpt.pretty, runOpt.disablesandbox))
 	}
 exit:
 }
@@ -203,8 +207,9 @@ func executeAction(action mig.Action, prettyPrint bool) (cmd mig.Command, err er
 	}()
 
 	// launch each operation consecutively
+	disableSandbox := true
 	for _, op := range action.Operations {
-		out := runModuleDirectly(op.Module, op.Parameters, prettyPrint)
+		out := runModuleDirectly(op.Module, op.Parameters, prettyPrint, disableSandbox)
 		var res modules.Result
 		err = json.Unmarshal([]byte(out), &res)
 		if err != nil {
@@ -220,7 +225,7 @@ func executeAction(action mig.Action, prettyPrint bool) (cmd mig.Command, err er
 // paramargs allows the parameters to be specified as an argument to the
 // function, overriding the expectation parameters will be sent via
 // Stdin. If nil, the parameters will still be read on Stdin by the module.
-func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out string) {
+func runModuleDirectly(mode string, paramargs interface{}, pretty bool, disableSandbox bool) (out string) {
 	if _, ok := modules.Available[mode]; !ok {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
@@ -236,6 +241,9 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 	}
 	// instantiate and call module
 	run := modules.Available[mode].NewRun()
+	if !disableSandbox {
+		sandbox.Jail(modules.Available[mode].GetSandboxProfile())
+	}
 	out = run.Run(infd)
 	if pretty {
 		var modres modules.Result
