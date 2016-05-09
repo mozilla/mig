@@ -129,6 +129,7 @@ go_vendor_dependencies:
 	$(GOGETTER) golang.org/x/net/ipv6
 	$(GOGETTER) gopkg.in/gcfg.v1
 	$(GOGETTER) github.com/cheggaaa/pb
+	$(GOGETTER) github.com/mozilla/mig-sandbox
 	echo 'removing .git from vendored pkg and moving them to vendor'
 	find .tmpdeps/src -name ".git" ! -name ".gitignore" -exec rm -rf {} \; || exit 0
 	[ -d vendor ] && git rm -rf vendor/ || exit 0
