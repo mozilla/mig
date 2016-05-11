@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/mozilla/mig-sandbox"
 	scribelib "github.com/mozilla/scribe"
 	"mig.ninja/mig/modules"
 )
@@ -35,14 +36,24 @@ func endCounters() {
 }
 
 type module struct {
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
+func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
+	return m.SandboxProfile
+}
+
 func init() {
-	modules.Register("pkg", new(module))
+	m := new(module)
+	sandbox := sandbox.SandboxProfile{
+		DefaultPolicy: sandbox.ActAllow,
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("pkg", m)
 }
 
 type run struct {
