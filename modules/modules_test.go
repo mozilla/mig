@@ -7,6 +7,7 @@
 package modules /* import "mig.ninja/mig/modules" */
 
 import (
+	"github.com/mozilla/mig-sandbox"
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
@@ -19,10 +20,15 @@ import (
 )
 
 type testModule struct {
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *testModule) NewRun() Runner {
 	return new(testRunner)
+}
+
+func (m *testModule) GetSandboxProfile() sandbox.SandboxProfile {
+	return m.SandboxProfile
 }
 
 type testRunner struct {

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/osext"
+	"github.com/mozilla/mig-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"os"
@@ -22,14 +23,24 @@ import (
 )
 
 type module struct {
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
+func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
+	return m.SandboxProfile
+}
+
 func init() {
-	modules.Register("agentdestroy", new(module))
+	m := new(module)
+	sandbox := sandbox.SandboxProfile{
+		DefaultPolicy: sandbox.ActAllow,
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("agentdestroy", m)
 }
 
 type run struct {

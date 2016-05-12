@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/osext"
+	"github.com/mozilla/mig-sandbox"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -33,14 +34,24 @@ import (
 )
 
 type module struct {
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
+func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
+	return m.SandboxProfile
+}
+
 func init() {
-	modules.Register("upgrade", new(module))
+	m := new(module)
+	sandbox := sandbox.SandboxProfile{
+		DefaultPolicy: sandbox.ActAllow,
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("upgrade", m)
 }
 
 type run struct {
