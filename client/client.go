@@ -1353,6 +1353,7 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 				switch resource.Collection.Error.Message {
 				case "", "no results found":
 					err = nil
+					goto nextunsuccessful
 				case "maxmind database not initialized":
 					panic("Maxmind database not configured in the API, geolocations cannot be displayed")
 				default:
@@ -1372,6 +1373,7 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 				}
 				offset += limit
 			}
+		nextunsuccessful:
 		}
 		for status, agents := range unsuccessful {
 			fmt.Fprintf(os.Stderr, "\x1b[35m%s: %s\x1b[0m\n", status, strings.Join(agents, ", "))
