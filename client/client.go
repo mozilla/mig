@@ -1351,12 +1351,17 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 				// because we query using pagination, the last query will return a 404 with no result.
 				// When that happens, GetAPIResource returns an error which we do not report to the user
 				switch resource.Collection.Error.Message {
-				case "", "no results found":
+				case "":
+					break
+				case "no results found":
+					// 404, move one
 					err = nil
 					goto nextunsuccessful
 				case "maxmind database not initialized":
+					// can't make the map, exit with error
 					panic("Maxmind database not configured in the API, geolocations cannot be displayed")
 				default:
+					// something else happened, exit with error
 					panic(err)
 				}
 				for _, item := range resource.Collection.Items {
