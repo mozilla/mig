@@ -95,3 +95,28 @@ Documentation
 All documentation is available in the 'doc' directory and on http://mig.mozilla.org .
 * [Concepts & Internal Components](doc/concepts.rst)
 * [Installation & Configuration](doc/configuration.rst)
+
+Testing
+-------
+Assuming you have a dedicated Ubuntu system (like a VM), you can use the
+standalone installation script to deploy a test environment rapidly.
+```bash
+$ sudo apt-get install golang git
+
+# must be >= 1.5
+$ go version
+go version go1.6.1 linux/amd64
+
+$ export GOPATH=$HOME/go
+
+$ mkdir $GOPATH
+
+$ go get mig.ninja/mig
+
+$ cd $GOPATH/src/mig.ninja/mig
+
+$ bash tools/standalone_install.sh
+```
+This script will install all of the components MIG needs for a localhost only
+installation. Follow instructions at the end of the script to convert it to a
+real infrastructure, or read [Installation & Configuration](doc/configuration.rst).
