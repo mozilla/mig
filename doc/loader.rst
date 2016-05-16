@@ -80,6 +80,36 @@ The MIG database
 The MIG database stores agent manifests (discussed later). The API fetches data from
 the database to provide it to mig-loader instances requesting updates.
 
+About manifest signatures
+-------------------------
+When the loader asks the API for the current version of the agent that should be
+installed, the API will respond with a signed manifest. The manifest is signed by
+MIG administrators when it is uploaded to the API (discussed later) using the
+administrators GPG key. The loader is built with the GPG public key of the
+administrators, which allows the loader to validate the manifest signature is
+correct before it will attempt to install updates.
+
+You can require any number of signatures. For example, you could deploy so a
+loader will accept a manifest signed by one MIG administrator, or potentially to
+provide additional security you can require the manifest be signed by 2 or more
+different administrators.
+
+There are two places this needs to be configured:
+
+* The MIG API configuration file
+* The loader built-in configuration
+
+Decide on the number of signatures you wish to require, then edit ``/etc/mig/api.cfg``
+and add the required option, for example to require 2 signatures:
+
+::
+
+    [manifest]
+        requiredsignatures = 2
+
+The configuration option required for the loader built-in config is discussed later
+in the building mig-loader section.
+
 Building mig-loader for your environment
 ----------------------------------------
 If the loader is to be used, it needs to be built with some basic configuration
@@ -97,6 +127,15 @@ that should be included with this loader type, and you would also build in any
 GPG keys that should be used as part of validation of manifest signatures
 by the loader. Manifests are signed by MIG administrators, so normally you will
 place the GPG public keys of MIG administrators in the loader configuration.
+
+An important value to set here is the number of signatures that must be present on
+a manifest before the loader will accept it. This can be set by changing the value
+of the REQUIREDSIGNATURES variable. For example, to set the loader to require 2
+valid signatures be present in the manifest:
+
+.. code:: go
+
+    var REQUIREDSIGNATURES = 2
 
 The configuration file also contains variables used in environment
 discovery similar to those available for the agent. The agent and loader both use
