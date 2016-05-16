@@ -29,13 +29,13 @@ A complete environment should be configured in the following order:
 Prepare a build environment
 ------------------------------
 
-Install **Go 1.5** from your package manager , via `gvm`_ or `from source`_.
+Install **Go 1.5** or later from your package manager , via `gvm`_ or `from source`_.
 
 .. _`gvm`: https://github.com/moovweb/gvm
 
 .. _`from source`: http://golang.org/doc/install/source
 
-You **must** use Go 1.5 because MIG uses vendoring that isn't available in prior
+You **must** use Go 1.5 or later because MIG uses vendoring that isn't available in prior
 versions.
 
 .. code:: bash
