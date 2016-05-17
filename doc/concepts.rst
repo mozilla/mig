@@ -186,7 +186,7 @@ Access Control Lists
 --------------------
 
 Not all keys can perform all actions. The scheduler, for example, sometimes needs
-to issue specific actions to agents (such as during the upgrade protocol) but
+to issue specific actions to agents but
 shouldn't be able to perform more dangerous actions. This is enforced by
 an Access Control List, or ACL, stored on the agents. An ACL describes who can
 access what function of which module. It can be used to require multiple
