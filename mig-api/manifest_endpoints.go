@@ -166,7 +166,7 @@ func newManifest(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
-	respond(http.StatusOK, resource, respWriter, request)
+	respond(http.StatusCreated, resource, respWriter, request)
 }
 
 // Return information describing an existing manifest
