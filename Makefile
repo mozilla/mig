@@ -178,6 +178,18 @@ deb-loader: mig-loader
 		--architecture $(FPMARCH) -v $(BUILDREV) \
 		-s dir -t deb .
 
+rpm-loader: mig-loader
+	rm -fr tmp
+	$(INSTALL) -s -D -m 0755 $(BINDIR)/mig-loader tmp/sbin/mig-loader
+	$(INSTALL) -D -m 0644 LICENSE tmp/usr/share/doc/mig-loader/copyright
+	$(MKDIR) -p tmp/var/lib/mig
+	$(MKDIR) -p tmp/etc/mig
+	fpm -C tmp -n mig-loader --license GPL --vendor mozilla \
+		--description "Mozilla InvestiGator Agent Loader\nAgent loader binary" \
+		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org \
+		--architecture $(FPMARCH) -v $(BUILDREV) \
+		-s dir -t rpm .
+
 dmg-agent: mig-agent
 ifneq ($(OS),darwin)
 	echo 'you must be on MacOS and set OS=darwin on the make command line to build an OSX package'
