@@ -1408,4 +1408,9 @@ Generating a token in Python
 		print token
 		print r.text
 
+Authentication with X-LOADERKEY
+-------------------------------
+X-LOADERKEY is a simple authentication method used by loader instances to authenticate
+with the API. The X-LOADERKEY header is included with the request, and is set to the loader
+key value for the requesting loader instance.
 
