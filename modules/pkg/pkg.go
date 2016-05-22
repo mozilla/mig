@@ -112,8 +112,14 @@ func (r *run) Run(in io.Reader) (resStr string) {
 				if err != nil {
 					panic(err)
 				}
-				if !rev.MatchString(y.Version) {
-					continue
+				if !r.Parameters.NotVersion {
+					if !rev.MatchString(y.Version) {
+						continue
+					}
+				} else {
+					if rev.MatchString(y.Version) {
+						continue
+					}
 				}
 			}
 			e.Packages = append(e.Packages, y)
@@ -188,8 +194,9 @@ type Statistics struct {
 }
 
 type Parameters struct {
-	PkgMatch PkgMatch `json:"pkgmatch"` // List of strings to use as regexp package matches.
-	VerMatch string   `json:"vermatch"` // Optionally filter returned packages on version string
+	PkgMatch   PkgMatch `json:"pkgmatch"`   // List of strings to use as regexp package matches.
+	VerMatch   string   `json:"vermatch"`   // Optionally filter returned packages on version string
+	NotVersion bool     `json:"notversion"` // Inverts version filtering logic
 }
 
 type PkgMatch struct {

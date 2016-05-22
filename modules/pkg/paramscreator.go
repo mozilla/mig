@@ -28,7 +28,18 @@ func printHelp(isCmd bool) {
 %sversion <regexp>  - Version string search
                     ex: version ^1\..*
 		    optionally filter returned packages to include version
-`, dash, dash)
+
+%snotver <bool>     - Invert version logic
+                    ex: notver true
+		    return matching packages that do not match version string
+`, dash, dash, dash)
+}
+
+func checkBoolFlag(flag string) bool {
+	if strings.ToLower(flag) == "true" {
+		return true
+	}
+	return false
 }
 
 func (r *run) ParamsCreator() (interface{}, error) {
@@ -64,6 +75,8 @@ func (r *run) ParamsCreator() (interface{}, error) {
 			p.PkgMatch.Matches = append(p.PkgMatch.Matches, checkValue)
 		case "version":
 			p.VerMatch = checkValue
+		case "notver":
+			p.NotVersion = checkBoolFlag(checkValue)
 		default:
 			fmt.Printf("Invalid method!\nTry 'help'\n")
 			continue
@@ -80,6 +93,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 		fs       flag.FlagSet
 		pkgMatch flagParam
 		verMatch string
+		notVer   bool
 	)
 
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
@@ -90,6 +104,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.Init("pkg", flag.ContinueOnError)
 	fs.Var(&pkgMatch, "name", "see help")
 	fs.StringVar(&verMatch, "version", "", "see help")
+	fs.BoolVar(&notVer, "notver", false, "see help")
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -100,6 +115,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	if verMatch != "" {
 		p.VerMatch = verMatch
 	}
+	p.NotVersion = notVer
 
 	r.Parameters = *p
 
