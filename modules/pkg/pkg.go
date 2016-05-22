@@ -105,6 +105,17 @@ func (r *run) Run(in io.Reader) (resStr string) {
 			if !re.MatchString(y.Name) {
 				continue
 			}
+			// If optional version filter was supplied, filter on that
+			// as well
+			if r.Parameters.VerMatch != "" {
+				rev, err := regexp.Compile(r.Parameters.VerMatch)
+				if err != nil {
+					panic(err)
+				}
+				if !rev.MatchString(y.Version) {
+					continue
+				}
+			}
 			e.Packages = append(e.Packages, y)
 		}
 	}
@@ -123,6 +134,12 @@ func (r *run) ValidateParameters() (err error) {
 	// Make sure all package match parameters are valid expressions.
 	for _, x := range r.Parameters.PkgMatch.Matches {
 		_, err = regexp.Compile(x)
+		if err != nil {
+			return err
+		}
+	}
+	if r.Parameters.VerMatch != "" {
+		_, err = regexp.Compile(r.Parameters.VerMatch)
 		if err != nil {
 			return err
 		}
@@ -172,6 +189,7 @@ type Statistics struct {
 
 type Parameters struct {
 	PkgMatch PkgMatch `json:"pkgmatch"` // List of strings to use as regexp package matches.
+	VerMatch string   `json:"vermatch"` // Optionally filter returned packages on version string
 }
 
 type PkgMatch struct {

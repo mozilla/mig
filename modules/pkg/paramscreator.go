@@ -24,7 +24,11 @@ func printHelp(isCmd bool) {
 %sname <regexp>     - OS package search
                     ex: name linux-image
 		    query for installed OS packages matching expression
-`, dash)
+
+%sversion <regexp>  - Version string search
+                    ex: version ^1\..*
+		    optionally filter returned packages to include version
+`, dash, dash)
 }
 
 func (r *run) ParamsCreator() (interface{}, error) {
@@ -58,6 +62,8 @@ func (r *run) ParamsCreator() (interface{}, error) {
 		switch checkType {
 		case "name":
 			p.PkgMatch.Matches = append(p.PkgMatch.Matches, checkValue)
+		case "version":
+			p.VerMatch = checkValue
 		default:
 			fmt.Printf("Invalid method!\nTry 'help'\n")
 			continue
@@ -73,6 +79,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		fs       flag.FlagSet
 		pkgMatch flagParam
+		verMatch string
 	)
 
 	if len(args) < 1 || args[0] == "" || args[0] == "help" {
@@ -82,6 +89,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 
 	fs.Init("pkg", flag.ContinueOnError)
 	fs.Var(&pkgMatch, "name", "see help")
+	fs.StringVar(&verMatch, "version", "", "see help")
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
@@ -89,6 +97,9 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 
 	p := newParameters()
 	p.PkgMatch.Matches = pkgMatch
+	if verMatch != "" {
+		p.VerMatch = verMatch
+	}
 
 	r.Parameters = *p
 
