@@ -108,11 +108,17 @@ func (r *run) Run(in io.Reader) (resStr string) {
 			// If optional version filter was supplied, filter on that
 			// as well
 			if r.Parameters.VerMatch != "" {
-				rev, err := regexp.Compile(r.Parameters.VerMatch)
+				vs := r.Parameters.VerMatch
+				invver := false
+				if vs[0] == '!' && len(vs) > 1 {
+					vs = vs[1:]
+					invver = true
+				}
+				rev, err := regexp.Compile(vs)
 				if err != nil {
 					panic(err)
 				}
-				if !r.Parameters.NotVersion {
+				if !invver {
 					if !rev.MatchString(y.Version) {
 						continue
 					}
@@ -145,7 +151,11 @@ func (r *run) ValidateParameters() (err error) {
 		}
 	}
 	if r.Parameters.VerMatch != "" {
-		_, err = regexp.Compile(r.Parameters.VerMatch)
+		vs := r.Parameters.VerMatch
+		if vs[0] == '!' && len(vs) > 1 {
+			vs = vs[1:]
+		}
+		_, err = regexp.Compile(vs)
 		if err != nil {
 			return err
 		}
@@ -194,9 +204,8 @@ type Statistics struct {
 }
 
 type Parameters struct {
-	PkgMatch   PkgMatch `json:"pkgmatch"`   // List of strings to use as regexp package matches.
-	VerMatch   string   `json:"vermatch"`   // Optionally filter returned packages on version string
-	NotVersion bool     `json:"notversion"` // Inverts version filtering logic
+	PkgMatch PkgMatch `json:"pkgmatch"` // List of strings to use as regexp package matches.
+	VerMatch string   `json:"vermatch"` // Optionally filter returned packages on version string
 }
 
 type PkgMatch struct {
