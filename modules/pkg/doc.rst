@@ -20,6 +20,10 @@ on the agent system, identifying any packages matching the regular expression
 argument to `name`, and returning those packages along with their versions. In
 addition to this, the agent will also return what type of package was identified.
 
+It is also possible to optionally filter on the version, so the agent only returns
+packages which also match the given version. This can be done by supplying a
+regular expression to match against the package version as a `version` option.
+
 Currently the following package managers are supported for query on an agent system.
 
 * **RPM**: RPM based package managers, for Red Hat, CentOS, etc
