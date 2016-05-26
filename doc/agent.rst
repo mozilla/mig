@@ -63,13 +63,16 @@ Below is a sample heartbeat message from a linux agent stored in
 		"version": "201407310027+bcbdd94.prod"
 	}
 
-It's possible on an endpoint information in the environment will change. For
-example, a new IP address could be assigned via DHCP. The agent periodically
-checks the system; if changes to the environment are detected the heartbeat
-message will automatically be updated to include those changes. The frequency
-environment checks occur can be controlled through the ``refreshenv``
-configuration option in the agent configuration file, or the ``REFRESHENV``
-variable in the agent built-in configuration.
+The agent sends information about the OS configuration and it's environment
+to the scheduler periodically. This includes information like the hostname
+of the system it is running on, IP addresses assigned, AWS instance related
+information, and others. It's possible on an endpoint this changes while the
+agent is running. For example, a new IP address could be assigned via DHCP.
+The agent periodically checks the system; if changes to the environment
+are detected the heartbeat message will automatically be updated to include
+those changes. The frequency environment checks occur can be controlled
+through the ``refreshenv`` configuration option in the agent configuration
+file, or the ``REFRESHENV`` variable in the agent built-in configuration.
 
 Check-In mode
 ~~~~~~~~~~~~~
