@@ -720,8 +720,9 @@ POST /api/v1/investigator/create/
 * Description: create a new investigator in the database
 * Authentication: X-PGPAUTHORIZATION
 * Parameters: (POST body)
-	- `name`: string that represents the full name
-	- `publickey`: armored GPG public key
+        - `name`: string that represents the full name
+        - `publickey`: armored GPG public key
+        - `isadmin`: specify if user should be admin, true or false
 * Response Code: 201 Created
 * Response: Collection+JSON
 * Example: (without authentication)
@@ -729,18 +730,21 @@ POST /api/v1/investigator/create/
 .. code:: bash
 
 	$ gpg --export -a --export-options export-minimal bob_kelso@example.net > /tmp/bobpubkey
-	$ curl -iv -F "name=Bob Kelso" -F publickey=@/tmp/pubkey https://api.mig.example.net/api/v1/investigator/create/
+	$ curl -iv -F "name=Bob Kelso" -F "isadmin=false" -F publickey=@/tmp/pubkey https://api.mig.example.net/api/v1/investigator/create/
 
 POST /api/v1/investigator/update/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: update an existing investigator in the database
 * Authentication: X-PGPAUTHORIZATION
 * Parameters: (POST body)
-	- `id`: investigator id, to identify the target investigator
-	- `status`: new status of the investigator, to be updated
+        - `id`: investigator id, to identify the target investigator
+        - `status`: new status of the investigator, to be updated
+        - `isadmin`: specify if user should be admin, true or false
 * Response Code: 201 Created
 * Response: Collection+JSON
 * Example: (without authentication)
+
+One of either ``status`` or ``isadmin`` must be passed to this API endpoint.
 
 .. code:: bash
 

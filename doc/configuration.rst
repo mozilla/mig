@@ -707,6 +707,7 @@ Then in the console prompt, enter the following commands:
 
 - `create investigator`
 - enter a name, such as `Bob The Investigator`
+- choose yes to make the investigator an administrator, which is usually the case if it is the first one added
 - enter the path to the public key `/tmp/myinvestigator_pubkey.asc`
 - enter `y` to confirm the creation
 
@@ -716,42 +717,29 @@ created with ID 2". We can view the details of this new investigator by entering
 
 .. code::
 
-	mig> investigator 2
-	Entering investigator mode. Type exit or press ctrl+d to leave. help may help.
-	Investigator 2 named 'Bob The Investigator'
-
-	inv 2> details
-	Investigator ID 2
-	name     Bob The Investigator
-	status   active
-	key id   E60892BB9BD89A69F759A1A0A3D652173B763E8F
-	created  2015-09-09 09:53:28.989481 -0400 EDT
-	modified 2015-09-09 09:53:28.989481 -0400 EDT
+        mig> investigator 2
+        Entering investigator mode. Type exit or press ctrl+d to leave. help may help.
+        Investigator 2 named 'Bob The Investigator'
+        
+        inv 2> details
+        Investigator ID 2
+        name     Bob The Investigator
+        status   active
+        admin    true
+        key id   E60892BB9BD89A69F759A1A0A3D652173B763E8F
+        created  2015-09-09 09:53:28.989481 -0400 EDT
+        modified 2015-09-09 09:53:28.989481 -0400 EDT
 
 MIG supports two levels of access for users: normal investigators and administrators.
-Administrator have the ability to manage manifests and manipulate mig-loader related
-functionality, in addition to being able to run investigations like a standard user.
-If you are going to use ``mig-loader`` to keep agents up to date automatically, you
-should make your investigator an administrator. If not, it is not required.
+Administrator have the ability to create and manage investigators, manage manifests
+and manipulate mig-loader related functionality, in addition to being able to run
+investigations like a standard user.
 
-For information on mig-loader see `MIG LOADER`_ documentation.
-
-.. _`MIG LOADER`: loader.rst
-
-To make a user an administrator, set ``isadmin`` to true for your investigator
-in the database. The following is an example for the previously created investigator
-with an ID of 2.
-
-::
-
-    $ sudo -u postgres psql mig
-    psql (9.4.7)
-    Type "help" for help.
-    
-    mig=# UPDATE investigators SET isadmin = true WHERE id=2;
-    UPDATE 1
-    mig=# \q
-    $
+To make a user an administrator, specify ``yes`` when asked to if the user should be an
+administrator while running ``create investigator``. You can make an existing user an
+administrator using the ``setadmin`` command while viewing the investigator in the
+console. Remember that to manipulate investigator privileges, the user you are using
+to access MIG must be an administrator.
 
 Enable API Authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -766,6 +754,9 @@ in the API. Go back to the API server and modify the configuration in
 		# turn this on after initial setup, once you have at least
 		# one investigator created
 		enabled = on
+
+Since the user we create in the previous step was created as an administrator, we can now
+use this user to add other investigators to the system.
 
 Reopen the mig-console, and you will see the investigator name in the API logs:
 
