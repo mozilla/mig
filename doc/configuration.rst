@@ -728,11 +728,11 @@ created with ID 2". We can view the details of this new investigator by entering
 	created  2015-09-09 09:53:28.989481 -0400 EDT
 	modified 2015-09-09 09:53:28.989481 -0400 EDT
 
-Recent versions of MIG have introduced the concept of investigators that can be
-considered MIG administrators. Administrator investigators have the ability to 
-manage manifests and manipulate mig-loader related functionality. If you are going
-to use ``mig-loader`` to keep agents up to date automatically, you should make
-your investigator an administrator. If not, it is not required.
+MIG supports two levels of access for users: normal investigators and administrators.
+Administrator have the ability to manage manifests and manipulate mig-loader related
+functionality, in addition to being able to run investigations like a standard user.
+If you are going to use ``mig-loader`` to keep agents up to date automatically, you
+should make your investigator an administrator. If not, it is not required.
 
 For information on mig-loader see `MIG LOADER`_ documentation.
 
@@ -784,11 +784,6 @@ MIG loader Configuration
 At this point you will want to decide if you wish to use ``mig-loader`` to keep
 your agents up to date on remote endpoints.
 
-Traditionally with MIG, if you wanted the agent installed on a set of systems,
-you would package the MIG agent up and install that agent package on the desired
-systems. If you wanted to upgrade the agent, you would need to upgrade the agent
-package installed on the systems.
-
 With mig-loader, instead of installing the agent on the systems you want to run
 the agent on, you would install only mig-loader. mig-loader is a small binary
 intended to be run from a periodic system such as cron. mig-loader will then
@@ -796,8 +791,6 @@ look after fetching the agent and installing it if it does not exist on the syst
 and will look after upgrading the agent automatically if you want to publish new
 agent updates. The upgrades can be controlled by a MIG administrator through the
 MIG API and console tools.
-
-**Note:** mig-loader is a new feature. It's use is optional.
 
 For information on the loader, see `MIG LOADER`_ documentation. If you wish to
 use mig-loader, read the `MIG LOADER`_ documentation to understand how the rest

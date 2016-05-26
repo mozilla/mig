@@ -1134,7 +1134,7 @@ POST /api/v1/manifest/fetch/
                             {
                                 "name": "content",
                                 "value": {
-                                    "data": "<file content...>",
+                                    "data": "<base64 compressed file content...>",
                                 }
                             }
                         ],
