@@ -883,12 +883,12 @@ GET /api/v1/loader
                             {
                                 "name": "loader",
                                 "value": {
-                                    "AgentName": "corbomite.internal",
-                                    "Enabled": true,
-                                    "ID": 12,
-                                    "Key": "",
-                                    "LastSeen": "2016-05-17T14:10:03.041024-05:00",
-                                    "Name": "corbomite.internal"
+                                    "agentname": "corbomite.internal",
+                                    "enabled": true,
+                                    "id": 12,
+                                    "key": "",
+                                    "lastseen": "2016-05-17T14:10:03.041024-05:00",
+                                    "name": "corbomite.internal"
                                 }
                             }
                         ],
@@ -1018,12 +1018,12 @@ GET /api/v1/manifest/loaders/
                             {
                                 "name": "loader",
                                 "value": {
-                                    "AgentName": "kirk.host",
-                                    "Enabled": true,
-                                    "ID": 6,
-                                    "Key": "",
-                                    "LastSeen": "2016-05-17T14:17:30.987222-05:00",
-                                    "Name": "kirk"
+                                    "agentname": "kirk.host",
+                                    "enabled": true,
+                                    "id": 6,
+                                    "key": "",
+                                    "lastseen": "2016-05-17T14:17:30.987222-05:00",
+                                    "name": "kirk"
                                 }
                             }
                         ],
@@ -1034,12 +1034,12 @@ GET /api/v1/manifest/loaders/
                             {
                                 "name": "loader",
                                 "value": {
-                                    "AgentName": "khan.host",
-                                    "Enabled": true,
-                                    "ID": 8,
-                                    "Key": "",
-                                    "LastSeen": "2016-05-14T19:50:35.258066-05:00",
-                                    "Name": "khan"
+                                    "agentname": "khan.host",
+                                    "enabled": true,
+                                    "id": 8,
+                                    "key": "",
+                                    "lastseen": "2016-05-14T19:50:35.258066-05:00",
+                                    "name": "khan"
                                 }
                             }
                         ],

@@ -14,12 +14,12 @@ import (
 
 // Describes a loader entry stored in the database
 type LoaderEntry struct {
-	ID        float64   // Loader ID
-	Name      string    // Loader name
-	Key       string    // Loader key (only populated during creation)
-	AgentName string    // Loader environment, agent name
-	LastSeen  time.Time // Last time loader was used
-	Enabled   bool      // Loader entry is active
+	ID        float64   `json:"id"`        // Loader ID
+	Name      string    `json:"name"`      // Loader name
+	Key       string    `json:"key"`       // Loader key (only populated during creation)
+	AgentName string    `json:"agentname"` // Loader environment, agent name
+	LastSeen  time.Time `json:"lastseen"`  // Last time loader was used
+	Enabled   bool      `json:"enabled"`   // Loader entry is active
 }
 
 func (le *LoaderEntry) Validate() error {
