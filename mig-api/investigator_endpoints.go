@@ -121,6 +121,14 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	if inv.Name == "" {
 		panic("Investigator name must not be empty")
 	}
+	switch request.FormValue("isadmin") {
+	case "true":
+		inv.IsAdmin = true
+	case "false":
+		inv.IsAdmin = false
+	default:
+		panic("Invalid isadmin value for investigator")
+	}
 	// publickey is stored in a multipart post form, extract it
 	_, keyHeader, err := request.FormFile("publickey")
 	if err != nil {

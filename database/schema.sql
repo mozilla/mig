@@ -202,7 +202,7 @@ GRANT SELECT ON actions, agents, agents_stats, agtmodreq, commands, invagtmodper
 GRANT SELECT (id, name, pgpfingerprint, publickey, status, createdat, lastmodified, isadmin) ON investigators TO migapi;
 GRANT INSERT ON actions, signatures, manifests, manifestsig, loaders TO migapi;
 GRANT DELETE ON manifestsig TO migapi;
-GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified) ON investigators TO migapi;
+GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified, isadmin) ON investigators TO migapi;
 GRANT UPDATE (isadmin, status, lastmodified) ON investigators TO migapi;
 GRANT UPDATE (name, env, tags, loaderkey, lastseen, enabled) ON loaders TO migapi;
 GRANT UPDATE (status) ON manifests TO migapi;

@@ -219,8 +219,10 @@ func investigatorCreator(cli client.Client) (err error) {
 		}
 	}()
 	var (
-		name   string
-		pubkey []byte
+		name     string
+		adminstr string
+		isadmin  bool
+		pubkey   []byte
 	)
 	fmt.Println("Entering investigator creation mode. Please provide the full name\n" +
 		"and the public key of the new investigator.")
@@ -232,6 +234,18 @@ func investigatorCreator(cli client.Client) (err error) {
 		panic("input name too short")
 	}
 	fmt.Printf("Name: '%s'\n", name)
+	adminstr, err = readline.String("admin? (yes/no)> ")
+	if err != nil {
+		panic(err)
+	}
+	switch strings.ToLower(adminstr) {
+	case "yes":
+		isadmin = true
+	case "no":
+		isadmin = false
+	default:
+		panic("must specify yes or no")
+	}
 	fmt.Println("Please provide a public key. You can either provide a local path to the\n" +
 		"armored public key file, or a full length PGP fingerprint.\n" +
 		"example:\npubkey> 0x716CFA6BA8EBB21E860AE231645090E64367737B")
@@ -266,7 +280,7 @@ func investigatorCreator(cli client.Client) (err error) {
 		fmt.Println("abort")
 		return
 	}
-	inv, err := cli.PostInvestigator(name, pubkey)
+	inv, err := cli.PostInvestigator(name, pubkey, isadmin)
 	if err != nil {
 		panic(err)
 	}

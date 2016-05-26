@@ -113,9 +113,10 @@ func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err 
 // or an error if the insertion failed, or if the investigator already exists
 func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) {
 	_, err = db.c.Exec(`INSERT INTO investigators
-		(name, pgpfingerprint, publickey, status, createdat, lastmodified)
-		VALUES ($1, $2, $3, 'active', $4, $5)`,
-		inv.Name, inv.PGPFingerprint, inv.PublicKey, time.Now().UTC(), time.Now().UTC())
+		(name, pgpfingerprint, publickey, status, createdat, lastmodified, isadmin)
+		VALUES ($1, $2, $3, 'active', $4, $5, $6)`,
+		inv.Name, inv.PGPFingerprint, inv.PublicKey, time.Now().UTC(), time.Now().UTC(),
+		inv.IsAdmin)
 	if err != nil {
 		if err.Error() == `pq: duplicate key value violates unique constraint "investigators_pgpfingerprint_idx"` {
 			return iid, fmt.Errorf("Investigator's PGP Fingerprint already exists in database")

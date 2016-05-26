@@ -891,7 +891,7 @@ func (cli Client) GetInvestigator(iid float64) (inv mig.Investigator, err error)
 }
 
 // PostInvestigator creates an Investigator and returns the reflected investigator
-func (cli Client) PostInvestigator(name string, pubkey []byte) (inv mig.Investigator, err error) {
+func (cli Client) PostInvestigator(name string, pubkey []byte, isadmin bool) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PostInvestigator() -> %v", e)
@@ -902,6 +902,10 @@ func (cli Client) PostInvestigator(name string, pubkey []byte) (inv mig.Investig
 	writer := multipart.NewWriter(buf)
 	// set the name form value
 	err = writer.WriteField("name", name)
+	if err != nil {
+		panic(err)
+	}
+	err = writer.WriteField("isadmin", fmt.Sprintf("%v", isadmin))
 	if err != nil {
 		panic(err)
 	}
