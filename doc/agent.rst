@@ -10,7 +10,9 @@ Initialization process
 The agent tries to be as autonomous as possible. One of the goal is to ship
 agents without requiring external provisioning tools, such as Chef or Puppet.
 Therefore, the agent attempts to install itself as a service, and also supports
-a builtin upgrade protocol (described in the next section).
+optional automatic upgrades via the `mig-loader`_ companion program.
+
+.. _`mig-loader`: loader.rst
 
 As a portable binary, the agent needs to detect the type of operating system
 and init method that is used by an endpoint. Depending on the endpoint,
@@ -60,6 +62,17 @@ Below is a sample heartbeat message from a linux agent stored in
 		"starttime": "2014-07-30T21:34:48.525449401-07:00",
 		"version": "201407310027+bcbdd94.prod"
 	}
+
+The agent sends information about the OS configuration and it's environment
+to the scheduler periodically. This includes information like the hostname
+of the system it is running on, IP addresses assigned, AWS instance related
+information, and others. It's possible on an endpoint this changes while the
+agent is running. For example, a new IP address could be assigned via DHCP.
+The agent periodically checks the system; if changes to the environment
+are detected the heartbeat message will automatically be updated to include
+those changes. The frequency environment checks occur can be controlled
+through the ``refreshenv`` configuration option in the agent configuration
+file, or the ``REFRESHENV`` variable in the agent built-in configuration.
 
 Check-In mode
 ~~~~~~~~~~~~~
@@ -249,104 +262,55 @@ and copies them into ``Message.Parameters``. It then sets ``Message.Class`` to
 ``modules.MsgClassParameters``, marshals the struct into JSON, and pass the
 resulting ``[]byte`` to the module as an IO stream.
 
-Agent upgrade process
----------------------
-MIG supports upgrading agents in the wild. The upgrade protocol is designed with
-security in mind. The flow diagram below presents a high-level view:
+Agent upgrade process via mig-loader
+------------------------------------
+MIG supports upgrading agents in the wild through the use of the companion
+program mig-loader. Using mig-loader is optional; you don't need to use
+mig-loader in your environment if you want to upgrade agents yourself.
 
- ::
+The following is a high level diagram of how the loader interacts with the
+API and the agent during the upgrade process.
 
-	Investigator          Scheduler             Agent             NewAgent           FileServer
-	+-----------+         +-------+             +---+             +------+           +--------+
-		  |                   |                   |                   |                   |
-		  |    1.initiate     |                   |                   |                   |
-		  |------------------>|                   |                   |                   |
-		  |                   |  2.send command   |                   |                   |
-		  |                   |------------------>| 3.verify          |                   |
-		  |                   |                   |--------+          |                   |
-		  |                   |                   |        |          |                   |
-		  |                   |                   |        |          |                   |
-		  |                   |                   |<-------+          |                   |
-		  |                   |                   |                   |                   |
-		  |                   |                   |    4.download     |                   |
-		  |                   |                   |-------------------------------------->|
-		  |                   |                   |                   |                   |
-		  |                   |                   | 5.checksum        |                   |
-		  |                   |                   |--------+          |                   |
-		  |                   |                   |        |          |                   |
-		  |                   |                   |        |          |                   |
-		  |                   |                   |<-------+          |                   |
-		  |                   |                   |                   |                   |
-		  |                   |                   |      6.exec       |                   |
-		  |                   |                   |------------------>|                   |
-		  |                   |  7.return own PID |                   |                   |
-		  |                   |<------------------|                   |                   |
-		  |                   |                   |                   |                   |
-		  |                   |------+ 8.mark     |                   |                   |
-		  |                   |      | agent as   |                   |                   |
-		  |                   |      | upgraded   |                   |                   |
-		  |                   |<-----+            |                   |                   |
-		  |                   |                   |                   |                   |
-		  |                   |    9.register     |                   |                   |
-		  |                   |<--------------------------------------|                   |
-		  |                   |                   |                   |                   |
-		  |                   |------+10.find dup |                   |                   |
-		  |                   |      |agents in   |                   |                   |
-		  |                   |      |registrations                   |                   |
-		  |                   |<-----+            |                   |                   |
-		  |                   |                   |                   |                   |
-		  |                   |    11.send command to kill PID old agt|                   |
-		  |                   |-------------------------------------->|                   |
-		  |                   |                   |                   |                   |
-		  |                   |  12.acknowledge   |                   |                   |
-		  |                   |<--------------------------------------|                   |
+::
 
-All upgrade operations are initiated by an investigator (1). The upgrade is
-triggered by an action to the upgrade module with the following parameters:
+        Agent                Loader              API
+        +---+                +----+             +--+
+        |                    |                     |
+        |                    | 1. request manifest |
+        |                    |-------------------->|------+
+        |                    |                     |      | 2. update loader
+        | 3. valid  +--------|                     |      | record in database
+        | manifest  |        |                     |<-----+
+        | sig?      +------->|                     |
+        |                    |                     |
+        | 4. does   +--------|                     |
+        | current   |        |                     |
+        | agent     |        |                     |
+        | match?    +------->|                     |
+        |                    |                     |
+        |                    | 5. fetch new agent  |
+        |                    |-------------------->|
+        |                    |                     |
+        | 6. stage  +--------|                     |
+        | agent on  |        |                     |
+        | disk      +------->|                     |
+        |                    |                     |
+        | 7. agent  +--------|                     |
+        | SHA256    |        |                     |
+        | matches   |        |                     |
+        | manifest? +------->|                     |
+        |                    |                     |
+        |  8. install agent  |                     |
+        |<-------------------|                     |
+        |                    |                     |
+        |  9. stop old agent |                     |
+        |<-------------------|                     |
+        |                    |                     |
+        | 10. start new      |                     |
+        |<-------------------|                     |
+        |                    |                     |
 
-.. code:: json
+For more information on how MIG loader can be used see the relevant
+documentation in `MIG LOADER`_.
 
-    "Operations": [
-        {
-            "Module": "upgrade",
-            "Parameters": {
-                "linux/amd64": {
-                    "to_version": "16eb58b-201404021544",
-                    "location": "http://localhost/mig/bin/linux/amd64/mig-agent",
-                    "checksum": "31fccc576635a29e0a27bbf7416d4f32a0ebaee892475e14708641c0a3620b03"
-                }
-            }
-        }
-    ],
-
-* Each OS family and architecture have their own parameters (ex: "linux/amd64",
-  "darwin/amd64", "windows/386", ...). Then, in each OS/Arch group, we have:
-* to_version is the version an agent should upgrade to
-* location points to a HTTPS address that contains the agent binary
-* checksum is a SHA256 hash of the agent binary to be verified after download
-
-The parameters above are signed using a standard PGP action signature.
-
-The upgrade action is forwarded to agents (2) like any other action. The action
-signature is verified by the agent (3), and the upgrade module is called. The
-module downloads the new binary (4), verifies the version and checksum (5) and
-installs itself on the system.
-
-Assuming everything checks in, the old agent executes the binary of the new
-agent (6). At that point, two agents are running on the same machine, and the
-rest of the protocol is designed to shut down the old agent, and clean up.
-
-After executing the new agent, the old agent returns a successful result to the
-scheduler, and includes its own PID in the results.
-The new agent starts by registering with the scheduler (7). This tells the
-scheduler that two agents are running on the same node, and one of them must
-terminate. The scheduler sends a kill action to both agents with the PID of the
-old agent (8). The kill action may be executed twice, but that doesn't matter.
-When the scheduler receives the kill results (9), it sends a new action to check
-for `mig-agent` processes (10). Only one should be found in the results (11),
-and if that is the case, the scheduler tells the agent to remove the binary of
-the old agent (12). When the agent returns (13), the upgrade protocol is done.
-
-If the PID of the old agent lingers on the system, an error is logged for the
-investigator to decide what to do next. The scheduler does not attempt to clean
-up the situation.
+.. _`MIG LOADER`: loader.rst

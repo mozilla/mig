@@ -862,6 +862,289 @@ Find the last 10 commands signed by an investigator identified by name.
 
 	/api/v1/search?investigatorname=%25bob%25smith%25&limit=10&type=command
 
+GET /api/v1/loader
+~~~~~~~~~~~~~~~~~~
+* Description: Returns the details of a particular loader instance
+* Parameters:
+	- `loaderid`: ID of loader instance to return
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 200 OK
+* Reponse: Collection+JSON
+
+.. code:: json
+
+        {
+            "collection": {
+                "error": {},
+                "href": "http://api.mig.example.net:1664/api/v1/loader?loaderid=12",
+                "items": [
+                    {
+                        "data": [
+                            {
+                                "name": "loader",
+                                "value": {
+                                    "AgentName": "corbomite.internal",
+                                    "Enabled": true,
+                                    "ID": 12,
+                                    "Key": "",
+                                    "LastSeen": "2016-05-17T14:10:03.041024-05:00",
+                                    "Name": "corbomite.internal"
+                                }
+                            }
+                        ],
+                        "href": "http://api.mig.example.net:1664/api/v1/loader?loaderid=12"
+                    }
+                ],
+                "template": {},
+                "version": "1.0"
+            }
+        }
+
+POST /api/v1/loader/status/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: Change the status of a loader instance
+* Parameters: (POST body)
+        - `loaderid`: ID of loader instance to modify
+        - `status`: New status, "enabled" or "disabled"
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 200 OK
+* Reponse: Collection+JSON
+
+POST /api/v1/loader/key/
+~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: Change loader key for a loader instance
+* Parameters: (POST body)
+        - `loaderid`: ID of loader instance to modify
+        - `loaderkey`: New key for loader instance
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 200 OK
+* Reponse: Collection+JSON
+
+POST /api/v1/loader/new/
+~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: Create a new loader instance
+* Parameters: (POST body)
+	- `loader`: JSON marshaled mig.LoaderEntry data
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 201 Created
+* Reponse: Collection+JSON
+
+GET /api/v1/manifest/
+~~~~~~~~~~~~~~~~~~~~~
+* Description: Return details of a given manifest
+* Parameters:
+	- `manifestid`: ID of manifest to return
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 200 OK
+* Reponse: Collection+JSON
+
+.. code:: json
+
+        {
+            "collection": {
+                "error": {},
+                "href": "http://api.mig.example.net:1664/api/v1/manifest?manifestid=35",
+                "items": [
+                    {
+                        "data": [
+                            {
+                                "name": "manifest",
+                                "value": {
+                                    "content": "<base64-encoded-manifest-content...>",
+                                    "id": 35,
+                                    "name": "a mig manifest",
+                                    "signatures": null,
+                                    "status": "staged",
+                                    "target": "env#>>'{os}'='darwin'",
+                                    "timestamp": "2016-05-17T14:18:23.481867-05:00"
+                                }
+                            }
+                        ],
+                        "href": "http://api.mig.example.net:1664/api/v1/manifest?manifestid=35"
+                    }
+                ],
+                "template": {},
+                "version": "1.0"
+            }
+        }
+
+POST /api/v1/manifest/sign/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: Sign a given manifest
+* Parameters: (POST body)
+        - `manifestid`: ID of manifest to sign
+        - `signature`: The signature to add
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 200 OK
+* Reponse: Collection+JSON
+
+POST /api/v1/manifest/status/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: Change the status of a manifest
+* Parameters: (POST body)
+        - `manifestid`: ID of manifest to change
+        - `status`: Status for manifest, "staged" or "disabled"
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 200 OK
+* Reponse: Collection+JSON
+
+POST /api/v1/manifest/new/
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: Create a new manifest
+* Parameters: (POST body)
+	- `manifest`: JSON marshaled mig.ManifestRecord data
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 201 Created
+* Reponse: Collection+JSON
+
+GET /api/v1/manifest/loaders/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: Return known loader instances this manifest will match
+* Parameters:
+	- `manifestid`: ID of manifest to return loaders for
+* Authentication: X-PGPAUTHORIZATION
+* Response Code: 200 OK
+* Reponse: Collection+JSON
+
+.. code:: json
+
+        {
+            "collection": {
+                "error": {},
+                "href": "http://api.mig.example.net:1664/api/v1/manifest/loaders/?manifestid=33",
+                "items": [
+                    {
+                        "data": [
+                            {
+                                "name": "loader",
+                                "value": {
+                                    "AgentName": "kirk.host",
+                                    "Enabled": true,
+                                    "ID": 6,
+                                    "Key": "",
+                                    "LastSeen": "2016-05-17T14:17:30.987222-05:00",
+                                    "Name": "kirk"
+                                }
+                            }
+                        ],
+                        "href": "http://api.mig.example.net:1664/api/v1/loader?loaderid=6"
+                    },
+                    {
+                        "data": [
+                            {
+                                "name": "loader",
+                                "value": {
+                                    "AgentName": "khan.host",
+                                    "Enabled": true,
+                                    "ID": 8,
+                                    "Key": "",
+                                    "LastSeen": "2016-05-14T19:50:35.258066-05:00",
+                                    "Name": "khan"
+                                }
+                            }
+                        ],
+                        "href": "http://api.mig.example.net:1664/api/v1/loader?loaderid=8"
+                    }
+                ],
+                "template": {},
+                "version": "1.0"
+            }
+        }
+
+POST /api/v1/manifest/agent/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: Returns a manifest for consumption by mig-loader on an agent endpoint
+* Parameters: (POST body)
+	- `parameters`: JSON marshaled mig.ManifestParameters data
+* Authentication: X-LOADERKEY
+* Response Code: 200 OK
+* Reponse: Collection+JSON
+
+.. code:: json
+
+        {
+            "collection": {
+                "error": {},
+                "href": "http://api.mig.example.net:1664/api/v1/manifest/agent/",
+                "items": [
+                    {
+                        "data": [
+                            {
+                                "name": "manifest",
+                                "value": {
+                                    "entries": [
+                                        {
+                                            "name": "mig-loader",
+                                            "sha256": "<object sha256sum...>"
+                                        },
+                                        {
+                                            "name": "configuration",
+                                            "sha256": "<object sha256sum...>"
+                                        },
+                                        {
+                                            "name": "mig-agent",
+                                            "sha256": "<object sha256sum...>"
+                                        },
+                                        {
+                                            "name": "agentcert",
+                                            "sha256": "<object sha256sum...>"
+                                        },
+                                        {
+                                            "name": "cacert",
+                                            "sha256": "<object sha256sum...>"
+                                        },
+                                        {
+                                            "name": "agentkey",
+                                            "sha256": "<object sha256sum...>"
+                                        }
+                                    ],
+                                    "loader_name": "khan",
+                                    "signatures": [
+                                        "<a signature from a MIG administrator...>"
+                                    ]
+                                }
+                            }
+                        ],
+                        "href": "/api/v1/manifest/agent/"
+                    }
+                ],
+                "template": {},
+                "version": "1.0"
+            }
+        }
+
+POST /api/v1/manifest/fetch/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: Fetches a file provided by a manifest
+* Parameters: (POST body)
+	- `parameters`: JSON marshaled mig.ManifestParameters data
+* Authentication: X-LOADERKEY
+* Response Code: 200 OK
+* Reponse: Collection+JSON
+
+.. code:: json
+
+        {
+            "collection": {
+                "error": {},
+                "href": "http://api.mig.example.net:1664/api/v1/manifest/fetch/",
+                "items": [
+                    {
+                        "data": [
+                            {
+                                "name": "content",
+                                "value": {
+                                    "data": "<file content...>",
+                                }
+                            }
+                        ],
+                        "href": "http://api.mig.example.net:1664/api/v1/manifest/fetch/"
+                    }
+                ],
+                "template": {},
+                "version": "1.0"
+            }
+        }
 
 Data transformation
 -------------------
@@ -1125,4 +1408,9 @@ Generating a token in Python
 		print token
 		print r.text
 
+Authentication with X-LOADERKEY
+-------------------------------
+X-LOADERKEY is a simple authentication method used by loader instances to authenticate
+with the API. The X-LOADERKEY header is included with the request, and is set to the loader
+key value for the requesting loader instance.
 

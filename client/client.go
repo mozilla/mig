@@ -501,7 +501,7 @@ func (cli Client) PostNewManifest(mr mig.ManifestRecord) (err error) {
 			panic(err)
 		}
 	}
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated {
 		err = fmt.Errorf("error: HTTP %d. Manifest create failed with error '%v' (code %s).",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)

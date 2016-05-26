@@ -37,6 +37,8 @@ Terminology:
 * **Agent**: a small program that runs on a remote endpoint. It receives commands
   from the scheduler through the relays, executes those commands using modules,
   and sends the results back to the relays.
+* **Loader**: a small bootstrapping program that can optionally be used to keep
+  agents up to date on remote endpoints
 * **Module**: single feature Go program that does stuff, like inspecting a file
   system, listing connected IP addresses, creating user accounts or adding
   firewall rules
@@ -184,7 +186,7 @@ Access Control Lists
 --------------------
 
 Not all keys can perform all actions. The scheduler, for example, sometimes needs
-to issue specific actions to agents (such as during the upgrade protocol) but
+to issue specific actions to agents but
 shouldn't be able to perform more dangerous actions. This is enforced by
 an Access Control List, or ACL, stored on the agents. An ACL describes who can
 access what function of which module. It can be used to require multiple
