@@ -951,6 +951,43 @@ func (cli Client) PostInvestigator(name string, pubkey []byte) (inv mig.Investig
 	return
 }
 
+// PostInvestigatorAdminFlag enables or disabled admin status for an investigator
+func (cli Client) PostInvestigatorAdminFlag(iid float64, enabled bool) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("PostInvestigatorAdminFlag() -> %v", e)
+		}
+	}()
+	data := url.Values{"id": {fmt.Sprintf("%.0f", iid)}, "isadmin": {fmt.Sprintf("%v", enabled)}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"investigator/update/", strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	var resource *cljs.Resource
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("error: HTTP %d. admin flag update failed with error '%v' (code %s)",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	return
+}
+
 // PostInvestigatorStatus updates the status of an Investigator
 func (cli Client) PostInvestigatorStatus(iid float64, newstatus string) (err error) {
 	defer func() {

@@ -211,15 +211,46 @@ func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	inv.Status = request.FormValue("status")
-	if inv.Status == "" {
-		panic("Investigator status must not be empty")
+	isadm := request.FormValue("isadmin")
+	if inv.Status == "" && isadm == "" {
+		panic("No updates to the investigator were specified")
 	}
-	// create the investigator in database
-	err = ctx.DB.UpdateInvestigatorStatus(inv)
-	if err != nil {
-		panic(err)
+	if inv.Status != "" {
+		// update the investigator status in database
+		err = ctx.DB.UpdateInvestigatorStatus(inv)
+		if err != nil {
+			panic(err)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f status changed to %s", inv.ID, inv.Status)}
+	} else {
+		switch isadm {
+		case "true":
+			inv.IsAdmin = true
+		case "false":
+			inv.IsAdmin = false
+			// If the request is to disable the admin flag, make sure we
+			// are not disabling the only remaining admin
+			var cnt int
+			cnt, err = ctx.DB.CountOtherAdminInvestigators(inv)
+			if err != nil {
+				panic(err)
+			}
+			if cnt < 1 {
+				resource.SetError(cljs.Error{
+					Code:    fmt.Sprintf("%.0f", opid),
+					Message: "Will not disable last remaining administrator"})
+				respond(http.StatusBadRequest, resource, respWriter, request)
+				return
+			}
+		default:
+			panic("invalid value for isadmin")
+		}
+		err = ctx.DB.UpdateInvestigatorAdmin(inv)
+		if err != nil {
+			panic(err)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f admin changed to %v", inv.ID, inv.IsAdmin)}
 	}
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f status changed to %s", inv.ID, inv.Status)}
 	err = resource.AddItem(cljs.Item{
 		Href: fmt.Sprintf("%s/investigator?investigatorid=%.0f", ctx.Server.BaseURL, inv.ID),
 		Data: []cljs.Data{{Name: "Investigator ID " + fmt.Sprintf("%.0f", inv.ID), Value: inv}},

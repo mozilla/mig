@@ -164,6 +164,27 @@ func (db *DB) UpdateInvestigatorStatus(inv mig.Investigator) (err error) {
 	return
 }
 
+// UpdateInvestigatorStatus updates the status of an investigator
+func (db *DB) UpdateInvestigatorAdmin(inv mig.Investigator) (err error) {
+	_, err = db.c.Exec(`UPDATE investigators SET (isadmin) = ($1) WHERE id=$2`,
+		inv.IsAdmin, inv.ID)
+	if err != nil {
+		return fmt.Errorf("Failed to update investigator: '%v'", err)
+	}
+	return
+}
+
+// Count the number of administrators aside from the specified investigator
+func (db *DB) CountOtherAdminInvestigators(inv mig.Investigator) (cnt int, err error) {
+	err = db.c.QueryRow(`SELECT COUNT(id) FROM investigators
+		WHERE isadmin=TRUE AND id!=$1`, inv.ID).Scan(&cnt)
+	if err != nil {
+		err = fmt.Errorf("Error while counting administrators: '%v'", err)
+		return
+	}
+	return
+}
+
 // GetSchedulerPrivKey returns the first active private key found for user migscheduler
 func (db *DB) GetSchedulerPrivKey() (key []byte, err error) {
 	err = db.c.QueryRow(`SELECT privatekey FROM investigators
