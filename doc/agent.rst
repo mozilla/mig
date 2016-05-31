@@ -269,10 +269,14 @@ program mig-loader. Using mig-loader is optional; you don't need to use
 mig-loader in your environment if you want to upgrade agents yourself.
 
 The following is a high level diagram of how the loader interacts with the
-API and the agent during the upgrade process.
+API and the agent during the upgrade process. Note this diagram focuses on
+the agent being upgraded, but it could be any file in the manifest such as
+the certificates, agent configuration, or loader. In all cases changes to
+anything will result in a respawn of any running agent by the loader.
 
 ::
 
+        /------ Endpoint ---------\
         Agent                Loader              API
         +---+                +----+             +--+
         |                    |                     |
@@ -289,6 +293,9 @@ API and the agent during the upgrade process.
         | match?    +------->|                     |
         |                    |                     |
         |                    | 5. fetch new agent  |
+        |                    |    or other files   |
+        |                    |    from manifest    |
+        |                    |    that dont match  |
         |                    |-------------------->|
         |                    |                     |
         | 6. stage  +--------|                     |

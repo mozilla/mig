@@ -113,9 +113,10 @@ func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err 
 // or an error if the insertion failed, or if the investigator already exists
 func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) {
 	_, err = db.c.Exec(`INSERT INTO investigators
-		(name, pgpfingerprint, publickey, status, createdat, lastmodified)
-		VALUES ($1, $2, $3, 'active', $4, $5)`,
-		inv.Name, inv.PGPFingerprint, inv.PublicKey, time.Now().UTC(), time.Now().UTC())
+		(name, pgpfingerprint, publickey, status, createdat, lastmodified, isadmin)
+		VALUES ($1, $2, $3, 'active', $4, $5, $6)`,
+		inv.Name, inv.PGPFingerprint, inv.PublicKey, time.Now().UTC(), time.Now().UTC(),
+		inv.IsAdmin)
 	if err != nil {
 		if err.Error() == `pq: duplicate key value violates unique constraint "investigators_pgpfingerprint_idx"` {
 			return iid, fmt.Errorf("Investigator's PGP Fingerprint already exists in database")
@@ -160,6 +161,27 @@ func (db *DB) UpdateInvestigatorStatus(inv mig.Investigator) (err error) {
 		inv.Status, inv.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to update investigator: '%v'", err)
+	}
+	return
+}
+
+// UpdateInvestigatorStatus updates the status of an investigator
+func (db *DB) UpdateInvestigatorAdmin(inv mig.Investigator) (err error) {
+	_, err = db.c.Exec(`UPDATE investigators SET (isadmin) = ($1) WHERE id=$2`,
+		inv.IsAdmin, inv.ID)
+	if err != nil {
+		return fmt.Errorf("Failed to update investigator: '%v'", err)
+	}
+	return
+}
+
+// Count the number of administrators aside from the specified investigator
+func (db *DB) CountOtherAdminInvestigators(inv mig.Investigator) (cnt int, err error) {
+	err = db.c.QueryRow(`SELECT COUNT(id) FROM investigators
+		WHERE isadmin=TRUE AND id!=$1`, inv.ID).Scan(&cnt)
+	if err != nil {
+		err = fmt.Errorf("Error while counting administrators: '%v'", err)
+		return
 	}
 	return
 }

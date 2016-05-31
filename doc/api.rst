@@ -720,8 +720,9 @@ POST /api/v1/investigator/create/
 * Description: create a new investigator in the database
 * Authentication: X-PGPAUTHORIZATION
 * Parameters: (POST body)
-	- `name`: string that represents the full name
-	- `publickey`: armored GPG public key
+        - `name`: string that represents the full name
+        - `publickey`: armored GPG public key
+        - `isadmin`: specify if user should be admin, true or false
 * Response Code: 201 Created
 * Response: Collection+JSON
 * Example: (without authentication)
@@ -729,18 +730,21 @@ POST /api/v1/investigator/create/
 .. code:: bash
 
 	$ gpg --export -a --export-options export-minimal bob_kelso@example.net > /tmp/bobpubkey
-	$ curl -iv -F "name=Bob Kelso" -F publickey=@/tmp/pubkey https://api.mig.example.net/api/v1/investigator/create/
+	$ curl -iv -F "name=Bob Kelso" -F "isadmin=false" -F publickey=@/tmp/pubkey https://api.mig.example.net/api/v1/investigator/create/
 
 POST /api/v1/investigator/update/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: update an existing investigator in the database
 * Authentication: X-PGPAUTHORIZATION
 * Parameters: (POST body)
-	- `id`: investigator id, to identify the target investigator
-	- `status`: new status of the investigator, to be updated
+        - `id`: investigator id, to identify the target investigator
+        - `status`: new status of the investigator, to be updated
+        - `isadmin`: specify if user should be admin, true or false
 * Response Code: 201 Created
 * Response: Collection+JSON
 * Example: (without authentication)
+
+One of either ``status`` or ``isadmin`` must be passed to this API endpoint.
 
 .. code:: bash
 
@@ -883,12 +887,12 @@ GET /api/v1/loader
                             {
                                 "name": "loader",
                                 "value": {
-                                    "AgentName": "corbomite.internal",
-                                    "Enabled": true,
-                                    "ID": 12,
-                                    "Key": "",
-                                    "LastSeen": "2016-05-17T14:10:03.041024-05:00",
-                                    "Name": "corbomite.internal"
+                                    "agentname": "corbomite.internal",
+                                    "enabled": true,
+                                    "id": 12,
+                                    "key": "",
+                                    "lastseen": "2016-05-17T14:10:03.041024-05:00",
+                                    "name": "corbomite.internal"
                                 }
                             }
                         ],
@@ -1018,12 +1022,12 @@ GET /api/v1/manifest/loaders/
                             {
                                 "name": "loader",
                                 "value": {
-                                    "AgentName": "kirk.host",
-                                    "Enabled": true,
-                                    "ID": 6,
-                                    "Key": "",
-                                    "LastSeen": "2016-05-17T14:17:30.987222-05:00",
-                                    "Name": "kirk"
+                                    "agentname": "kirk.host",
+                                    "enabled": true,
+                                    "id": 6,
+                                    "key": "",
+                                    "lastseen": "2016-05-17T14:17:30.987222-05:00",
+                                    "name": "kirk"
                                 }
                             }
                         ],
@@ -1034,12 +1038,12 @@ GET /api/v1/manifest/loaders/
                             {
                                 "name": "loader",
                                 "value": {
-                                    "AgentName": "khan.host",
-                                    "Enabled": true,
-                                    "ID": 8,
-                                    "Key": "",
-                                    "LastSeen": "2016-05-14T19:50:35.258066-05:00",
-                                    "Name": "khan"
+                                    "agentname": "khan.host",
+                                    "enabled": true,
+                                    "id": 8,
+                                    "key": "",
+                                    "lastseen": "2016-05-14T19:50:35.258066-05:00",
+                                    "name": "khan"
                                 }
                             }
                         ],
@@ -1134,7 +1138,7 @@ POST /api/v1/manifest/fetch/
                             {
                                 "name": "content",
                                 "value": {
-                                    "data": "<file content...>",
+                                    "data": "<base64 compressed file content...>",
                                 }
                             }
                         ],

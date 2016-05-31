@@ -7,8 +7,9 @@ MIG LOADER
 
 Overview
 --------
-The MIG loader is the component in MIG that can look after keeping agents up
-to date on systems. More specifically, this involves periodically checking if
+The MIG loader is the component in MIG that can look after keeping things up
+to date on systems, for example on workstations and laptops that are not
+centrally managed. More specifically, this involves periodically checking if
 new agent code is available, making sure it's signed and safe to install, and
 handling automatic agent/configuration upgrades.
 
@@ -17,13 +18,13 @@ puppet or ansible) MIG loader may not be required. The configuration management
 system can periodically push updates out to required systems.
 
 In other environments, the loader can help keep things up to date. As an example
-this could be in cases where you want to keep MIG up to date on workstations that
+this could be in cases where you want to keep MIG agents up to date on workstations that
 are not centrally managed. Even in cases with a configuration management system in
 place, you may want to use MIG loader to provide more fine-grained control over
 updates to agents.
 
 Here we describe how the loader works, and provide an example on how it is setup
-and used to provision and continuously upgrade a MIG environment.
+and used to provision and continuously upgrade MIG agent deployments.
 
 Differences between deploying with mig-loader and without
 ---------------------------------------------------------
@@ -48,19 +49,19 @@ that is used.
 
 mig-loader
 ~~~~~~~~~~
-mig-loader is the component responsible for upgrading and managing the agent and
-associated agent configuration files on a system. It would run on a host you would
+mig-loader runs on an endpoint and is responsible for managing the mig-agent
+that is running on that particular endpoint. It would run on a host you would
 like the agent deployed on. mig-loader looks after periodically checking if new
 agents are available by contacting the API, validating signatures on new agent
 manifests, and installing new agent code and configuration data when available. It
-also looks after management related actions such as restarting the agent if new
-code has been installed.
+also looks after management related actions such as restarting the agent if a new
+version has been installed.
 
 mig-api
 ~~~~~~~
-In the general sense, the MIG API is used by clients to send actions to agents and
-provides the interface into MIG. From the perspective of the loader, it serves a
-couple additional purposes.
+The API is the control interface of MIG used by investigators to interact with
+the platform. From the perspective of the loader, it serves a
+couple specific purposes.
 
 The mig-loader contacts the API periodically to see if updates are available, and
 fetches these updates from the API.
@@ -85,7 +86,7 @@ About manifest signatures
 When the loader asks the API for the current version of the agent that should be
 installed, the API will respond with a signed manifest. The manifest is signed by
 MIG administrators when it is uploaded to the API (discussed later) using the
-administrators GPG key. The loader is built with the GPG public key of the
+administrators PGP key. The loader is built with the PGP public key of the
 administrators, which allows the loader to validate the manifest signature is
 correct before it will attempt to install updates.
 
@@ -124,9 +125,9 @@ another file for editing.
 
 Here you would indicate where the API is, include any tags (similar to agent tags)
 that should be included with this loader type, and you would also build in any
-GPG keys that should be used as part of validation of manifest signatures
+PGP keys that should be used as part of validation of manifest signatures
 by the loader. Manifests are signed by MIG administrators, so normally you will
-place the GPG public keys of MIG administrators in the loader configuration.
+place the PGP public keys of MIG administrators in the loader configuration.
 
 An important value to set here is the number of signatures that must be present on
 a manifest before the loader will accept it. This can be set by changing the value
@@ -155,7 +156,6 @@ Once complete, build the loader binary with your configuration file.
     # and if so, replace the link to the default configuration with the provided configuration
     if [ conf/mig-loader-myenv.go.inc != "conf/mig-loader-conf.go.inc" ]; then rm mig-loader/configuration.go; cp conf/mig-loader-myenv.go.inc mig-loader/configuration.go; fi
     GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go build  -o bin/linux/amd64/mig-loader -ldflags "-X mig.ninja/mig.Version=20160512-0.9fe5f23.dev" mig.ninja/mig/mig-loader
-    $
 
 You will end up with a mig-loader binary in ``bin/linux/amd64`` you can copy into
 your manifest when you create it in a later step.
@@ -232,7 +232,6 @@ When creating a manifest, you will likely end up with something like this.
     $ cd mig-manifest-int-linux
     $ ls
     agentcert  agentkey  cacert  configuration  mig-agent  mig-loader
-    $
 
 To finish creating our manifest we will use, tar/compress the directory into
 the manifest file we will upload to the API.
@@ -247,7 +246,6 @@ the manifest file we will upload to the API.
     mig-manifest-int-linux/agentcert
     mig-manifest-int-linux/cacert
     mig-manifest-int-linux/agentkey
-    $
 
 Creating a new manifest in the API
 ----------------------------------
@@ -402,7 +400,6 @@ permissions on your relay, using ``rabbitmqctl``.
     Creating user "corbomite.internal" ...
     # rabbitmqctl set_permissions -p mig corbomite.internal '^mig\.agt\..*$' '^(toschedulers|mig\.agt\..*)$' '^(toagents|mig\.agt\..*)$'
     Setting permissions for user "corbomite.internal" in vhost "mig" ...
-    #
 
 Initial provisioning of mig-loader
 ----------------------------------
@@ -446,10 +443,9 @@ based, so first we make a loader package using our loader configuration.
         -s dir -t deb .
     Debian packaging tools generally labels all files in /etc as config files, as mandated by policy, so fpm defaults to this behavior for deb packages. You can disable this default behavior with --deb-no-default-config-files flag {:level=>:warn}
     Created package {:path=>"mig-loader_20160516-0.8ba7319.dev_amd64.deb"}
-    $ 
 
 This package will contain the mig-loader binary built with our configuration, which contains the
-API URL the loader should use and the GPG keys that will be used to validate incoming manifests. Next
+API URL the loader should use and the PGP keys that will be used to validate incoming manifests. Next
 the package can be installed on the system we want to run the agent on.
 
 Loader configuration and initial run
@@ -534,7 +530,6 @@ We can run ``/sbin/mig-loader`` manually on the system now.
     installing staged file
     running triggers due to modification
     terminateAgent() -> exit status 1 (ignored)
-    #
 
 By running the loader manually you can validate it has connectivity. We should now have an
 agent running on the system. Future invocations of mig-loader by the periodic job will

@@ -67,8 +67,8 @@ func investigatorReader(input string, cli client.Client) (err error) {
 		orders := strings.Split(strings.TrimSpace(input), " ")
 		switch orders[0] {
 		case "details":
-			fmt.Printf("Investigator ID %.0f\nname     %s\nstatus   %s\nkey id   %s\ncreated  %s\nmodified %s\n",
-				inv.ID, inv.Name, inv.Status, inv.PGPFingerprint, inv.CreatedAt, inv.LastModified)
+			fmt.Printf("Investigator ID %.0f\nname     %s\nstatus   %s\nadmin    %v\nkey id   %s\ncreated  %s\nmodified %s\n",
+				inv.ID, inv.Name, inv.Status, inv.IsAdmin, inv.PGPFingerprint, inv.CreatedAt, inv.LastModified)
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
@@ -80,6 +80,7 @@ help			show this help
 lastactions <limit>	print the last actions ran by the investigator. limit=10 by default.
 pubkey			show the armored public key of the investigator
 r			refresh the investigator (get latest version from upstream)
+setadmin <true|false>   enable or disable admin flag for investigator
 setstatus <status>	changes the status of the investigator to <status> (can be 'active' or 'disabled')
 `)
 		case "lastactions":
@@ -117,6 +118,35 @@ setstatus <status>	changes the status of the investigator to <status> (can be 'a
 				panic(err)
 			} else {
 				fmt.Println("Investigator status set to", newstatus)
+			}
+			inv, err = cli.GetInvestigator(iid)
+			if err != nil {
+				panic(err)
+			}
+		case "setadmin":
+			if len(orders) != 2 {
+				fmt.Println("error: must be 'setadmin <true|false>'. try 'help'")
+				break
+			}
+			var flag bool
+			valid := true
+			switch strings.ToLower(orders[1]) {
+			case "true":
+				flag = true
+			case "false":
+				flag = false
+			default:
+				fmt.Println("error: must specify true or false")
+				valid = false
+			}
+			if !valid {
+				break
+			}
+			err = cli.PostInvestigatorAdminFlag(iid, flag)
+			if err != nil {
+				panic(err)
+			} else {
+				fmt.Println("Investigator admin flag set to", flag)
 			}
 			inv, err = cli.GetInvestigator(iid)
 			if err != nil {
@@ -189,8 +219,10 @@ func investigatorCreator(cli client.Client) (err error) {
 		}
 	}()
 	var (
-		name   string
-		pubkey []byte
+		name     string
+		adminstr string
+		isadmin  bool
+		pubkey   []byte
 	)
 	fmt.Println("Entering investigator creation mode. Please provide the full name\n" +
 		"and the public key of the new investigator.")
@@ -202,6 +234,18 @@ func investigatorCreator(cli client.Client) (err error) {
 		panic("input name too short")
 	}
 	fmt.Printf("Name: '%s'\n", name)
+	adminstr, err = readline.String("admin? (yes/no)> ")
+	if err != nil {
+		panic(err)
+	}
+	switch strings.ToLower(adminstr) {
+	case "yes":
+		isadmin = true
+	case "no":
+		isadmin = false
+	default:
+		panic("must specify yes or no")
+	}
 	fmt.Println("Please provide a public key. You can either provide a local path to the\n" +
 		"armored public key file, or a full length PGP fingerprint.\n" +
 		"example:\npubkey> 0x716CFA6BA8EBB21E860AE231645090E64367737B")
@@ -236,7 +280,7 @@ func investigatorCreator(cli client.Client) (err error) {
 		fmt.Println("abort")
 		return
 	}
-	inv, err := cli.PostInvestigator(name, pubkey)
+	inv, err := cli.PostInvestigator(name, pubkey, isadmin)
 	if err != nil {
 		panic(err)
 	}
