@@ -80,14 +80,10 @@ func main() {
 		authenticateLoader(getManifestFile)).Methods("POST")
 
 	// Investigator resources that require authentication
-	s.HandleFunc("/",
-		authenticate(getHome, false)).Methods("GET")
 	s.HandleFunc("/search",
 		authenticate(search, false)).Methods("GET")
 	s.HandleFunc("/action",
 		authenticate(getAction, false)).Methods("GET")
-	s.HandleFunc("/action/create/",
-		authenticate(describeCreateAction, false)).Methods("GET")
 	s.HandleFunc("/action/create/",
 		authenticate(createAction, false)).Methods("POST")
 	s.HandleFunc("/command",
@@ -119,11 +115,7 @@ func main() {
 	s.HandleFunc("/investigator",
 		authenticate(getInvestigator, true)).Methods("GET")
 	s.HandleFunc("/investigator/create/",
-		authenticate(describeCreateInvestigator, true)).Methods("GET")
-	s.HandleFunc("/investigator/create/",
 		authenticate(createInvestigator, true)).Methods("POST")
-	s.HandleFunc("/investigator/update/",
-		authenticate(describeUpdateInvestigator, true)).Methods("GET")
 	s.HandleFunc("/investigator/update/",
 		authenticate(updateInvestigator, true)).Methods("POST")
 
@@ -391,133 +383,6 @@ func getIP(respWriter http.ResponseWriter, request *http.Request) {
 		// request.RemoteAddr contains IP:Port, so strip the port and return just the IP
 		respond(http.StatusOK, []byte(request.RemoteAddr[:strings.LastIndex(request.RemoteAddr, ":")]), respWriter, request)
 	}
-}
-
-// getHome returns a basic document that presents the different ressources
-// available in the API, as well as some status information
-func getHome(respWriter http.ResponseWriter, request *http.Request) {
-	var err error
-	opid := getOpID(request)
-	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
-	resource := cljs.New(loc)
-	defer func() {
-		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(http.StatusInternalServerError, resource, respWriter, request)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getHome()"}.Debug()
-	}()
-
-	resource.AddQuery(cljs.Query{
-		Rel:  "Get dashboard",
-		Href: fmt.Sprintf("%s/dashboard", ctx.Server.BaseURL),
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	err = resource.AddLink(cljs.Link{
-		Rel:  "create action",
-		Href: fmt.Sprintf("%s/action/create/", ctx.Server.BaseURL),
-		Name: "POST endpoint to create an action"})
-	if err != nil {
-		panic(err)
-	}
-
-	err = resource.AddLink(cljs.Link{
-		Rel:  "create investigator",
-		Href: fmt.Sprintf("%s/investigator/create/", ctx.Server.BaseURL),
-		Name: "POST endpoint to create an investigator"})
-	if err != nil {
-		panic(err)
-	}
-
-	err = resource.AddLink(cljs.Link{
-		Rel:  "update investigator",
-		Href: fmt.Sprintf("%s/investigator/update/", ctx.Server.BaseURL),
-		Name: "POST endpoint to update an investigator"})
-	if err != nil {
-		panic(err)
-	}
-
-	// Describe the queries that are exposed to the client
-	err = resource.AddQuery(cljs.Query{
-		Rel:    "Query action by ID",
-		Href:   fmt.Sprintf("%s/action", ctx.Server.BaseURL),
-		Prompt: "GET endpoint to query an action by ID, using url parameter ?actionid=<numerical id>",
-		Data: []cljs.Data{
-			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	resource.AddQuery(cljs.Query{
-		Rel:    "Query command by ID",
-		Href:   fmt.Sprintf("%s/command", ctx.Server.BaseURL),
-		Prompt: "GET endpoint to query a command by ID, using url parameter ?commandid=<numerical id>",
-		Data: []cljs.Data{
-			{Name: "commandid", Value: "[0-9]{1,20}", Prompt: "Command ID"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	resource.AddQuery(cljs.Query{
-		Rel:    "Query agent by ID",
-		Href:   fmt.Sprintf("%s/agent", ctx.Server.BaseURL),
-		Prompt: "GET endpoint to query an agent by ID, using url parameter ?agentid=<numerical id>",
-		Data: []cljs.Data{
-			{Name: "agentid", Value: "[0-9]{1,20}", Prompt: "Agent ID"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	resource.AddQuery(cljs.Query{
-		Rel:    "Query investigator by ID",
-		Href:   fmt.Sprintf("%s/investigator", ctx.Server.BaseURL),
-		Prompt: "GET endpoint to query an investigator by ID, using url parameter ?investigatorid=<numerical id>",
-		Data: []cljs.Data{
-			{Name: "investigatorid", Value: "[0-9]{1,20}", Prompt: "Investigator ID"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	resource.AddQuery(cljs.Query{
-		Rel:    "Search stuff",
-		Href:   fmt.Sprintf("%s/search", ctx.Server.BaseURL),
-		Prompt: "GET endpoint to search for stuff",
-		Data: []cljs.Data{
-			{Name: "type", Value: "(command|action|agent|investigator)", Prompt: "type defines what the search is looking for"},
-			{Name: "actionid", Value: "123456789...", Prompt: "filter results on the action id"},
-			{Name: "actionname", Value: "some action name", Prompt: "filter results on the action name"},
-			{Name: "after", Value: "11-01-01 12:12:12.686438508-04:00", Prompt: "return results recorded after this RFC3339 date"},
-			{Name: "agentid", Value: "123456789...", Prompt: "filter results on the agent id"},
-			{Name: "agentname", Value: "agent123.example.net", Prompt: "filter results on the agent name"},
-			{Name: "before", Value: "9998-01-01 12:12:12.686438508-04:00", Prompt: "return results recorded before this RFC3339 date"},
-			{Name: "commandid", Value: "123456789...", Prompt: "filter results on the command id"},
-			{Name: "foundanything", Value: "(true|false)", Prompt: "return commands that have results with foundanything flag set to true or false"},
-			{Name: "investigatorid", Value: "123456789...", Prompt: "filter results on the investigator id"},
-			{Name: "investigatorname", Value: "%bob%", Prompt: "filter results on the investigator name"},
-			{Name: "limit", Value: "10000", Prompt: "limit the number of results to 10,000 by default"},
-			{Name: "offset", Value: "0", Prompt: "skip the first results, default value of 0 does not skip"},
-			{Name: "report", Value: "(compliancesummary|complianceitems)", Prompt: "if set, return results in the given report format"},
-			{Name: "status", Value: "(sent|success|cancelled|expired|failed|timeout|...)", Prompt: "filter results on the type's status"},
-			{Name: "threatfamily", Value: "(compliance|backdoor|...)", Prompt: "filter results of the threat family"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	respond(http.StatusOK, resource, respWriter, request)
 }
 
 func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
