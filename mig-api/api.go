@@ -67,36 +67,65 @@ func main() {
 	// register routes
 	r := mux.NewRouter()
 	s := r.PathPrefix(ctx.Server.BaseRoute).Subrouter()
+
 	// unauthenticated endpoints
 	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")
 	s.HandleFunc("/ip", getIP).Methods("GET")
+
 	// Loader manifest endpoints, use loader specific authentication on
 	// the request
-	s.HandleFunc("/manifest/agent/", authenticateLoader(getAgentManifest)).Methods("POST")
-	s.HandleFunc("/manifest/fetch/", authenticateLoader(getManifestFile)).Methods("POST")
-	// all other resources require authentication
-	s.HandleFunc("/", authenticate(getHome, false)).Methods("GET")
-	s.HandleFunc("/loader", authenticate(getLoader, true)).Methods("GET")
-	s.HandleFunc("/loader/status/", authenticate(statusLoader, true)).Methods("POST")
-	s.HandleFunc("/loader/key/", authenticate(keyLoader, true)).Methods("POST")
-	s.HandleFunc("/loader/new/", authenticate(newLoader, true)).Methods("POST")
-	s.HandleFunc("/manifest", authenticate(getManifest, true)).Methods("GET")
-	s.HandleFunc("/manifest/sign/", authenticate(signManifest, true)).Methods("POST")
-	s.HandleFunc("/manifest/status/", authenticate(statusManifest, true)).Methods("POST")
-	s.HandleFunc("/manifest/new/", authenticate(newManifest, true)).Methods("POST")
-	s.HandleFunc("/manifest/loaders/", authenticate(manifestLoaders, true)).Methods("GET")
-	s.HandleFunc("/search", authenticate(search, false)).Methods("GET")
-	s.HandleFunc("/action", authenticate(getAction, false)).Methods("GET")
-	s.HandleFunc("/action/create/", authenticate(describeCreateAction, false)).Methods("GET")
-	s.HandleFunc("/action/create/", authenticate(createAction, false)).Methods("POST")
-	s.HandleFunc("/command", authenticate(getCommand, false)).Methods("GET")
-	s.HandleFunc("/agent", authenticate(getAgent, false)).Methods("GET")
-	s.HandleFunc("/investigator", authenticate(getInvestigator, true)).Methods("GET")
-	s.HandleFunc("/investigator/create/", authenticate(describeCreateInvestigator, true)).Methods("GET")
-	s.HandleFunc("/investigator/create/", authenticate(createInvestigator, true)).Methods("POST")
-	s.HandleFunc("/investigator/update/", authenticate(describeUpdateInvestigator, true)).Methods("GET")
-	s.HandleFunc("/investigator/update/", authenticate(updateInvestigator, true)).Methods("POST")
-	s.HandleFunc("/dashboard", authenticate(getDashboard, false)).Methods("GET")
+	s.HandleFunc("/manifest/agent/",
+		authenticateLoader(getAgentManifest)).Methods("POST")
+	s.HandleFunc("/manifest/fetch/",
+		authenticateLoader(getManifestFile)).Methods("POST")
+
+	// Investigator resources that require authentication
+	s.HandleFunc("/",
+		authenticate(getHome, false)).Methods("GET")
+	s.HandleFunc("/search",
+		authenticate(search, false)).Methods("GET")
+	s.HandleFunc("/action",
+		authenticate(getAction, false)).Methods("GET")
+	s.HandleFunc("/action/create/",
+		authenticate(describeCreateAction, false)).Methods("GET")
+	s.HandleFunc("/action/create/",
+		authenticate(createAction, false)).Methods("POST")
+	s.HandleFunc("/command",
+		authenticate(getCommand, false)).Methods("GET")
+	s.HandleFunc("/agent",
+		authenticate(getAgent, false)).Methods("GET")
+	s.HandleFunc("/dashboard",
+		authenticate(getDashboard, false)).Methods("GET")
+
+	// Administrator resources
+	s.HandleFunc("/loader",
+		authenticate(getLoader, true)).Methods("GET")
+	s.HandleFunc("/loader/status/",
+		authenticate(statusLoader, true)).Methods("POST")
+	s.HandleFunc("/loader/key/",
+		authenticate(keyLoader, true)).Methods("POST")
+	s.HandleFunc("/loader/new/",
+		authenticate(newLoader, true)).Methods("POST")
+	s.HandleFunc("/manifest",
+		authenticate(getManifest, true)).Methods("GET")
+	s.HandleFunc("/manifest/sign/",
+		authenticate(signManifest, true)).Methods("POST")
+	s.HandleFunc("/manifest/status/",
+		authenticate(statusManifest, true)).Methods("POST")
+	s.HandleFunc("/manifest/new/",
+		authenticate(newManifest, true)).Methods("POST")
+	s.HandleFunc("/manifest/loaders/",
+		authenticate(manifestLoaders, true)).Methods("GET")
+	s.HandleFunc("/investigator",
+		authenticate(getInvestigator, true)).Methods("GET")
+	s.HandleFunc("/investigator/create/",
+		authenticate(describeCreateInvestigator, true)).Methods("GET")
+	s.HandleFunc("/investigator/create/",
+		authenticate(createInvestigator, true)).Methods("POST")
+	s.HandleFunc("/investigator/update/",
+		authenticate(describeUpdateInvestigator, true)).Methods("GET")
+	s.HandleFunc("/investigator/update/",
+		authenticate(updateInvestigator, true)).Methods("POST")
 
 	ctx.Channels.Log <- mig.Log{Desc: "Starting HTTP handler"}
 
