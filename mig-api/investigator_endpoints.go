@@ -8,10 +8,11 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"mig.ninja/mig"
-	"mig.ninja/mig/pgp"
 	"net/http"
 	"strconv"
+
+	"mig.ninja/mig"
+	"mig.ninja/mig/pgp"
 
 	"github.com/jvehent/cljs"
 )
@@ -67,33 +68,6 @@ func getInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(investigatorItem)
-	respond(http.StatusOK, resource, respWriter, request)
-}
-
-// describeCreateInvestigator returns a resource that describes how to create an investigator
-func describeCreateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
-	var err error
-	opid := getOpID(request)
-	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
-	resource := cljs.New(loc)
-	defer func() {
-		if e := recover(); e != nil {
-			emsg := fmt.Sprintf("%v", e)
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
-			respond(http.StatusInternalServerError, resource, respWriter, request)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCreateInvestigator()"}.Debug()
-	}()
-	err = resource.SetTemplate(cljs.Template{
-		Data: []cljs.Data{
-			{Name: "name", Value: "investigator's full name", Prompt: "Investigator Name"},
-			{Name: "publickey", Value: "armored GPG public key", Prompt: "Public Key"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
 	respond(http.StatusOK, resource, respWriter, request)
 }
 
@@ -161,33 +135,6 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		Data: []cljs.Data{{Name: "Investigator ID " + fmt.Sprintf("%.0f", inv.ID), Value: inv}},
 	})
 	respond(http.StatusCreated, resource, respWriter, request)
-}
-
-// describeUpdateInvestigator returns a resource that describes how to update the status of an investigator
-func describeUpdateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
-	var err error
-	opid := getOpID(request)
-	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
-	resource := cljs.New(loc)
-	defer func() {
-		if e := recover(); e != nil {
-			emsg := fmt.Sprintf("%v", e)
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: emsg})
-			respond(http.StatusInternalServerError, resource, respWriter, request)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeUpdateInvestigator()"}.Debug()
-	}()
-	err = resource.SetTemplate(cljs.Template{
-		Data: []cljs.Data{
-			{Name: "id", Value: "investigator id to update", Prompt: "Investigator ID"},
-			{Name: "status", Value: "new status of investigator", Prompt: "Investigator Status"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // updateInvestigator updates the status of an investigator in database

@@ -7,9 +7,10 @@ package main
 
 import (
 	"fmt"
-	"mig.ninja/mig"
 	"net/http"
 	"strconv"
+
+	"mig.ninja/mig"
 
 	"github.com/jvehent/cljs"
 )
@@ -65,32 +66,6 @@ func getCommand(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(commandItem)
-	respond(http.StatusOK, resource, respWriter, request)
-}
-
-// describeCancelCommand returns a resource that describes how to cancel a command
-func describeCancelCommand(respWriter http.ResponseWriter, request *http.Request) {
-	var err error
-	opid := getOpID(request)
-	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
-	resource := cljs.New(loc)
-	defer func() {
-		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(http.StatusInternalServerError, resource, respWriter, request)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCancelCommand()"}.Debug()
-	}()
-	err = resource.SetTemplate(cljs.Template{
-		Data: []cljs.Data{
-			{Name: "actionid", Value: "[0-9]{1,20}", Prompt: "Action ID"},
-			{Name: "commandid", Value: "[0-9]{1,20}", Prompt: "Command ID"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
 	respond(http.StatusOK, resource, respWriter, request)
 }
 

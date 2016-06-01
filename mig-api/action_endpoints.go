@@ -8,39 +8,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/jvehent/cljs"
-	"mig.ninja/mig"
-	"mig.ninja/mig/pgp"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/jvehent/cljs"
+	"mig.ninja/mig"
+	"mig.ninja/mig/pgp"
 )
-
-// describeCreateAction returns a resource that describes how to POST new actions
-func describeCreateAction(respWriter http.ResponseWriter, request *http.Request) {
-	var err error
-	opid := getOpID(request)
-	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
-	resource := cljs.New(loc)
-	defer func() {
-		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(http.StatusInternalServerError, resource, respWriter, request)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCreateAction()"}.Debug()
-	}()
-
-	err = resource.SetTemplate(cljs.Template{
-		Data: []cljs.Data{
-			{Name: "action", Value: "URL encoded signed MIG action", Prompt: "Signed MIG Action"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-	respond(http.StatusOK, resource, respWriter, request)
-}
 
 // createAction receives a signed action in a POST request, validates it,
 // and write it into the scheduler spool
@@ -136,32 +111,6 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	// return a 202 Accepted. the action will be processed asynchronously, and may fail later.
 	respond(http.StatusAccepted, resource, respWriter, request)
-}
-
-// describeCancelAction returns a resource that describes how to cancel an action
-func describeCancelAction(respWriter http.ResponseWriter, request *http.Request) {
-	var err error
-	opid := getOpID(request)
-	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
-	resource := cljs.New(loc)
-	defer func() {
-		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
-			respond(http.StatusInternalServerError, resource, respWriter, request)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving describeCancelAction()"}.Debug()
-	}()
-
-	err = resource.SetTemplate(cljs.Template{
-		Data: []cljs.Data{
-			{Name: "id", Value: "[0-9]{1,20}", Prompt: "Action ID"},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-	respond(http.StatusOK, resource, respWriter, request)
 }
 
 // getAction queries the database and retrieves the detail of an action
