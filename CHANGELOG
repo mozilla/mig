@@ -1,0 +1,11 @@
+CHANGELOG
+=========
+
+1.0
+---
+After 3 years of effort, this is the first stable release of MIG.
+
+This release breaks backward compatibility with prior versions, but we
+will guarantee it moving forward (until 2.0 is reached, at least).
+
+
