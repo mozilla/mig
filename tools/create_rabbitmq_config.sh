@@ -42,12 +42,12 @@ mqconf=$(mktemp)
 echo '[
   {rabbit, [
          {ssl_listeners, [5671]},
-         {ssl_options, [{cacertfile,		"/etc/rabbitmq/ca.crt"},
+         {ssl_options, [{cacertfile,	"/etc/rabbitmq/ca.crt"},
                         {certfile,		"/etc/rabbitmq/rabbitmq.crt"},
                         {keyfile,		"/etc/rabbitmq/rabbitmq.key"},
                         {verify,		verify_peer},
                         {fail_if_no_peer_cert,	true},
-                        {versions, ['tlsv1.2', 'tlsv1.1']},
+                        {versions, ["tlsv1.2", "tlsv1.1"]},
                         {ciphers,  [{dhe_rsa,aes_256_cbc,sha256},
                                     {dhe_rsa,aes_128_cbc,sha256},
                                     {dhe_rsa,aes_256_cbc,sha},
