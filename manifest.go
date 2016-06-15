@@ -22,7 +22,6 @@ import (
 	"mig.ninja/mig/pgp"
 	"os"
 	"path"
-	"regexp"
 	"runtime"
 	"time"
 )
@@ -340,29 +339,28 @@ type ManifestEntry struct {
 // If a Transform function is set on the entry, this is used to transform
 // bytes into the data set prior to hash calculation
 type BundleDictionaryEntry struct {
-	Name          string
-	Path          string
-	SHA256        string
-	TransformFunc func([]byte) []byte
-	Perm          os.FileMode
+	Name   string
+	Path   string
+	SHA256 string
+	Perm   os.FileMode
 }
 
 var bundleEntryLinux = []BundleDictionaryEntry{
-	{"mig-agent", "/sbin/mig-agent", "", nil, 0700},
-	{"mig-loader", "/sbin/mig-loader", "", nil, 0700},
-	{"configuration", "/etc/mig/mig-agent.cfg", "", TransformAMQPAuth, 0600},
-	{"agentcert", "/etc/mig/agent.crt", "", nil, 0644},
-	{"agentkey", "/etc/mig/agent.key", "", nil, 0600},
-	{"cacert", "/etc/mig/ca.crt", "", nil, 0644},
+	{"mig-agent", "/sbin/mig-agent", "", 0700},
+	{"mig-loader", "/sbin/mig-loader", "", 0700},
+	{"configuration", "/etc/mig/mig-agent.cfg", "", 0600},
+	{"agentcert", "/etc/mig/agent.crt", "", 0644},
+	{"agentkey", "/etc/mig/agent.key", "", 0600},
+	{"cacert", "/etc/mig/ca.crt", "", 0644},
 }
 
 var bundleEntryDarwin = []BundleDictionaryEntry{
-	{"mig-agent", "/usr/local/bin/mig-agent", "", nil, 0700},
-	{"mig-loader", "/usr/local/bin/mig-loader", "", nil, 0700},
-	{"configuration", "/etc/mig/mig-agent.cfg", "", TransformAMQPAuth, 0600},
-	{"agentcert", "/etc/mig/agent.crt", "", nil, 0644},
-	{"agentkey", "/etc/mig/agent.key", "", nil, 0600},
-	{"cacert", "/etc/mig/ca.crt", "", nil, 0644},
+	{"mig-agent", "/usr/local/bin/mig-agent", "", 0700},
+	{"mig-loader", "/usr/local/bin/mig-loader", "", 0700},
+	{"configuration", "/etc/mig/mig-agent.cfg", "", 0600},
+	{"agentcert", "/etc/mig/agent.crt", "", 0644},
+	{"agentkey", "/etc/mig/agent.key", "", 0600},
+	{"cacert", "/etc/mig/ca.crt", "", 0644},
 }
 
 var BundleDictionary = map[string][]BundleDictionaryEntry{
@@ -397,47 +395,22 @@ func HashBundle(b []BundleDictionaryEntry) ([]BundleDictionaryEntry, error) {
 			return nil, err
 		}
 		h := sha256.New()
-		// Support two different methods of hash generation here. If a
-		// transform function is set, the entire file is read at once
-		// so we can apply the transformations. For larger files such
-		// as the agent with no transform function, we read the file
-		// and hash in blocks.
-		if ret[i].TransformFunc != nil {
-			buf, err := ioutil.ReadAll(fd)
+		buf := make([]byte, 4096)
+		for {
+			n, err := fd.Read(buf)
 			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				fd.Close()
 				return nil, err
 			}
-			buf = ret[i].TransformFunc(buf)
-			h.Write(buf)
-		} else {
-			buf := make([]byte, 4096)
-			for {
-				n, err := fd.Read(buf)
-				if err != nil {
-					if err == io.EOF {
-						break
-					}
-					fd.Close()
-					return nil, err
-				}
-				if n > 0 {
-					h.Write(buf[:n])
-				}
+			if n > 0 {
+				h.Write(buf[:n])
 			}
 		}
 		fd.Close()
 		ret[i].SHA256 = fmt.Sprintf("%x", h.Sum(nil))
 	}
 	return ret, nil
-}
-
-// Transforms a byte string containing the agent configuration file, removing
-// AMQP credentials and replacing them with a place holder. This is used during
-// manifest comparison operations, as configuration files can be loader
-// specific but we want to compare against the manifests template configuration.
-func TransformAMQPAuth(in []byte) (out []byte) {
-	r := regexp.MustCompile("(amqps?://)\\S+?:[^@]+")
-	rstr := "$1<<AMQPCRED>>"
-	out = r.ReplaceAll(in, []byte(rstr))
-	return
 }

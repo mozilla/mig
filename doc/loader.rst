@@ -187,28 +187,6 @@ If a file is not present in a manifest, it will not be deployed with the loader.
 example, you may not want a configuration file to be part of the manifest if you
 want to deploy agents with a built-in configuration.
 
-The configuration file deployed using mig-loader needs to differ slightly from
-the configuration file you would use otherwise. Within the configuration file in
-the manifest, the AMQP relay URL should not have a username and password. When
-mig-loader installs the configuration file on and endpoint, it will automatically
-add the loader name and loader key (discussed later) as the AMQP username and
-password to use. This allows for different credentials per endpoint to connect
-to the relay, and provides an ability to isolate an agent from connecting if
-needed which would not be possible with a shared credential.
-
-Instead of putting the credentials in the configuration file, your relay configuration
-line should look something like this.
-
-::
-
-    relay = "amqps://<<AMQPCRED>>@my.mig.relay.url:5671/mig"
-
-<<AMQPCRED>> will be replaced on the endpoint with whatever credentials that
-endpoint should be using to connect to the relay.
-
-**Note:** If you want a built-in configuration, you will not be able to do per-agent
-relay credentials (all agents will connect with the same AMQP username and password).
-
 To create a manifest, create a directory we will use to place the files we want
 to be in the manifest. Copy the components into the directory you want to be part
 of the manifest. The components must have specific file names representing their
@@ -379,27 +357,6 @@ used.
 Note the agent name is unset as it has not been used yet. Once mig-loader connects
 and authenticates as this loader instance, it will be populated with the hostname of
 the device.
-
-Adding the new instance to the relay
-------------------------------------
-The loader instance configured using mig-console allows authentication with the
-API. We also need to add the credentials to RabbitMQ, as they will also be used by
-the loader provisioned agent to connect. This was mentioned previously with respect
-to using AMQPCRED in the agent configuration file.
-
-Add a new user to the MIG RabbitMQ vhost with the same key used for the loader
-instance. Ensure the correct permissions are set on the new RabbitMQ user. You
-can use ``rabbitmqctl`` for this, or use the RabbitMQ admin interface.
-
-The following example shows how you would add a user and set the required
-permissions on your relay, using ``rabbitmqctl``.
-
-::
-
-    # rabbitmqctl add_user corbomite.internal vw1NQs9F3wuZx1kSUhZaQzZ0
-    Creating user "corbomite.internal" ...
-    # rabbitmqctl set_permissions -p mig corbomite.internal '^mig\.agt\..*$' '^(toschedulers|mig\.agt\..*)$' '^(toagents|mig\.agt\..*)$'
-    Setting permissions for user "corbomite.internal" in vhost "mig" ...
 
 Initial provisioning of mig-loader
 ----------------------------------

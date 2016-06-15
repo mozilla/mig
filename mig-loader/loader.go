@@ -28,7 +28,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -261,15 +260,6 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) (err error) {
 		panic("staged file signature mismatch")
 	}
 
-	// If we are replacing the configuration file, we will also
-	// update the relay credentials
-	if entry.Name == "configuration" {
-		err = updateRelayCreds(reppath)
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	// Got this far, OK to proceed with the replacement.
 	// Rename existing file first
 	logInfo("renaming existing file")
@@ -279,35 +269,6 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) (err error) {
 	err = os.Rename(reppath, entry.Path)
 	if err != nil {
 		panic(err)
-	}
-	return
-}
-
-func updateRelayCreds(reppath string) (err error) {
-	fd, err := os.Open(reppath)
-	if err != nil {
-		return err
-	}
-	buf, err := ioutil.ReadAll(fd)
-	if err != nil {
-		fd.Close()
-		return err
-	}
-	fd.Close()
-	amqpstr := fmt.Sprintf("%v:%v", apiManifest.LoaderName, ctx.LoaderKey)
-	resub, err := regexp.Compile("\\<\\<AMQPCRED\\>\\>")
-	if err != nil {
-		return err
-	}
-	buf = resub.ReplaceAll(buf, []byte(amqpstr))
-	fd, err = os.OpenFile(reppath, os.O_TRUNC|os.O_WRONLY, 0600)
-	if err != nil {
-		return err
-	}
-	defer fd.Close()
-	_, err = fd.Write(buf)
-	if err != nil {
-		return err
 	}
 	return
 }
