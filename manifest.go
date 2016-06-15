@@ -218,6 +218,26 @@ func (m *ManifestRecord) ContentFromFile(path string) (err error) {
 	return
 }
 
+// Write manifest content to a file on the file system
+func (m *ManifestRecord) FileFromContent(path string) (err error) {
+	fd, err := os.Create(path)
+	if err != nil {
+		return
+	}
+	defer fd.Close()
+	bufr := bytes.NewBufferString(m.Content)
+	b64r := base64.NewDecoder(base64.StdEncoding, bufr)
+	b, err := ioutil.ReadAll(b64r)
+	if err != nil {
+		return
+	}
+	_, err = fd.Write(b)
+	if err != nil {
+		return
+	}
+	return nil
+}
+
 // Manifest parameters are sent from the loader to the API as part of
 // a manifest request.
 type ManifestParameters struct {
