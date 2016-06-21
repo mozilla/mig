@@ -87,7 +87,7 @@ which rngd 2>&1 1>/dev/null || pkglist="$pkglist rng-tools"
 
 if [ "$pkglist" != "" ]; then
     echo "missing packages: $pkglist"
-    echo -n "would you list to install the missing packages? (need sudo) y/n> "
+    echo -n "would you like to install the missing packages? (need sudo) y/n> "
     read yesno
     if [ $yesno = "y" ]; then
         [ "$isRPM" != true ] && (sudo apt-get update || fail)
