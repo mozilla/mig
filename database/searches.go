@@ -516,7 +516,7 @@ func (db *DB) SearchAgents(p search.Parameters) (agents []mig.Agent, err error) 
 	}
 	columns := `agents.id, agents.name, agents.queueloc, agents.mode,
 		agents.version, agents.pid, agents.starttime, agents.destructiontime,
-		agents.heartbeattime, agents.status`
+		agents.heartbeattime, agents.status, agents.tags, agents.environment`
 	join := ""
 	where := ""
 	vals := []interface{}{}
@@ -663,11 +663,20 @@ func (db *DB) SearchAgents(p search.Parameters) (agents []mig.Agent, err error) 
 	}
 	for rows.Next() {
 		var agent mig.Agent
+		var jTags, jEnv []byte
 		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Mode, &agent.Version,
 			&agent.PID, &agent.StartTime, &agent.DestructionTime, &agent.HeartBeatTS,
-			&agent.Status)
+			&agent.Status, &jTags, &jEnv)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
+			return
+		}
+		err = json.Unmarshal(jTags, &agent.Tags)
+		if err != nil {
+			return
+		}
+		err = json.Unmarshal(jEnv, &agent.Env)
+		if err != nil {
 			return
 		}
 		agents = append(agents, agent)
