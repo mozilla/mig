@@ -12,6 +12,8 @@ import (
 	"io"
 	"mig.ninja/mig"
 	migdb "mig.ninja/mig/database"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -45,6 +47,8 @@ type Context struct {
 		IP                       string
 		Port                     int
 		Host, BaseRoute, BaseURL string
+		ClientPublicIP           string
+		ClientPublicIPOffset     int
 	}
 	MaxMind struct {
 		Path string
@@ -71,6 +75,16 @@ func Init(path string, debug bool) (ctx Context, err error) {
 	ctx.Server.BaseURL = ctx.Server.Host + ctx.Server.BaseRoute
 	ctx.Authentication.duration, err = time.ParseDuration(ctx.Authentication.TokenDuration)
 	if err != nil {
+		panic(err)
+	}
+
+	// Set the mode we will use to determine a client's public IP address
+	if ctx.Server.ClientPublicIP == "" {
+		ctx.Server.ClientPublicIP = "peer"
+	}
+	ctx.Server.ClientPublicIPOffset, err = parseClientPublicIP(ctx.Server.ClientPublicIP)
+	if err != nil {
+		fmt.Println(err)
 		panic(err)
 	}
 
@@ -119,4 +133,25 @@ func initDB(orig_ctx Context) (ctx Context, err error) {
 	ctx.DB.SetMaxOpenConns(ctx.Postgres.MaxConn)
 	ctx.Channels.Log <- mig.Log{Desc: "Database connection opened"}
 	return
+}
+
+func parseClientPublicIP(s string) (ret int, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("parseClientPublicIP() -> %v", e)
+		}
+	}()
+
+	if s == "peer" {
+		return -1, nil
+	}
+	args := strings.Split(s, ":")
+	if len(args) != 2 || args[0] != "x-forwarded-for" {
+		panic("argument must be peer or x-forwarded-for:<int>")
+	}
+	ret, err = strconv.Atoi(args[1])
+	if err != nil || ret < 0 {
+		panic("x-forwarded-for argument must be positive integer or zero")
+	}
+	return ret, nil
 }

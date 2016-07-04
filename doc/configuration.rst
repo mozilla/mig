@@ -478,6 +478,16 @@ which is 192.168.1.150, on port 51664. The public endpoint of the api is
 		# ex: http://localhost:12345/api/v1/action/create/
 		#     |------<host>--------|<base>|--<endpoint>--|
 		baseroute = "/api/v1"
+                
+                # informs the api where it should obtain the clients public ip address
+                # from. the default if unset is "peer".
+                #
+                # use the X-Forwarded-For header, the trailing integer
+                # indicates an offset from the end of the list of addresses in
+                # x-forwarded-for to use as the client public ip:
+                #clientpublicip = x-forwarded-for:0
+                # use socket peer address:
+                #clientpublicip = peer
 
 	[postgres]
 		host = "192.168.1.240"
@@ -509,6 +519,16 @@ Under the `[server]` section:
 * `ip` and `port` define the socket the API will be listening on.
 * `host` is the public URL of the API, that clients will be connecting to
 * `baseroute` is the location of the base of the API, without the trailing slash.
+* `clientpublicip` tells where API where to get the clients public IP address.
+
+Ensure clientpublicip is set based on your environment. If clients are terminated
+directly on the API, peer can be used. If a load balancer or other device terminates
+connections from clients and adds the address to X-Forwarded-For, x-forwarded-for
+can be used. The integer trailing X-Forwarded-For specifies the offset from the end
+of the list of IPs in the header to use to extract the IP. For example,
+x-forwarded-for:0 would get the last IP in a list in that header, x-forwarded-for:1
+would get the second last, etc. Set this based on the number of forwarding devices
+you have between the client and the API.
 
 In this example, to reach the home of the API, we would point our browser to
 `https://api.mig.example.net/api/v1/`.
