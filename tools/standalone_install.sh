@@ -302,7 +302,7 @@ var LOGGINGCONF = mig.Logging{
     File:   "/var/cache/mig/mig-agent.log",
 }
 var AMQPBROKER string = "amqp://agent:$mqpass@localhost:5672/mig"
-var PROXIES = [...]string{``}
+var PROXIES = []string{}
 var SOCKET string = "127.0.0.1:51664"
 var HEARTBEATFREQ time.Duration = 30 * time.Second
 var REFRESHENV time.Duration = 60 * time.Second

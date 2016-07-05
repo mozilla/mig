@@ -44,13 +44,12 @@ func findPublicIP(orig_ctx AgentContext, hints AgentContextHints) (ctx AgentCont
 		Dial: (&net.Dialer{Timeout: 10 * time.Second}).Dial,
 	}
 	client := &http.Client{Transport: tr}
-	resp, err := client.Get(hints.APIUrl + "/ip")
-	if err != nil {
-		logChan <- mig.Log{Desc: fmt.Sprintf("Public IP retrieval from API failed. Trying with proxy next. Error was: %v", err)}.Info()
-	} else {
-		goto parseBody
-	}
+	var resp *http.Response
+
+	// If any proxies have been configured, try to use those first, fall back to a
+	// direct connection.
 	for _, proxy := range hints.Proxies {
+		logChan <- mig.Log{Desc: fmt.Sprintf("Trying proxy %v for public IP retrieval", proxy)}.Debug()
 		pu, err := url.Parse("http://" + proxy)
 		if err != nil {
 			logChan <- mig.Log{Desc: fmt.Sprintf("Failed to parse proxy url http://%s - %v", proxy, err)}.Info()
@@ -65,6 +64,18 @@ func findPublicIP(orig_ctx AgentContext, hints AgentContextHints) (ctx AgentCont
 			goto parseBody
 		}
 	}
+
+	// Try a direct connection, but also take into consideration any proxies that may
+	// have been configured in the proxy related environment variables.
+	logChan <- mig.Log{Desc: "Trying proxy from environment otherwise direct connection for public IP retrieval"}.Debug()
+	tr.Proxy = http.ProxyFromEnvironment
+	resp, err = client.Get(hints.APIUrl + "/ip")
+	if err != nil {
+		logChan <- mig.Log{Desc: fmt.Sprintf("Public IP retrieval from API failed. Error was: %v", err)}.Info()
+	} else {
+		goto parseBody
+	}
+
 	// exit here if no connection succeeded
 	logChan <- mig.Log{Desc: fmt.Sprintf("Failed to retrieve public ip from api: %v", err)}.Err()
 	return

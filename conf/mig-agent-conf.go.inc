@@ -59,7 +59,10 @@ var APIURL string = "http://localhost:1664/api/v1/"
 
 // if the connection still fails after looking for a HTTP_PROXY, try to use the
 // proxies listed below
-var PROXIES = [...]string{`proxy.example.net:3128`, `proxy2.example.net:8080`}
+var PROXIES = []string{"proxy.example.net:3128", "proxy2.example.net:8080"}
+// If you don't want proxies in the built-in configuration, use the following
+// instead.
+// var PROXIES = []string{}
 
 // local socket used to retrieve stat information from a running agent
 var SOCKET = "127.0.0.1:51664"

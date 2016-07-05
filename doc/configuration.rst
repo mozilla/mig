@@ -856,11 +856,13 @@ public IP during startup.
 Proxy support
 ~~~~~~~~~~~~~
 
-The agent supports connecting to the relay via a CONNECT proxy. It will attempt
-a direct connection first, and if this fails, will look for the environment
-variable `HTTP_PROXY` to use as a proxy. A list of proxies can be manually
-added to the configuration of the agent in the `PROXIES` parameters. These
-proxies will be used if the two previous connections fail.
+The agent supports connecting to the relay via a CONNECT proxy. If proxies are
+configured, it will attempt to use them before attemping a direct connection. The
+agent will also attempt to use any proxy noted in the environment via the
+`HTTP_PROXY` environment variable. A list of proxies can be manually
+added to the configuration of the agent in the `PROXIES` parameters. Proxies can
+also be specified in the agent configuration file, and will override any built-in
+configuration.
 
 An agent using a proxy will reference the name of the proxy in the environment
 fields of the heartbeat sent to the scheduler.
@@ -1635,7 +1637,6 @@ The following parameters are **not** controlable by the configuration file:
 
 * list of investigators public keys in `PUBLICPGPKEYS`
 * list of access control lists in `AGENTACL`
-* list of proxies in `PROXIES`
 
 All other parameters can be overriden in the configuration file. Check out the
 sample file `mig-agent.cfg.inc` in the **conf** folder.

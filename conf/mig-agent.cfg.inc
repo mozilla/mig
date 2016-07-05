@@ -20,6 +20,11 @@
     ; will attempt to restart itself instead of just shutting down
     isimmortal       = on
 
+    ; comma delimited list of host:port proxies to use, if desired
+    ; the agent will attempt to try to proxies for public ip retrieval
+    ; and the relay connection before a direct connection
+    ; proxies          = "proxy1:8888,proxy2:8888"
+
     ; installservice orders the agent to deploy a service init configuration
     ; and start itself during the endpoint's boot process
     installservice   = on
