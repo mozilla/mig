@@ -89,6 +89,8 @@ help            show this help
 
 exit            exit this mode (also works with ctrl+d)
 
+fetch           fetch manifest content and save to disk
+
 json            show json of manifest record stored in database
 
 loaders         show known loader entries that will match this manifest
@@ -102,6 +104,15 @@ sign            add a signature to the manifest record
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
+		case "fetch":
+			if len(orders) != 2 {
+				fmt.Println("error: must be 'fetch <path>'. try 'help'")
+				break
+			}
+			err = mr.FileFromContent(orders[1])
+			if err != nil {
+				panic(err)
+			}
 		case "json":
 			tmpmr := mr
 			if len(tmpmr.Content) > 0 {
