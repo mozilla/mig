@@ -541,7 +541,15 @@ func keyLoader(respWriter http.ResponseWriter, request *http.Request) {
 		respond(http.StatusBadRequest, resource, respWriter, request)
 		return
 	}
-	err = ctx.DB.LoaderUpdateKey(loaderid, lkey)
+	err = mig.ValidateLoaderKey(lkey)
+	if err != nil {
+		panic(err)
+	}
+	hashkey, err := hashLoaderKey(lkey, nil)
+	if err != nil {
+		panic(err)
+	}
+	err = ctx.DB.LoaderUpdateKey(loaderid, hashkey)
 	if err != nil {
 		panic(err)
 	}
@@ -583,7 +591,12 @@ func newLoader(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	err = ctx.DB.LoaderAdd(le)
+	// Hash the loader key to provide it to LoaderAdd
+	hkey, err := hashLoaderKey(le.Key, nil)
+	if err != nil {
+		panic(err)
+	}
+	err = ctx.DB.LoaderAdd(le, hkey)
 	if err != nil {
 		panic(err)
 	}

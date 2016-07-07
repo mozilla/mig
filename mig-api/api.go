@@ -265,8 +265,8 @@ func authenticate(pass handler, adminRequired bool) handler {
 func authenticateLoader(pass handler) handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var (
-			loaderid float64
-			err      error
+			err error
+			ldr mig.LoaderEntry
 		)
 		opid := getOpID(r)
 		context.Set(r, opID, opid)
@@ -277,21 +277,24 @@ func authenticateLoader(pass handler) handler {
 			respond(http.StatusUnauthorized, resource, w, r)
 			return
 		}
-		// Do a sanity check here on the submitted loader string before
-		// we attempt the authentication
-		err = mig.ValidateLoaderKey(lkey)
-		if err == nil {
-			loaderid, err = ctx.DB.GetLoaderEntryID(lkey)
-		}
+		err = mig.ValidateLoaderPrefixAndKey(lkey)
 		if err != nil {
-			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Loader authorization failed")})
-			respond(http.StatusUnauthorized, resource, w, r)
-			return
+			goto authfailed
 		}
-		context.Set(r, loaderID, loaderid)
+
+		ldr, err = hashAuthenticateLoader(lkey)
+		if err != nil {
+			goto authfailed
+		}
+		context.Set(r, loaderID, ldr.ID)
 		// accept request
 		pass(w, r)
+		return
+
+	authfailed:
+		resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
+		resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Loader authorization failed")})
+		respond(http.StatusUnauthorized, resource, w, r)
 	}
 }
 

@@ -512,7 +512,7 @@ func loadLoaderKey() error {
 	}
 	// Also trim any leading and trailing spaces from the loader key
 	LOADERKEY = strings.Trim(string(buf), " ")
-	err = mig.ValidateLoaderKey(LOADERKEY)
+	err = mig.ValidateLoaderPrefixAndKey(LOADERKEY)
 	if err != nil {
 		return err
 	}

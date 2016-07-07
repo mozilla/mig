@@ -133,7 +133,8 @@ CREATE SEQUENCE loaders_id_seq START 1;
 CREATE TABLE loaders (
 	id            numeric NOT NULL DEFAULT nextval('loaders_id_seq'),
 	loadername    character varying(256) NOT NULL,
-	loaderkey     character varying(64) NOT NULL,
+	keyprefix     character varying(256) NOT NULL,
+	loaderkey     character varying(256) NOT NULL,
 	name          character varying(2048),
 	env           json,
 	tags          json,
@@ -144,6 +145,7 @@ ALTER TABLE ONLY loaders
     ADD CONSTRAINT loaders_pkey PRIMARY KEY (id);
 CREATE UNIQUE INDEX loaders_loadername_idx ON loaders USING btree(loadername);
 CREATE UNIQUE INDEX loaders_loaderkey_idx ON loaders USING btree(loaderkey);
+CREATE UNIQUE INDEX loaders_keyprefix_idx ON loaders USING btree(keyprefix);
 ALTER TABLE public.loaders OWNER TO migadmin;
 
 CREATE TABLE modules (

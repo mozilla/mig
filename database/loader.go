@@ -28,6 +28,17 @@ func (db *DB) GetLoaderEntryID(key string) (ret float64, err error) {
 	return
 }
 
+// Return a loader ID and hashed key given a prefix string
+func (db *DB) GetLoaderIDAndKey(prefix string) (lid float64, hkey string, err error) {
+	err = db.c.QueryRow(`SELECT id, loaderkey FROM loaders WHERE
+		keyprefix=$1 AND enabled=TRUE`, prefix).Scan(&lid, &hkey)
+	if err != nil {
+		err = fmt.Errorf("Unable to locate loader from prefix")
+		return
+	}
+	return
+}
+
 // Return a loader name given an ID
 func (db *DB) GetLoaderName(id float64) (ret string, err error) {
 	err = db.c.QueryRow(`SELECT loadername FROM loaders 
@@ -138,9 +149,9 @@ func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err 
 // Return a loader entry given an ID
 func (db *DB) GetLoaderFromID(lid float64) (ret mig.LoaderEntry, err error) {
 	var name sql.NullString
-	err = db.c.QueryRow(`SELECT id, loadername, name, lastseen, enabled
-		FROM loaders WHERE id=$1`, lid).Scan(&ret.ID, &ret.Name, &name,
-		&ret.LastSeen, &ret.Enabled)
+	err = db.c.QueryRow(`SELECT id, loadername, keyprefix, name, lastseen, enabled
+		FROM loaders WHERE id=$1`, lid).Scan(&ret.ID, &ret.Name,
+		&ret.Prefix, &name, &ret.LastSeen, &ret.Enabled)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving loader: '%v'", err)
 		return
@@ -161,20 +172,23 @@ func (db *DB) LoaderUpdateStatus(lid float64, status bool) (err error) {
 	return
 }
 
-// Change loader key
-func (db *DB) LoaderUpdateKey(lid float64, key string) (err error) {
+// Change loader key, hashkey should be the hashed version of the key component
+func (db *DB) LoaderUpdateKey(lid float64, hashkey string) (err error) {
 	_, err = db.c.Exec(`UPDATE loaders SET loaderkey=$1 WHERE
-		id=$2`, key, lid)
+		id=$2`, hashkey, lid)
 	if err != nil {
 		return err
 	}
 	return
 }
 
-// Add a new loader entry to the database
-func (db *DB) LoaderAdd(le mig.LoaderEntry) (err error) {
-	_, err = db.c.Exec(`INSERT INTO loaders VALUES
-		(DEFAULT, $1, $2, NULL, NULL, NULL, now(), FALSE)`, le.Name,
-		le.Key)
+// Add a new loader entry to the database; the hashed loader key should
+// be provided as hashkey
+func (db *DB) LoaderAdd(le mig.LoaderEntry, hashkey string) (err error) {
+	_, err = db.c.Exec(`INSERT INTO loaders 
+		(loadername, keyprefix, loaderkey, lastseen, enabled)
+		VALUES
+		($1, $2, $3, now(), FALSE)`, le.Name,
+		le.Prefix, hashkey)
 	return
 }
