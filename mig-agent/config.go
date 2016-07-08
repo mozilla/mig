@@ -9,6 +9,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"mig.ninja/mig"
@@ -23,6 +24,7 @@ type config struct {
 		DiscoverPublicIP bool
 		DiscoverAWSMeta  bool
 		CheckIn          bool
+		Proxies          string
 		Relay            string
 		Socket           string
 		HeartbeatFreq    string
@@ -80,6 +82,9 @@ func configLoad(path string) (err error) {
 	MUSTINSTALLSERVICE = config.Agent.InstallService
 	DISCOVERPUBLICIP = config.Agent.DiscoverPublicIP
 	DISCOVERAWSMETA = config.Agent.DiscoverAWSMeta
+	if config.Agent.Proxies != "" {
+		PROXIES = strings.Split(config.Agent.Proxies, ",")
+	}
 	CHECKIN = config.Agent.CheckIn
 	LOGGINGCONF = config.Logging
 	AMQPBROKER = config.Agent.Relay

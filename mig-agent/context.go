@@ -215,29 +215,35 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 
 	connected := false
 	// connect to the message broker
-	ctx, err = initMQ(ctx, false, "")
-	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay directly: '%v'", err)}.Debug()
-		// if the connection failed, look for a proxy
-		// in the environment variables, and try again
-		ctx, err = initMQ(ctx, true, "")
+	//
+	// If any proxies have been configured, we try to use those first. If they fail, or
+	// no proxies have been setup, just attempt a direct connection.
+	for _, proxy := range PROXIES {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Trying proxy %v for relay connection", proxy)}.Debug()
+		ctx, err = initMQ(ctx, true, proxy)
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay using HTTP_PROXY: '%v'", err)}.Debug()
-			// still failing, try connecting using the proxies in the configuration
-			for _, proxy := range PROXIES {
-				ctx, err = initMQ(ctx, true, proxy)
-				if err != nil {
-					ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay using proxy %s: '%v'", proxy, err)}.Debug()
-					continue
-				}
-				connected = true
-				goto mqdone
-			}
-		} else {
-			connected = true
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay using proxy %s: '%v'", proxy, err)}.Info()
+			continue
 		}
-	} else {
 		connected = true
+		goto mqdone
+	}
+	// Try and proxy that has been specified in the environment
+	ctx.Channels.Log <- mig.Log{Desc: "Trying proxies from environment for relay connection"}.Debug()
+	ctx, err = initMQ(ctx, true, "")
+	if err == nil {
+		connected = true
+		goto mqdone
+	} else {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay using HTTP_PROXY: '%v'", err)}.Info()
+	}
+	// Fall back to a direct connection
+	ctx.Channels.Log <- mig.Log{Desc: "Trying direct relay connection"}.Debug()
+	ctx, err = initMQ(ctx, false, "")
+	if err == nil {
+		connected = true
+	} else {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to connect to relay directly: '%v'", err)}.Info()
 	}
 mqdone:
 	if !connected {
