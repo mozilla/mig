@@ -34,12 +34,12 @@ func (le *LoaderEntry) Validate() (err error) {
 
 // Generate a new loader prefix value
 func GenerateLoaderPrefix() string {
-	return RandLoaderKeyString(8)
+	return RandLoaderKeyString(LoaderPrefixLength)
 }
 
 // Generate a new loader key value
 func GenerateLoaderKey() string {
-	return RandLoaderKeyString(32)
+	return RandLoaderKeyString(LoaderKeyLength)
 }
 
 // RandLoaderKeyString is used for prefix and key generation, and just
@@ -55,15 +55,15 @@ func RandLoaderKeyString(length int) string {
 	return string(ret[:len(ret)])
 }
 
-// The length of a loader key including the prefix
-const LoaderPrefixAndKeyLength = 40
-
-// The length of the prefix
-const LoaderPrefixLength = 8
+// Various constants related to properties of the loader keys
+const LoaderPrefixAndKeyLength = 40 // Key length including prefix
+const LoaderPrefixLength = 8        // Prefix length
+const LoaderKeyLength = 32          // Length excluding prefix
 
 // Validate a loader key, returns nil if it is valid
 func ValidateLoaderKey(key string) error {
-	ok, err := regexp.MatchString("^[A-Za-z0-9]{32}$", key)
+	repstr := fmt.Sprintf("^[A-Za-z0-9]{%v}$", LoaderKeyLength)
+	ok, err := regexp.MatchString(repstr, key)
 	if err != nil || !ok {
 		return errors.New("loader key format is invalid")
 	}
@@ -72,7 +72,8 @@ func ValidateLoaderKey(key string) error {
 
 // Validate a loader prefix value, returns nil if it is valid
 func ValidateLoaderPrefix(prefix string) error {
-	ok, err := regexp.MatchString("^[A-Za-z0-9]{8}$", prefix)
+	repstr := fmt.Sprintf("^[A-Za-z0-9]{%v}$", LoaderPrefixLength)
+	ok, err := regexp.MatchString(repstr, prefix)
 	if err != nil || !ok {
 		return errors.New("loader prefix format is invalid")
 	}
@@ -84,11 +85,11 @@ func ValidateLoaderPrefixAndKey(pk string) error {
 	if len(pk) != LoaderPrefixAndKeyLength {
 		return fmt.Errorf("loader key is incorrect length")
 	}
-	err := ValidateLoaderPrefix(pk[:8])
+	err := ValidateLoaderPrefix(pk[:LoaderPrefixLength])
 	if err != nil {
 		return err
 	}
-	err = ValidateLoaderKey(pk[8:])
+	err = ValidateLoaderKey(pk[LoaderPrefixLength:])
 	if err != nil {
 		return err
 	}

@@ -110,7 +110,7 @@ r               refresh the loader entry (get latest version from database)
 			}
 			fmt.Printf("%v\n", string(jsonle))
 		case "key":
-			fmt.Println("New key component must be 32 alphanumeric characters long, or type 'generate' to generate one")
+			fmt.Printf("New key component must be %v alphanumeric characters long, or type 'generate' to generate one\n", mig.LoaderKeyLength)
 			lkey, err := readline.String("New key for loader> ")
 			if err != nil {
 				panic(err)
