@@ -134,7 +134,8 @@ CREATE TABLE loaders (
 	id            numeric NOT NULL DEFAULT nextval('loaders_id_seq'),
 	loadername    character varying(256) NOT NULL,
 	keyprefix     character varying(256) NOT NULL,
-	loaderkey     character varying(256) NOT NULL,
+	loaderkey     bytea,
+	salt          bytea,
 	name          character varying(2048),
 	env           json,
 	tags          json,
@@ -206,7 +207,7 @@ GRANT INSERT ON actions, signatures, manifests, manifestsig, loaders TO migapi;
 GRANT DELETE ON manifestsig TO migapi;
 GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified, isadmin) ON investigators TO migapi;
 GRANT UPDATE (isadmin, status, lastmodified) ON investigators TO migapi;
-GRANT UPDATE (name, env, tags, loaderkey, lastseen, enabled) ON loaders TO migapi;
+GRANT UPDATE (name, env, tags, loaderkey, salt, lastseen, enabled) ON loaders TO migapi;
 GRANT UPDATE (status) ON manifests TO migapi;
 GRANT USAGE ON SEQUENCE investigators_id_seq TO migapi;
 GRANT USAGE ON SEQUENCE loaders_id_seq TO migapi;

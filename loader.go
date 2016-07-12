@@ -32,6 +32,15 @@ func (le *LoaderEntry) Validate() (err error) {
 	return nil
 }
 
+// Small helper type used primarily during the loader authentication
+// process between the API and database code, temporarily stores
+// authentication information
+type LoaderAuthDetails struct {
+	ID   float64
+	Hash []byte
+	Salt []byte
+}
+
 // Generate a new loader prefix value
 func GenerateLoaderPrefix() string {
 	return RandLoaderKeyString(LoaderPrefixLength)

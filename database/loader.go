@@ -29,9 +29,9 @@ func (db *DB) GetLoaderEntryID(key string) (ret float64, err error) {
 }
 
 // Return a loader ID and hashed key given a prefix string
-func (db *DB) GetLoaderIDAndKey(prefix string) (lid float64, hkey string, err error) {
-	err = db.c.QueryRow(`SELECT id, loaderkey FROM loaders WHERE
-		keyprefix=$1 AND enabled=TRUE`, prefix).Scan(&lid, &hkey)
+func (db *DB) GetLoaderAuthDetails(prefix string) (lad mig.LoaderAuthDetails, err error) {
+	err = db.c.QueryRow(`SELECT id, salt, loaderkey FROM loaders WHERE
+		keyprefix=$1 AND enabled=TRUE`, prefix).Scan(&lad.ID, &lad.Salt, &lad.Hash)
 	if err != nil {
 		err = fmt.Errorf("Unable to locate loader from prefix")
 		return
@@ -173,9 +173,9 @@ func (db *DB) LoaderUpdateStatus(lid float64, status bool) (err error) {
 }
 
 // Change loader key, hashkey should be the hashed version of the key component
-func (db *DB) LoaderUpdateKey(lid float64, hashkey string) (err error) {
-	_, err = db.c.Exec(`UPDATE loaders SET loaderkey=$1 WHERE
-		id=$2`, hashkey, lid)
+func (db *DB) LoaderUpdateKey(lid float64, hashkey []byte, salt []byte) (err error) {
+	_, err = db.c.Exec(`UPDATE loaders SET loaderkey=$1, salt=$2 WHERE
+		id=$3`, hashkey, salt, lid)
 	if err != nil {
 		return err
 	}
@@ -184,11 +184,11 @@ func (db *DB) LoaderUpdateKey(lid float64, hashkey string) (err error) {
 
 // Add a new loader entry to the database; the hashed loader key should
 // be provided as hashkey
-func (db *DB) LoaderAdd(le mig.LoaderEntry, hashkey string) (err error) {
+func (db *DB) LoaderAdd(le mig.LoaderEntry, hashkey []byte, salt []byte) (err error) {
 	_, err = db.c.Exec(`INSERT INTO loaders 
-		(loadername, keyprefix, loaderkey, lastseen, enabled)
+		(loadername, keyprefix, loaderkey, salt, lastseen, enabled)
 		VALUES
-		($1, $2, $3, now(), FALSE)`, le.Name,
-		le.Prefix, hashkey)
+		($1, $2, $3, $4, now(), FALSE)`, le.Name,
+		le.Prefix, hashkey, salt)
 	return
 }

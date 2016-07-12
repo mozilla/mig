@@ -10,24 +10,26 @@ package main
 // key hashing and key comparisons
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"golang.org/x/crypto/pbkdf2"
 	"mig.ninja/mig"
 )
 
-func hashLoaderKey(key string, salt []byte) (ret string, err error) {
+func hashLoaderKey(key string, salt []byte) (ret []byte, retsalt []byte, err error) {
 	if salt == nil {
-		salt = make([]byte, 16)
-		_, err = rand.Read(salt)
+		retsalt = make([]byte, 16)
+		_, err = rand.Read(retsalt)
 		if err != nil {
 			return
 		}
+	} else {
+		retsalt = salt
 	}
-	hv := pbkdf2.Key([]byte(key), salt, 4096, 32, sha256.New)
-	return fmt.Sprintf("%x%x", salt, hv), nil
+	ret = pbkdf2.Key([]byte(key), retsalt, 4096, 32, sha256.New)
+	return ret, retsalt, nil
 }
 
 func hashAuthenticateLoader(lkey string) (ldr mig.LoaderEntry, err error) {
@@ -37,23 +39,18 @@ func hashAuthenticateLoader(lkey string) (ldr mig.LoaderEntry, err error) {
 	}
 	prefix := lkey[:mig.LoaderPrefixLength]
 	suppkey := lkey[mig.LoaderPrefixLength:]
-	id, hashkey, err := ctx.DB.GetLoaderIDAndKey(prefix)
+	lad, err := ctx.DB.GetLoaderAuthDetails(prefix)
 	if err != nil {
 		return
 	}
-	// Extract the 16 byte (32 char hex encoded) salt
-	salt, err := hex.DecodeString(hashkey[:32])
+	tryhash, _, err := hashLoaderKey(suppkey, lad.Salt)
 	if err != nil {
 		return
 	}
-	tryhash, err := hashLoaderKey(suppkey, salt)
-	if err != nil {
-		return
-	}
-	if tryhash != hashkey {
+	if !bytes.Equal(tryhash, lad.Hash) {
 		err = fmt.Errorf("Loader key authentication failed")
 		return
 	}
-	ldr, err = ctx.DB.GetLoaderFromID(id)
+	ldr, err = ctx.DB.GetLoaderFromID(lad.ID)
 	return
 }
