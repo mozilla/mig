@@ -110,6 +110,7 @@ r               refresh the loader entry (get latest version from database)
 			}
 			fmt.Printf("%v\n", string(jsonle))
 		case "key":
+			fmt.Printf("New key component must be %v alphanumeric characters long, or type 'generate' to generate one\n", mig.LoaderKeyLength)
 			lkey, err := readline.String("New key for loader> ")
 			if err != nil {
 				panic(err)
@@ -117,6 +118,11 @@ r               refresh the loader entry (get latest version from database)
 			if lkey == "" {
 				panic("invalid key specified")
 			}
+			if lkey == "generate" {
+				lkey = mig.GenerateLoaderKey()
+				fmt.Printf("New key will be set to %v\n", lkey)
+			}
+			fmt.Printf("New key including prefix to supply to client will be %q\n", le.Prefix+lkey)
 			err = cli.LoaderEntryKey(le, lkey)
 			if err != nil {
 				panic(err)
@@ -155,12 +161,10 @@ func loaderCreator(cli client.Client) (err error) {
 		panic("input name too short")
 	}
 	fmt.Printf("Name: '%s'\n", newle.Name)
-	fmt.Println("Please provide loader key for entry.")
-	newle.Key, err = readline.String("key> ")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Key: '%s'\n", newle.Key)
+	fmt.Println("Generating loader prefix...")
+	newle.Prefix = mig.GenerateLoaderPrefix()
+	fmt.Println("Generating loader key...")
+	newle.Key = mig.GenerateLoaderKey()
 	// Validate the new loader entry before sending it to the API
 	err = newle.Validate()
 	if err != nil {
@@ -171,6 +175,7 @@ func loaderCreator(cli client.Client) (err error) {
 		panic(err)
 	}
 	fmt.Printf("%s\n", jsonle)
+	fmt.Printf("Loader key including prefix to supply to client will be %q\n", newle.Prefix+newle.Key)
 	input, err := readline.String("create loader entry? (y/n)> ")
 	if err != nil {
 		panic(err)

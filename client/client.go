@@ -621,6 +621,10 @@ func (cli Client) LoaderEntryKey(le mig.LoaderEntry, key string) (err error) {
 	if key == "" {
 		panic("invalid loader key specified")
 	}
+	err = mig.ValidateLoaderKey(key)
+	if err != nil {
+		panic(err)
+	}
 	data := url.Values{"loaderid": {fmt.Sprintf("%.0f", le.ID)}, "loaderkey": {key}}
 	r, err := http.NewRequest("POST", cli.Conf.API.URL+"loader/key/",
 		strings.NewReader(data.Encode()))

@@ -130,6 +130,13 @@ func main() {
 	}
 }
 
+// The category of request being made, this is set in the request context
+const (
+	_ = iota
+	RequestCategoryInvestigator
+	RequestCategoryLoader
+)
+
 // Context variables:
 // invNameType defines a type to store the name of an investigator in the request context
 type invNameType string
@@ -196,6 +203,32 @@ func getLoaderID(r *http.Request) float64 {
 	return 0.0
 }
 
+// loaderNameType defines a type to store the loader name
+type loaderNameType string
+
+const loaderName loaderNameType = ""
+
+// getLoaderName returns the name of the loader, "noauth" if not found
+func getLoaderName(r *http.Request) string {
+	if lname := context.Get(r, loaderName); lname != nil {
+		return lname.(string)
+	}
+	return "noauth"
+}
+
+// apiRequestType defines a type to store the request type
+type apiRequestCategoryType int
+
+const apiRequestCategory apiRequestCategoryType = 0
+
+// getAPIRequestType returns the type of request being made
+func getAPIRequestCategory(r *http.Request) int {
+	if rcat := context.Get(r, apiRequestCategory); rcat != nil {
+		return rcat.(int)
+	}
+	return 0
+}
+
 // handler defines the type returned by the authenticate and authenticateLoader functions
 type handler func(w http.ResponseWriter, r *http.Request)
 
@@ -210,6 +243,7 @@ func authenticate(pass handler, adminRequired bool) handler {
 		)
 		opid := getOpID(r)
 		context.Set(r, opID, opid)
+		context.Set(r, apiRequestCategory, RequestCategoryInvestigator)
 		if !ctx.Authentication.Enabled {
 			inv.Name = "authdisabled"
 			inv.ID = 0
@@ -265,11 +299,12 @@ func authenticate(pass handler, adminRequired bool) handler {
 func authenticateLoader(pass handler) handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var (
-			loaderid float64
-			err      error
+			err error
+			ldr mig.LoaderEntry
 		)
 		opid := getOpID(r)
 		context.Set(r, opID, opid)
+		context.Set(r, apiRequestCategory, RequestCategoryLoader)
 		lkey := r.Header.Get("X-LOADERKEY")
 		if lkey == "" {
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
@@ -277,21 +312,26 @@ func authenticateLoader(pass handler) handler {
 			respond(http.StatusUnauthorized, resource, w, r)
 			return
 		}
-		// Do a sanity check here on the submitted loader string before
-		// we attempt the authentication
-		err = mig.ValidateLoaderKey(lkey)
-		if err == nil {
-			loaderid, err = ctx.DB.GetLoaderEntryID(lkey)
-		}
+		err = mig.ValidateLoaderPrefixAndKey(lkey)
 		if err != nil {
-			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
-			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Loader authorization failed")})
-			respond(http.StatusUnauthorized, resource, w, r)
-			return
+			goto authfailed
 		}
-		context.Set(r, loaderID, loaderid)
+
+		ldr, err = hashAuthenticateLoader(lkey)
+		if err != nil {
+			goto authfailed
+		}
+		context.Set(r, loaderID, ldr.ID)
+		context.Set(r, loaderName, ldr.Name)
 		// accept request
 		pass(w, r)
+		return
+
+	authfailed:
+		context.Set(r, loaderName, "authfailed")
+		resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
+		resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("Loader authorization failed")})
+		respond(http.StatusUnauthorized, resource, w, r)
 	}
 }
 
@@ -319,7 +359,10 @@ func respond(code int, response interface{}, respWriter http.ResponseWriter, r *
 		}
 		ctx.Channels.Log <- mig.Log{OpID: getOpID(r), Desc: "leaving respond()"}.Debug()
 	}()
-	var body []byte
+	var (
+		body                []byte
+		authfield, catfield string
+	)
 	// if the response is a cljs resource, marshal it, other treat it as a slice of bytes
 	if _, ok := response.(*cljs.Resource); ok {
 		body, err = response.(*cljs.Resource).Marshal()
@@ -330,6 +373,18 @@ func respond(code int, response interface{}, respWriter http.ResponseWriter, r *
 		body = []byte(response.([]byte))
 	}
 
+	switch getAPIRequestCategory(r) {
+	case RequestCategoryInvestigator:
+		authfield = fmt.Sprintf("[%s %.0f]", getInvName(r), getInvID(r))
+		catfield = "investigator"
+	case RequestCategoryLoader:
+		authfield = fmt.Sprintf("[%s %.0f]", getLoaderName(r), getLoaderID(r))
+		catfield = "loader"
+	default:
+		authfield = "[noauth 0]"
+		catfield = "public"
+	}
+
 	respWriter.Header().Set("Content-Type", "application/json")
 	respWriter.Header().Set("Cache-Control", "no-cache")
 	respWriter.WriteHeader(code)
@@ -337,8 +392,8 @@ func respond(code int, response interface{}, respWriter http.ResponseWriter, r *
 
 	ctx.Channels.Log <- mig.Log{
 		OpID: getOpID(r),
-		Desc: fmt.Sprintf("src=%s auth=[%s %.0f] %s %s %s resp_code=%d resp_size=%d user-agent=%s",
-			remoteAddresses(r), getInvName(r), getInvID(r), r.Method, r.Proto,
+		Desc: fmt.Sprintf("src=%s category=%s auth=%s %s %s %s resp_code=%d resp_size=%d user-agent=%s",
+			remoteAddresses(r), catfield, authfield, r.Method, r.Proto,
 			r.URL.String(), code, len(body), r.UserAgent()),
 	}
 	return

@@ -124,6 +124,7 @@ go_vendor_dependencies:
 	$(GOGETTER) github.com/gorhill/cronexpr
 	$(GOGETTER) golang.org/x/crypto/openpgp
 	$(GOGETTER) golang.org/x/crypto/sha3
+	$(GOGETTER) golang.org/x/crypto/pbkdf2
 	$(GOGETTER) golang.org/x/net/icmp
 	$(GOGETTER) golang.org/x/net/ipv4
 	$(GOGETTER) golang.org/x/net/ipv6
