@@ -8,6 +8,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"runtime"
@@ -335,20 +336,35 @@ func authenticateLoader(pass handler) handler {
 	}
 }
 
-func remoteAddresses(r *http.Request) (ips string) {
-	defer func() {
-		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{OpID: getOpID(r), Desc: fmt.Sprintf("%v", e)}.Err()
+// Extract the clients public IP from the Request using the method that
+// has been defined in the API configuration using the clientpublicip
+// option.
+func remotePublicIP(r *http.Request) string {
+	var useip string
+	if ctx.Server.ClientPublicIPOffset == -1 {
+		// Use the socket peer address
+		useip = r.RemoteAddr[:strings.LastIndex(r.RemoteAddr, ":")]
+	} else {
+		// Use an offset of the X-Forwarded-For header
+		xff := r.Header.Get("X-FORWARDED-FOR")
+		if xff != "" {
+			xargs := strings.Split(xff, ",")
+			if ctx.Server.ClientPublicIPOffset >= len(xargs) {
+				ctx.Channels.Log <- mig.Log{Desc: "warning: requested X-Forwarded-For offset is not possible, not enough elements"}.Warning()
+				useip = strings.Trim(xargs[0], " ")
+			} else {
+				useip = strings.Trim(xargs[(len(xargs)-1)-ctx.Server.ClientPublicIPOffset], " ")
+			}
+		} else {
+			ctx.Channels.Log <- mig.Log{Desc: "warning: API configured to use X-Forwarded-For but header not found"}.Warning()
+			return "0.0.0.0"
 		}
-		ctx.Channels.Log <- mig.Log{OpID: getOpID(r), Desc: "leaving remoteAddresses()"}.Debug()
-	}()
-	if r.Header.Get("X-FORWARDED-FOR") != "" {
-		ips += r.Header.Get("X-FORWARDED-FOR") + ","
 	}
-	// strip port from remoteaddr received from request
-	pos := strings.LastIndex(r.RemoteAddr, ":")
-	ips += r.RemoteAddr[0:pos]
-	return
+	if net.ParseIP(useip) == nil {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("warning: obtained client public IP %q invalid", useip)}.Warning()
+		return "0.0.0.0"
+	}
+	return useip
 }
 
 // respond builds a Collection+JSON body and sends it to the client
@@ -393,7 +409,7 @@ func respond(code int, response interface{}, respWriter http.ResponseWriter, r *
 	ctx.Channels.Log <- mig.Log{
 		OpID: getOpID(r),
 		Desc: fmt.Sprintf("src=%s category=%s auth=%s %s %s %s resp_code=%d resp_size=%d user-agent=%s",
-			remoteAddresses(r), catfield, authfield, r.Method, r.Proto,
+			remotePublicIP(r), catfield, authfield, r.Method, r.Proto,
 			r.URL.String(), code, len(body), r.UserAgent()),
 	}
 	return
@@ -432,12 +448,7 @@ func getIP(respWriter http.ResponseWriter, request *http.Request) {
 	defer func() {
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getIP()"}.Debug()
 	}()
-	if request.Header.Get("X-FORWARDED-FOR") != "" {
-		respond(http.StatusOK, []byte(request.Header.Get("X-FORWARDED-FOR")), respWriter, request)
-	} else {
-		// request.RemoteAddr contains IP:Port, so strip the port and return just the IP
-		respond(http.StatusOK, []byte(request.RemoteAddr[:strings.LastIndex(request.RemoteAddr, ":")]), respWriter, request)
-	}
+	respond(http.StatusOK, []byte(remotePublicIP(request)), respWriter, request)
 }
 
 func getDashboard(respWriter http.ResponseWriter, request *http.Request) {

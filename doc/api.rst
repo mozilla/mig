@@ -52,8 +52,8 @@ GET /api/v1/heartbeat
 
 GET /api/v1/ip
 ~~~~~~~~~~~~~~
-* Description: basic endpoint that returns the public IP of the caller. If the
-  API is behind a load balancer, it returns the value of X-Forwarded-For.
+* Description: basic endpoint that returns the public IP of the caller. The public
+  IP is extracted based on the clientpublicip setting in the API configuration.
 * Parameters: none
 * Authentication: none
 * Response Code: 200 OK

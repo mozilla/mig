@@ -29,6 +29,16 @@
     #     |------<host>--------|<base>|--<endpoint>--|
     baseroute = "/api/v1"
 
+    # informs the api where it should obtain the clients public ip address
+    # from. the default if unset is "peer".
+    #
+    # use the X-Forwarded-For header, the trailing integer
+    # indicates an offset from the end of the list of addresses in
+    # x-forwarded-for to use as the client public ip:
+    #clientpublicip = x-forwarded-for:0
+    # use socket peer address:
+    #clientpublicip = peer
+
 [postgres]
     host = "127.0.0.1"
     port = 5432
