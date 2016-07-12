@@ -41,6 +41,14 @@ type LoaderAuthDetails struct {
 	Salt []byte
 }
 
+func (lad *LoaderAuthDetails) Validate() error {
+	if len(lad.Hash) != LoaderHashedKeyLength ||
+		len(lad.Salt) != LoaderSaltLength {
+		return fmt.Errorf("contents of LoaderAuthDetails are invalid")
+	}
+	return nil
+}
+
 // Generate a new loader prefix value
 func GenerateLoaderPrefix() string {
 	return RandLoaderKeyString(LoaderPrefixLength)
@@ -68,6 +76,8 @@ func RandLoaderKeyString(length int) string {
 const LoaderPrefixAndKeyLength = 40 // Key length including prefix
 const LoaderPrefixLength = 8        // Prefix length
 const LoaderKeyLength = 32          // Length excluding prefix
+const LoaderHashedKeyLength = 32    // Length of hashed key in the database
+const LoaderSaltLength = 16         // Length of salt
 
 // Validate a loader key, returns nil if it is valid
 func ValidateLoaderKey(key string) error {

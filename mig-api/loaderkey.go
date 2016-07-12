@@ -20,7 +20,7 @@ import (
 
 func hashLoaderKey(key string, salt []byte) (ret []byte, retsalt []byte, err error) {
 	if salt == nil {
-		retsalt = make([]byte, 16)
+		retsalt = make([]byte, mig.LoaderSaltLength)
 		_, err = rand.Read(retsalt)
 		if err != nil {
 			return
@@ -28,7 +28,7 @@ func hashLoaderKey(key string, salt []byte) (ret []byte, retsalt []byte, err err
 	} else {
 		retsalt = salt
 	}
-	ret = pbkdf2.Key([]byte(key), retsalt, 4096, 32, sha256.New)
+	ret = pbkdf2.Key([]byte(key), retsalt, 4096, mig.LoaderHashedKeyLength, sha256.New)
 	return ret, retsalt, nil
 }
 

@@ -36,6 +36,10 @@ func (db *DB) GetLoaderAuthDetails(prefix string) (lad mig.LoaderAuthDetails, er
 		err = fmt.Errorf("Unable to locate loader from prefix")
 		return
 	}
+	err = lad.Validate()
+	if err != nil {
+		return
+	}
 	return
 }
 
