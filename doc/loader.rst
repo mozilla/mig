@@ -315,26 +315,28 @@ to that system.
     Please provide the name of the new entry
     name> corbomite.internal
     Name: 'corbomite.internal'
-    Please provide loader key for entry.
-    key> vw1NQs9F3wuZx1kSUhZaQzZ0
-    Key: 'vw1NQs9F3wuZx1kSUhZaQzZ0'
+    Generating loader prefix...
+    Generating loader key...
     {
-      "ID": 0,
-      "Name": "corbomite.internal",
-      "Key": "vw1NQs9F3wuZx1kSUhZaQzZ0",
-      "AgentName": "",
-      "LastSeen": "0001-01-01T00:00:00Z",
-      "Enabled": false
+      "id": 0,
+      "name": "corbomite.internal",
+      "prefix": "qqLwjje7",
+      "key": "BNbZUenzBaucYKgK6ubkz0yqDZ7k4kNX",
+      "agentname": "",
+      "lastseen": "0001-01-01T00:00:00Z",
+      "enabled": false
     }
+    
+    Loader key including prefix to supply to client will be "qqLwjje7BNbZUenzBaucYKgK6ubkz0yqDZ7k4kNX"
     create loader entry? (y/n)> y
     New entry successfully created but is disabled
     mig>
 
 The name can be any value you want, but usually you will want something describing
 the system or in the case of a workstation something describing the user of the
-device. Here we just used the hostname. The key is the API key that will need to be
-configured in mig-loader on that system to allow it to authenticate as this loader
-instance.
+device. Here we just used the hostname. The key including prefix is the API key that
+will need to be configured in mig-loader on that system to allow it to authenticate as
+this loader instance.
 
 The new loader is created in a disabled state. Lets enable it so that it can be
 used.
