@@ -52,8 +52,8 @@ usage: %s <module> <global options> <module parameters>
 		* run on local system:	 -t local
 		* use a migrc macro:     -t mymacroname
 
--targetfound <action ID>
--targetnotfound <action ID>
+-target-found    <action ID>
+-target-notfound <action ID>
 		targets agents that have eiher found or not found results in a previous action.
 		example: -target-found 123456
 
