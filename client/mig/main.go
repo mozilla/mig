@@ -275,7 +275,7 @@ func main() {
 		target = targetQuery + " AND " + target
 	}
 	if targetnotfound != "" {
-		targetQuery := fmt.Sprintf(`id NOT IN (select agentid from commands, json_array_elements(commands.results) as `+
+		targetQuery := fmt.Sprintf(`id IN (select agentid from commands, json_array_elements(commands.results) as `+
 			`r where actionid=%s and r#>>'{foundanything}' = 'false')`, targetnotfound)
 		target = targetQuery + " AND " + target
 	}
