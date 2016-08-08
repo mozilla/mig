@@ -433,6 +433,7 @@ func initContext() (err error) {
 		panic(err)
 	}
 	ctx.AgentIdentifier = actx.ToAgent()
+	ctx.AgentIdentifier.Tags = TAGS
 
 	return
 }
