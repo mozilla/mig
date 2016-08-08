@@ -331,6 +331,9 @@ times			show the various timestamps of the action
 				break
 			}
 			a.Target = strings.Join(orders[1:], " ")
+			// Convert the target string to the desired value if the input was a
+			// target macro
+			a.Target = cli.ResolveTargetMacro(a.Target)
 			agents, err := cli.EvaluateAgentTarget(a.Target)
 			if err != nil {
 				fmt.Println(err)

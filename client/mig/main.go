@@ -43,14 +43,14 @@ usage: %s <module> <global options> <module parameters>
 		* text (default):	results are printed to the console
 		* map:			results are geolocated and a google map is generated
 
--t <target>	target to launch the action on. The default targets all online agents.
-		(idle and offline agents are ignored).
+-t <target>	target to launch the action on. A target must be specified.
 		examples:
 		* linux agents:          -t "queueloc LIKE 'linux.%%'"
 		* agents named *mysql*:  -t "name like '%%mysql%%'"
 		* proxied linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
 		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
 		* run on local system:	 -t local
+		* use a migrc macro:     -t mymacroname
 
 -targetfound <action ID>
 -targetnotfound <action ID>
@@ -108,7 +108,7 @@ func main() {
 	fs.StringVar(&migrc, "c", homedir+"/.migrc", "alternative configuration file")
 	fs.StringVar(&show, "show", "found", "type of results to show")
 	fs.StringVar(&render, "render", "text", "results rendering mode")
-	fs.StringVar(&target, "t", fmt.Sprintf("status='%s' AND mode='daemon'", mig.AgtStatusOnline), "action target")
+	fs.StringVar(&target, "t", "", "action target")
 	fs.StringVar(&targetfound, "target-found", "", "targets agents that have found results in a previous action.")
 	fs.StringVar(&targetnotfound, "target-notfound", "", "targets agents that haven't found results in a previous action.")
 	fs.StringVar(&expiration, "e", "300s", "expiration")
@@ -127,6 +127,19 @@ func main() {
 	if showversion || (len(os.Args) > 1 && (os.Args[1] == "-V" || os.Args[1] == "version")) {
 		fmt.Println(mig.Version)
 		os.Exit(0)
+	}
+
+	// instantiate an API client
+	conf, err = client.ReadConfiguration(migrc)
+	if err != nil {
+		panic(err)
+	}
+	cli, err = client.NewClient(conf, "cmd-"+mig.Version)
+	if err != nil {
+		panic(err)
+	}
+	if verbose {
+		cli.EnableDebug()
 	}
 
 	// when reading the action from a file, go directly to launch
@@ -205,6 +218,15 @@ func main() {
 	if compressAction {
 		op.WantCompressed = true
 	}
+	// Make sure a target value was specified
+	if target == "" {
+		fmt.Fprintf(os.Stderr, "[error] No target was specified with -t after the module name\n\n"+
+			"See MIG documentation on target strings and creating target macros\n"+
+			"for help. If you are sure you want to target everything online, you\n"+
+			"can use \"status='online'\" as the argument to -t. See the usage\n"+
+			"output for the mig command for more examples.\n")
+		os.Exit(2)
+	}
 	// If running against the local target, don't post the action to the MIG API
 	// but run it locally instead.
 	if target == "local" {
@@ -241,6 +263,9 @@ func main() {
 		a.Name += arg + " "
 	}
 
+	// Determine if the specified target was a macro, and if so get the correct
+	// target string
+	target = cli.ResolveTargetMacro(target)
 	if targetfound != "" && targetnotfound != "" {
 		panic("Both -target-found and -target-foundnothing cannot be used simultaneously")
 	}
@@ -266,20 +291,6 @@ func main() {
 	}
 
 readytolaunch:
-	// instanciate an API client
-	conf, err = client.ReadConfiguration(migrc)
-	if err != nil {
-		panic(err)
-	}
-	cli, err = client.NewClient(conf, "cmd-"+mig.Version)
-	if err != nil {
-		panic(err)
-	}
-
-	if verbose {
-		cli.EnableDebug()
-	}
-
 	// set the validity 60 second in the past to deal with clock skew
 	a.ValidFrom = time.Now().Add(-60 * time.Second).UTC()
 	period, err := time.ParseDuration(expiration)
