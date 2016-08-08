@@ -332,7 +332,7 @@ osx-loader-pkg:
 	       pkgbuild --root $${tmpdir} --identifier org.mozilla.mig-loader --version $(BUILDREV) \
 	       --ownership recommended --scripts $${scriptstmp} \
 	       $(SIGNFLAGS) \
-	       ./mig-loader-$(BUILDREV)-darwin.pkg && \
+	       ./mig-loader-$(BUILDREV)-darwin-$(ARCH).pkg && \
 	       rm -rf $${tmpdir} && \
 	       rm -rf $${scriptstmp}
 
