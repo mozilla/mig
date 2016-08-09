@@ -203,7 +203,8 @@ Action parameters can be edited prior to launching it:
 
 	launcher> setname Test action that pings google.com
 
-* **settarget** sets the target of the action. The target is evaluated
+* **settarget** sets the target of the action. Targets can either be a targeting
+  string, or a macro if defined in migrc. The target is evaluated
   right away, and a list of targeted agents can be obtained via **listagents**::
 
 	launcher> settarget environment->>'os'='linux' and mode='daemon'

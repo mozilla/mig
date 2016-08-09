@@ -670,6 +670,13 @@ you can reuse with your own values.
 	[gpg]
 		home = "/home/myuser/.gnupg/"
 		keyid = "E60892BB9BD89A69F759A1A0A3D652173B763E8F"
+        [targets]
+                macro = allonline:status='online'
+                macro = idleandonline:status='online' OR status='idle'
+
+The targets section is optional and provides the ability to specify
+short forms of your own targeting strings. In the example above, 
+`allonline` or `idleandonline` could be used as target arguments.
 
 Make sure have the dev library of readline installed (`readline-devel` on
 rhel/fedora or `libreadline-dev` on debian/ubuntu) and `go get` the binary from

@@ -46,9 +46,10 @@ type Client struct {
 
 // Configuration stores the live configuration and global parameters of a client
 type Configuration struct {
-	API     ApiConf // location of the MIG API
-	Homedir string  // location of the user's home directory
-	GPG     GpgConf // location of the user's secring
+	API     ApiConf    // location of the MIG API
+	Homedir string     // location of the user's home directory
+	GPG     GpgConf    // location of the user's secring
+	Targets TargetConf // Target macro specification
 }
 
 type ApiConf struct {
@@ -59,6 +60,27 @@ type GpgConf struct {
 	Home      string
 	KeyID     string
 	Keyserver string
+}
+
+type TargetConf struct {
+	Macro  []string
+	macros map[string]string
+}
+
+// Used by the macro parser to add processed target macros to the client
+// configuration
+func (t *TargetConf) addMacro(name string, tgt string) {
+	if t.macros == nil {
+		t.macros = make(map[string]string)
+	}
+	t.macros[name] = tgt
+}
+
+func (t *TargetConf) getMacro(name string) (string, error) {
+	if val, ok := t.macros[name]; ok {
+		return val, nil
+	}
+	return "", fmt.Errorf("macro %v not found", name)
 }
 
 // Can store the passphrase used to decrypt a GPG private key so the client
@@ -150,6 +172,10 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 	// if trailing slash is missing from API url, add it
 	if conf.API.URL[len(conf.API.URL)-1] != '/' {
 		conf.API.URL += "/"
+	}
+	err = addTargetMacros(&conf)
+	if err != nil {
+		panic(err)
 	}
 	return
 }
@@ -1140,6 +1166,17 @@ func (cli Client) SignManifest(m mig.ManifestRecord) (ret string, err error) {
 		panic(err)
 	}
 	return
+}
+
+// Resolves target macros; clients should pass the action target string here, and this
+// function will return the resolved target if it is a valid macro, otherwise it just
+// returns the passed target string
+func (cli Client) ResolveTargetMacro(target string) string {
+	v, err := cli.Conf.Targets.getMacro(target)
+	if err != nil {
+		return target
+	}
+	return v
 }
 
 // EvaluateAgentTarget runs a search against the api to find all agents that match an action target string
