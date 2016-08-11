@@ -49,7 +49,8 @@ func loaderReader(input string, cli client.Client) (err error) {
 			}
 			fmt.Println("reloaded")
 		}
-		var symbols = []string{"disable", "enable", "exit", "help", "json", "key", "r"}
+		var symbols = []string{"disable", "enable", "expectenv",
+			"exit", "help", "json", "key", "r"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -84,21 +85,34 @@ func loaderReader(input string, cli client.Client) (err error) {
 			}
 			fmt.Println("Loader has been enabled")
 			reloadfunc()
+		case "expectenv":
+			sv := ""
+			if len(orders) >= 2 {
+				sv = strings.Join(orders[1:], " ")
+			}
+			err = cli.LoaderEntryExpect(le, sv)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Expected environment match set")
+			reloadfunc()
 		case "help":
 			fmt.Printf(`The following orders are avialable:
-disable         disable loader entry
+disable          disable loader entry
 
-enable          enable loader entry
+enable           enable loader entry
 
-help            show this help
+expectenv <val>  set expected environment match, omit val to remove
 
-exit            exit this mode (also works with ctrl+d)
+help             show this help
 
-json            show json of loader entry stored in database
+exit             exit this mode (also works with ctrl+d)
 
-key             change loader key
+json             show json of loader entry stored in database
 
-r               refresh the loader entry (get latest version from database)
+key              change loader key
+
+r                refresh the loader entry (get latest version from database)
 `)
 		case "exit":
 			fmt.Printf("exit\n")

@@ -79,6 +79,19 @@ func (db *DB) UpdateLoaderEntry(lid float64, agt mig.Agent) (err error) {
 	return
 }
 
+// If any expected environment has been set on a loader entry, this function
+// validates the environment submitted by the loader matches that expected
+// query string; returns an error if not
+func (db *DB) CompareLoaderExpectEnv(lid float64) error {
+	var result bool
+	err := db.c.QueryRow(`SELECT ldr_verify_env($1);`, lid).Scan(&result)
+	if err != nil || !result {
+		err = fmt.Errorf("loader environment verification failed")
+		return err
+	}
+	return nil
+}
+
 // Given a loader ID, identify which manifest is applicable to return to this
 // loader in a manifest request
 func (db *DB) ManifestIDFromLoaderID(lid float64) (ret float64, err error) {
@@ -152,16 +165,21 @@ func (db *DB) AllLoadersFromManifestID(mid float64) (ret []mig.LoaderEntry, err 
 
 // Return a loader entry given an ID
 func (db *DB) GetLoaderFromID(lid float64) (ret mig.LoaderEntry, err error) {
-	var name sql.NullString
-	err = db.c.QueryRow(`SELECT id, loadername, keyprefix, name, lastseen, enabled
+	var name, expectenv sql.NullString
+	err = db.c.QueryRow(`SELECT id, loadername, keyprefix, name, lastseen, enabled,
+		expectenv
 		FROM loaders WHERE id=$1`, lid).Scan(&ret.ID, &ret.Name,
-		&ret.Prefix, &name, &ret.LastSeen, &ret.Enabled)
+		&ret.Prefix, &name, &ret.LastSeen, &ret.Enabled,
+		&expectenv)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving loader: '%v'", err)
 		return
 	}
 	if name.Valid {
 		ret.AgentName = name.String
+	}
+	if expectenv.Valid {
+		ret.ExpectEnv = expectenv.String
 	}
 	return
 }
@@ -170,6 +188,21 @@ func (db *DB) GetLoaderFromID(lid float64) (ret mig.LoaderEntry, err error) {
 func (db *DB) LoaderUpdateStatus(lid float64, status bool) (err error) {
 	_, err = db.c.Exec(`UPDATE loaders SET enabled=$1 WHERE
 		id=$2`, status, lid)
+	if err != nil {
+		return err
+	}
+	return
+}
+
+// Update loader expect fields
+func (db *DB) LoaderUpdateExpect(lid float64, eenv string) (err error) {
+	var eset sql.NullString
+	if eenv != "" {
+		eset.String = eenv
+		eset.Valid = true
+	}
+	_, err = db.c.Exec(`UPDATE loaders SET expectenv=$1 WHERE
+		id=$2`, eset, lid)
 	if err != nil {
 		return err
 	}
