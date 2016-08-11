@@ -175,6 +175,11 @@ func loaderCreator(cli client.Client) (err error) {
 		panic("input name too short")
 	}
 	fmt.Printf("Name: '%s'\n", newle.Name)
+	fmt.Println("Provide expected environment target string, or enter for none")
+	newle.ExpectEnv, err = readline.String("expectenv> ")
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println("Generating loader prefix...")
 	newle.Prefix = mig.GenerateLoaderPrefix()
 	fmt.Println("Generating loader key...")

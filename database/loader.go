@@ -222,10 +222,16 @@ func (db *DB) LoaderUpdateKey(lid float64, hashkey []byte, salt []byte) (err err
 // Add a new loader entry to the database; the hashed loader key should
 // be provided as hashkey
 func (db *DB) LoaderAdd(le mig.LoaderEntry, hashkey []byte, salt []byte) (err error) {
+	var eval sql.NullString
+	if le.ExpectEnv != "" {
+		eval.String = le.ExpectEnv
+		eval.Valid = true
+	}
 	_, err = db.c.Exec(`INSERT INTO loaders 
-		(loadername, keyprefix, loaderkey, salt, lastseen, enabled)
+		(loadername, keyprefix, loaderkey, salt, lastseen, enabled,
+		expectenv)
 		VALUES
-		($1, $2, $3, $4, now(), FALSE)`, le.Name,
-		le.Prefix, hashkey, salt)
+		($1, $2, $3, $4, now(), FALSE, $5)`, le.Name,
+		le.Prefix, hashkey, salt, eval)
 	return
 }
