@@ -102,7 +102,7 @@ CREATE TABLE investigators (
     status          character varying(255) NOT NULL,
     createdat       timestamp with time zone NOT NULL,
     lastmodified    timestamp with time zone NOT NULL,
-    permissions     integer NOT NULL DEFAULT 0
+    permissions     bigint NOT NULL DEFAULT 0
 );
 ALTER TABLE public.investigators OWNER TO migadmin;
 ALTER TABLE ONLY investigators

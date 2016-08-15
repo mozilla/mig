@@ -45,10 +45,11 @@ func (db *DB) ActiveInvestigatorsKeys() (keys [][]byte, err error) {
 
 // InvestigatorByID searches the database for an investigator with a given ID
 func (db *DB) InvestigatorByID(iid float64) (inv mig.Investigator, err error) {
+	var perm int64
 	err = db.c.QueryRow(`SELECT id, name, pgpfingerprint, publickey, status,
 		createdat, lastmodified, permissions FROM investigators WHERE id=$1`,
 		iid).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey,
-		&inv.Status, &inv.CreatedAt, &inv.LastModified, &inv.Permissions)
+		&inv.Status, &inv.CreatedAt, &inv.LastModified, &perm)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving investigator: '%v'", err)
 		return
@@ -56,18 +57,20 @@ func (db *DB) InvestigatorByID(iid float64) (inv mig.Investigator, err error) {
 	if err == sql.ErrNoRows {
 		return
 	}
+	inv.Permissions.FromMask(perm)
 	return
 }
 
 // InvestigatorByFingerprint searches the database for an investigator that
 // has a given fingerprint
 func (db *DB) InvestigatorByFingerprint(fp string) (inv mig.Investigator, err error) {
+	var perm int64
 	err = db.c.QueryRow(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
 		investigators.publickey, investigators.status, investigators.createdat,
 		investigators.lastmodified, investigators.permissions
 		FROM investigators WHERE LOWER(pgpfingerprint)=LOWER($1)`,
 		fp).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status,
-		&inv.CreatedAt, &inv.LastModified, &inv.Permissions)
+		&inv.CreatedAt, &inv.LastModified, &perm)
 	if err != nil && err != sql.ErrNoRows {
 		err = fmt.Errorf("Error while finding investigator: '%v'", err)
 		return
@@ -76,11 +79,13 @@ func (db *DB) InvestigatorByFingerprint(fp string) (inv mig.Investigator, err er
 		err = fmt.Errorf("InvestigatorByFingerprint: no investigator found for fingerprint '%s'", fp)
 		return
 	}
+	inv.Permissions.FromMask(perm)
 	return
 }
 
 //InvestigatorByActionID returns the list of investigators that signed a given action
 func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err error) {
+	var perm int64
 	rows, err := db.c.Query(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
 		investigators.status, investigators.createdat, investigators.lastmodified,
 		investigators.permissions
@@ -96,11 +101,12 @@ func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err 
 	}
 	for rows.Next() {
 		var inv mig.Investigator
-		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status, &inv.CreatedAt, &inv.LastModified, &inv.Permissions)
+		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status, &inv.CreatedAt, &inv.LastModified, &perm)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve investigator data: '%v'", err)
 			return
 		}
+		inv.Permissions.FromMask(perm)
 		invs = append(invs, inv)
 	}
 	if err := rows.Err(); err != nil {
@@ -116,7 +122,7 @@ func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) 
 		(name, pgpfingerprint, publickey, status, createdat, lastmodified, permissions)
 		VALUES ($1, $2, $3, 'active', $4, $5, $6)`,
 		inv.Name, inv.PGPFingerprint, inv.PublicKey, time.Now().UTC(), time.Now().UTC(),
-		inv.Permissions)
+		inv.Permissions.ToMask())
 	if err != nil {
 		if err.Error() == `pq: duplicate key value violates unique constraint "investigators_pgpfingerprint_idx"` {
 			return iid, fmt.Errorf("Investigator's PGP Fingerprint already exists in database")
@@ -169,11 +175,15 @@ func (db *DB) UpdateInvestigatorPerms(inv mig.Investigator) (err error) {
 	// If the desired permissions do not include an admin bit, do a check here
 	// to see how many administrators remain. If this change will reduce the
 	// number of admins to 0 prevent the modification.
-	if (inv.Permissions & mig.PermAdmin) == 0 {
+	mask := inv.Permissions.ToMask()
+	if ((mask & mig.PermInvestigator) == 0) || ((mask & mig.PermInvestigatorUpdate) == 0) {
+		var ts mig.InvestigatorPerms
+		ts.AdminSet()
+		tmask := ts.ToMask()
 		cnt := 0
 		err = db.c.QueryRow(`SELECT COUNT(*) FROM investigators
 			WHERE (permissions & $1) != 0 AND
-			id != $2`, mig.PermAdmin, inv.ID).Scan(&cnt)
+			id != $2`, tmask, inv.ID).Scan(&cnt)
 		if err != nil {
 			return fmt.Errorf("Failed to update investigator: '%v'", err)
 		}
@@ -182,7 +192,7 @@ func (db *DB) UpdateInvestigatorPerms(inv mig.Investigator) (err error) {
 		}
 	}
 	_, err = db.c.Exec(`UPDATE investigators SET (permissions) = ($1) WHERE id=$2`,
-		inv.Permissions, inv.ID)
+		mask, inv.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to update investigator: '%v'", err)
 	}

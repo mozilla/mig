@@ -847,12 +847,16 @@ func (db *DB) SearchInvestigators(p search.Parameters) (investigators []mig.Inve
 		return
 	}
 	for rows.Next() {
-		var inv mig.Investigator
-		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status, &inv.CreatedAt, &inv.LastModified, &inv.Permissions)
+		var (
+			inv  mig.Investigator
+			perm int64
+		)
+		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status, &inv.CreatedAt, &inv.LastModified, &perm)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve investigator data: '%v'", err)
 			return
 		}
+		inv.Permissions.FromMask(perm)
 		investigators = append(investigators, inv)
 	}
 	if err := rows.Err(); err != nil {

@@ -961,7 +961,7 @@ func (cli Client) GetInvestigator(iid float64) (inv mig.Investigator, err error)
 }
 
 // PostInvestigator creates an Investigator and returns the reflected investigator
-func (cli Client) PostInvestigator(name string, pubkey []byte, perms int) (inv mig.Investigator, err error) {
+func (cli Client) PostInvestigator(name string, pubkey []byte, pset mig.InvestigatorPerms) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PostInvestigator() -> %v", e)
@@ -975,7 +975,11 @@ func (cli Client) PostInvestigator(name string, pubkey []byte, perms int) (inv m
 	if err != nil {
 		panic(err)
 	}
-	err = writer.WriteField("permissions", fmt.Sprintf("%v", perms))
+	pbuf, err := json.Marshal(&pset)
+	if err != nil {
+		panic(err)
+	}
+	err = writer.WriteField("permissions", string(pbuf))
 	if err != nil {
 		panic(err)
 	}
@@ -1026,13 +1030,17 @@ func (cli Client) PostInvestigator(name string, pubkey []byte, perms int) (inv m
 }
 
 // PostInvestigatorPerms sets permission on an investigator
-func (cli Client) PostInvestigatorPerms(iid float64, perm int) (err error) {
+func (cli Client) PostInvestigatorPerms(iid float64, perm mig.InvestigatorPerms) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PostInvestigatorPerms() -> %v", e)
 		}
 	}()
-	data := url.Values{"id": {fmt.Sprintf("%.0f", iid)}, "permissions": {fmt.Sprintf("%v", perm)}}
+	permbuf, err := json.Marshal(&perm)
+	if err != nil {
+		panic(err)
+	}
+	data := url.Values{"id": {fmt.Sprintf("%.0f", iid)}, "permissions": {fmt.Sprintf("%v", string(permbuf))}}
 	r, err := http.NewRequest("POST", cli.Conf.API.URL+"investigator/update/", strings.NewReader(data.Encode()))
 	if err != nil {
 		panic(err)

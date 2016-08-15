@@ -6,6 +6,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -95,11 +96,9 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	if inv.Name == "" {
 		panic("Investigator name must not be empty")
 	}
-	tmpperm := request.FormValue("permissions")
-	if tmpperm == "" {
-		panic("Investigator permissions must not be empty")
-	}
-	inv.Permissions, err = strconv.Atoi(tmpperm)
+	// Parse incoming permissions as JSON InvestigatorPerms
+	permbuf := request.FormValue("permissions")
+	err = json.Unmarshal([]byte(permbuf), &inv.Permissions)
 	if err != nil {
 		panic(err)
 	}
@@ -180,7 +179,7 @@ func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f status changed to %s", inv.ID, inv.Status)}
 	} else {
-		inv.Permissions, err = strconv.Atoi(invperm)
+		err = json.Unmarshal([]byte(invperm), &inv.Permissions)
 		if err != nil {
 			panic(err)
 		}
@@ -188,7 +187,7 @@ func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f permissions changed to %v", inv.ID, inv.Permissions)}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f permissions changed", inv.ID)}
 	}
 	err = resource.AddItem(cljs.Item{
 		Href: fmt.Sprintf("%s/investigator?investigatorid=%.0f", ctx.Server.BaseURL, inv.ID),

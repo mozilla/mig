@@ -82,45 +82,45 @@ func main() {
 
 	// Investigator resources that require authentication
 	s.HandleFunc("/search",
-		authenticate(search, 0)).Methods("GET")
+		authenticate(search, mig.PermSearch)).Methods("GET")
 	s.HandleFunc("/action",
-		authenticate(getAction, 0)).Methods("GET")
+		authenticate(getAction, mig.PermAction)).Methods("GET")
 	s.HandleFunc("/action/create/",
-		authenticate(createAction, 0)).Methods("POST")
+		authenticate(createAction, mig.PermActionCreate)).Methods("POST")
 	s.HandleFunc("/command",
-		authenticate(getCommand, 0)).Methods("GET")
+		authenticate(getCommand, mig.PermCommand)).Methods("GET")
 	s.HandleFunc("/agent",
-		authenticate(getAgent, 0)).Methods("GET")
+		authenticate(getAgent, mig.PermAgent)).Methods("GET")
 	s.HandleFunc("/dashboard",
-		authenticate(getDashboard, 0)).Methods("GET")
+		authenticate(getDashboard, mig.PermDashboard)).Methods("GET")
 
 	// Administrator resources
 	s.HandleFunc("/loader",
-		authenticate(getLoader, mig.PermLoaders)).Methods("GET")
+		authenticate(getLoader, mig.PermLoader)).Methods("GET")
 	s.HandleFunc("/loader/status/",
-		authenticate(statusLoader, mig.PermLoaders)).Methods("POST")
+		authenticate(statusLoader, mig.PermLoaderStatus)).Methods("POST")
 	s.HandleFunc("/loader/expect/",
-		authenticate(expectLoader, mig.PermLoaders)).Methods("POST")
+		authenticate(expectLoader, mig.PermLoaderExpect)).Methods("POST")
 	s.HandleFunc("/loader/key/",
-		authenticate(keyLoader, mig.PermLoaders)).Methods("POST")
+		authenticate(keyLoader, mig.PermLoaderKey)).Methods("POST")
 	s.HandleFunc("/loader/new/",
-		authenticate(newLoader, mig.PermLoaders)).Methods("POST")
+		authenticate(newLoader, mig.PermLoaderNew)).Methods("POST")
 	s.HandleFunc("/manifest",
-		authenticate(getManifest, mig.PermManifests)).Methods("GET")
+		authenticate(getManifest, mig.PermManifest)).Methods("GET")
 	s.HandleFunc("/manifest/sign/",
-		authenticate(signManifest, mig.PermManifests)).Methods("POST")
+		authenticate(signManifest, mig.PermManifestSign)).Methods("POST")
 	s.HandleFunc("/manifest/status/",
-		authenticate(statusManifest, mig.PermManifests)).Methods("POST")
+		authenticate(statusManifest, mig.PermManifestStatus)).Methods("POST")
 	s.HandleFunc("/manifest/new/",
-		authenticate(newManifest, mig.PermManifests)).Methods("POST")
+		authenticate(newManifest, mig.PermManifestNew)).Methods("POST")
 	s.HandleFunc("/manifest/loaders/",
-		authenticate(manifestLoaders, mig.PermManifests)).Methods("GET")
+		authenticate(manifestLoaders, mig.PermManifestLoaders)).Methods("GET")
 	s.HandleFunc("/investigator",
-		authenticate(getInvestigator, mig.PermAdmin)).Methods("GET")
+		authenticate(getInvestigator, mig.PermInvestigator)).Methods("GET")
 	s.HandleFunc("/investigator/create/",
-		authenticate(createInvestigator, mig.PermAdmin)).Methods("POST")
+		authenticate(createInvestigator, mig.PermInvestigatorCreate)).Methods("POST")
 	s.HandleFunc("/investigator/update/",
-		authenticate(updateInvestigator, mig.PermAdmin)).Methods("POST")
+		authenticate(updateInvestigator, mig.PermInvestigatorUpdate)).Methods("POST")
 
 	ctx.Channels.Log <- mig.Log{Desc: "Starting HTTP handler"}
 
@@ -226,7 +226,7 @@ type handler func(w http.ResponseWriter, r *http.Request)
 // authentication logic, which mostly consist of validating GPG signed tokens and setting the
 // identity of the signer in the request context. If requirePerm is not zero, this is the
 // permission the investigator must have in order to access the endpoint.
-func authenticate(pass handler, requirePerm int) handler {
+func authenticate(pass handler, requirePerm int64) handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var (
 			err error
@@ -238,7 +238,10 @@ func authenticate(pass handler, requirePerm int) handler {
 		if !ctx.Authentication.Enabled {
 			inv.Name = "authdisabled"
 			inv.ID = 0
-			inv.Permissions = mig.InvestigatorPermsAll()
+			inv.Permissions.DefaultSet()
+			inv.Permissions.ManifestSet()
+			inv.Permissions.LoaderSet()
+			inv.Permissions.AdminSet()
 			goto authorized
 		}
 		if r.Header.Get("X-PGPAUTHORIZATION") == "" {
@@ -260,7 +263,8 @@ func authenticate(pass handler, requirePerm int) handler {
 		}
 		// As a final phase, validate the investigator has permission to access
 		// the endpoint
-		if (requirePerm != 0) && ((inv.Permissions & requirePerm) == 0) {
+
+		if !inv.CheckPermission(requirePerm) {
 			inv.Name = "authfailed"
 			inv.ID = -1
 			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
