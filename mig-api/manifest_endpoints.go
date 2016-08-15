@@ -141,6 +141,10 @@ func newManifest(respWriter http.ResponseWriter, request *http.Request) {
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving newManifest()"}.Debug()
 	}()
 
+	// Since this is a file upload, override the limit on the request body
+	// and set a reasonable maximum.
+	request.Body = http.MaxBytesReader(respWriter, request.Body, 20971520)
+
 	err := request.ParseForm()
 	if err != nil {
 		panic(err)
