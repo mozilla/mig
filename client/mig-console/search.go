@@ -200,7 +200,13 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 				if len(name) > 30 {
 					name = name[0:27] + "..."
 				}
-				fmt.Printf("%6.0f   %s   %s\n", inv.ID, name, inv.Status)
+				sts := inv.Status
+				if len(sts) < 17 {
+					for i := len(sts); i < 16; i++ {
+						sts += " "
+					}
+				}
+				fmt.Printf("%6.0f   %s   %s\n", inv.ID, name, sts)
 			case "manifest":
 				mr, err := client.ValueToManifestRecord(data.Value)
 				if err != nil {

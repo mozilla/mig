@@ -275,7 +275,7 @@ gpg --no-default-keyring --keyring ~/.mig/pubring.gpg \
     --secret-keyring ~/.mig/secring.gpg \
     --export -a $(whoami)@$(hostname) \
     > ~/.mig/$(whoami)-pubkey.asc || fail
-echo -e "create investigator\n$(whoami)\nyes\n$HOME/.mig/$(whoami)-pubkey.asc\ny\n" | \
+echo -e "create investigator\n$(whoami)\nyes\nyes\nyes\n$HOME/.mig/$(whoami)-pubkey.asc\ny\n" | \
     /usr/local/bin/mig-console -q || fail
 
 echo -e "\n---- Creating agent configuration\n"

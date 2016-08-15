@@ -231,9 +231,10 @@ Next we need to send our new manifest to the API, so it is available to be
 fetched by loader instances we are running. This is accomplished using
 mig-console.
 
-A MIG administrator account is required for this. To make an account an
-administrator account, the ``isadmin`` column for the investigator in the
-``investigators`` table should be set to ``true``.
+Permission to manage manifests must be set on your investigator to create
+manifests. Ensure the PermManifests permission has been applied; you can
+validate this by looking at the details for your investigator in ``mig-console``,
+and can use the ``setperms`` command if needed.
 
 The ``create manifest`` command is used to create the new manifest.
 
@@ -307,6 +308,11 @@ sending a loader key to the API, which should be unique per endpoint loader inst
 The loader key is essentially an API token. In this example, we will create a new
 loader instance for a Linux system, so we can deploy the manifest we just created
 to that system.
+
+Permission to manage loaders must be set on your investigator to create
+loaders. Ensure the PermLoaders permission has been applied; you can
+validate this by looking at the details for your investigator in ``mig-console``,
+and can use the ``setperms`` command if needed.
 
 ::
 

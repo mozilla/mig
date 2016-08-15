@@ -102,7 +102,7 @@ CREATE TABLE investigators (
     status          character varying(255) NOT NULL,
     createdat       timestamp with time zone NOT NULL,
     lastmodified    timestamp with time zone NOT NULL,
-    isadmin         boolean NOT NULL DEFAULT false
+    permissions     bigint NOT NULL DEFAULT 0
 );
 ALTER TABLE public.investigators OWNER TO migadmin;
 ALTER TABLE ONLY investigators
@@ -203,11 +203,11 @@ GRANT USAGE ON SEQUENCE investigators_id_seq TO migscheduler;
 
 -- API has limited permissions, and cannot list scheduler private keys in the investigators table, but can update their statuses
 GRANT SELECT ON actions, agents, agents_stats, agtmodreq, commands, invagtmodperm, loaders, manifests, manifestsig, modules, signatures TO migapi;
-GRANT SELECT (id, name, pgpfingerprint, publickey, status, createdat, lastmodified, isadmin) ON investigators TO migapi;
+GRANT SELECT (id, name, pgpfingerprint, publickey, status, createdat, lastmodified, permissions) ON investigators TO migapi;
 GRANT INSERT ON actions, signatures, manifests, manifestsig, loaders TO migapi;
 GRANT DELETE ON manifestsig TO migapi;
-GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified, isadmin) ON investigators TO migapi;
-GRANT UPDATE (isadmin, status, lastmodified) ON investigators TO migapi;
+GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified, permissions) ON investigators TO migapi;
+GRANT UPDATE (permissions, status, lastmodified) ON investigators TO migapi;
 GRANT UPDATE (name, env, tags, loaderkey, salt, lastseen, enabled, expectenv) ON loaders TO migapi;
 GRANT UPDATE (status) ON manifests TO migapi;
 GRANT USAGE ON SEQUENCE investigators_id_seq TO migapi;

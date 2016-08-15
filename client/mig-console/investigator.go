@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/bobappleyard/readline"
+	"mig.ninja/mig"
 	"mig.ninja/mig/client"
 	"mig.ninja/mig/pgp"
 )
@@ -44,8 +45,9 @@ func investigatorReader(input string, cli client.Client) (err error) {
 	fmt.Printf("Investigator %.0f named '%s'\n", inv.ID, inv.Name)
 	prompt := fmt.Sprintf("\x1b[35;1minv %.0f>\x1b[0m ", iid)
 	for {
-		// completion
-		var symbols = []string{"details", "exit", "help", "pubkey", "r", "lastactions"}
+		// completion, for convenience also add permission categories here
+		var symbols = []string{"details", "exit", "help", "pubkey", "r", "lastactions",
+			"setperms", "PermManifest", "PermLoader", "PermAdmin"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
@@ -67,21 +69,30 @@ func investigatorReader(input string, cli client.Client) (err error) {
 		orders := strings.Split(strings.TrimSpace(input), " ")
 		switch orders[0] {
 		case "details":
-			fmt.Printf("Investigator ID %.0f\nname     %s\nstatus   %s\nadmin    %v\nkey id   %s\ncreated  %s\nmodified %s\n",
-				inv.ID, inv.Name, inv.Status, inv.IsAdmin, inv.PGPFingerprint, inv.CreatedAt, inv.LastModified)
+			fmt.Printf("Investigator ID %.0f\n"+
+				"name           %s\n"+
+				"status         %s\n"+
+				"permissions    %v\n"+
+				"key id         %s\n"+
+				"created        %s\n"+
+				"modified       %s\n",
+				inv.ID, inv.Name, inv.Status, inv.Permissions.ToDescriptive(),
+				inv.PGPFingerprint, inv.CreatedAt, inv.LastModified)
 		case "exit":
 			fmt.Printf("exit\n")
 			goto exit
 		case "help":
 			fmt.Printf(`The following orders are available:
-details			print the details of the investigator
-exit			exit this mode
-help			show this help
-lastactions <limit>	print the last actions ran by the investigator. limit=10 by default.
-pubkey			show the armored public key of the investigator
-r			refresh the investigator (get latest version from upstream)
-setadmin <true|false>   enable or disable admin flag for investigator
-setstatus <status>	changes the status of the investigator to <status> (can be 'active' or 'disabled')
+details			  print the details of the investigator
+exit			  exit this mode
+help			  show this help
+lastactions <limit>	  print the last actions ran by the investigator. limit=10 by default.
+pubkey			  show the armored public key of the investigator
+r			  refresh the investigator (get latest version from upstream)
+setperms [permissions...] set permissions for investigator, no arguments to apply default
+showperms                 display possible permission values
+setadmin <true|false>     enable or disable admin flag for investigator
+setstatus <status>	  changes the status of the investigator to <status> (can be 'active' or 'disabled')
 `)
 		case "lastactions":
 			limit := 10
@@ -123,34 +134,27 @@ setstatus <status>	changes the status of the investigator to <status> (can be 'a
 			if err != nil {
 				panic(err)
 			}
-		case "setadmin":
-			if len(orders) != 2 {
-				fmt.Println("error: must be 'setadmin <true|false>'. try 'help'")
-				break
+		case "setperms":
+			newperms := mig.InvestigatorPerms{}
+			// Always apply the default permission set for now
+			newperms.DefaultSet()
+			if len(orders) >= 2 {
+				err = newperms.FromSetList(orders[1:])
+				if err != nil {
+					panic(err)
+				}
 			}
-			var flag bool
-			valid := true
-			switch strings.ToLower(orders[1]) {
-			case "true":
-				flag = true
-			case "false":
-				flag = false
-			default:
-				fmt.Println("error: must specify true or false")
-				valid = false
-			}
-			if !valid {
-				break
-			}
-			err = cli.PostInvestigatorAdminFlag(iid, flag)
+			err = cli.PostInvestigatorPerms(iid, newperms)
 			if err != nil {
 				panic(err)
-			} else {
-				fmt.Println("Investigator admin flag set to", flag)
 			}
 			inv, err = cli.GetInvestigator(iid)
 			if err != nil {
 				panic(err)
+			}
+		case "showperms":
+			for _, x := range mig.PermSets {
+				fmt.Println(x)
 			}
 		case "":
 			break
@@ -219,13 +223,11 @@ func investigatorCreator(cli client.Client) (err error) {
 		}
 	}()
 	var (
-		name     string
-		adminstr string
-		isadmin  bool
-		pubkey   []byte
+		name   string
+		pubkey []byte
 	)
 	fmt.Println("Entering investigator creation mode. Please provide the full name\n" +
-		"and the public key of the new investigator.")
+		"additional permissions if desired, and the public key of the new investigator.")
 	name, err = readline.String("name> ")
 	if err != nil {
 		panic(err)
@@ -234,15 +236,48 @@ func investigatorCreator(cli client.Client) (err error) {
 		panic("input name too short")
 	}
 	fmt.Printf("Name: '%s'\n", name)
-	adminstr, err = readline.String("admin? (yes/no)> ")
+	pset := mig.InvestigatorPerms{}
+	pset.DefaultSet()
+	fmt.Println("With no additional permissions, the investigator will be permitted\n" +
+		"access to run investigations. Answer yes to any of the following to add\n" +
+		"additional permissions to the investigator.\n\nIf this is the first " +
+		"investigator being added, you should make this\ninvestigator an admin.")
+	respv, err := readline.String("Allow investigator to manage users (admin)? (yes/no)> ")
 	if err != nil {
 		panic(err)
 	}
-	switch strings.ToLower(adminstr) {
+	switch strings.ToLower(respv) {
 	case "yes":
-		isadmin = true
+		fmt.Println("Investigator will have administrative permissions")
+		pset.AdminSet()
 	case "no":
-		isadmin = false
+		fmt.Println("Investigator will not have administrative permissions")
+	default:
+		panic("must specify yes or no")
+	}
+	respv, err = readline.String("Allow investigator to manage loaders? (yes/no)> ")
+	if err != nil {
+		panic(err)
+	}
+	switch strings.ToLower(respv) {
+	case "yes":
+		fmt.Println("Investigator will have loader management permissions")
+		pset.LoaderSet()
+	case "no":
+		fmt.Println("Investigator will not have loader management permissions")
+	default:
+		panic("must specify yes or no")
+	}
+	respv, err = readline.String("Allow investigator to manage manifests? (yes/no)> ")
+	if err != nil {
+		panic(err)
+	}
+	switch strings.ToLower(respv) {
+	case "yes":
+		fmt.Println("Investigator will have manifest management permissions")
+		pset.ManifestSet()
+	case "no":
+		fmt.Println("Investigator will not have manifest management permissions")
 	default:
 		panic("must specify yes or no")
 	}
@@ -280,7 +315,7 @@ func investigatorCreator(cli client.Client) (err error) {
 		fmt.Println("abort")
 		return
 	}
-	inv, err := cli.PostInvestigator(name, pubkey, isadmin)
+	inv, err := cli.PostInvestigator(name, pubkey, pset)
 	if err != nil {
 		panic(err)
 	}

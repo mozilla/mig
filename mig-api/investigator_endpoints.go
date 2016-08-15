@@ -6,6 +6,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -95,13 +96,11 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	if inv.Name == "" {
 		panic("Investigator name must not be empty")
 	}
-	switch request.FormValue("isadmin") {
-	case "true":
-		inv.IsAdmin = true
-	case "false":
-		inv.IsAdmin = false
-	default:
-		panic("Invalid isadmin value for investigator")
+	// Parse incoming permissions as JSON InvestigatorPerms
+	permbuf := request.FormValue("permissions")
+	err = json.Unmarshal([]byte(permbuf), &inv.Permissions)
+	if err != nil {
+		panic(err)
 	}
 	// publickey is stored in a multipart post form, extract it
 	_, keyHeader, err := request.FormFile("publickey")
@@ -137,7 +136,9 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	respond(http.StatusCreated, resource, respWriter, request)
 }
 
-// updateInvestigator updates the status of an investigator in database
+// updateInvestigator updates the status or permissions for an investigator
+// in the database. Note only the status or permissions can be updated
+// at a given time, but not both in a single request.
 func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	var err error
 	opid := getOpID(request)
@@ -166,8 +167,8 @@ func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	inv.Status = request.FormValue("status")
-	isadm := request.FormValue("isadmin")
-	if inv.Status == "" && isadm == "" {
+	invperm := request.FormValue("permissions")
+	if inv.Status == "" && invperm == "" {
 		panic("No updates to the investigator were specified")
 	}
 	if inv.Status != "" {
@@ -178,33 +179,15 @@ func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 		}
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f status changed to %s", inv.ID, inv.Status)}
 	} else {
-		switch isadm {
-		case "true":
-			inv.IsAdmin = true
-		case "false":
-			inv.IsAdmin = false
-			// If the request is to disable the admin flag, make sure we
-			// are not disabling the only remaining admin
-			var cnt int
-			cnt, err = ctx.DB.CountOtherAdminInvestigators(inv)
-			if err != nil {
-				panic(err)
-			}
-			if cnt < 1 {
-				resource.SetError(cljs.Error{
-					Code:    fmt.Sprintf("%.0f", opid),
-					Message: "Will not disable last remaining administrator"})
-				respond(http.StatusBadRequest, resource, respWriter, request)
-				return
-			}
-		default:
-			panic("invalid value for isadmin")
-		}
-		err = ctx.DB.UpdateInvestigatorAdmin(inv)
+		err = json.Unmarshal([]byte(invperm), &inv.Permissions)
 		if err != nil {
 			panic(err)
 		}
-		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f admin changed to %v", inv.ID, inv.IsAdmin)}
+		err = ctx.DB.UpdateInvestigatorPerms(inv)
+		if err != nil {
+			panic(err)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f permissions changed", inv.ID)}
 	}
 	err = resource.AddItem(cljs.Item{
 		Href: fmt.Sprintf("%s/investigator?investigatorid=%.0f", ctx.Server.BaseURL, inv.ID),
