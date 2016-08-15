@@ -28,6 +28,14 @@ func locateManifestFromLoader(loaderid float64, agt mig.Agent) (mr mig.ManifestR
 	if err != nil {
 		panic(err)
 	}
+	// Confirm the submitted environment matches any expected environment set on the
+	// loader entry. This check is intended to prevent a malicious loader process from
+	// submitting a forged environment to obtain a different manifest.
+	err = ctx.DB.CompareLoaderExpectEnv(loaderid)
+	if err != nil {
+		panic(err)
+	}
+	// If the check was successful, determine which manifest to send
 	manifestid, err := ctx.DB.ManifestIDFromLoaderID(loaderid)
 	if err != nil {
 		panic(err)
@@ -470,6 +478,40 @@ func getLoader(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	resource.AddItem(li)
+	respond(http.StatusOK, resource, respWriter, request)
+}
+
+// Update expect values on a loader entry
+func expectLoader(respWriter http.ResponseWriter, request *http.Request) {
+	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
+	opid := getOpID(request)
+	resource := cljs.New(loc)
+	defer func() {
+		if e := recover(); e != nil {
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
+			respond(http.StatusInternalServerError, resource, respWriter, request)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving expectLoader()"}.Debug()
+	}()
+
+	err := request.ParseForm()
+	if err != nil {
+		panic(err)
+	}
+
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received loader expect change request")}.Debug()
+
+	loaderid, err := strconv.ParseFloat(request.FormValue("loaderid"), 64)
+	if err != nil {
+		panic(err)
+	}
+	eval := request.FormValue("expectenv")
+	err = ctx.DB.LoaderUpdateExpect(loaderid, eval)
+	if err != nil {
+		panic(err)
+	}
+
 	respond(http.StatusOK, resource, respWriter, request)
 }
 

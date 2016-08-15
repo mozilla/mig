@@ -315,6 +315,8 @@ to that system.
     Please provide the name of the new entry
     name> corbomite.internal
     Name: 'corbomite.internal'
+    Provide expected environment target string, or enter for none
+    expectenv> tags#>>'{operator}'='myorg'
     Generating loader prefix...
     Generating loader key...
     {
@@ -325,6 +327,7 @@ to that system.
       "agentname": "",
       "lastseen": "0001-01-01T00:00:00Z",
       "enabled": false
+      "expectenv": "tags#\u003e\u003e'{operator}'='myorg'"
     }
     
     Loader key including prefix to supply to client will be "qqLwjje7BNbZUenzBaucYKgK6ubkz0yqDZ7k4kNX"
@@ -334,7 +337,13 @@ to that system.
 
 The name can be any value you want, but usually you will want something describing
 the system or in the case of a workstation something describing the user of the
-device. Here we just used the hostname. The key including prefix is the API key that
+device. Here we just used the hostname.
+
+If desired, an expected environment value can be set on the instance. If set, this target string
+must match desired parts of the environment the loader is sending, if it does not the request will
+be rejected.
+
+The key including prefix is the API key that
 will need to be configured in mig-loader on that system to allow it to authenticate as
 this loader instance.
 

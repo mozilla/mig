@@ -99,6 +99,8 @@ func main() {
 		authenticate(getLoader, true)).Methods("GET")
 	s.HandleFunc("/loader/status/",
 		authenticate(statusLoader, true)).Methods("POST")
+	s.HandleFunc("/loader/expect/",
+		authenticate(expectLoader, true)).Methods("POST")
 	s.HandleFunc("/loader/key/",
 		authenticate(keyLoader, true)).Methods("POST")
 	s.HandleFunc("/loader/new/",

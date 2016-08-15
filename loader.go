@@ -23,6 +23,7 @@ type LoaderEntry struct {
 	AgentName string    `json:"agentname"` // Loader environment, agent name
 	LastSeen  time.Time `json:"lastseen"`  // Last time loader was used
 	Enabled   bool      `json:"enabled"`   // Loader entry is active
+	ExpectEnv string    `json:"expectenv"` // Expected environment
 }
 
 func (le *LoaderEntry) Validate() (err error) {
