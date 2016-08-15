@@ -150,25 +150,6 @@ CREATE UNIQUE INDEX loaders_loaderkey_idx ON loaders USING btree(loaderkey);
 CREATE UNIQUE INDEX loaders_keyprefix_idx ON loaders USING btree(keyprefix);
 ALTER TABLE public.loaders OWNER TO migadmin;
 
-CREATE OR REPLACE FUNCTION ldr_verify_env(ldrid numeric)
-RETURNS BOOLEAN AS $$
-DECLARE expectenv VARCHAR(2048);
-DECLARE ret BOOLEAN;
-BEGIN
-        SET LOCAL ROLE migreadonly;
-        SELECT loaders.expectenv INTO expectenv
-                FROM loaders WHERE id=ldrid LIMIT 1;
-        IF expectenv IS NOT NULL THEN
-                expectenv := ' AND ' || expectenv;
-        ELSE
-                expectenv := '';
-        END IF;
-        EXECUTE 'SELECT TRUE FROM loaders WHERE id=' || ldrid ||
-                expectenv INTO ret;
-        IF (ret IS NOT NULL AND ret=TRUE) THEN RETURN TRUE; ELSE RETURN FALSE; END IF;
-END;
-$$ LANGUAGE PLPGSQL;
-
 CREATE TABLE modules (
     id      numeric NOT NULL,
     name    character varying(256) NOT NULL

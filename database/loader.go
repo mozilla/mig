@@ -83,11 +83,46 @@ func (db *DB) UpdateLoaderEntry(lid float64, agt mig.Agent) (err error) {
 // validates the environment submitted by the loader matches that expected
 // query string; returns an error if not
 func (db *DB) CompareLoaderExpectEnv(lid float64) error {
-	var result bool
-	err := db.c.QueryRow(`SELECT ldr_verify_env($1);`, lid).Scan(&result)
-	if err != nil || !result {
-		err = fmt.Errorf("loader environment verification failed")
-		return err
+	var (
+		expectenv sql.NullString
+		result    bool
+	)
+	rerr := fmt.Errorf("loader environment verification failed")
+	txn, err := db.c.Begin()
+	if err != nil {
+		txn.Rollback()
+		return rerr
+	}
+	_, err = txn.Exec("SET LOCAL ROLE migreadonly")
+	if err != nil {
+		txn.Rollback()
+		return rerr
+	}
+	err = txn.QueryRow(`SELECT expectenv FROM loaders WHERE
+		id=$1`, lid).Scan(&expectenv)
+	if err != nil {
+		txn.Rollback()
+		return rerr
+	}
+	// If no expected environment is set, we are done here
+	if !expectenv.Valid || expectenv.String == "" {
+		err = txn.Commit()
+		if err != nil {
+			txn.Rollback()
+			return err
+		}
+		return nil
+	}
+	qfmt := fmt.Sprintf("SELECT TRUE FROM loaders WHERE id=$1 AND %v", expectenv.String)
+	err = txn.QueryRow(qfmt, lid).Scan(&result)
+	if err != nil {
+		txn.Rollback()
+		return rerr
+	}
+	err = txn.Commit()
+	if err != nil {
+		txn.Rollback()
+		return rerr
 	}
 	return nil
 }
