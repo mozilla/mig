@@ -699,7 +699,8 @@ func (db *DB) SearchInvestigators(p search.Parameters) (investigators []mig.Inve
 		return
 	}
 	columns := `investigators.id, investigators.name, investigators.pgpfingerprint,
-		investigators.status, investigators.createdat, investigators.lastmodified`
+		investigators.status, investigators.createdat, investigators.lastmodified,
+		investigators.permissions`
 	join := ""
 	where := ""
 	vals := []interface{}{}
@@ -847,7 +848,7 @@ func (db *DB) SearchInvestigators(p search.Parameters) (investigators []mig.Inve
 	}
 	for rows.Next() {
 		var inv mig.Investigator
-		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status, &inv.CreatedAt, &inv.LastModified)
+		err = rows.Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.Status, &inv.CreatedAt, &inv.LastModified, &inv.Permissions)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve investigator data: '%v'", err)
 			return

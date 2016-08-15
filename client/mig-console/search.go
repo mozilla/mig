@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"mig.ninja/mig"
 	"mig.ninja/mig/client"
 	migdbsearch "mig.ninja/mig/database/search"
 )
@@ -125,7 +126,7 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 	case "command":
 		fmt.Println("----  ID  ---- + ----         Name         ---- + --- Last Updated ---")
 	case "investigator":
-		fmt.Println("- ID - + ----         Name         ---- + --- Status ---")
+		fmt.Println("- ID - + ----         Name         ---- + --- Status --- + -- Permissions ---")
 	case "manifest":
 		fmt.Println("- ID - + ----      Name      ---- + -- Status -- + -------------- Target -------- + ---- Timestamp ---")
 	case "loader":
@@ -200,7 +201,26 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 				if len(name) > 30 {
 					name = name[0:27] + "..."
 				}
-				fmt.Printf("%6.0f   %s   %s\n", inv.ID, name, inv.Status)
+				sts := inv.Status
+				if len(sts) < 17 {
+					for i := len(sts); i < 16; i++ {
+						sts += " "
+					}
+				}
+				perms := ""
+				for _, x := range mig.InvestigatorPermissions {
+					if (inv.Permissions & x.Value) != 0 {
+						if perms != "" {
+							perms += "," + x.Text
+						} else {
+							perms = x.Text
+						}
+					}
+				}
+				if perms == "" {
+					perms = "InvestigatorOnly"
+				}
+				fmt.Printf("%6.0f   %s   %s %s\n", inv.ID, name, sts, perms)
 			case "manifest":
 				mr, err := client.ValueToManifestRecord(data.Value)
 				if err != nil {

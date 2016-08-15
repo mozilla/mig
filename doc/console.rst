@@ -443,54 +443,74 @@ Creating investigators
 
 To create a new investigator, go back to **mig>** mode and type
 **create investigator**. The console will prompt the name of the new
-investigator as well as the location of her public PGP key. You can either
-provide a local path to the public key file on disk, on provide a fingerprint
-in the format "0x<40 char sha1 hash>". When a fingerprint is provided, the
-console will attempt to retrieve the key from the keyserver `gpg.mozilla.org`::
+investigator, if additional permissions should be set, and as well 
+the location of her public PGP key.
 
-	mig> create investigator
-	Entering investigator creation mode. Please provide the full name
-	and the public key of the new investigator.
-	name> Bob Kelso
-	Name: 'Bob Kelso'
-	Please provide a public key. You can either provide a local path to the
-	armored public key file, or a full length PGP fingerprint.
-	example:
-	pubkey> 0x716CFA6BA8EBB21E860AE231645090E64367737B
-	pubkey> 0x716CFA6BA8EBB21E860AE231645090E64367737B
-	retrieving public key from http://gpg.mozilla.org
-	-----BEGIN PGP PUBLIC KEY BLOCK-----
-	Version: SKS 1.1.5
-	Comment: Hostname: keyserver.mozilla.org
+By default unless specific investigators will be created with no
+additional permissions. Answering yes to the permission related
+questions grant the investigator additional access to API functionality.
 
-	mQENBEbv+5sBCADNHPvUIajRoxb/qylLrzwm9e+9sB8R/jhY4gxOzGZRDHECPvNeTUd9eogV
-	n24rQDTWowkE+t9sW7vlD3TUWdBEAhXEpDZBfzlTBWIzEb1m3hwPOQM10ZNX6jPS1WlGsfoE
-	LsUC0HmFTtOx4b5os9mIYbsjsDWd/JZjn0yUIv4eb28+fle6BkbgqIotLW4d1gTrxVlFc3be
-	m+4OqimQ/v2LZDV+uObEkbh4UvmTtOCCx8zAOyZohPmICUbmJBc8KWWhzLOo8b9ns/GqP41q
-	/9IuTQDXP2GUAKXzBKSdQiNzJP8Skfu4tPyGsGJSErprPC9t43HPPUgfeW9/sfuaw+vnABEB
-	AAG0JUp1bGllbiBWRUhFTlQgPGp1bGllbkBsaW51eHdhbGwuaW5mbz6JATYEEwECACAFAkbv
-	+5sCGy8GCwkIBwMCBBUCCAMEFgIDAQIeAQIXgAAKCRBkUJDmQ2dze5U9CADK4Z6X02TP9afJ
-	AyWF32zM3UdMksJ/F2wuo2HBHT0iOomw4ecNzHyO1P5BTglm5LC5ZZrV+Dx6Jve75JiSDTSD
-	V3AhpR+M83rw8YKkeUrbTvfsy3+qhB7HYNIbCKT0lgAAL05SmDnYwYMQIV+p3T0F8BgGhkGT
-	vHdKLhzEhKNOMaMCwCd1SsiBepA976oBUp9h5Vt6TEFyG6hCcFP90DFjNlK17yMNjbdrgyd6
-	FkGEePKK3RhaLxcPShAgCnYzYYMABLYu1ow5AxxtEJTBHkJFkIzE9XM/lmyekYhWfX/Q4jpn
-	1aiiVlf2klZlFSFy/TXuuQH1JO3YlKo9uHjlvSQb
-	=+Ru1
-	-----END PGP PUBLIC KEY BLOCK-----
+You can either provide a local path to the public key file on disk,
+on provide a fingerprint in the format "0x<40 char sha1 hash>". When
+a fingerprint is provided, the console will attempt to retrieve the
+key from the keyserver `gpg.mozilla.org`::
 
-	create investigator? (y/n)> y
-	Investigator 'Bob Kelso' successfully created with ID 4
-
-	mig> investigator 4
-	Entering investigator mode. Type exit or press ctrl+d to leave. help may help.
-	Investigator 4 named 'Bob Kelso'
-
-	inv 4> details
-	Investigator ID 4
-	name     Bob Kelso
-	status   active
-	key id   716CFA6BA8EBB21E860AE231645090E64367737B
-	created  2015-10-06 09:23:14.473307 -0400 EDT
-	modified 2015-10-06 09:23:14.473307 -0400 EDT
+        mig> create investigator
+        Entering investigator creation mode. Please provide the full name
+        and the public key of the new investigator.
+        name> Bob Kelso
+        Name: 'Bob Kelso'
+        With no additional permissions, the investigator will be permitted
+        access to run investigations. Answer yes to any of the following to add
+        additional permissions to the investigator.
+        
+        If this is the first investigator being added, you should make this
+        investigator an admin.
+        Allow investigator to manage users (admin)? (yes/no)> no
+        Investigator will not have administrative permissions
+        Allow investigator to manage loaders? (yes/no)> no
+        Investigator will not have loader management permissions
+        Allow investigator to manage manifests? (yes/no)> no
+        Investigator will not have manifest management permissions
+        Please provide a public key. You can either provide a local path to the
+        armored public key file, or a full length PGP fingerprint.
+        example:
+        pubkey> 0x716CFA6BA8EBB21E860AE231645090E64367737B
+        pubkey> 0x716CFA6BA8EBB21E860AE231645090E64367737B
+        retrieving public key from http://gpg.mozilla.org
+        -----BEGIN PGP PUBLIC KEY BLOCK-----
+        Version: SKS 1.1.5
+        Comment: Hostname: keyserver.mozilla.org
+        
+        mQENBEbv+5sBCADNHPvUIajRoxb/qylLrzwm9e+9sB8R/jhY4gxOzGZRDHECPvNeTUd9eogV
+        n24rQDTWowkE+t9sW7vlD3TUWdBEAhXEpDZBfzlTBWIzEb1m3hwPOQM10ZNX6jPS1WlGsfoE
+        LsUC0HmFTtOx4b5os9mIYbsjsDWd/JZjn0yUIv4eb28+fle6BkbgqIotLW4d1gTrxVlFc3be
+        m+4OqimQ/v2LZDV+uObEkbh4UvmTtOCCx8zAOyZohPmICUbmJBc8KWWhzLOo8b9ns/GqP41q
+        /9IuTQDXP2GUAKXzBKSdQiNzJP8Skfu4tPyGsGJSErprPC9t43HPPUgfeW9/sfuaw+vnABEB
+        AAG0JUp1bGllbiBWRUhFTlQgPGp1bGllbkBsaW51eHdhbGwuaW5mbz6JATYEEwECACAFAkbv
+        +5sCGy8GCwkIBwMCBBUCCAMEFgIDAQIeAQIXgAAKCRBkUJDmQ2dze5U9CADK4Z6X02TP9afJ
+        AyWF32zM3UdMksJ/F2wuo2HBHT0iOomw4ecNzHyO1P5BTglm5LC5ZZrV+Dx6Jve75JiSDTSD
+        V3AhpR+M83rw8YKkeUrbTvfsy3+qhB7HYNIbCKT0lgAAL05SmDnYwYMQIV+p3T0F8BgGhkGT
+        vHdKLhzEhKNOMaMCwCd1SsiBepA976oBUp9h5Vt6TEFyG6hCcFP90DFjNlK17yMNjbdrgyd6
+        FkGEePKK3RhaLxcPShAgCnYzYYMABLYu1ow5AxxtEJTBHkJFkIzE9XM/lmyekYhWfX/Q4jpn
+        1aiiVlf2klZlFSFy/TXuuQH1JO3YlKo9uHjlvSQb
+        =+Ru1
+        -----END PGP PUBLIC KEY BLOCK-----
+        
+        create investigator? (y/n)> y
+        Investigator 'Bob Kelso' successfully created with ID 4
+        
+        mig> investigator 4
+        Entering investigator mode. Type exit or press ctrl+d to leave. help may help.
+        Investigator 4 named 'Bob Kelso'
+        
+        inv 4> details
+        Investigator ID 4
+        name        Bob Kelso
+        status      active
+        permissions 0 (Investigator only)
+        key id      716CFA6BA8EBB21E860AE231645090E64367737B
+        created     2015-10-06 09:23:14.473307 -0400 EDT
+        modified    2015-10-06 09:23:14.473307 -0400 EDT
 
 The new investigator now has access to the API.

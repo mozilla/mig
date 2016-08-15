@@ -961,7 +961,7 @@ func (cli Client) GetInvestigator(iid float64) (inv mig.Investigator, err error)
 }
 
 // PostInvestigator creates an Investigator and returns the reflected investigator
-func (cli Client) PostInvestigator(name string, pubkey []byte, isadmin bool) (inv mig.Investigator, err error) {
+func (cli Client) PostInvestigator(name string, pubkey []byte, perms int) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PostInvestigator() -> %v", e)
@@ -975,7 +975,7 @@ func (cli Client) PostInvestigator(name string, pubkey []byte, isadmin bool) (in
 	if err != nil {
 		panic(err)
 	}
-	err = writer.WriteField("isadmin", fmt.Sprintf("%v", isadmin))
+	err = writer.WriteField("permissions", fmt.Sprintf("%v", perms))
 	if err != nil {
 		panic(err)
 	}
@@ -1025,14 +1025,14 @@ func (cli Client) PostInvestigator(name string, pubkey []byte, isadmin bool) (in
 	return
 }
 
-// PostInvestigatorAdminFlag enables or disabled admin status for an investigator
-func (cli Client) PostInvestigatorAdminFlag(iid float64, enabled bool) (err error) {
+// PostInvestigatorPerms sets permission on an investigator
+func (cli Client) PostInvestigatorPerms(iid float64, perm int) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("PostInvestigatorAdminFlag() -> %v", e)
+			err = fmt.Errorf("PostInvestigatorPerms() -> %v", e)
 		}
 	}()
-	data := url.Values{"id": {fmt.Sprintf("%.0f", iid)}, "isadmin": {fmt.Sprintf("%v", enabled)}}
+	data := url.Values{"id": {fmt.Sprintf("%.0f", iid)}, "permissions": {fmt.Sprintf("%v", perm)}}
 	r, err := http.NewRequest("POST", cli.Conf.API.URL+"investigator/update/", strings.NewReader(data.Encode()))
 	if err != nil {
 		panic(err)
@@ -1055,7 +1055,7 @@ func (cli Client) PostInvestigatorAdminFlag(iid float64, enabled bool) (err erro
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. admin flag update failed with error '%v' (code %s)",
+		err = fmt.Errorf("error: HTTP %d. permission update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}

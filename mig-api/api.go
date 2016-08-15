@@ -82,45 +82,45 @@ func main() {
 
 	// Investigator resources that require authentication
 	s.HandleFunc("/search",
-		authenticate(search, false)).Methods("GET")
+		authenticate(search, 0)).Methods("GET")
 	s.HandleFunc("/action",
-		authenticate(getAction, false)).Methods("GET")
+		authenticate(getAction, 0)).Methods("GET")
 	s.HandleFunc("/action/create/",
-		authenticate(createAction, false)).Methods("POST")
+		authenticate(createAction, 0)).Methods("POST")
 	s.HandleFunc("/command",
-		authenticate(getCommand, false)).Methods("GET")
+		authenticate(getCommand, 0)).Methods("GET")
 	s.HandleFunc("/agent",
-		authenticate(getAgent, false)).Methods("GET")
+		authenticate(getAgent, 0)).Methods("GET")
 	s.HandleFunc("/dashboard",
-		authenticate(getDashboard, false)).Methods("GET")
+		authenticate(getDashboard, 0)).Methods("GET")
 
 	// Administrator resources
 	s.HandleFunc("/loader",
-		authenticate(getLoader, true)).Methods("GET")
+		authenticate(getLoader, mig.PermLoaders)).Methods("GET")
 	s.HandleFunc("/loader/status/",
-		authenticate(statusLoader, true)).Methods("POST")
+		authenticate(statusLoader, mig.PermLoaders)).Methods("POST")
 	s.HandleFunc("/loader/expect/",
-		authenticate(expectLoader, true)).Methods("POST")
+		authenticate(expectLoader, mig.PermLoaders)).Methods("POST")
 	s.HandleFunc("/loader/key/",
-		authenticate(keyLoader, true)).Methods("POST")
+		authenticate(keyLoader, mig.PermLoaders)).Methods("POST")
 	s.HandleFunc("/loader/new/",
-		authenticate(newLoader, true)).Methods("POST")
+		authenticate(newLoader, mig.PermLoaders)).Methods("POST")
 	s.HandleFunc("/manifest",
-		authenticate(getManifest, true)).Methods("GET")
+		authenticate(getManifest, mig.PermManifests)).Methods("GET")
 	s.HandleFunc("/manifest/sign/",
-		authenticate(signManifest, true)).Methods("POST")
+		authenticate(signManifest, mig.PermManifests)).Methods("POST")
 	s.HandleFunc("/manifest/status/",
-		authenticate(statusManifest, true)).Methods("POST")
+		authenticate(statusManifest, mig.PermManifests)).Methods("POST")
 	s.HandleFunc("/manifest/new/",
-		authenticate(newManifest, true)).Methods("POST")
+		authenticate(newManifest, mig.PermManifests)).Methods("POST")
 	s.HandleFunc("/manifest/loaders/",
-		authenticate(manifestLoaders, true)).Methods("GET")
+		authenticate(manifestLoaders, mig.PermManifests)).Methods("GET")
 	s.HandleFunc("/investigator",
-		authenticate(getInvestigator, true)).Methods("GET")
+		authenticate(getInvestigator, mig.PermAdmin)).Methods("GET")
 	s.HandleFunc("/investigator/create/",
-		authenticate(createInvestigator, true)).Methods("POST")
+		authenticate(createInvestigator, mig.PermAdmin)).Methods("POST")
 	s.HandleFunc("/investigator/update/",
-		authenticate(updateInvestigator, true)).Methods("POST")
+		authenticate(updateInvestigator, mig.PermAdmin)).Methods("POST")
 
 	ctx.Channels.Log <- mig.Log{Desc: "Starting HTTP handler"}
 
@@ -152,19 +152,6 @@ func getInvName(r *http.Request) string {
 		return name.(string)
 	}
 	return "noauth"
-}
-
-// invIsAdmin indicates if an investigator is an administrator or not
-type invIsAdminType bool
-
-const authenticatedInvIsAdmin invIsAdminType = false
-
-// getInvIsAdmin returns true of an authenticated investigator is an administrator
-func getInvIsAdmin(r *http.Request) bool {
-	if f := context.Get(r, authenticatedInvIsAdmin); f != nil {
-		return f.(bool)
-	}
-	return false
 }
 
 // invIDType defines a type to store the ID of an investigator in the request context
@@ -237,8 +224,9 @@ type handler func(w http.ResponseWriter, r *http.Request)
 
 // authenticate is called prior to processing incoming requests. it implements the client
 // authentication logic, which mostly consist of validating GPG signed tokens and setting the
-// identity of the signer in the request context
-func authenticate(pass handler, adminRequired bool) handler {
+// identity of the signer in the request context. If requirePerm is not zero, this is the
+// permission the investigator must have in order to access the endpoint.
+func authenticate(pass handler, requirePerm int) handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var (
 			err error
@@ -250,7 +238,7 @@ func authenticate(pass handler, adminRequired bool) handler {
 		if !ctx.Authentication.Enabled {
 			inv.Name = "authdisabled"
 			inv.ID = 0
-			inv.IsAdmin = true
+			inv.Permissions = mig.InvestigatorPermsAll()
 			goto authorized
 		}
 		if r.Header.Get("X-PGPAUTHORIZATION") == "" {
@@ -270,27 +258,20 @@ func authenticate(pass handler, adminRequired bool) handler {
 			respond(http.StatusUnauthorized, resource, w, r)
 			return
 		}
+		// As a final phase, validate the investigator has permission to access
+		// the endpoint
+		if (requirePerm != 0) && ((inv.Permissions & requirePerm) == 0) {
+			inv.Name = "authfailed"
+			inv.ID = -1
+			resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
+			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: "Insufficient permissions to access endpoint"})
+			respond(http.StatusUnauthorized, resource, w, r)
+			return
+		}
 	authorized:
 		// store investigator identity in request context
 		context.Set(r, authenticatedInvName, inv.Name)
 		context.Set(r, authenticatedInvID, inv.ID)
-		context.Set(r, authenticatedInvIsAdmin, inv.IsAdmin)
-		// Validate investigator is an administrator if required
-		if adminRequired {
-			if !inv.IsAdmin {
-				inv.Name = "authfailed"
-				inv.ID = -1
-				ctx.Channels.Log <- mig.Log{
-					OpID: getOpID(r),
-					Desc: fmt.Sprintf("Investigator '%v' %v has insufficient privileges to access API function", getInvName(r), getInvID(r)),
-				}.Info()
-				resource := cljs.New(fmt.Sprintf("%s%s", ctx.Server.Host, r.URL.String()))
-				resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid),
-					Message: "Insufficient privileges"})
-				respond(http.StatusUnauthorized, resource, w, r)
-				return
-			}
-		}
 		// accept request
 		pass(w, r)
 	}
