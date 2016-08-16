@@ -261,9 +261,9 @@ func authenticate(pass handler, requirePerm int64) handler {
 			respond(http.StatusUnauthorized, resource, w, r)
 			return
 		}
+
 		// As a final phase, validate the investigator has permission to access
 		// the endpoint
-
 		if !inv.CheckPermission(requirePerm) {
 			inv.Name = "authfailed"
 			inv.ID = -1

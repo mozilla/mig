@@ -125,7 +125,7 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 	case "command":
 		fmt.Println("----  ID  ---- + ----         Name         ---- + --- Last Updated ---")
 	case "investigator":
-		fmt.Println("- ID - + ----         Name         ---- + --- Status ---")
+		fmt.Println("- ID - + ----         Name         ---- + --- Status --- + --- Permissions ---")
 	case "manifest":
 		fmt.Println("- ID - + ----      Name      ---- + -- Status -- + -------------- Target -------- + ---- Timestamp ---")
 	case "loader":
@@ -206,7 +206,8 @@ No spaces are permitted within parameters. Spaces are used to separate search pa
 						sts += " "
 					}
 				}
-				fmt.Printf("%6.0f   %s   %s\n", inv.ID, name, sts)
+				fmt.Printf("%6.0f   %s   %s %s\n", inv.ID, name, sts,
+					inv.Permissions.ToDescriptive())
 			case "manifest":
 				mr, err := client.ValueToManifestRecord(data.Value)
 				if err != nil {
