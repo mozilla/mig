@@ -90,7 +90,6 @@ func (db *DB) CompareLoaderExpectEnv(lid float64) error {
 	rerr := fmt.Errorf("loader environment verification failed")
 	txn, err := db.c.Begin()
 	if err != nil {
-		txn.Rollback()
 		return rerr
 	}
 	_, err = txn.Exec("SET LOCAL ROLE migreadonly")
