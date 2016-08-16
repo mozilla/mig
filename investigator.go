@@ -213,41 +213,78 @@ func (ip *InvestigatorPerms) ToMask() (ret int64) {
 	return ret
 }
 
-// Convert an existing boolean permission set to a descriptive string
+// Convert an existing boolean permission set to a descriptive string, used
+// primarily in mig-console for summarizing permissions assigned to an
+// investigator
 func (ip *InvestigatorPerms) ToDescriptive() string {
+	cf := func(want int64, have int64) (bool, int64) {
+		var (
+			wantcnt, havecnt int64
+			n                uint = 64
+			sb               uint
+		)
+		for sb = 0; sb < n; sb++ {
+			wantcnt += (want >> sb) & 0x01
+		}
+		for sb = 0; sb < n; sb++ {
+			havecnt += ((have & want) >> sb) & 0x01
+		}
+		return (havecnt == wantcnt), havecnt
+	}
 	ret := ""
+	// Compare the permissions applied to the investigator to the various
+	// permission sets; if the user has the full set of permissions from the
+	// set we note that
 	tv := InvestigatorPerms{}
 	tv.DefaultSet()
-	if ip.ToMask()&tv.ToMask() != 0 {
+	fs, part := cf(tv.ToMask(), ip.ToMask())
+	if fs {
 		ret = "Default"
+	} else if part > 0 {
+		ret = "Default(partial)"
 	}
-	tv = InvestigatorPerms{}
-	tv.ManifestSet()
-	if ip.ToMask()&tv.ToMask() != 0 {
-		if len(ret) > 0 {
-			ret += ","
-		}
-		ret += "PermManifest"
-	}
-	tv = InvestigatorPerms{}
-	tv.LoaderSet()
-	if ip.ToMask()&tv.ToMask() != 0 {
-		if len(ret) > 0 {
-			ret += ","
-		}
-		ret += "PermLoader"
-	}
+
+	av := ""
 	tv = InvestigatorPerms{}
 	tv.AdminSet()
-	if ip.ToMask()&tv.ToMask() != 0 {
-		if len(ret) > 0 {
-			ret += ","
-		}
-		ret += "PermAdmin"
+	fs, part = cf(tv.ToMask(), ip.ToMask())
+	if fs {
+		av = "PermAdmin"
+	} else if part > 0 {
+		av = "PermAdmin(partial)"
 	}
-	if ret == "" {
-		ret = "Unknown"
+	if ret != "" && av != "" {
+		ret += ","
 	}
+	ret += av
+
+	av = ""
+	tv = InvestigatorPerms{}
+	tv.LoaderSet()
+	fs, part = cf(tv.ToMask(), ip.ToMask())
+	if fs {
+		av = "PermLoader"
+	} else if part > 0 {
+		av = "PermLoader(partial)"
+	}
+	if ret != "" && av != "" {
+		ret += ","
+	}
+	ret += av
+
+	av = ""
+	tv = InvestigatorPerms{}
+	tv.ManifestSet()
+	fs, part = cf(tv.ToMask(), ip.ToMask())
+	if fs {
+		av = "PermManifest"
+	} else if part > 0 {
+		av = "PermManifest(partial)"
+	}
+	if ret != "" && av != "" {
+		ret += ","
+	}
+	ret += av
 	return ret
 }
 
