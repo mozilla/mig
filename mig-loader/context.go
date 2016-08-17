@@ -13,7 +13,7 @@ import (
 	"runtime"
 )
 
-const runInterval = 900
+const runInterval = 7200
 
 type Context struct {
 	AgentIdentifier mig.Agent
