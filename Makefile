@@ -14,6 +14,16 @@ else
 	BINSUFFIX := ""
 endif
 
+# Ensure these are set if building client packages so signing works
+#
+# RPM signatures require configuration for rpmsign, see the rpm-clients
+# target for details.
+#
+# Set for deb
+CSIG_DEB_PGPFP=
+CSIG_DEB_NAME=
+CSIG_DEB_USER=
+
 # Supported OSes: linux darwin windows
 # Supported ARCHes: 386 amd64
 OS			:= $(shell uname -s| tr '[:upper:]' '[:lower:]')
@@ -256,7 +266,7 @@ prepare-clients-packaging: mig-cmd mig-console mig-action-generator mig-action-v
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-agent-search tmp/usr/local/bin/mig-agent-search
 
 rpm-clients: prepare-clients-packaging
-# --rpm-sign requires installing package `rpm-sign` and configuring this macros in ~/.rpmmacros
+# --rpm-sign requires rpmsign being present on the system, and example macro configuration in ~/.rpmmacros:
 #  %_signature gpg
 #  %_gpg_name  Julien Vehent
 	fpm -C tmp -n mig-clients --license GPL --vendor mozilla --description "Mozilla InvestiGator Clients" \
@@ -269,7 +279,8 @@ deb-clients: prepare-clients-packaging
 		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
 		-s dir -t deb .
 # require dpkg-sig, it's a perl script, take it from any debian box and copy it in your PATH
-	dpkg-sig -k E60892BB9BD89A69F759A1A0A3D652173B763E8F --sign jvehent -m "Julien Vehent" mig-clients_$(BUILDREV)_$(ARCH).deb
+# you may also need libconfig-file-perl on ubuntu
+	dpkg-sig -k $(CSIG_DEB_PGPFP) --sign $(CSIG_DEB_USER) -m "$(CSIG_DEB_NAME)" mig-clients_$(BUILDREV)_$(ARCH).deb
 
 dmg-clients: mig-cmd mig-console mig-action-generator
 ifneq ($(OS),darwin)
