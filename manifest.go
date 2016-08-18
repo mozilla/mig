@@ -15,6 +15,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -310,15 +311,25 @@ func (m *ManifestResponse) VerifySignatures(keyring io.Reader) (validcnt int, er
 	if err != nil {
 		return validcnt, err
 	}
+	fpcache := make([]string, 0)
 	for _, x := range sigs {
 		keyreader := bytes.NewBuffer(keycopy)
-		valid, _, err := pgp.Verify(string(buf), x, keyreader)
+		valid, ent, err := pgp.Verify(string(buf), x, keyreader)
 		if err != nil {
 			return validcnt, err
 		}
 		if valid {
 			validcnt++
 		}
+		fp := hex.EncodeToString(ent.PrimaryKey.Fingerprint[:])
+		// Return an error if we have already cached this fingerprint
+		for _, x := range fpcache {
+			if x == fp {
+				err = fmt.Errorf("duplicate signature for fingerprint %v", fp)
+				return 0, err
+			}
+		}
+		fpcache = append(fpcache, fp)
 	}
 
 	return
