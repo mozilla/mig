@@ -121,7 +121,7 @@ func requestManifest() (err error) {
 	if err != nil {
 		panic(err)
 	}
-	return checkManifestSignature(apiManifest)
+	return checkManifestSignature(apiManifest, MANIFESTPGPKEYS[:])
 }
 
 func valueToManifest(v interface{}) (m mig.ManifestResponse, err error) {
@@ -355,7 +355,7 @@ func compareManifest(have []mig.BundleDictionaryEntry) (err error) {
 	return
 }
 
-func checkManifestSignature(mr *mig.ManifestResponse) (err error) {
+func checkManifestSignature(mr *mig.ManifestResponse, keylist []string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("checkManifestSignature() -> %v", e)
@@ -363,7 +363,7 @@ func checkManifestSignature(mr *mig.ManifestResponse) (err error) {
 	}()
 
 	var keys [][]byte
-	for _, pk := range MANIFESTPGPKEYS {
+	for _, pk := range keylist {
 		keys = append(keys, []byte(pk))
 	}
 	keyring, _, err := pgp.ArmoredKeysToKeyring(keys)
