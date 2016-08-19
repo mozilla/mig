@@ -40,7 +40,12 @@ func getFlavor() (initFlavor, error) {
 	if strings.Contains(init, "init") {
 		// not so fast! you may think this is upstart, but it may be
 		// a symlink to systemd... yeah, debian does that... ( x )
-		target, err := filepath.EvalSymlinks(init)
+		var target string
+		if len(init) > 9 && init[0:10] == "/sbin/init" {
+			target, err = filepath.EvalSymlinks("/sbin/init")
+		} else {
+			target, err = filepath.EvalSymlinks(init)
+		}
 		if err == nil && strings.Contains(target, "systemd") {
 			return initSystemd, nil
 		}
