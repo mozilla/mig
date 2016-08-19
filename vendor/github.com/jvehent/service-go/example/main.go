@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"bitbucket.org/kardianos/service"
+	"github.com/jvehent/service-go"
 )
 
 var log service.Logger
