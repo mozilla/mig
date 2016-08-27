@@ -1820,3 +1820,23 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 	}
 	return
 }
+
+// Enhanced privacy mode for file module, mask file names being returned by the module
+func (r *run) EnhancePrivacy(in modules.Result) (out modules.Result, err error) {
+	var el SearchResults
+	out = in
+	err = out.GetElements(&el)
+	if err != nil {
+		return
+	}
+	for k, v := range el {
+		for i := range v {
+			if v[i].File != "" {
+				v[i].File = "masked"
+			}
+		}
+		el[k] = v
+	}
+	out.Elements = el
+	return
+}
