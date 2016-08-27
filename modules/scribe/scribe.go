@@ -246,3 +246,21 @@ type parameters struct {
 func newParameters() *parameters {
 	return &parameters{}
 }
+
+// Enhanced privacy mode for scribe module, mask identifiers
+func (r *run) EnhancePrivacy(in modules.Result) (out modules.Result, err error) {
+	var el ScribeElements
+
+	out = in
+	err = out.GetElements(&el)
+	if err != nil {
+		return
+	}
+	for i := range el.Results {
+		for j := range el.Results[i].Results {
+			el.Results[i].Results[j].Identifier = "masked"
+		}
+	}
+	out.Elements = el
+	return
+}
