@@ -225,6 +225,10 @@ func (r Result) GetStatistics(stats interface{}) (err error) {
 	return
 }
 
+type HasEnhancedPrivacy interface {
+	EnhancePrivacy(Result) (Result, error)
+}
+
 // HasParamsCreator implements a function that creates module parameters
 type HasParamsCreator interface {
 	ParamsCreator() (interface{}, error)

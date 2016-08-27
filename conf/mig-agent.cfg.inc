@@ -43,6 +43,11 @@
     ; like "5m"
     refreshenv = ""
 
+    ; mask meta-data such as file names in search results from this agent. note that
+    ; honoring this flag is up to the module, and not all modules may consider
+    ; it. the default is off.
+    ; extraprivacymode = off
+
 [certs]
     ca  = "/path/to/ca/cert"
     cert= "/path/to/client/cert"

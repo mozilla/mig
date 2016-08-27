@@ -237,6 +237,28 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 	// instantiate and call module
 	run := modules.Available[mode].NewRun()
 	out = run.Run(infd)
+
+	// if enhanced privacy mode has been requested, apply it to the result set
+	// if the module supports it
+	if EXTRAPRIVACYMODE {
+		if _, ok := run.(modules.HasEnhancedPrivacy); ok {
+			var restmp modules.Result
+			err := json.Unmarshal([]byte(out), &restmp)
+			if err != nil {
+				panic(err)
+			}
+			restmp, err = run.(modules.HasEnhancedPrivacy).EnhancePrivacy(restmp)
+			if err != nil {
+				panic(err)
+			}
+			resb, err := json.Marshal(restmp)
+			if err != nil {
+				panic(err)
+			}
+			out = string(resb)
+		}
+	}
+
 	if pretty {
 		var modres modules.Result
 		err := json.Unmarshal([]byte(out), &modres)
