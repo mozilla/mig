@@ -434,6 +434,21 @@ A typical implementation from the ``timedrift`` module looks as follows:
 It is highly recommended to call ``ValidateParameters`` to verify that the
 parameters supplied by the users are correct.
 
+HasEnhancedPrivacy
+~~~~~~~~~~~~~~~~~~
+
+Modules can implement the ``HasEnhancedPrivacy`` interface by providing an
+``EnhancePrivacy`` function.
+
+If extra privacy mode has been enabled in the agent configuration, results that
+are returned from a module will be passed through the modules ``EnhancePrivacy``
+function. This provides the module a means to mask certain meta-data as desired
+from the result set.
+
+The function is only run if extra privacy mode is enabled, if not the function
+will not be run on results. If the module does not implement ``HasEnhancedPrivacy``,
+the results are returned as-is.
+
 The Example module
 ==================
 

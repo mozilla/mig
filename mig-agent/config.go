@@ -31,6 +31,7 @@ type config struct {
 		ModuleTimeout    string
 		Api              string
 		RefreshEnv       string
+		ExtraPrivacyMode bool
 	}
 	Certs struct {
 		Ca, Cert, Key string
@@ -95,5 +96,6 @@ func configLoad(path string) (err error) {
 	AGENTCERT = agentcert
 	AGENTKEY = agentkey
 	REFRESHENV = refreshenv
+	EXTRAPRIVACYMODE = config.Agent.ExtraPrivacyMode
 	return
 }

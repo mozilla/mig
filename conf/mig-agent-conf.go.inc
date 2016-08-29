@@ -34,6 +34,11 @@ var DISCOVERAWSMETA = true
 // and exits. this mode is used to run the agent as a cron job, not a daemon.
 var CHECKIN = false
 
+// if enabled, the agent will inform modules to mask returned meta-data as much
+// as possible. modules which consider this will tell you they found something,
+// but not much else.
+var EXTRAPRIVACYMODE = false
+
 // how often the agent will refresh its environment. if 0 agent
 // will only update environment at initialization.
 var REFRESHENV time.Duration = 0

@@ -917,6 +917,28 @@ To obtain the PID of the running agent, use the following command:
 
 Leave the `SOCKET` configuration variable empty to disable the stat socket.
 
+Extra privacy mode (EPM)
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+A design principle of MIG is that the agent protects privacy, and it will not
+return information such as file contents or memory contents in any configuration.
+It does however return meta-data that is useful to the investigator (such as
+file names).
+
+In some cases for example if you are running MIG on user workstations, you
+may want to deploy extra privacy controls. Extra privacy mode informs the agent
+that it should further mask certain result data. If enabled for example, the
+file module will report that it found something as the result of a search, but
+will not include file names.
+
+It is up to modules to honor the EPM setting; currently this value is used by
+the file module (mask filenames), the netstat module (mask addresses the system
+is communicating with), and the scribe module (mask test identifiers).
+
+EPM can be enabled in the agent configuration either via the `extraprivacymode`
+option in the configuration file, or setting `EXTRAPRIVACYMODE` to true in the
+built-in configuration.
+
 Logging
 ~~~~~~~
 

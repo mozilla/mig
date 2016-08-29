@@ -467,3 +467,25 @@ func (r *run) PrintResults(result modules.Result, matchOnly bool) (prints []stri
 	prints = append(prints, resStr)
 	return
 }
+
+// Enhanced privacy mode for the netstat module, mask returned address information
+//
+// On an agent with enhanced privacy mode enabled, this does not provide much for queries
+// directed to a small address group, but can prevent returning results from a large
+// query scope (e.g., all connected ip's matching 0.0.0.0/0); we only apply it to information
+// returned in the ConnectedIP element.
+func (r *run) EnhancePrivacy(in modules.Result) (out modules.Result, err error) {
+	var el elements
+	out = in
+	err = out.GetElements(&el)
+	if err != nil {
+		return
+	}
+	for k, v := range el.ConnectedIP {
+		for i := range v {
+			el.ConnectedIP[k][i].RemoteAddr = "masked"
+		}
+	}
+	out.Elements = el
+	return
+}
