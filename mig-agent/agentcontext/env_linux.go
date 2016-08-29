@@ -25,16 +25,35 @@ func findHostname(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	}()
 
 	// get the hostname
-	hostname, err := os.Hostname()
-	if (err != nil) || (hostname == "localhost") {
-		out, err := exec.Command("hostname", "--fqdn").Output()
-		if err != nil {
-			hostname = "localhost"
+	var kernhosterr bool
+	kernhostname, err := os.Hostname()
+	if err == nil {
+		if strings.ContainsAny(kernhostname, ".") {
+			ctx.Hostname = kernhostname
+			return
 		}
-		// remove trailing newline
-		hostname = fmt.Sprintf("%s", out[0:len(out)-1])
+	} else {
+		kernhostname = "localhost"
+		kernhosterr = true
 	}
-	ctx.Hostname = hostname
+	fqdnhostbuf, err := exec.Command("hostname", "--fqdn").Output()
+	if err != nil {
+		ctx.Hostname = kernhostname
+		err = nil
+		return
+	}
+	fqdnhost := string(fqdnhostbuf)
+	fqdnhost = fqdnhost[0 : len(fqdnhost)-1]
+	if kernhosterr {
+		ctx.Hostname = fqdnhost
+		return
+	}
+	hcomp := strings.Split(fqdnhost, ".")
+	if kernhostname == hcomp[0] {
+		ctx.Hostname = fqdnhost
+		return
+	}
+	ctx.Hostname = kernhostname
 	return
 }
 
