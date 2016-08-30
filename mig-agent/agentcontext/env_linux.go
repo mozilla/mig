@@ -25,19 +25,35 @@ func findHostname(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	}()
 
 	// get the hostname
-	out, err := exec.Command("hostname", "--fqdn").Output()
-	if err != nil {
-		// --fqdn can fail sometimes. when that happens, use Go's builtin
-		// hostname lookup (reads /proc/sys/kernel/hostname)
-		hostname, err := os.Hostname()
-		if err != nil {
-			panic(err)
+	var kernhosterr bool
+	kernhostname, err := os.Hostname()
+	if err == nil {
+		if strings.ContainsAny(kernhostname, ".") {
+			ctx.Hostname = kernhostname
+			return
 		}
-		ctx.Hostname = hostname
-		return ctx, err
+	} else {
+		kernhostname = "localhost"
+		kernhosterr = true
 	}
-	// remove trailing newline
-	ctx.Hostname = fmt.Sprintf("%s", out[0:len(out)-1])
+	fqdnhostbuf, err := exec.Command("hostname", "--fqdn").Output()
+	if err != nil {
+		ctx.Hostname = kernhostname
+		err = nil
+		return
+	}
+	fqdnhost := string(fqdnhostbuf)
+	fqdnhost = fqdnhost[0 : len(fqdnhost)-1]
+	if kernhosterr {
+		ctx.Hostname = fqdnhost
+		return
+	}
+	hcomp := strings.Split(fqdnhost, ".")
+	if kernhostname == hcomp[0] {
+		ctx.Hostname = fqdnhost
+		return
+	}
+	ctx.Hostname = kernhostname
 	return
 }
 
