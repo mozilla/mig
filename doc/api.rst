@@ -64,6 +64,41 @@ GET /api/v1/ip
 	$ curl https://api.mig.mozilla.org/api/v1/ip
 	108.36.248.44
 
+GET /api/v1/publickey/<pgp_fingerprint>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Description: basic endpoint that returns the armored public key that
+  corresponds to the pgp fingerprint
+* Parameters: pgp_fingerprint
+* Authentication: none
+* Response Code: 200 OK
+* Response: Text
+
+.. code:: bash
+
+	$ curl https://api.mig.mozilla.org/api/v1/publickey/124F824DC2336D1492D3EC3344D73A94E9CF5B7D
+	-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+	xo0EV9ETlQEEANbHxZhpLNb0FYhLgIxNpMlboBYJFFrG4RQ5UiWC7bBjyyhvSlsz
+	thneplAws16VFCjsf6FWNF4kmFQdN16Yb8onchE8Rqs7UlFiHijrBOGZC2xe8ZKC
+	J0r2cB3229mrfo38bVh5Mji/jhfLMbXIBALQE2SR5fQYi1RR9eY0e/hRABEBAAHN
+	LnN1bm55IEludmVzdGlnYXRvciA8c3VubnlAc3VubnktQXNwaXJlLUUxLTU3Mj7C
+	vgQTAQIAKAUCV9ETlQIbLwUJAdqcAAYLCQgHAwIGFQgCCQoLBBYCAwECHgECF4AA
+	CgkQRNc6lOnPW31ybQQAxRHnANkAzIQyFa3QnHMMJqFppBpHb5/e4kYK/kyKEepk
+	1HNd8z5vK4+EzMAhqKYiGhr76J2xOaYBgXNpGaUMLaUpVVoooTnzFs16ZfowSQX5
+	TnFbFb6wlC8e6EWbvL+YoIT+MgMs7DpI2d1TAP7+xtyrBhUhYdULtppf38FpSVvO
+	jQRX0ROVAQQA1PvrbQtjwbGTZGil6CO/oAh2f7+s4p3LtM3inHIfYUkCW2Pfuc9K
+	vTm0PmCjRvj4HPN/uGvI+4YebnsPzx55UW4L8V7yRR1gq0470McTnTzrUfk5H3LT
+	MGVIgw0zJrd6J71MfPW8CPzskvtPATlILm8qNAA3JtxB4aY+4U1z5mEAEQEAAcLA
+	gwQYAQIADwUCV9ETlQIbLgUJAdqcAACoCRBE1zqU6c9bfZ0gBBkBAgAGBQJX0ROV
+	AAoJEK+0jauhp1rQUM8EALAo4U19p8PTroqTL1CoiOGeA5nD226cTw1k2EtOlpeG
+	hCFgnVaqud8Qcqjrb/Nj4r16Al6c8yKo6MHuiTcQdGLQQqtNnVG0uWqAJfWgegP7
+	6MMpon5pHhsmoHru7c62k6wVCCckcOeMYkbap/wzzrQkBKDnOgr+JZUbT98LqxdG
+	WKMEANaDkidz5EUEjbDRNMox5AKJneuJE8qVLesGMUzuLqbvfl+Tykrlymxz+fgk
+	x70Wkz1u0YYw5GuNyrA9yYUcbyux1mllBVFFJoJ7Rl29oSmZUTCxMqp8230NItpD
+	irj/IaB7HMP+QRKXvL9GvCSxRCwTxKdleGbYMbJWk36NX2gn
+	=B/u/
+	-----END PGP PUBLIC KEY BLOCK-----
+
 GET /api/v1/dashboard
 ~~~~~~~~~~~~~~~~~~~~~
 * Description: returns a status dashboard with counters of active and idle
@@ -1417,4 +1452,3 @@ Authentication with X-LOADERKEY
 X-LOADERKEY is a simple authentication method used by loader instances to authenticate
 with the API. The X-LOADERKEY header is included with the request, and is set to the loader
 key value for the requesting loader instance.
-

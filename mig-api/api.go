@@ -18,6 +18,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jvehent/cljs"
 	"mig.ninja/mig"
+	"mig.ninja/mig/pgp"
 )
 
 var ctx Context
@@ -72,6 +73,7 @@ func main() {
 	// unauthenticated endpoints
 	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")
 	s.HandleFunc("/ip", getIP).Methods("GET")
+	s.HandleFunc("/publickey/{pgp_fingerprint}", getPublicKey).Methods("GET")
 
 	// Loader manifest endpoints, use loader specific authentication on
 	// the request
@@ -436,6 +438,49 @@ func getIP(respWriter http.ResponseWriter, request *http.Request) {
 		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getIP()"}.Debug()
 	}()
 	respond(http.StatusOK, []byte(remotePublicIP(request)), respWriter, request)
+}
+
+// getPublicKey takes an pgp_fingerprint and returns corresponding publickey
+func getPublicKey(respWriter http.ResponseWriter, request *http.Request) {
+	var err error
+	opid := getOpID(request)
+	defer func() {
+		if e := recover(); e != nil {
+			emsg := fmt.Sprintf("%v", e)
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: emsg}.Err()
+			respond(http.StatusInternalServerError, emsg, respWriter, request)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getPublicKey()"}.Debug()
+	}()
+	vars := mux.Vars(request)
+	fp := vars["pgp_fingerprint"]
+
+	// retrieve the publickey
+	var inv mig.Investigator
+	if fp != "" {
+		inv, err = ctx.DB.InvestigatorByFingerprint(fp)
+		if err != nil {
+			if fmt.Sprintf("%v", err) == fmt.Sprintf("InvestigatorByFingerprint: no investigator found for fingerprint '%s'", fp) {
+				// not found, return 404
+				emsg := fmt.Sprintf("Invalid Fingerprint : No PublicKey found for fingerprint '%s'", fp)
+				respond(http.StatusNotFound, []uint8(emsg), respWriter, request)
+				return
+			} else {
+				panic(err)
+			}
+		}
+	} else {
+		// bad request, return 400
+		emsg := fmt.Sprintf("No Fingerprint specified")
+		respond(http.StatusBadRequest, []uint8(emsg), respWriter, request)
+		return
+	}
+	// fetch the armoredPubKey
+	armoredPubKey, err := pgp.ArmorPubKey(inv.PublicKey)
+	if err != nil {
+		panic(err)
+	}
+	respond(http.StatusOK, armoredPubKey, respWriter, request)
 }
 
 func getDashboard(respWriter http.ResponseWriter, request *http.Request) {
