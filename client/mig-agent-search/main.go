@@ -145,6 +145,10 @@ Command line flags:
 	if err != nil {
 		panic(err)
 	}
+	conf, err = client.ReadEnvConfiguration(conf)
+	if err != nil {
+		panic(err)
+	}
 	cli, err := client.NewClient(conf, "agent-search-"+mig.Version)
 	if err != nil {
 		panic(err)

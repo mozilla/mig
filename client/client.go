@@ -180,6 +180,23 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 	return
 }
 
+// Read any possible configuration values from the environment; currently we only
+// load a passphrase here if provided, but conf is passed/returned for any future
+// requirements to override file based configuration using environment options.
+func ReadEnvConfiguration(inconf Configuration) (conf Configuration, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("ReadEnvConfiguration() -> %v", e)
+		}
+	}()
+	conf = inconf
+	pf := os.Getenv("MIGPGPPASSPHRASE")
+	if pf != "" {
+		ClientPassphrase(pf)
+	}
+	return
+}
+
 func FindHomedir() string {
 	if os.Getenv("HOME") != "" {
 		return os.Getenv("HOME")

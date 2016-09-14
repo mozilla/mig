@@ -134,6 +134,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	conf, err = client.ReadEnvConfiguration(conf)
+	if err != nil {
+		panic(err)
+	}
 	cli, err = client.NewClient(conf, "cmd-"+mig.Version)
 	if err != nil {
 		panic(err)
