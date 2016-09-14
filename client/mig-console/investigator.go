@@ -47,7 +47,7 @@ func investigatorReader(input string, cli client.Client) (err error) {
 	for {
 		// completion, for convenience also add permission categories here
 		var symbols = []string{"details", "exit", "help", "pubkey", "r", "lastactions",
-			"setperms", "PermManifest", "PermLoader", "PermAdmin"}
+			"setperms", "setstatus", "PermManifest", "PermLoader", "PermAdmin"}
 		readline.Completer = func(query, ctx string) []string {
 			var res []string
 			for _, sym := range symbols {
