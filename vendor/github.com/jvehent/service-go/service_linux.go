@@ -370,12 +370,10 @@ exec {{.Path}}
 const systemdScript = `[Unit]
 Description={{.Description}}
 ConditionFileIsExecutable={{.Path}}
+After=network.target
 
 [Service]
-StartLimitInterval=5
-StartLimitBurst=10
 ExecStart={{.Path}}
-
 # respawn process on crash after a 3s wait
 # if fails to start 5 times within 5 minutes, stop trying
 Restart=on-failure
