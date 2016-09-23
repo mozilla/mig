@@ -52,6 +52,10 @@ usage: %s <module> <global options> <module parameters>
 		* run on local system:	 -t local
 		* use a migrc macro:     -t mymacroname
 
+-s <bool>       create and sign the action, and output the action to stdout
+                this is useful for dual-signing; the signed action can be provided
+                to another investigator for launch using the -i flag.
+
 -target-found    <action ID>
 -target-notfound <action ID>
 		targets agents that have eiher found or not found results in a previous action.
@@ -90,6 +94,7 @@ func main() {
 		a                                       mig.Action
 		migrc, show, render, target, expiration string
 		afile, targetfound, targetnotfound      string
+		signAndOutput                           bool
 		printAndExit                            bool
 		verbose, showversion                    bool
 		compressAction                          bool
@@ -113,6 +118,7 @@ func main() {
 	fs.StringVar(&targetnotfound, "target-notfound", "", "targets agents that haven't found results in a previous action.")
 	fs.StringVar(&expiration, "e", "300s", "expiration")
 	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
+	fs.BoolVar(&signAndOutput, "s", false, "Fully sign action and print to stdout, useful for dual-signing")
 	fs.BoolVar(&verbose, "v", false, "Enable verbose output")
 	fs.BoolVar(&showversion, "V", false, "Show version")
 	fs.BoolVar(&compressAction, "z", false, "Request compression of action parameters")
@@ -286,24 +292,28 @@ func main() {
 	a.Target = target
 
 	if printAndExit {
-		actionstr, err := a.IndentedString()
+		err = printActionAndExit(a)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(os.Stdout, "%v\n", actionstr)
-		os.Exit(0)
 	}
 
 readytolaunch:
-	// set the validity 60 second in the past to deal with clock skew
-	a.ValidFrom = time.Now().Add(-60 * time.Second).UTC()
-	period, err := time.ParseDuration(expiration)
-	if err != nil {
-		panic(err)
+	// Only set the action time values if they are unset, otherwise we leave what
+	// they are set to in the action file.
+	if a.ValidFrom.IsZero() {
+		// set the validity 60 second in the past to deal with clock skew
+		a.ValidFrom = time.Now().Add(-60 * time.Second).UTC()
+		period, err := time.ParseDuration(expiration)
+		if err != nil {
+			panic(err)
+		}
+		a.ExpireAfter = a.ValidFrom.Add(period)
+		// add extra 60 seconds taken for clock skew
+		a.ExpireAfter = a.ExpireAfter.Add(60 * time.Second).UTC()
+	} else {
+		fmt.Fprintf(os.Stderr, "[notice] action already had validity time period, which was left as is\n")
 	}
-	a.ExpireAfter = a.ValidFrom.Add(period)
-	// add extra 60 seconds taken for clock skew
-	a.ExpireAfter = a.ExpireAfter.Add(60 * time.Second).UTC()
 
 	a, err = cli.CompressAction(a)
 	if err != nil {
@@ -314,6 +324,14 @@ readytolaunch:
 		panic(err)
 	}
 	a = asig
+
+	// If we are in sign and output mode, print the signed action here now and just exit.
+	if signAndOutput {
+		err = printActionAndExit(a)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	// evaluate target before launch, give a change to cancel before going out to agents
 	agents, err := cli.EvaluateAgentTarget(a.Target)
@@ -354,4 +372,20 @@ printresults:
 	if err != nil {
 		panic(err)
 	}
+}
+
+// Print action a to stdout and exit if successful, otherwise returns an error
+func printActionAndExit(a mig.Action) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("printAndExit() -> %v", e)
+		}
+	}()
+	actionstr, err := a.IndentedString()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Fprintf(os.Stdout, "%v\n", actionstr)
+	os.Exit(0)
+	return
 }
