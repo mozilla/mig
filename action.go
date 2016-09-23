@@ -305,8 +305,17 @@ func (a Action) VerifySignatures(keyring io.Reader) (err error) {
 	if err != nil {
 		return errors.New("Failed to stringify action")
 	}
+	// Create a copy of the keyring we can use during validation of each
+	// signature. We don't want to use the keyring reader directly as it is
+	// backed by a buffer and will be drained after verification of the first
+	// signature.
+	keycopy, err := ioutil.ReadAll(keyring)
+	if err != nil {
+		panic(err)
+	}
 	for _, sig := range a.PGPSignatures {
-		valid, _, err := pgp.Verify(astr, sig, keyring)
+		keyrdr := bytes.NewBuffer(keycopy)
+		valid, _, err := pgp.Verify(astr, sig, keyrdr)
 		if err != nil {
 			return errors.New("Failed to verify PGP Signature")
 		}
@@ -342,10 +351,27 @@ func (a Action) VerifyACL(acl ACL, keyring io.Reader) (err error) {
 	if err != nil {
 		return errors.New("Failed to stringify action")
 	}
+	// Create a copy of the keyring we can use during validation of each
+	// signature. We don't want to use the keyring reader directly as it is
+	// backed by a buffer and will be drained after verification of the first
+	// signature.
+	keycopy, err := ioutil.ReadAll(keyring)
+	if err != nil {
+		panic(err)
+	}
 	for _, sig := range a.PGPSignatures {
-		fp, err := pgp.GetFingerprintFromSignature(astr, sig, keyring)
+		keyrdr := bytes.NewBuffer(keycopy)
+		fp, err := pgp.GetFingerprintFromSignature(astr, sig, keyrdr)
 		if err != nil {
 			return fmt.Errorf("Failed to retrieve fingerprint from signatures: %v", err)
+		}
+		// Make sure this key fingerprint is not already present; the API prevents
+		// submission of signatures from the same fingerprint but this is a second
+		// check.
+		for _, cfp := range fingerprints {
+			if cfp == fp {
+				return fmt.Errorf("Duplicate fingerprint: %v", fp)
+			}
 		}
 		fingerprints = append(fingerprints, fp)
 	}
