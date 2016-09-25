@@ -28,13 +28,21 @@ func verifyPermission(operation Operation, permName string, perm Permission, fin
 		return fmt.Errorf("Invalid permission '%s'. Must require at least 1 signature, has %d",
 			permName, perm[permName].MinimumWeight)
 	}
+	var seenFp []string
 	signaturesWeight := 0
 	for _, fp := range fingerprints {
+		// if the same key is used to sign multiple times, return an error
+		for _, seen := range seenFp {
+			if seen == fp {
+				return fmt.Errorf("Permission violation: key id '%s' used to sign multiple times.", fp)
+			}
+		}
 		for _, signer := range perm[permName].Investigators {
 			if strings.ToUpper(fp) == strings.ToUpper(signer.Fingerprint) {
 				signaturesWeight += signer.Weight
 			}
 		}
+		seenFp = append(seenFp, fp)
 	}
 	if signaturesWeight < perm[permName].MinimumWeight {
 		return fmt.Errorf("Permission denied for operation '%s'. Insufficient signatures weight. Need %d, got %d",
