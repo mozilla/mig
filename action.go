@@ -365,14 +365,6 @@ func (a Action) VerifyACL(acl ACL, keyring io.Reader) (err error) {
 		if err != nil {
 			return fmt.Errorf("Failed to retrieve fingerprint from signatures: %v", err)
 		}
-		// Make sure this key fingerprint is not already present; the API prevents
-		// submission of signatures from the same fingerprint but this is a second
-		// check.
-		for _, cfp := range fingerprints {
-			if cfp == fp {
-				return fmt.Errorf("Duplicate fingerprint: %v", fp)
-			}
-		}
 		fingerprints = append(fingerprints, fp)
 	}
 
