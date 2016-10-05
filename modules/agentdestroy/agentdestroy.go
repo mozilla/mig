@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/osext"
-	"io"
 	"mig.ninja/mig/modules"
 	"os"
 	"os/exec"
@@ -65,7 +64,11 @@ func (r *run) ValidateParameters() (err error) {
 	return
 }
 
-func (r *run) Run(in io.Reader) (out string) {
+func (r *run) IsPersistent() bool {
+	return false
+}
+
+func (r *run) Run(in modules.ModuleInput) (out string) {
 	defer func() {
 		if e := recover(); e != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))
@@ -75,7 +78,7 @@ func (r *run) Run(in io.Reader) (out string) {
 		}
 	}()
 	// read module parameters from stdin
-	err := modules.ReadInputParameters(in, &r.Parameters)
+	err := in.ReadInputParameters(&r.Parameters)
 	if err != nil {
 		panic(err)
 	}

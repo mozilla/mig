@@ -244,7 +244,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		out := run.(modules.Runner).Run(bytes.NewBuffer(msg))
+		out := run.(modules.Runner).Run(modules.NewModuleInput(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			panic("got empty results, run failed")
 		}

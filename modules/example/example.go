@@ -90,7 +90,7 @@ func (r *run) ValidateParameters() (err error) {
 // Run *must* be implemented by a module. Its the function that executes the module.
 // It must return a string of marshalled json that contains the results from the module.
 // The code below provides a base module skeleton that can be reused in all modules.
-func (r *run) Run(in io.Reader) (out string) {
+func (r *run) Run(in modules.ModuleInput) (out string) {
 	// a good way to handle execution failures is to catch panics and store
 	// the panicked error into modules.Results.Errors, marshal that, and output
 	// the JSON string back to the caller
@@ -104,7 +104,7 @@ func (r *run) Run(in io.Reader) (out string) {
 	}()
 
 	// read module parameters from stdin
-	err := modules.ReadInputParameters(in, &r.Parameters)
+	err := in.ReadInputParameters(&r.Parameters)
 	if err != nil {
 		panic(err)
 	}

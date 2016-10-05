@@ -17,7 +17,6 @@ import (
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
-	"io"
 	"mig.ninja/mig/modules"
 	"net"
 	"os"
@@ -62,7 +61,11 @@ const (
 	E_Timeout     = "connection timed out"
 )
 
-func (r *run) Run(in io.Reader) (out string) {
+func (r *run) IsPersistent() bool {
+	return false
+}
+
+func (r *run) Run(in modules.ModuleInput) (out string) {
 	var (
 		err error
 		el  elements
@@ -75,7 +78,7 @@ func (r *run) Run(in io.Reader) (out string) {
 			out = string(buf[:])
 		}
 	}()
-	err = modules.ReadInputParameters(in, &r.Parameters)
+	err = in.ReadInputParameters(&r.Parameters)
 	if err != nil {
 		panic(err)
 	}

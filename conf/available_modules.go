@@ -7,6 +7,7 @@ package main
 
 import (
 	_ "mig.ninja/mig/modules/agentdestroy"
+	_ "mig.ninja/mig/modules/examplepersistent"
 	_ "mig.ninja/mig/modules/file"
 	_ "mig.ninja/mig/modules/memory"
 	_ "mig.ninja/mig/modules/netstat"
