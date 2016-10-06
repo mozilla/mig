@@ -653,7 +653,11 @@ var stats statistics
 
 var walkingErrors []string
 
-func (r *run) Run(in io.Reader) (resStr string) {
+func (r *run) IsPersistent() bool {
+	return false
+}
+
+func (r *run) Run(in modules.ModuleInput) (resStr string) {
 	var (
 		roots     []string
 		traversed []string
@@ -674,7 +678,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 		}
 	}()
 	t0 := time.Now()
-	err := modules.ReadInputParameters(in, &r.Parameters)
+	err := in.ReadInputParameters(&r.Parameters)
 	if err != nil {
 		panic(err)
 	}

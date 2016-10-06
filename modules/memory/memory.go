@@ -19,7 +19,6 @@ import (
 	"github.com/mozilla/masche/listlibs"
 	"github.com/mozilla/masche/memaccess"
 	"github.com/mozilla/masche/process"
-	"io"
 	"mig.ninja/mig/modules"
 	"regexp"
 	"time"
@@ -302,7 +301,11 @@ func validateBytes(bytes string) error {
 	return nil
 }
 
-func (r *run) Run(in io.Reader) (out string) {
+func (r *run) IsPersistent() bool {
+	return false
+}
+
+func (r *run) Run(in modules.ModuleInput) (out string) {
 	var ts statistics
 	stats = ts
 	// in debug mode, we just panic
@@ -321,7 +324,7 @@ func (r *run) Run(in io.Reader) (out string) {
 		}()
 	}
 	t0 := time.Now()
-	err := modules.ReadInputParameters(in, &r.Parameters)
+	err := in.ReadInputParameters(&r.Parameters)
 	if err != nil {
 		panic(err)
 	}

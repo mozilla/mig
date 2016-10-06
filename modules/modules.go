@@ -61,8 +61,9 @@ type Result struct {
 
 // Runner provides the interface to an execution of a module
 type Runner interface {
-	Run(io.Reader) string
+	Run(ModuleInput) string
 	ValidateParameters() error
+	IsPersistent() bool
 }
 
 // MakeMessage creates a new modules.Message with a given class and parameters and
@@ -100,6 +101,63 @@ func MakeMessage(class MessageClass, params interface{}, comp bool) (rawMsg []by
 		}
 	}
 	rawMsg, err = json.Marshal(msg)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+// Create a new ModuleInput structure used to interface between the MIG
+// agent and a module during the course of the modules lifetime.
+func NewModuleInput(fd io.Reader) (ret ModuleInput) {
+	ret.InputChan = make(chan Message, 0)
+	go ret.startReading(fd)
+	return
+}
+
+// ModuleInput describes the data structure used to pass information into
+// a module. The agent will generally call NewModuleInput and pass this
+// object into the runner Run() function for the module, which will provide
+// a method for the module to read input.
+type ModuleInput struct {
+	InputChan chan Message
+}
+
+// Retrieve a buffered message the agent has submitted to the module.
+func (mi *ModuleInput) getMessage() Message {
+	return <-mi.InputChan
+}
+
+// Initializes reading data from the io.Reader r; in the case of MIG
+// modules this is usually stdin. This function is executed in NewModuleInput()
+// and feeds InputChan with messages as they come in from the agent.
+func (mi *ModuleInput) startReading(r io.Reader) {
+	for {
+		m, err := ReadInput(r)
+		if err != nil {
+			return
+		}
+		mi.InputChan <- m
+	}
+}
+
+// ReadInputParameters reads the first line from ModuleInput and expects to
+// find a modules.Message of class `parameters`.
+func (mi *ModuleInput) ReadInputParameters(p interface{}) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("ReadInputParameters() -> %v", e)
+		}
+	}()
+	msg := mi.getMessage()
+	if msg.Class != MsgClassParameters {
+		panic("unexpected input is not module parameters")
+	}
+	rawParams, err := json.Marshal(msg.Parameters)
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(rawParams, p)
 	if err != nil {
 		panic(err)
 	}

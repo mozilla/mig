@@ -16,7 +16,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"mig.ninja/mig/modules"
 	"net"
 	"os"
@@ -79,7 +78,11 @@ func (r *run) ValidateParameters() (err error) {
 	return err
 }
 
-func (r *run) Run(in io.Reader) (out string) {
+func (r *run) IsPersistent() bool {
+	return false
+}
+
+func (r *run) Run(in modules.ModuleInput) (out string) {
 	var (
 		stats   statistics
 		el      elements
@@ -98,7 +101,7 @@ func (r *run) Run(in io.Reader) (out string) {
 	}()
 	el.LocalTime = time.Now().Format(time.RFC3339Nano)
 	t1 := time.Now()
-	err := modules.ReadInputParameters(in, &r.Parameters)
+	err := in.ReadInputParameters(&r.Parameters)
 	if err != nil {
 		panic(err)
 	}

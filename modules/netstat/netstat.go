@@ -12,7 +12,6 @@ package netstat /* import "mig.ninja/mig/modules/netstat" */
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"regexp"
 	"strconv"
@@ -167,7 +166,11 @@ func validatePort(val string) error {
 	return nil
 }
 
-func (r *run) Run(in io.Reader) (resStr string) {
+func (r *run) IsPersistent() bool {
+	return false
+}
+
+func (r *run) Run(in modules.ModuleInput) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
@@ -181,7 +184,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	t0 := time.Now()
 
 	// read module parameters from stdin
-	err := modules.ReadInputParameters(in, &r.Parameters)
+	err := in.ReadInputParameters(&r.Parameters)
 	if err != nil {
 		panic(err)
 	}

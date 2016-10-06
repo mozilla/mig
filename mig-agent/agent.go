@@ -15,7 +15,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -236,7 +235,7 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 	}
 	// instantiate and call module
 	run := modules.Available[mode].NewRun()
-	out = run.Run(infd)
+	out = run.Run(modules.NewModuleInput(infd))
 
 	// if enhanced privacy mode has been requested, apply it to the result set
 	// if the module supports it
@@ -582,119 +581,6 @@ func parseCommands(ctx *Context, msg []byte) (err error) {
 	// start the goroutine that will receive the results
 	go receiveModuleResults(ctx, cmd, resultChan, opsCounter)
 
-	return
-}
-
-// runModule is a generic module launcher that takes an operation and calls
-// the mig-agent binary with the proper module parameters. It sets a timeout on
-// execution and kills the module if needed. On success, it stores the output from
-// the module in a moduleResult struct and passes it along to the function that aggregates
-// all results
-func runModule(ctx *Context, op moduleOp) (err error) {
-	var result moduleResult
-	result.id = op.id
-	result.position = op.position
-	defer func() {
-		if e := recover(); e != nil {
-			// if running the module failed, store the error in the module result
-			// and sets the status to failed before passing the results along
-			err = fmt.Errorf("runModule() -> %v", e)
-			result.err = err
-			result.status = mig.StatusFailed
-		}
-		// upon exit, remove the op from the running Ops
-		delete(runningOps, op.id)
-		// whatever happens, always send the results
-		op.resultChan <- result
-		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "leaving runModule()"}.Debug()
-	}()
-
-	ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: fmt.Sprintf("executing module %q", op.mode)}.Debug()
-	// waiter is a channel that receives a message when the timeout expires
-	waiter := make(chan error, 1)
-	var out bytes.Buffer
-
-	// calculate the max exec time by taking the smallest duration between the expiration date
-	// sent with the command, and the default MODULETIMEOUT value from the agent configuration
-	execTimeOut := MODULETIMEOUT
-	if op.expireafter.Before(time.Now().Add(MODULETIMEOUT)) {
-		execTimeOut = op.expireafter.Sub(time.Now())
-	}
-
-	// Build parameters message
-	modParams, err := modules.MakeMessage(modules.MsgClassParameters, op.params, op.isCompressed)
-	if err != nil {
-		panic(err)
-	}
-
-	// build the command line and execute
-	cmd := exec.Command(ctx.Agent.BinPath, "-m", strings.ToLower(op.mode))
-	stdinpipe, err := cmd.StdinPipe()
-	if err != nil {
-		panic(err)
-	}
-	cmd.Stdout = &out
-	if err := cmd.Start(); err != nil {
-		panic(err)
-	}
-
-	// Spawn a goroutine to write the parameter data to stdin of the module
-	// if required. Doing this in a goroutine ensures the timeout logic
-	// later in this function will fire if for some reason the module does
-	// not drain the pipe, and the agent ends up blocking on Write().
-	go func() {
-		left := len(modParams)
-		for left > 0 {
-			nb, err := stdinpipe.Write(modParams)
-			if err != nil {
-				stdinpipe.Close()
-				return
-			}
-			left -= nb
-			modParams = modParams[nb:]
-		}
-		stdinpipe.Close()
-	}()
-
-	// launch the waiter in a separate goroutine
-	go func() {
-		waiter <- cmd.Wait()
-	}()
-
-	select {
-
-	// Timeout case: command has reached timeout, kill it
-	case <-time.After(execTimeOut):
-		ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command timed out. Killing it."}.Err()
-
-		// update the command status and send the response back
-		result.status = mig.StatusTimeout
-
-		// kill the command
-		err := cmd.Process.Kill()
-		if err != nil {
-			panic(err)
-		}
-		<-waiter // allow goroutine to exit
-
-	// Normal exit case: command has run successfully
-	case err := <-waiter:
-		if err != nil {
-			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command failed."}.Err()
-			panic(err)
-
-		} else {
-			ctx.Channels.Log <- mig.Log{OpID: op.id, Desc: "command done."}
-			err = json.Unmarshal(out.Bytes(), &result.output)
-			if err != nil {
-				panic(err)
-			}
-			// mark command status as successfully completed
-			result.status = mig.StatusSuccess
-		}
-	}
-	// return executes the defer block at the top of the function, which passes module result
-	// into the result channel
 	return
 }
 
