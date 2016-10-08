@@ -9,6 +9,10 @@ If you're new to Mozilla, you may find the [Contributing to the Mozilla
 codebase](https://developer.mozilla.org/en-US/docs/Introduction) page on MDN
 full of interesting information.
 
+## Looking for a place to start?
+
+Take a look at the list of [issues labelled "up for grabs"](https://github.com/mozilla/mig/issues?q=is%3Aopen+is%3Aissue+label%3Aup-for-grabs) and pick you that interests you. If you want more information, ping "alm" and "ulfr" on the #mig IRC channel on irc.mozilla.org.
+
 ## Coding guidelines
 
 * Commits must be prefixed with one of the following tag:
