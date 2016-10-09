@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"net"
 	"path"
-	"time"
 )
 
 var ModuleRunDir string
@@ -238,7 +237,6 @@ func WatchForStop(r io.Reader, stopChan *chan bool) error {
 }
 
 func DefaultPersistHandlers(in io.ReadCloser, out io.WriteCloser, logch chan string) {
-	time.Sleep(10 * time.Second)
 	inChan := make(chan Message, 0)
 	go func() {
 		for {
