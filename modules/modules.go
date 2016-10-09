@@ -19,7 +19,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
+	"path"
+	"time"
 )
+
+var ModuleRunDir string
 
 // Message defines the input messages received by modules.
 type Message struct {
@@ -32,7 +37,13 @@ type MessageClass string
 const (
 	MsgClassParameters MessageClass = "parameters"
 	MsgClassStop       MessageClass = "stop"
+	MsgClassPing       MessageClass = "ping"
+	MsgClassLog        MessageClass = "log"
 )
+
+type LogParams struct {
+	Message string `json:"message"`
+}
 
 // Result implement the base type for results returned by modules.
 // All modules must return this type of result. The fields are:
@@ -63,6 +74,13 @@ type Result struct {
 type Runner interface {
 	Run(io.Reader) string
 	ValidateParameters() error
+}
+
+// PersistRunner provides the interface to execution of a persistent module. All
+// modules will satisfy Runner. Persistent modules will satisfy both Runner and
+// PersistRunner.
+type PersistRunner interface {
+	RunPersist(io.ReadCloser, io.WriteCloser)
 }
 
 // MakeMessage creates a new modules.Message with a given class and parameters and
@@ -100,6 +118,21 @@ func MakeMessage(class MessageClass, params interface{}, comp bool) (rawMsg []by
 		}
 	}
 	rawMsg, err = json.Marshal(msg)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+func MakeMessageLog(f string, args ...interface{}) (rawMsg []byte, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("Failed to make module log message: %v", e)
+		}
+	}()
+	param := LogParams{Message: fmt.Sprintf(f, args...)}
+	msg := Message{Class: MsgClassLog, Parameters: param}
+	rawMsg, err = json.Marshal(&msg)
 	if err != nil {
 		panic(err)
 	}
@@ -169,6 +202,26 @@ func ReadInputParameters(r io.Reader, p interface{}) (err error) {
 	return
 }
 
+func WriteOutput(buf []byte, w io.Writer) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("WriteOutput() -> %v", e)
+		}
+	}()
+	// Since our output is line delimited, add a newline
+	buf = append(buf, '\n')
+	left := len(buf)
+	for left > 0 {
+		nb, err := w.Write(buf)
+		if err != nil {
+			return err
+		}
+		left -= nb
+		buf = buf[nb:]
+	}
+	return
+}
+
 // WatchForStop continuously reads stdin for a stop message. When one is received,
 // `true` is sent into the stop channel.
 func WatchForStop(r io.Reader, stopChan *chan bool) error {
@@ -182,6 +235,107 @@ func WatchForStop(r io.Reader, stopChan *chan bool) error {
 			return nil
 		}
 	}
+}
+
+func DefaultPersistHandlers(in io.ReadCloser, out io.WriteCloser, logch chan string) {
+	time.Sleep(10 * time.Second)
+	inChan := make(chan Message, 0)
+	go func() {
+		for {
+			msg, err := ReadInput(in)
+			if err != nil {
+				close(inChan)
+				break
+			}
+			inChan <- msg
+		}
+	}()
+	for {
+		failed := false
+
+		select {
+		case s := <-logch:
+			logmsg, err := MakeMessageLog("%v", s)
+			if err != nil {
+				failed = true
+				break
+			}
+			err = WriteOutput(logmsg, out)
+			if err != nil {
+				failed = true
+				break
+			}
+		case msg, ok := <-inChan:
+			if !ok {
+				failed = true
+				break
+			}
+			switch msg.Class {
+			case "ping":
+				buf, err := json.Marshal(&msg)
+				if err != nil {
+					failed = true
+					break
+				}
+				err = WriteOutput(buf, out)
+				if err != nil {
+					failed = true
+					break
+				}
+			}
+		}
+
+		if failed {
+			break
+		}
+	}
+}
+
+func HandlePersistRequest(l net.Listener, f func(interface{}) string) {
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			panic(err)
+		}
+		go func() {
+			var p interface{}
+			err = ReadInputParameters(conn, &p)
+			if err != nil {
+				panic(err)
+			}
+			resp := f(p)
+			WriteOutput([]byte(resp), conn)
+			err = conn.Close()
+			if err != nil {
+				panic(err)
+			}
+		}()
+	}
+}
+
+func SendPersistRequest(p interface{}, modname string) string {
+	conn, err := net.Dial("unix", PersistSockPath(modname))
+	if err != nil {
+		panic(err)
+	}
+	buf, err := MakeMessage(MsgClassParameters, p, false)
+	if err != nil {
+		panic(err)
+	}
+	err = WriteOutput(buf, conn)
+	if err != nil {
+		panic(err)
+	}
+	rb, err := ioutil.ReadAll(conn)
+	if err != nil {
+		panic(err)
+	}
+	return string(rb)
+}
+
+func PersistSockPath(modname string) string {
+	sname := fmt.Sprintf("persist-%v.sock", modname)
+	return path.Join(ModuleRunDir, sname)
 }
 
 // HasResultsPrinter implements functions used by module to print information

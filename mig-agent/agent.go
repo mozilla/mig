@@ -22,6 +22,7 @@ import (
 	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
+	"mig.ninja/mig/mig-agent/agentcontext"
 	"mig.ninja/mig/modules"
 )
 
@@ -34,6 +35,7 @@ var publication sync.Mutex
 type runtimeOptions struct {
 	debug       bool
 	mode        string
+	persistmode string
 	file        string
 	config      string
 	query       string
@@ -86,6 +88,7 @@ func main() {
 	flag.BoolVar(&runOpt.foreground, "f", false, "Agent will fork into background by default. Except if this flag is set.")
 	flag.BoolVar(&runOpt.upgrading, "u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
 	flag.BoolVar(&runOpt.pretty, "p", false, "When running a module, pretty print the results instead of returning JSON.")
+	flag.StringVar(&runOpt.persistmode, "P", "", "Run persistent module.")
 	flag.BoolVar(&runOpt.showversion, "V", false, "Print Agent version to stdout and exit.")
 
 	flag.Parse()
@@ -130,9 +133,16 @@ func main() {
 		LOGGINGCONF.Mode = "stdout"
 	}
 
+	// Tell the modules subsystem what our rundir is, needed to ensure persistent
+	// modules can determine the request socket path
+	modules.ModuleRunDir = agentcontext.GetRunDir()
+
 	// if checkin mode is set in conf, enforce the mode
 	if CHECKIN && runOpt.mode == "agent" {
 		runOpt.mode = "agent-checkin"
+	}
+	if runOpt.persistmode != "" {
+		runOpt.mode = "persist"
 	}
 	// run the agent in the correct mode. the default is to call a module.
 	switch runOpt.mode {
@@ -160,6 +170,8 @@ func main() {
 				panic(err)
 			}
 		}
+	case "persist":
+		runModulePersist(runOpt.persistmode)
 	default:
 		fmt.Printf("%s", runModuleDirectly(runOpt.mode, nil, runOpt.pretty))
 	}
@@ -281,6 +293,20 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 	return
 }
 
+func runModulePersist(mode string) {
+	mod, ok := modules.Available[mode]
+	if !ok {
+		// XXX Should write a valid error message back to the agent here.
+		return
+	}
+	prun, ok := mod.NewRun().(modules.PersistRunner)
+	if !ok {
+		fmt.Printf("module %v does not support persistence\n", mode)
+		return
+	}
+	prun.RunPersist(os.Stdin, os.Stdout)
+}
+
 // runAgentCheckin is the one-off startup function for agent mode, where the
 // agent shuts itself down after running outstanding commands
 func runAgentCheckin(runOpt runtimeOptions) (err error) {
@@ -377,6 +403,12 @@ func runAgent(runOpt runtimeOptions) (err error) {
 	go getCommands(&ctx)
 
 	err = startRoutines(&ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// Initialize any persistent modules
+	err = startPersist(&ctx)
 	if err != nil {
 		panic(err)
 	}
