@@ -20,3 +20,4 @@ tmp/
 .builddir/
 workers/*/*.html
 modules/*/*.html
+tools/vagrant/.vagrant
