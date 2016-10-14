@@ -39,6 +39,10 @@ var CHECKIN = false
 // but not much else.
 var EXTRAPRIVACYMODE = false
 
+// spawn persistent modules; if enabled in the built-in config this can be
+// disabled at run-time using a config option or command line flag
+var SPAWNPERSISTENT = true
+
 // how often the agent will refresh its environment. if 0 agent
 // will only update environment at initialization.
 var REFRESHENV time.Duration = 0

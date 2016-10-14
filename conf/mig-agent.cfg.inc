@@ -48,6 +48,9 @@
     ; it. the default is off.
     ; extraprivacymode = off
 
+    ; if true, persistent modules will not be executed by the agent
+    ; nopersistmods = off
+
 [certs]
     ca  = "/path/to/ca/cert"
     cert= "/path/to/client/cert"

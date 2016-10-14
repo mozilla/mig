@@ -33,16 +33,17 @@ var publication sync.Mutex
 // Agent runtime options; stores command line flags used when the agent was
 // executed.
 type runtimeOptions struct {
-	debug       bool
-	mode        string
-	persistmode string
-	file        string
-	config      string
-	query       string
-	foreground  bool
-	upgrading   bool
-	pretty      bool
-	showversion bool
+	debug        bool
+	mode         string
+	persistmode  string
+	file         string
+	config       string
+	query        string
+	foreground   bool
+	upgrading    bool
+	pretty       bool
+	showversion  bool
+	norunpersist bool
 }
 
 type moduleResult struct {
@@ -89,6 +90,7 @@ func main() {
 	flag.BoolVar(&runOpt.upgrading, "u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
 	flag.BoolVar(&runOpt.pretty, "p", false, "When running a module, pretty print the results instead of returning JSON.")
 	flag.StringVar(&runOpt.persistmode, "P", "", "Run persistent module.")
+	flag.BoolVar(&runOpt.norunpersist, "n", false, "Force disable persistent modules.")
 	flag.BoolVar(&runOpt.showversion, "V", false, "Print Agent version to stdout and exit.")
 
 	flag.Parse()
@@ -136,6 +138,11 @@ func main() {
 	// Tell the modules subsystem what our rundir is, needed to ensure persistent
 	// modules can determine the request socket path
 	modules.ModuleRunDir = agentcontext.GetRunDir()
+
+	// See if we should disable persistent modules
+	if runOpt.norunpersist {
+		SPAWNPERSISTENT = false
+	}
 
 	// if checkin mode is set in conf, enforce the mode
 	if CHECKIN && runOpt.mode == "agent" {
@@ -408,9 +415,11 @@ func runAgent(runOpt runtimeOptions) (err error) {
 	}
 
 	// Initialize any persistent modules
-	err = startPersist(&ctx)
-	if err != nil {
-		panic(err)
+	if SPAWNPERSISTENT {
+		err = startPersist(&ctx)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	ctx.Agent.Lock()
