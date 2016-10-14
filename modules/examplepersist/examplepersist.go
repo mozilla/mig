@@ -43,6 +43,7 @@ func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 }
 
 var logChan chan string
+var handlerErrChan chan error
 
 func runSomeTasks() {
 	for {
@@ -84,17 +85,23 @@ func requestHandler(p interface{}) (ret string) {
 
 func (r *run) RunPersist(in io.ReadCloser, out io.WriteCloser) {
 	// Create a string channel, used to send log messages up to the agent
-	// from the module tasks
+	// from the module tasks. Functions in the persistent module can
+	// log messages through the agent by writing to this channel.
 	logChan = make(chan string, 64)
-	// Start up an example background task
+	// Create an error channel we will pass to the handlers. Writing an
+	// error to this channel will cause DefaultPersistHandlers() to return
+	// and the module to exit.
+	handlerErrChan = make(chan error, 64)
+	// Start up an example background task we want our module to run
+	// continuously.
 	go runSomeTasks()
 	_ = os.Remove(modules.PersistSockPath("examplepersist"))
 	l, err := net.Listen("unix", modules.PersistSockPath("examplepersist"))
 	if err != nil {
 		panic(err)
 	}
-	go modules.HandlePersistRequest(l, requestHandler)
-	modules.DefaultPersistHandlers(in, out, logChan)
+	go modules.HandlePersistRequest(l, requestHandler, handlerErrChan)
+	modules.DefaultPersistHandlers(in, out, logChan, handlerErrChan)
 }
 
 func (r *run) Run(in io.Reader) (resStr string) {
