@@ -12,11 +12,41 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
 )
+
+type persistModuleRegister struct {
+	modules map[string]*string
+	sync.Mutex
+}
+
+func (p *persistModuleRegister) get(modname string) (string, error) {
+	p.Lock()
+	defer p.Unlock()
+	sv, ok := p.modules[modname]
+	if !ok || sv == nil {
+		return "", fmt.Errorf("module %v is not registered", modname)
+	}
+	return *sv, nil
+}
+
+func (p *persistModuleRegister) register(modname string, spec string) {
+	p.Lock()
+	defer p.Unlock()
+	p.modules[modname] = &spec
+}
+
+func (p *persistModuleRegister) remove(modname string) {
+	p.Lock()
+	defer p.Unlock()
+	p.modules[modname] = nil
+}
+
+var persistModRegister persistModuleRegister
 
 func startPersist(ctx *Context) (err error) {
 	defer func() {
@@ -25,6 +55,8 @@ func startPersist(ctx *Context) (err error) {
 		}
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "initializing any persistent modules"}.Debug()
+
+	persistModRegister.modules = make(map[string]*string)
 
 	for k, v := range modules.Available {
 		if _, ok := v.NewRun().(modules.PersistRunner); ok {
@@ -114,6 +146,7 @@ func managePersistModule(ctx *Context, name string) {
 				err = cmd.Wait()
 				logfunc("module is down, %v", err)
 				isRunning = false
+				persistModRegister.remove(name)
 				failDelay = true
 				break
 			}
@@ -133,6 +166,20 @@ func managePersistModule(ctx *Context, name string) {
 					break
 				}
 				logfunc("(module log) %v", lp.Message)
+			case modules.MsgClassRegister:
+				var rp modules.RegParams
+				buf, err := json.Marshal(msg.Parameters)
+				if err != nil {
+					logfunc("%v", err)
+					break
+				}
+				err = json.Unmarshal(buf, &rp)
+				if err != nil {
+					logfunc("%v", err)
+					break
+				}
+				persistModRegister.register(name, rp.SockPath)
+				logfunc("module has registered at %v", rp.SockPath)
 			default:
 				logfunc("unknown message class")
 				killModule = true
@@ -158,6 +205,7 @@ func managePersistModule(ctx *Context, name string) {
 			if err != nil {
 				logfunc("ping failed, %v", err)
 				isRunning = false
+				persistModRegister.remove(name)
 				failDelay = true
 				break
 			}
@@ -174,6 +222,7 @@ func managePersistModule(ctx *Context, name string) {
 			}
 			_ = cmd.Wait()
 			isRunning = false
+			persistModRegister.remove(name)
 			failDelay = true
 			killModule = false
 		}

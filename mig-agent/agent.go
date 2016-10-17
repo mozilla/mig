@@ -668,6 +668,29 @@ func runModule(ctx *Context, op moduleOp) (err error) {
 		panic(err)
 	}
 
+	// If the module we are querying is a persistent module, we will want to add the registered
+	// socket path for the module to the message to indicate where it should be queried.
+	mod, ok := modules.Available[op.mode]
+	if !ok {
+		err = fmt.Errorf("module %v is not available", op.mode)
+		panic(err)
+	}
+	if _, ok := mod.NewRun().(modules.PersistRunner); ok {
+		var tm modules.Message
+		err = json.Unmarshal(modParams, &tm)
+		if err != nil {
+			panic(err)
+		}
+		tm.PersistSock, err = persistModRegister.get(op.mode)
+		if err != nil {
+			panic(err)
+		}
+		modParams, err = json.Marshal(&tm)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	// build the command line and execute
 	cmd := exec.Command(ctx.Agent.BinPath, "-m", strings.ToLower(op.mode))
 	stdinpipe, err := cmd.StdinPipe()

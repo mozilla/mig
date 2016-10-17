@@ -22,6 +22,8 @@ import (
 	"net"
 	"os"
 	"path"
+	"runtime"
+	"strings"
 	"time"
 )
 
@@ -29,8 +31,9 @@ var ModuleRunDir string
 
 // Message defines the input messages received by modules.
 type Message struct {
-	Class      MessageClass `json:"class"`                // represent the type of message being passed to the module
-	Parameters interface{}  `json:"parameters,omitempty"` // for `parameters` class, this interface contains the module parameters
+	Class       MessageClass `json:"class"`                // represent the type of message being passed to the module
+	Parameters  interface{}  `json:"parameters,omitempty"` // for `parameters` class, this interface contains the module parameters
+	PersistSock string       `json:"persistsock,omitempty"`
 }
 
 type MessageClass string
@@ -40,10 +43,15 @@ const (
 	MsgClassStop       MessageClass = "stop"
 	MsgClassPing       MessageClass = "ping"
 	MsgClassLog        MessageClass = "log"
+	MsgClassRegister   MessageClass = "register"
 )
 
 type LogParams struct {
 	Message string `json:"message"`
+}
+
+type RegParams struct {
+	SockPath string `json:"sockpath"`
 }
 
 // Result implement the base type for results returned by modules.
@@ -136,6 +144,17 @@ func MakeMessageLog(f string, args ...interface{}) (rawMsg []byte, err error) {
 	return
 }
 
+func MakeMessageRegister(spec string) (rawMsg []byte, err error) {
+	param := RegParams{SockPath: spec}
+	msg := Message{Class: MsgClassRegister, Parameters: param}
+	rawMsg, err = json.Marshal(&msg)
+	if err != nil {
+		err = fmt.Errorf("Failed to make module register message: %v", err)
+		return
+	}
+	return
+}
+
 // Keep reading until we get a full line or an error, and return
 func readInputLine(rdr *bufio.Reader) ([]byte, error) {
 	var ret []byte
@@ -199,6 +218,38 @@ func ReadInputParameters(r io.Reader, p interface{}) (err error) {
 	return
 }
 
+// ReadPersistInputParameters performs the same function as ReadInputParameters
+// however it also validates a socket path has been specified to query the
+// persistent module, returning an error if this is not present. Populates
+// p and also returns the socket path.
+func ReadPersistInputParameters(r io.Reader, p interface{}) (spath string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("ReadPersistInputParameters() -> %v", e)
+		}
+	}()
+	msg, err := ReadInput(r)
+	if err != nil {
+		panic(err)
+	}
+	if msg.Class != MsgClassParameters {
+		panic("unexpected input is not module parameters")
+	}
+	if msg.PersistSock == "" {
+		panic("no persistsock set in message")
+	}
+	spath = msg.PersistSock
+	rawParams, err := json.Marshal(msg.Parameters)
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(rawParams, p)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
 func WriteOutput(buf []byte, w io.Writer) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -235,7 +286,7 @@ func WatchForStop(r io.Reader, stopChan *chan bool) error {
 }
 
 func DefaultPersistHandlers(in io.ReadCloser, out io.WriteCloser, logch chan string,
-	errch chan error) {
+	errch chan error, regch chan string) {
 	inChan := make(chan Message, 0)
 	go func() {
 		for {
@@ -273,6 +324,17 @@ func DefaultPersistHandlers(in io.ReadCloser, out io.WriteCloser, logch chan str
 				break
 			}
 			err = WriteOutput(logmsg, out)
+			if err != nil {
+				failed = true
+				break
+			}
+		case r := <-regch:
+			regmsg, err := MakeMessageRegister(r)
+			if err != nil {
+				failed = true
+				break
+			}
+			err = WriteOutput(regmsg, out)
 			if err != nil {
 				failed = true
 				break
@@ -328,7 +390,7 @@ func HandlePersistRequest(l net.Listener, f func(interface{}) string, errch chan
 	}
 }
 
-func SendPersistRequest(p interface{}, modname string) (res string) {
+func SendPersistRequest(p interface{}, sockspec string) (res string) {
 	defer func() {
 		// If something goes wrong here we will want to format and
 		// return the result an a Result type, with the error
@@ -341,7 +403,31 @@ func SendPersistRequest(p interface{}, modname string) (res string) {
 			res = string(resbuf)
 		}
 	}()
-	conn, err := net.Dial("unix", PersistSockPath(modname))
+	var (
+		fam     string
+		address string
+	)
+	args := strings.Split(sockspec, ":")
+	if len(args) < 1 || len(args) > 3 {
+		panic("invalid socket specification for request")
+	}
+	switch args[0] {
+	case "unix":
+		if len(args) != 2 {
+			panic("invalid socket specification for unix connection")
+		}
+		fam = "unix"
+		address = args[1]
+	case "tcp":
+		if len(args) != 3 {
+			panic("invalid socket specification for tcp connection")
+		}
+		fam = "tcp"
+		address = strings.Join(args[1:], ":")
+	default:
+		panic("socket specification had invalid address family")
+	}
+	conn, err := net.Dial(fam, address)
 	if err != nil {
 		panic(err)
 	}
@@ -361,9 +447,18 @@ func SendPersistRequest(p interface{}, modname string) (res string) {
 	return
 }
 
-func PersistSockPath(modname string) string {
-	sname := fmt.Sprintf("persist-%v.sock", modname)
-	return path.Join(ModuleRunDir, sname)
+func GetPersistListener(modname string) (l net.Listener, specname string, err error) {
+	switch runtime.GOOS {
+	case "darwin", "linux":
+		sname := fmt.Sprintf("persist-%v.sock", modname)
+		spath := path.Join(ModuleRunDir, sname)
+		specname = "unix:" + spath
+		_ = os.Remove(spath)
+		l, err = net.Listen("unix", spath)
+		return
+	}
+	err = fmt.Errorf("persistent listener not available for this platform")
+	return
 }
 
 // HasResultsPrinter implements functions used by module to print information

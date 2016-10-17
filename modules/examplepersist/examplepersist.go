@@ -10,8 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
-	"os"
 	"runtime"
 	"time"
 
@@ -88,6 +86,14 @@ func (r *run) RunPersist(in io.ReadCloser, out io.WriteCloser) {
 	// from the module tasks. Functions in the persistent module can
 	// log messages through the agent by writing to this channel.
 	logChan = make(chan string, 64)
+	// Create a string channel used to send registration messages up to the
+	// agent. We will pass our persistent module query socket location
+	// through this channel after we have initialized it, so the agent knows
+	// where we are listening.
+	//
+	// This string will be "protocol:address", so for example it could be
+	// "unix:/var/lib/mig/mysock.sock", or "tcp:127.0.0.1:55000" (as examples)
+	regChan := make(chan string, 64)
 	// Create an error channel we will pass to the handlers. Writing an
 	// error to this channel will cause DefaultPersistHandlers() to return
 	// and the module to exit.
@@ -95,13 +101,15 @@ func (r *run) RunPersist(in io.ReadCloser, out io.WriteCloser) {
 	// Start up an example background task we want our module to run
 	// continuously.
 	go runSomeTasks()
-	_ = os.Remove(modules.PersistSockPath("examplepersist"))
-	l, err := net.Listen("unix", modules.PersistSockPath("examplepersist"))
+	l, spec, err := modules.GetPersistListener("examplepersist")
 	if err != nil {
-		panic(err)
+		handlerErrChan <- err
+	} else {
+		// We know our listener location, send it to the agent
+		regChan <- spec
 	}
 	go modules.HandlePersistRequest(l, requestHandler, handlerErrChan)
-	modules.DefaultPersistHandlers(in, out, logChan, handlerErrChan)
+	modules.DefaultPersistHandlers(in, out, logChan, handlerErrChan, regChan)
 }
 
 func (r *run) Run(in io.Reader) (resStr string) {
@@ -121,7 +129,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	runtime.GOMAXPROCS(1)
 
 	// Read module parameters from stdin
-	err := modules.ReadInputParameters(in, &r.Parameters)
+	sockspec, err := modules.ReadPersistInputParameters(in, &r.Parameters)
 	if err != nil {
 		panic(err)
 	}
@@ -130,7 +138,7 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	if err != nil {
 		panic(err)
 	}
-	resStr = modules.SendPersistRequest(r.Parameters, "examplepersist")
+	resStr = modules.SendPersistRequest(r.Parameters, sockspec)
 	return
 }
 
