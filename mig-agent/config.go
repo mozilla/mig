@@ -31,6 +31,7 @@ type config struct {
 		ModuleTimeout    string
 		Api              string
 		RefreshEnv       string
+		NoPersistMods    bool
 		ExtraPrivacyMode bool
 	}
 	Certs struct {
@@ -97,5 +98,8 @@ func configLoad(path string) (err error) {
 	AGENTKEY = agentkey
 	REFRESHENV = refreshenv
 	EXTRAPRIVACYMODE = config.Agent.ExtraPrivacyMode
+	if config.Agent.NoPersistMods {
+		SPAWNPERSISTENT = false
+	}
 	return
 }

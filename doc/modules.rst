@@ -20,6 +20,31 @@ base, and only imported during compilation of the agent. Go does not provide a
 way to load modules dynamically, so modules are compiled into the agent's static
 binary, and not as separate files.
 
+There are two types of modules. Standard modules, which were the initial module
+type supported by MIG, and persistent modules.
+
+A standard module is invoked by the agent when it recieves by a command, and the
+results provided by this module can be considered point in time. It does not keep
+any state between runs, and is used for general investigation activities. Some
+examples of standard modules include the ``file`` module for scanning the file
+system for certain criteria, or the ``netstat`` module for looking at current
+network communication.
+
+A persistent module is run by the agent when it starts, and can perform more
+on-going tasks or analysis activities. Persistent modules are kept running by
+the agent. Persistent modules can be queried just like standard modules, but
+instead of a one-time invocation of the module, when the investigator queries
+a persistent module you are querying into the already running module. This can
+be used to collect statistics or results, change the behavior of the persistent
+module, or various other activities.
+
+Persistent modules are developed in a similar manner to standard modules with a
+few additions. This discusses elements that are common to all modules. For details
+specific to the implementation of persistent modules see the `persistent module`_
+documentation.
+
+.. _`persistent module`: modulespersist.rst
+
 Module logic
 ============
 

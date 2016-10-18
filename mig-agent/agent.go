@@ -22,6 +22,7 @@ import (
 	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
+	"mig.ninja/mig/mig-agent/agentcontext"
 	"mig.ninja/mig/modules"
 )
 
@@ -32,15 +33,17 @@ var publication sync.Mutex
 // Agent runtime options; stores command line flags used when the agent was
 // executed.
 type runtimeOptions struct {
-	debug       bool
-	mode        string
-	file        string
-	config      string
-	query       string
-	foreground  bool
-	upgrading   bool
-	pretty      bool
-	showversion bool
+	debug        bool
+	mode         string
+	persistmode  string
+	file         string
+	config       string
+	query        string
+	foreground   bool
+	upgrading    bool
+	pretty       bool
+	showversion  bool
+	norunpersist bool
 }
 
 type moduleResult struct {
@@ -86,6 +89,8 @@ func main() {
 	flag.BoolVar(&runOpt.foreground, "f", false, "Agent will fork into background by default. Except if this flag is set.")
 	flag.BoolVar(&runOpt.upgrading, "u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
 	flag.BoolVar(&runOpt.pretty, "p", false, "When running a module, pretty print the results instead of returning JSON.")
+	flag.StringVar(&runOpt.persistmode, "P", "", "Run persistent module.")
+	flag.BoolVar(&runOpt.norunpersist, "n", false, "Force disable persistent modules.")
 	flag.BoolVar(&runOpt.showversion, "V", false, "Print Agent version to stdout and exit.")
 
 	flag.Parse()
@@ -130,9 +135,21 @@ func main() {
 		LOGGINGCONF.Mode = "stdout"
 	}
 
+	// Tell the modules subsystem what our rundir is, needed to ensure persistent
+	// modules can determine the request socket path
+	modules.ModuleRunDir = agentcontext.GetRunDir()
+
+	// See if we should disable persistent modules
+	if runOpt.norunpersist {
+		SPAWNPERSISTENT = false
+	}
+
 	// if checkin mode is set in conf, enforce the mode
 	if CHECKIN && runOpt.mode == "agent" {
 		runOpt.mode = "agent-checkin"
+	}
+	if runOpt.persistmode != "" {
+		runOpt.mode = "persist"
 	}
 	// run the agent in the correct mode. the default is to call a module.
 	switch runOpt.mode {
@@ -160,6 +177,8 @@ func main() {
 				panic(err)
 			}
 		}
+	case "persist":
+		runModulePersist(runOpt.persistmode)
 	default:
 		fmt.Printf("%s", runModuleDirectly(runOpt.mode, nil, runOpt.pretty))
 	}
@@ -281,6 +300,42 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 	return
 }
 
+// Used by the agent to run a module persistently, for example if the -P flag is given to
+// mig-agent. Calls into the modules RunPersist() function and typically does not return
+// unless the module is being shut down.
+func runModulePersist(mode string) {
+	var (
+		em     modules.Message
+		lparam modules.LogParams
+	)
+	// We will communicate any errors here back to the agent using a log message, since
+	// that is what is used for status communication between agents and persistent modules.
+	em.Class = modules.MsgClassLog
+	mod, ok := modules.Available[mode]
+	if !ok {
+		lparam.Message = fmt.Sprintf("module %q is not available", mode)
+		em.Parameters = lparam
+		buf, err := json.Marshal(&em)
+		if err != nil {
+			return
+		}
+		fmt.Fprint(os.Stdout, string(buf))
+		return
+	}
+	prun, ok := mod.NewRun().(modules.PersistRunner)
+	if !ok {
+		lparam.Message = fmt.Sprintf("module %q does not support persistence", mode)
+		em.Parameters = lparam
+		buf, err := json.Marshal(&em)
+		if err != nil {
+			return
+		}
+		fmt.Fprint(os.Stdout, string(buf))
+		return
+	}
+	prun.RunPersist(os.Stdin, os.Stdout)
+}
+
 // runAgentCheckin is the one-off startup function for agent mode, where the
 // agent shuts itself down after running outstanding commands
 func runAgentCheckin(runOpt runtimeOptions) (err error) {
@@ -379,6 +434,14 @@ func runAgent(runOpt runtimeOptions) (err error) {
 	err = startRoutines(&ctx)
 	if err != nil {
 		panic(err)
+	}
+
+	// Initialize any persistent modules
+	if SPAWNPERSISTENT {
+		err = startPersist(&ctx)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	ctx.Agent.Lock()
@@ -625,6 +688,29 @@ func runModule(ctx *Context, op moduleOp) (err error) {
 	modParams, err := modules.MakeMessage(modules.MsgClassParameters, op.params, op.isCompressed)
 	if err != nil {
 		panic(err)
+	}
+
+	// If the module we are querying is a persistent module, we will want to add the registered
+	// socket path for the module to the message to indicate where it should be queried.
+	mod, ok := modules.Available[op.mode]
+	if !ok {
+		err = fmt.Errorf("module %v is not available", op.mode)
+		panic(err)
+	}
+	if _, ok := mod.NewRun().(modules.PersistRunner); ok {
+		var tm modules.Message
+		err = json.Unmarshal(modParams, &tm)
+		if err != nil {
+			panic(err)
+		}
+		tm.PersistSock, err = persistModRegister.get(op.mode)
+		if err != nil {
+			panic(err)
+		}
+		modParams, err = json.Marshal(&tm)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// build the command line and execute
