@@ -300,15 +300,37 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 	return
 }
 
+// Used by the agent to run a module persistently, for example if the -P flag is given to
+// mig-agent. Calls into the modules RunPersist() function and typically does not return
+// unless the module is being shut down.
 func runModulePersist(mode string) {
+	var (
+		em     modules.Message
+		lparam modules.LogParams
+	)
+	// We will communicate any errors here back to the agent using a log message, since
+	// that is what is used for status communication between agents and persistent modules.
+	em.Class = modules.MsgClassLog
 	mod, ok := modules.Available[mode]
 	if !ok {
-		// XXX Should write a valid error message back to the agent here.
+		lparam.Message = fmt.Sprintf("module %q is not available", mode)
+		em.Parameters = lparam
+		buf, err := json.Marshal(&em)
+		if err != nil {
+			return
+		}
+		fmt.Fprint(os.Stdout, string(buf))
 		return
 	}
 	prun, ok := mod.NewRun().(modules.PersistRunner)
 	if !ok {
-		fmt.Printf("module %v does not support persistence\n", mode)
+		lparam.Message = fmt.Sprintf("module %q does not support persistence", mode)
+		em.Parameters = lparam
+		buf, err := json.Marshal(&em)
+		if err != nil {
+			return
+		}
+		fmt.Fprint(os.Stdout, string(buf))
 		return
 	}
 	prun.RunPersist(os.Stdin, os.Stdout)

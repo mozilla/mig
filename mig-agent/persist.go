@@ -19,11 +19,25 @@ import (
 	"mig.ninja/mig/modules"
 )
 
+// persistModuleRegister maintains a map of the running persistent modules, and
+// any socket specification registered for that module.
+//
+// Socket specifications tell the mig-agent how it should query a running
+// persistent module. The specification indicates where a running persistent
+// module has registered as listening.
+//
+// Socket specifications are format "family:address". For example, for a UNIX
+// domain socket, you might have "unix:/var/lib/mig/mymodule.sock" registered
+// for mymodule.
+//
+// For platforms that do not support domain sockets, the network can be used in
+// which case you might have something like "tcp:127.0.0.1:55000".
 type persistModuleRegister struct {
 	modules map[string]*string
 	sync.Mutex
 }
 
+// Get a socket specification registered for a given persistent module
 func (p *persistModuleRegister) get(modname string) (string, error) {
 	p.Lock()
 	defer p.Unlock()
@@ -34,12 +48,14 @@ func (p *persistModuleRegister) get(modname string) (string, error) {
 	return *sv, nil
 }
 
+// Register a socket specification for persistent module modname
 func (p *persistModuleRegister) register(modname string, spec string) {
 	p.Lock()
 	defer p.Unlock()
 	p.modules[modname] = &spec
 }
 
+// Remove a socket specification for a persistent module
 func (p *persistModuleRegister) remove(modname string) {
 	p.Lock()
 	defer p.Unlock()
@@ -48,6 +64,7 @@ func (p *persistModuleRegister) remove(modname string) {
 
 var persistModRegister persistModuleRegister
 
+// Start all the persistent modules available to the agent.
 func startPersist(ctx *Context) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -69,12 +86,15 @@ func startPersist(ctx *Context) (err error) {
 	return
 }
 
+// Starts a given persistent module.
 func startPersistModule(ctx *Context, name string) (err error) {
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("starting persistent module %v", name)}.Info()
 	go managePersistModule(ctx, name)
 	return
 }
 
+// Persistent module management function used in the agent. For each persistent module
+// the agent is running, this function will execute in a go-routine.
 func managePersistModule(ctx *Context, name string) {
 	var (
 		cmd        *exec.Cmd

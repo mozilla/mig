@@ -6,6 +6,18 @@
 
 package examplepersist /* import "mig.ninja/mig/modules/examplepersist" */
 
+// This is an example persistent module that provides a basic template that
+// can be used to create one.
+//
+// A persistent module will run continuously and be supervised by the main
+// agent process. When an investigator queries the persistent module, the
+// query is sent to the persistent module over the socket it has registered
+// as listening on.
+//
+// A lot of the concepts found in standard modules apply here, the primary
+// differences between a standard module and a persistent module are documented
+// in this code.
+
 import (
 	"encoding/json"
 	"fmt"
@@ -32,6 +44,8 @@ type run struct {
 	Results    modules.Result
 }
 
+// A persistent module is still queryable by an investigator and can return results,
+// we have similar results creation functions here.
 func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 	r.Success = true
 	r.Elements = e
@@ -40,9 +54,18 @@ func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 	return
 }
 
+// The log channel can be used by functions in the persistent module to send a log
+// message up to the agent, where it is logged in the agent's log.
 var logChan chan string
+
+// The error channel can be used to indicate something went wrong in the module by
+// writing an error to it. This will result in the modules default handler function
+// returning and the module exiting.
 var handlerErrChan chan error
 
+// An example background task the module will execute while it is being supervised by
+// the agent. This example just logs the current time up to the agent every 30
+// seconds.
 func runSomeTasks() {
 	for {
 		time.Sleep(time.Second * 30)
@@ -51,6 +74,11 @@ func runSomeTasks() {
 	}
 }
 
+// The request handler here would essentially be what you would find in the Run
+// function of a standard module. Parameters enter this routine, where they are processed
+// by the module and a result string is returned.
+//
+// The request handler is set as part of module initialization in the RunPersist function.
 func requestHandler(p interface{}) (ret string) {
 	var results modules.Result
 	defer func() {
@@ -62,7 +90,8 @@ func requestHandler(p interface{}) (ret string) {
 			return
 		}
 	}()
-	// Marshal and unmarshal the parameters into the type we want
+	// Marshal and unmarshal the parameters into the type we want; p is our
+	// incoming request parameters.
 	param := Parameters{}
 	buf, err := json.Marshal(p)
 	if err != nil {
@@ -81,6 +110,10 @@ func requestHandler(p interface{}) (ret string) {
 	return string(resp)
 }
 
+// RunPersist is the function used to initialize the persistent component
+// of the module. It should not return. In this example, we do our initialization
+// and call modules.DefaultPersistHandlers, which looks after handling all
+// persistent module management processes on the module side.
 func (r *run) RunPersist(in io.ReadCloser, out io.WriteCloser) {
 	// Create a string channel, used to send log messages up to the agent
 	// from the module tasks. Functions in the persistent module can
@@ -101,17 +134,23 @@ func (r *run) RunPersist(in io.ReadCloser, out io.WriteCloser) {
 	// Start up an example background task we want our module to run
 	// continuously.
 	go runSomeTasks()
+	// Get our listener we will listen for queries from the agent on.
 	l, spec, err := modules.GetPersistListener("examplepersist")
 	if err != nil {
 		handlerErrChan <- err
 	} else {
-		// We know our listener location, send it to the agent
+		// We know our listener location, send it to the agent, this registers
+		// us and allows queries from an investigator to make it to the module.
 		regChan <- spec
 	}
+	// Spawn the request handler; this will route new requests to requstHandler.
 	go modules.HandlePersistRequest(l, requestHandler, handlerErrChan)
+	// Finally, enter the standard module management function. This will not return
+	// unless an error occurs.
 	modules.DefaultPersistHandlers(in, out, logChan, handlerErrChan, regChan)
 }
 
+// Module Run function, used to make queries using the module.
 func (r *run) Run(in io.Reader) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -128,7 +167,9 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	// into a more generic agent module function at some point.
 	runtime.GOMAXPROCS(1)
 
-	// Read module parameters from stdin
+	// Read module parameters from stdin. Note we use ReadPersistInputParameters here
+	// as the socket path is being sent as well, and the function needs this to know
+	// where to query the persistent module.
 	sockspec, err := modules.ReadPersistInputParameters(in, &r.Parameters)
 	if err != nil {
 		panic(err)
@@ -138,6 +179,10 @@ func (r *run) Run(in io.Reader) (resStr string) {
 	if err != nil {
 		panic(err)
 	}
+	// With a standard module, we'd process the request and return the results here.
+	// Since this is a persistent module, we want to forward the parameters the
+	// investigator provided to the module which has been running persistently. We
+	// forward the request on to the listening socket and return the results.
 	resStr = modules.SendPersistRequest(r.Parameters, sockspec)
 	return
 }

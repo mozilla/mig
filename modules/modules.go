@@ -30,10 +30,15 @@ import (
 var ModuleRunDir string
 
 // Message defines the input messages received by modules.
+//
+// All messages will have Class and Parameters set. PersistSock is used in a case
+// where a parameters message is being sent for a persistent module. In this case,
+// PersistSock will contain the socket specification the module has registered as
+// listening on.
 type Message struct {
-	Class       MessageClass `json:"class"`                // represent the type of message being passed to the module
-	Parameters  interface{}  `json:"parameters,omitempty"` // for `parameters` class, this interface contains the module parameters
-	PersistSock string       `json:"persistsock,omitempty"`
+	Class       MessageClass `json:"class"`                 // represent the type of message being passed to the module
+	Parameters  interface{}  `json:"parameters,omitempty"`  // for `parameters` class, this interface contains the module parameters
+	PersistSock string       `json:"persistsock,omitempty"` // Persistent module socket path if required
 }
 
 type MessageClass string
@@ -46,10 +51,12 @@ const (
 	MsgClassRegister   MessageClass = "register"
 )
 
+// Parameter format expected for a log message
 type LogParams struct {
 	Message string `json:"message"`
 }
 
+// Parameter format expected for a register message
 type RegParams struct {
 	SockPath string `json:"sockpath"`
 }
@@ -133,6 +140,7 @@ func MakeMessage(class MessageClass, params interface{}, comp bool) (rawMsg []by
 	return
 }
 
+// MakeMessageLog creates a new message of class log.
 func MakeMessageLog(f string, args ...interface{}) (rawMsg []byte, err error) {
 	param := LogParams{Message: fmt.Sprintf(f, args...)}
 	msg := Message{Class: MsgClassLog, Parameters: param}
@@ -144,6 +152,7 @@ func MakeMessageLog(f string, args ...interface{}) (rawMsg []byte, err error) {
 	return
 }
 
+// Creates a new message of class register.
 func MakeMessageRegister(spec string) (rawMsg []byte, err error) {
 	param := RegParams{SockPath: spec}
 	msg := Message{Class: MsgClassRegister, Parameters: param}
@@ -250,6 +259,9 @@ func ReadPersistInputParameters(r io.Reader, p interface{}) (spath string, err e
 	return
 }
 
+// Write output in buf to writer w. buf is expected to contain a single line
+// of data, and a line feed is appended to terminate the line as module IO is
+// line delimited.
 func WriteOutput(buf []byte, w io.Writer) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -285,6 +297,9 @@ func WatchForStop(r io.Reader, stopChan *chan bool) error {
 	}
 }
 
+// A general management function that can be called by persistent modules from the
+// RunPersist function. Looks after replying to ping messages, writing logs, and other
+// communication between the agent and the running persistent module.
 func DefaultPersistHandlers(in io.ReadCloser, out io.WriteCloser, logch chan string,
 	errch chan error, regch chan string) {
 	inChan := make(chan Message, 0)
@@ -365,6 +380,9 @@ func DefaultPersistHandlers(in io.ReadCloser, out io.WriteCloser, logch chan str
 	}
 }
 
+// Request handler that can be called from RunPersist in a persistent module. Looks
+// after accepting incoming requests to listener l, and routing the requests to the
+// registered incoming request handler f.
 func HandlePersistRequest(l net.Listener, f func(interface{}) string, errch chan error) {
 	for {
 		conn, err := l.Accept()
@@ -390,6 +408,9 @@ func HandlePersistRequest(l net.Listener, f func(interface{}) string, errch chan
 	}
 }
 
+// Sends the parameters in p as a request to a persistent module listening at socket
+// specification sockspec; would typically be used in the Run() function of a
+// persistent module.
 func SendPersistRequest(p interface{}, sockspec string) (res string) {
 	defer func() {
 		// If something goes wrong here we will want to format and
@@ -447,6 +468,8 @@ func SendPersistRequest(p interface{}, sockspec string) (res string) {
 	return
 }
 
+// Get a listener for a persistent module that is appropriate for the platform type, returns
+// the listener itself in addition to the socket specification that should be registered.
 func GetPersistListener(modname string) (l net.Listener, specname string, err error) {
 	switch runtime.GOOS {
 	case "darwin", "linux":
