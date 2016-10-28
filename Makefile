@@ -14,6 +14,25 @@ else
 	BINSUFFIX := ""
 endif
 
+# These variables control signature operations used when building various
+# targets on OSX.
+#
+# OSXPROCSIGID if set will result in the specified identity being used to
+# sign the mig-agent and mig-loader binaries when built on OSX. If empty,
+# the compiled binaries will not be signed.
+#
+# OSXPACKSIGID if set will result in the specified identify being used to
+# sign the mig-loader package (osx-loader-pkg). If empty the .pkg will not
+# be signed.
+#
+# This uses the signature related options to pkgbuild and codesign
+#
+# https://developer.apple.com/library/content/technotes/tn2206/_index.html
+# https://developer.apple.com/developer-id/
+#
+OSXPROCSIGID?=
+OSXPACKSIGID?=
+
 # Ensure these are set if building client packages so signing works
 #
 # RPM signatures require configuration for rpmsign, see the rpm-clients
@@ -26,7 +45,7 @@ CSIG_DEB_USER=
 
 # Supported OSes: linux darwin windows
 # Supported ARCHes: 386 amd64
-OS			:= $(shell uname -s| tr '[:upper:]' '[:lower:]')
+OS		:= $(shell uname -s| tr '[:upper:]' '[:lower:]')
 ARCH		:= amd64
 
 ifeq ($(ARCH),amd64)
@@ -50,7 +69,16 @@ LDFLAGS		:=
 GOOPTS		:=
 GO 			:= GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
 GOGETTER	:= GOPATH=$(shell pwd)/.tmpdeps go get -d
-GOLDFLAGS	:= -ldflags "-X mig.ninja/mig.Version=$(BUILDREV)"
+MIGVERFLAGS	:= -X mig.ninja/mig.Version=$(BUILDREV)
+# If code signing is enabled for OSX binaries, pass the -s flag during linking
+# otherwise the signed binary will not execute correctly
+# https://github.com/golang/go/issues/11887
+ifneq ($(OSXPROCSIGID),)
+ifeq ($(OS),darwin)
+	STRIPOPT := -s
+endif
+endif
+GOLDFLAGS	:= -ldflags "$(MIGVERFLAGS) $(STRIPOPT)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install
@@ -70,7 +98,12 @@ mig-agent: create-bindir
 	if [ $(AGTCONF) != "conf/mig-agent-conf.go.inc" ]; then rm mig-agent/configuration.go; cp $(AGTCONF) mig-agent/configuration.go; fi
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
-	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] && echo SUCCESS && exit 0
+	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] || (echo FAILED && false)
+	# If our build target is darwin and OSXPROCSIGID is set, sign the binary
+	if [ $(OS) == "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
+		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX); \
+	fi
+	@echo SUCCESS
 
 mig-scheduler: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig.ninja/mig/mig-scheduler
@@ -90,6 +123,9 @@ mig-loader: create-bindir
 	# and if so, replace the link to the default configuration with the provided configuration
 	if [ $(LOADERCONF) != "conf/mig-loader-conf.go.inc" ]; then rm mig-loader/configuration.go; cp $(LOADERCONF) mig-loader/configuration.go; fi
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader $(GOLDFLAGS) mig.ninja/mig/mig-loader
+	if [ $(OS) == "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
+		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-loader; \
+	fi
 
 mig-action-verifier: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
@@ -331,21 +367,25 @@ install-client:
 	$(INSTALL) -m 0755 $(BINDIR)/mig-console $(PREFIX)/bin/mig-console
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-search $(PREFIX)/bin/mig-agent-search
 
-osx-loader-pkg:
+osx-loader-pkg: mig-loader
+ifneq ($(OSXPACKSIGID),)
+	$(eval SIGNFLAGS:=--sign "$(OSXPACKSIGID)")
+endif
 	tmpdir=$$(mktemp -d) && \
-	       scriptstmp=$$(mktemp -d) && \
-	       $(INSTALL) -m 0755 -d $${tmpdir}/usr/local/bin && \
-	       $(INSTALL) -m 0750 -d $${tmpdir}/etc/mig && \
-	       $(INSTALL) -m 0755 -d $${tmpdir}/Library/LaunchAgents && \
-	       $(INSTALL) -m 0755 $(BINDIR)/mig-loader $${tmpdir}/usr/local/bin/mig-loader && \
-	       touch $${tmpdir}/etc/mig/mig-loader.key && \
-	       $(INSTALL) -m 0755 tools/osx-loader-pkg-postinstall.sh $${scriptstmp}/postinstall && \
-	       pkgbuild --root $${tmpdir} --identifier org.mozilla.mig-loader --version $(BUILDREV) \
-	       --ownership recommended --scripts $${scriptstmp} \
-	       $(SIGNFLAGS) \
-	       ./mig-loader-$(BUILDREV)-darwin-$(ARCH).pkg && \
-	       rm -rf $${tmpdir} && \
-	       rm -rf $${scriptstmp}
+		scriptstmp=$$(mktemp -d) && \
+		echo $$signflags && \
+		$(INSTALL) -m 0755 -d $${tmpdir}/usr/local/bin && \
+		$(INSTALL) -m 0750 -d $${tmpdir}/etc/mig && \
+		$(INSTALL) -m 0755 -d $${tmpdir}/Library/LaunchAgents && \
+		$(INSTALL) -m 0755 $(BINDIR)/mig-loader $${tmpdir}/usr/local/bin/mig-loader && \
+		touch $${tmpdir}/etc/mig/mig-loader.key && \
+		$(INSTALL) -m 0755 tools/osx-loader-pkg-postinstall.sh $${scriptstmp}/postinstall && \
+		pkgbuild --root $${tmpdir} --identifier org.mozilla.mig-loader --version $(BUILDREV) \
+		--ownership recommended --scripts $${scriptstmp} \
+		$(SIGNFLAGS) \
+		./mig-loader-$(BUILDREV)-darwin-$(ARCH).pkg && \
+		rm -rf $${tmpdir} && \
+		rm -rf $${scriptstmp}
 
 doc:
 	make -C doc doc
