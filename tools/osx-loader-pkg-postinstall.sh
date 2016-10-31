@@ -9,13 +9,21 @@ chk() {
 	return 1
 }
 
+defanswer=""
+if [[ -r "$loaderkeyfile" ]]; then
+	buf=`head -1 $loaderkeyfile | xargs echo -n`
+	if [[ ! -z "$buf" ]]; then
+		defanswer=$buf
+	fi
+fi
+
 cnt=0
 buf=$(osascript << EOF
 set tries to 0
 repeat
 	set done to false
 	repeat 1 times
-		display dialog "Please enter MIG registration token" default answer ""
+		display dialog "Please enter MIG registration token" default answer "$defanswer"
 		set ret to text returned of result
 		set keylen to length of ret
 		set valid to "0" = (do shell script ¬
