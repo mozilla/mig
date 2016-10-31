@@ -100,7 +100,7 @@ mig-agent: create-bindir
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] || (echo FAILED && false)
 	# If our build target is darwin and OSXPROCSIGID is set, sign the binary
-	if [ $(OS) == "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
+	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX); \
 	fi
 	@echo SUCCESS
@@ -123,7 +123,7 @@ mig-loader: create-bindir
 	# and if so, replace the link to the default configuration with the provided configuration
 	if [ $(LOADERCONF) != "conf/mig-loader-conf.go.inc" ]; then rm mig-loader/configuration.go; cp $(LOADERCONF) mig-loader/configuration.go; fi
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader $(GOLDFLAGS) mig.ninja/mig/mig-loader
-	if [ $(OS) == "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
+	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-loader; \
 	fi
 
