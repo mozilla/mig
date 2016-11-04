@@ -86,7 +86,7 @@ MIG was recently presented at the SANS DFIR Summit in Austin, Tx. You can watch 
 Discussion
 ----------
 Join **#mig** on [irc.mozilla.org](https://wiki.mozilla.org/IRC) (use a web
-client such as [mibbit](https://chat.mibbit.com) ).
+client such as [mibbit](https://chat.mibbit.com)).
 
 We also have a [public mailing list at list@mig.ninja](http://list.mig.ninja/listinfo/list).
 
