@@ -268,6 +268,8 @@ cat > ~/.migrc << EOF
 [gpg]
     home = "$HOME/.mig/"
     keyid = "$keyid"
+[targets]
+    macro = all:status='online'
 EOF
 
 echo -e "\n---- Creating investigator $(whoami) in database\n"
