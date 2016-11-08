@@ -46,10 +46,11 @@ type Client struct {
 
 // Configuration stores the live configuration and global parameters of a client
 type Configuration struct {
-	API     ApiConf    // location of the MIG API
-	Homedir string     // location of the user's home directory
-	GPG     GpgConf    // location of the user's secring
-	Targets TargetConf // Target macro specification
+	API      ApiConf      // location of the MIG API
+	Homedir  string       // location of the user's home directory
+	GPG      GpgConf      // location of the user's secring
+	Targets  TargetConf   // Target macro specification
+	Terminal TerminalConf // Terminal configuration
 }
 
 type ApiConf struct {
@@ -65,6 +66,28 @@ type GpgConf struct {
 type TargetConf struct {
 	Macro  []string
 	macros map[string]string
+}
+
+type TerminalConf struct {
+	Color bool
+}
+
+//Used for color print in terminal base on color flag
+//in configuration file
+func (clr TerminalConf) Printf(c string, s string, a ...interface{}) {
+	if clr.Color {
+		fmt.Printf("\x1b["+c+"m"+s+"\x1b[0m", a...)
+	} else {
+		fmt.Printf(s, a...)
+	}
+}
+
+func (clr TerminalConf) Fprintf(w io.Writer, c string, s string, a ...interface{}) {
+	if clr.Color {
+		fmt.Fprintf(w, "\x1b["+c+"m"+s+"\x1b[0m", a...)
+	} else {
+		fmt.Fprintf(w, s, a...)
+	}
 }
 
 // Used by the macro parser to add processed target macros to the client
@@ -283,6 +306,7 @@ func MakeConfiguration(file string) (err error) {
 	}
 	fmt.Fprintf(fd, "[api]\n\turl = \"%s\"\n", cfg.API.URL)
 	fmt.Fprintf(fd, "[gpg]\n\thome = \"%s\"\n\tkeyid = \"%s\"\n", cfg.GPG.Home, cfg.GPG.KeyID)
+	fmt.Fprintf(fd, "[TerminalConf]\n\tcolor = off\n")
 	fd.Close()
 	fmt.Println("MIG client configuration generated at", file)
 	return

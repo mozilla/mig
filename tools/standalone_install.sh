@@ -268,6 +268,8 @@ cat > ~/.migrc << EOF
 [gpg]
     home = "$HOME/.mig/"
     keyid = "$keyid"
+[Terminal]
+    color = off
 EOF
 
 echo -e "\n---- Creating investigator $(whoami) in database\n"

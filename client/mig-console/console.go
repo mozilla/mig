@@ -53,19 +53,6 @@ func main() {
 	}
 	defer out.Close()
 
-	fmt.Fprintf(out, "\x1b[32;1m"+banner+"\x1b[0m")
-
-	// append a space after completion
-	readline.CompletionAppendChar = 0x20
-	// load history
-	historyfile := homedir + "/.mig_history"
-	fi, err := os.Stat(historyfile)
-	if err == nil && fi.Size() > 0 {
-		err = readline.LoadHistory(historyfile)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to load history from %s\n", historyfile)
-		}
-	}
 	// instanciate an API client
 	conf, err := client.ReadConfiguration(*config)
 	if err != nil {
@@ -82,6 +69,22 @@ func main() {
 	if *verbose {
 		cli.EnableDebug()
 	}
+
+	Terminal := cli.Conf.Terminal
+
+	Terminal.Fprintf(out, "32;1", banner)
+	// append a space after completion
+	readline.CompletionAppendChar = 0x20
+	// load history
+	historyfile := homedir + "/.mig_history"
+	fi, err := os.Stat(historyfile)
+	if err == nil && fi.Size() > 0 {
+		err = readline.LoadHistory(historyfile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to load history from %s\n", historyfile)
+		}
+	}
+
 	// print platform status
 	err = printStatus(cli)
 	if err != nil {
