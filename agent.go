@@ -46,6 +46,7 @@ type AgentEnv struct {
 	Addresses []string    `json:"addresses,omitempty"`
 	PublicIP  string      `json:"publicip,omitempty"`
 	AWS       AgentEnvAWS `json:"aws,omitempty"`
+	Modules   []string    `json:"modules,omitempty"`
 }
 
 // Stores AWS specific agent environment values

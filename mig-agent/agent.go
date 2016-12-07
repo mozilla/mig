@@ -871,7 +871,7 @@ func sendResults(ctx *Context, result mig.Command) (err error) {
 	return
 }
 
-// hearbeat will send heartbeats messages to the scheduler at regular intervals
+// heartbeat will send heartbeats messages to the scheduler at regular intervals
 // and also store that heartbeat on disc
 func heartbeat(ctx *Context) (err error) {
 	// loop forever

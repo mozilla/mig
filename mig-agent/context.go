@@ -27,6 +27,7 @@ import (
 	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
+	"mig.ninja/mig/modules"
 	"mig.ninja/mig/mig-agent/agentcontext"
 )
 
@@ -177,6 +178,14 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	// Do initial assignment of values which could change over the lifetime
 	// of the agent process
 	ctx.updateVolatileFromAgentContext(actx)
+
+	// Add the list of available modules to the agent's environment struct
+	// This list will not change while the process is running
+	var mlist []string
+	for key := range modules.Available {
+		mlist = append(mlist, key)
+	}
+	ctx.Agent.Env.Modules = mlist
 
 	// Set some other values obtained from the agent context which will not
 	// change while the process is running.
