@@ -49,6 +49,7 @@ const (
 	MsgClassPing       MessageClass = "ping"
 	MsgClassLog        MessageClass = "log"
 	MsgClassRegister   MessageClass = "register"
+	MsgClassConfig     MessageClass = "config"
 )
 
 // Parameter format expected for a log message
@@ -59,6 +60,10 @@ type LogParams struct {
 // Parameter format expected for a register message
 type RegParams struct {
 	SockPath string `json:"sockpath"`
+}
+
+type ConfigParams struct {
+	Config interface{} `json:"config"`
 }
 
 // Result implement the base type for results returned by modules.
@@ -97,6 +102,7 @@ type Runner interface {
 // PersistRunner.
 type PersistRunner interface {
 	RunPersist(ModuleReader, ModuleWriter)
+	PersistModConfig() interface{}
 }
 
 // ModuleReader is used to read module communications. It's intent is to
@@ -188,6 +194,18 @@ func MakeMessageRegister(spec string) (rawMsg []byte, err error) {
 	rawMsg, err = json.Marshal(&msg)
 	if err != nil {
 		err = fmt.Errorf("Failed to make module register message: %v", err)
+		return
+	}
+	return
+}
+
+// Creates a new message of class config.
+func MakeMessageConfig(cfgdata interface{}) (rawMsg []byte, err error) {
+	param := ConfigParams{Config: cfgdata}
+	msg := Message{Class: MsgClassConfig, Parameters: param}
+	rawMsg, err = json.Marshal(&msg)
+	if err != nil {
+		err = fmt.Errorf("Failed to make module config message: %v", err)
 		return
 	}
 	return
@@ -329,7 +347,7 @@ func WatchForStop(r ModuleReader, stopChan *chan bool) error {
 // RunPersist function. Looks after replying to ping messages, writing logs, and other
 // communication between the agent and the running persistent module.
 func DefaultPersistHandlers(in ModuleReader, out ModuleWriter, logch chan string,
-	errch chan error, regch chan string) {
+	errch chan error, regch chan string, confch chan []byte) {
 	inChan := make(chan Message, 0)
 	go func() {
 		for {
@@ -399,6 +417,24 @@ func DefaultPersistHandlers(in ModuleReader, out ModuleWriter, logch chan string
 					failed = true
 					break
 				}
+			case "config":
+				var confparam ConfigParams
+				buf, err := json.Marshal(msg.Parameters)
+				if err != nil {
+					failed = true
+					break
+				}
+				err = json.Unmarshal(buf, &confparam)
+				if err != nil {
+					failed = true
+					break
+				}
+				buf, err = json.Marshal(confparam.Config)
+				if err != nil {
+					failed = true
+					break
+				}
+				confch <- buf
 			}
 		}
 

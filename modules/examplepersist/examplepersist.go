@@ -62,12 +62,35 @@ var logChan chan string
 // returning and the module exiting.
 var handlerErrChan chan error
 
+// When the agent sends the persistent module it's configuration, it will come in via
+// the config channel as a JSON byte slice so we can unmarshal it into our configuration
+var configChan chan []byte
+
 // An example background task the module will execute while it is being supervised by
 // the agent. This example just logs the current time up to the agent every 30
-// seconds.
+// seconds by default, or if a configuration file existed for the module it will use
+// the interval value set there.
 func runSomeTasks() {
+	var cfg config
+
+	// After the agent starts this module, it will send any module configuration
+	// which we can read immediately here. The configuration will come in via
+	// configChan as a JSON document, which we unmarshal into our config struct.
+	incfg := <-configChan
+	err := json.Unmarshal(incfg, &cfg)
+	if err != nil {
+		handlerErrChan <- err
+		return
+	}
+
+	logChan <- "module received configuration"
+	if cfg.ExamplePersist.Interval <= 0 {
+		logChan <- "config interval was <= 0, defaulting to 30 seconds"
+		cfg.ExamplePersist.Interval = 30
+	}
+
 	for {
-		time.Sleep(time.Second * 30)
+		time.Sleep(time.Duration(cfg.ExamplePersist.Interval) * time.Second)
 		// Send a log message up to the agent
 		logChan <- fmt.Sprintf("running, current time is %v", time.Now())
 	}
@@ -109,6 +132,26 @@ func requestHandler(p interface{}) (ret string) {
 	return string(resp)
 }
 
+// The configuration for the persistent module; in the case of a persistent module
+// that does not require configuration, our config struct would just be empty, but
+// we need to define something to return so we can satisfy the PersistRunner
+// interface.
+//
+// We need to make sure we have JSON tags here as this structure will be marshalled
+// and sent to the running module by the agent.
+type config struct {
+	ExamplePersist struct {
+		Interval int `json:"interval"`
+	}
+}
+
+// PersistModConfig must be implemented in persistent modules so we can satisfy
+// the PersistRunner interface. Typically here we will just return a new config
+// structure that will get used to load our configuration.
+func (r *run) PersistModConfig() interface{} {
+	return &config{}
+}
+
 // RunPersist is the function used to initialize the persistent component
 // of the module. It should not return. In this example, we do our initialization
 // and call modules.DefaultPersistHandlers, which looks after handling all
@@ -130,6 +173,8 @@ func (r *run) RunPersist(in modules.ModuleReader, out modules.ModuleWriter) {
 	// error to this channel will cause DefaultPersistHandlers() to return
 	// and the module to exit.
 	handlerErrChan = make(chan error, 64)
+	// Create a config channel we will read our configuration from.
+	configChan = make(chan []byte, 1)
 	// Start up an example background task we want our module to run
 	// continuously.
 	go runSomeTasks()
@@ -146,7 +191,7 @@ func (r *run) RunPersist(in modules.ModuleReader, out modules.ModuleWriter) {
 	go modules.HandlePersistRequest(l, requestHandler, handlerErrChan)
 	// Finally, enter the standard module management function. This will not return
 	// unless an error occurs.
-	modules.DefaultPersistHandlers(in, out, logChan, handlerErrChan, regChan)
+	modules.DefaultPersistHandlers(in, out, logChan, handlerErrChan, regChan, configChan)
 }
 
 // Module Run function, used to make queries using the module.

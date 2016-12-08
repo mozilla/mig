@@ -5,7 +5,7 @@
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 package main
 
-import(
+import (
 	"mig.ninja/mig"
 	"time"
 )
@@ -43,13 +43,21 @@ var EXTRAPRIVACYMODE = false
 // disabled at run-time using a config option or command line flag
 var SPAWNPERSISTENT = true
 
+// The directory the agent will look for persistent module configuration files
+// in.
+//
+// XXX This should be improved to take into account Windows paths, but at this
+// time persistent module support is not available on Windows. The agent will
+// attempt to locate a configuration using the module name, e.g., modulename.cfg.
+var PERSISTCONFIGDIR = "/etc/mig"
+
 // how often the agent will refresh its environment. if 0 agent
 // will only update environment at initialization.
 var REFRESHENV time.Duration = 0
 
 var LOGGINGCONF = mig.Logging{
-	Mode:	"stdout",	// stdout | file | syslog
-	Level:	"debug",	// debug | info | ...
+	Mode:  "stdout", // stdout | file | syslog
+	Level: "debug",  // debug | info | ...
 	//File:	"/tmp/migagt.log",
 	//MaxFileSize: 0,
 	//Host:	"syslog_hostname",
@@ -69,6 +77,7 @@ var APIURL string = "http://localhost:1664/api/v1/"
 // if the connection still fails after looking for a HTTP_PROXY, try to use the
 // proxies listed below
 var PROXIES = []string{"proxy.example.net:3128", "proxy2.example.net:8080"}
+
 // If you don't want proxies in the built-in configuration, use the following
 // instead.
 // var PROXIES = []string{}
@@ -84,7 +93,7 @@ var MODULETIMEOUT time.Duration = 300 * time.Second
 
 // Control modules permissions by PGP keys
 var AGENTACL = [...]string{
-`{
+	`{
     "default": {
         "minimumweight": 2,
         "investigators": {
@@ -99,7 +108,7 @@ var AGENTACL = [...]string{
         }
     }
 }`,
-`{
+	`{
     "agentdestroy": {
         "minimumweight": 1,
         "investigators": {
@@ -112,12 +121,11 @@ var AGENTACL = [...]string{
 }`,
 }
 
-
 // PGP public keys that are authorized to sign actions
 // this is an array of strings, put each public key block
 // into its own array entry, as shown below
 var PUBLICPGPKEYS = [...]string{
-`
+	`
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1; Name: User for MIG test (Another test user for Mozilla Investigator) <usertest+mig@example.org>
 
@@ -128,7 +136,7 @@ lMVXz7c/B8T79KIH0EDAG8o6AbvZQdTMSZp+Ap562smLkV+xsPo1O1Zd/hDJKYuY
 =SWyb
 -----END PGP PUBLIC KEY BLOCK-----
 `,
-`
+	`
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1; Name: Test User (This is a test user for Mozilla Investigator) <testuser+mig@example.net>
 
@@ -139,7 +147,6 @@ QnD9SDA9/d80
 =phhK
 -----END PGP PUBLIC KEY BLOCK-----
 `}
-
 
 // CA cert that signs the rabbitmq server certificate, for verification
 // of the chain of trust. If rabbitmq uses a self-signed cert, add this
