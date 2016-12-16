@@ -10,12 +10,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"path"
 	"strings"
 	"sync"
 	"time"
 
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
+
+	"gopkg.in/gcfg.v1"
 )
 
 // persistModuleRegister maintains a map of the running persistent modules, and
@@ -62,6 +65,19 @@ func (p *persistModuleRegister) remove(modname string) {
 }
 
 var persistModRegister persistModuleRegister
+
+// Load the configuration file for a persistent module if it exists, and return it
+// as a JSON byte slice so we can send it from the agent to the module after the
+// module is started. If the configuration file cannot be loaded, just return the
+// config struct for the module uninitialized.
+func getPersistConfig(modname string) (ret interface{}) {
+	cfg := modules.Available[modname].NewRun().(modules.PersistRunner).PersistModConfig()
+	confpath := path.Join(MODULECONFIGDIR, modname+".cfg")
+	// An error here isn't fatal, we just continue with cfg as is
+	gcfg.ReadFileInto(cfg, confpath)
+	ret = cfg
+	return
+}
 
 // Start all the persistent modules available to the agent.
 func startPersist(ctx *Context) (err error) {
@@ -139,6 +155,7 @@ func managePersistModule(ctx *Context, name string) {
 				continue
 			}
 			pipein = modules.NewModuleReader(cmdpipein)
+			cfg := getPersistConfig(name)
 			err = cmd.Start()
 			if err != nil {
 				logfunc("error starting module, %v", err)
@@ -160,6 +177,28 @@ func managePersistModule(ctx *Context, name string) {
 			}()
 
 			isRunning = true
+
+			// The module is now running, send any configuration parameters we have
+			// to it.
+			cm, err := modules.MakeMessageConfig(cfg)
+			if err != nil {
+				// This should never happen, but if it does we will just
+				// kill the executing module as we are unable to send any
+				// configuration to it
+				killModule = true
+				break
+			}
+			err = modules.WriteOutput(cm, pipeout)
+			if err != nil {
+				// XXX This should be revisited, both here and later on when
+				// sending a ping. If this write fails, we just assume the
+				// process is down, where it may not be.
+				logfunc("config write failed, %v", err)
+				isRunning = false
+				persistModRegister.remove(name)
+				failDelay = true
+				continue
+			}
 		}
 		select {
 		case msg, ok := <-inChan:
