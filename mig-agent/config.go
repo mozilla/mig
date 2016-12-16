@@ -155,7 +155,7 @@ func newGlobals() *globals {
 		checkin:            CHECKIN,
 		extraPrivacyMode:   EXTRAPRIVACYMODE,
 		spawnPersistent:    SPAWNPERSISTENT,
-		persistConfigDir:   PERSISTCONFIGDIR,
+		persistConfigDir:   MODULECONFIGDIR,
 		refreshEnv:         REFRESHENV,
 		loggingConf:        LOGGINGCONF,
 		amqBroker:          AMQPBROKER,
@@ -250,7 +250,7 @@ func (g globals) apply() {
 	CHECKIN = g.checkin
 	EXTRAPRIVACYMODE = g.extraPrivacyMode
 	SPAWNPERSISTENT = g.spawnPersistent
-	PERSISTCONFIGDIR = g.persistConfigDir
+	MODULECONFIGDIR = g.persistConfigDir
 	REFRESHENV = g.refreshEnv
 	LOGGINGCONF = g.loggingConf
 	AMQPBROKER = g.amqBroker

@@ -311,7 +311,7 @@ var HEARTBEATFREQ time.Duration = 30 * time.Second
 var REFRESHENV time.Duration = 60 * time.Second
 var MODULETIMEOUT time.Duration = 300 * time.Second
 var SPAWNPERSISTENT bool = true
-var PERSISTCONFIGDIR = "/etc/mig"
+var MODULECONFIGDIR = "/etc/mig"
 var AGENTACL = [...]string{
 \`{
     "default": {

@@ -72,7 +72,7 @@ var persistModRegister persistModuleRegister
 // config struct for the module uninitialized.
 func getPersistConfig(modname string) (ret interface{}) {
 	cfg := modules.Available[modname].NewRun().(modules.PersistRunner).PersistModConfig()
-	confpath := path.Join(PERSISTCONFIGDIR, modname+".cfg")
+	confpath := path.Join(MODULECONFIGDIR, modname+".cfg")
 	// An error here isn't fatal, we just continue with cfg as is
 	gcfg.ReadFileInto(cfg, confpath)
 	ret = cfg

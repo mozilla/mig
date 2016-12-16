@@ -49,7 +49,7 @@ var SPAWNPERSISTENT = true
 // XXX This should be improved to take into account Windows paths, but at this
 // time persistent module support is not available on Windows. The agent will
 // attempt to locate a configuration using the module name, e.g., modulename.cfg.
-var PERSISTCONFIGDIR = "/etc/mig"
+var MODULECONFIGDIR = "/etc/mig"
 
 // how often the agent will refresh its environment. if 0 agent
 // will only update environment at initialization.
