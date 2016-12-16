@@ -74,7 +74,7 @@ func TestFindGoTestProcess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out := r.Run(bytes.NewBuffer(msg))
+	out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 	if len(out) == 0 {
 		t.Fatal("run failed")
 	}
@@ -123,7 +123,7 @@ func TestSearches(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}

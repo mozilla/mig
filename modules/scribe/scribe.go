@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"runtime"
 	"strconv"
 	"time"
@@ -93,7 +92,7 @@ func fileModuleLocator(pattern string, regex bool, root string, depth int) ([]st
 	if err != nil {
 		return ret, nil
 	}
-	rdr := bytes.NewReader(buf)
+	rdr := modules.NewModuleReader(bytes.NewReader(buf))
 
 	res := run.Run(rdr)
 	var modresult modules.Result
@@ -118,7 +117,7 @@ func fileModuleLocator(pattern string, regex bool, root string, depth int) ([]st
 	return ret, nil
 }
 
-func (r *run) Run(in io.Reader) (resStr string) {
+func (r *run) Run(in modules.ModuleReader) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json

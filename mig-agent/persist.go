@@ -9,7 +9,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
 	"strings"
 	"sync"
@@ -99,8 +98,8 @@ func managePersistModule(ctx *Context, name string) {
 	var (
 		cmd        *exec.Cmd
 		isRunning  bool
-		pipeout    io.WriteCloser
-		pipein     io.ReadCloser
+		pipeout    modules.ModuleWriter
+		pipein     modules.ModuleReader
 		err        error
 		failDelay  bool
 		killModule bool
@@ -126,18 +125,20 @@ func managePersistModule(ctx *Context, name string) {
 			logfunc("starting module")
 			lastPing = time.Now()
 			cmd = exec.Command(ctx.Agent.BinPath, "-P", strings.ToLower(name))
-			pipeout, err = cmd.StdinPipe()
+			cmdpipeout, err := cmd.StdinPipe()
 			if err != nil {
 				logfunc("error creating stdin pipe, %v", err)
 				failDelay = true
 				continue
 			}
-			pipein, err = cmd.StdoutPipe()
+			pipeout = modules.NewModuleWriter(cmdpipeout)
+			cmdpipein, err := cmd.StdoutPipe()
 			if err != nil {
 				logfunc("error creating stdout pipe, %v", err)
 				failDelay = true
 				continue
 			}
+			pipein = modules.NewModuleReader(cmdpipein)
 			err = cmd.Start()
 			if err != nil {
 				logfunc("error starting module, %v", err)

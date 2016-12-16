@@ -11,7 +11,6 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
-	"io"
 	"os"
 	"strings"
 	"testing"
@@ -34,7 +33,7 @@ func (r *testRunner) ValidateParameters() (err error) {
 	return nil
 }
 
-func (r *testRunner) Run(in io.Reader) (out string) {
+func (r *testRunner) Run(in ModuleReader) (out string) {
 	return ""
 }
 
@@ -148,7 +147,7 @@ func TestGetStatistics(t *testing.T) {
 
 func TestReadInputParameters(t *testing.T) {
 	var p params
-	w := strings.NewReader(`{"class":"parameters","parameters":{"someparam":"foo"}}`)
+	w := NewModuleReader(strings.NewReader(`{"class":"parameters","parameters":{"someparam":"foo"}}`))
 	err := ReadInputParameters(w, &p)
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -158,7 +157,8 @@ func TestReadInputParameters(t *testing.T) {
 	}
 	// test delayed write. use a pipe so that reader doesn't reach EOF on the first
 	// read of the empty buffer.
-	r2, w2, err := os.Pipe()
+	pr2, w2, err := os.Pipe()
+	r2 := NewModuleReader(pr2)
 	block := make(chan bool)
 	go func() {
 		err = ReadInputParameters(r2, &p)
@@ -182,7 +182,7 @@ func TestReadInputParameters(t *testing.T) {
 
 func TestWatchForStop(t *testing.T) {
 	stopChan := make(chan bool)
-	w := strings.NewReader(`{"class":"stop"}`)
+	w := NewModuleReader(strings.NewReader(`{"class":"stop"}`))
 	var err error
 	go func() {
 		err = WatchForStop(w, &stopChan)

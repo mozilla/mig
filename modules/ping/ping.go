@@ -17,7 +17,6 @@ import (
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
-	"io"
 	"mig.ninja/mig/modules"
 	"net"
 	"os"
@@ -62,7 +61,7 @@ const (
 	E_Timeout     = "connection timed out"
 )
 
-func (r *run) Run(in io.Reader) (out string) {
+func (r *run) Run(in modules.ModuleReader) (out string) {
 	var (
 		err error
 		el  elements

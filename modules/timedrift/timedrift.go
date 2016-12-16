@@ -16,7 +16,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"mig.ninja/mig/modules"
 	"net"
 	"os"
@@ -79,7 +78,7 @@ func (r *run) ValidateParameters() (err error) {
 	return err
 }
 
-func (r *run) Run(in io.Reader) (out string) {
+func (r *run) Run(in modules.ModuleReader) (out string) {
 	var (
 		stats   statistics
 		el      elements
