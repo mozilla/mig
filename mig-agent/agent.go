@@ -255,7 +255,8 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 	}
 	// instantiate and call module
 	run := modules.Available[mode].NewRun()
-	out = run.Run(infd)
+	mreader := modules.NewModuleReader(infd)
+	out = run.Run(mreader)
 
 	// if enhanced privacy mode has been requested, apply it to the result set
 	// if the module supports it
@@ -333,7 +334,9 @@ func runModulePersist(mode string) {
 		fmt.Fprint(os.Stdout, string(buf))
 		return
 	}
-	prun.RunPersist(os.Stdin, os.Stdout)
+	sin := modules.NewModuleReader(os.Stdin)
+	sout := modules.NewModuleWriter(os.Stdout)
+	prun.RunPersist(sin, sout)
 }
 
 // runAgentCheckin is the one-off startup function for agent mode, where the

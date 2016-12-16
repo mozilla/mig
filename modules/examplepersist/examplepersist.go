@@ -21,7 +21,6 @@ package examplepersist /* import "mig.ninja/mig/modules/examplepersist" */
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"runtime"
 	"time"
 
@@ -114,7 +113,7 @@ func requestHandler(p interface{}) (ret string) {
 // of the module. It should not return. In this example, we do our initialization
 // and call modules.DefaultPersistHandlers, which looks after handling all
 // persistent module management processes on the module side.
-func (r *run) RunPersist(in io.ReadCloser, out io.WriteCloser) {
+func (r *run) RunPersist(in modules.ModuleReader, out modules.ModuleWriter) {
 	// Create a string channel, used to send log messages up to the agent
 	// from the module tasks. Functions in the persistent module can
 	// log messages through the agent by writing to this channel.
@@ -151,7 +150,7 @@ func (r *run) RunPersist(in io.ReadCloser, out io.WriteCloser) {
 }
 
 // Module Run function, used to make queries using the module.
-func (r *run) Run(in io.Reader) (resStr string) {
+func (r *run) Run(in modules.ModuleReader) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json

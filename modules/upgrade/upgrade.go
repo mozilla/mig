@@ -87,7 +87,7 @@ func (r run) ValidateParameters() (err error) {
 	return
 }
 
-func (r run) Run(in io.Reader) (out string) {
+func (r run) Run(in modules.ModuleReader) (out string) {
 	defer func() {
 		if e := recover(); e != nil {
 			r.Results.Errors = append(r.Results.Errors, fmt.Sprintf("%v", e))

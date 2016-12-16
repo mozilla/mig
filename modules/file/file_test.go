@@ -57,7 +57,7 @@ func TestNameSearch(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("%s\n", msg)
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}
@@ -90,7 +90,7 @@ func TestContentSearch(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("%s\n", msg)
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}
@@ -132,7 +132,7 @@ func TestDecompressedContentSearch(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("%s\n", msg)
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}
@@ -163,7 +163,7 @@ func TestSize(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("%s\n", msg)
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}
@@ -196,7 +196,7 @@ func TestMTime(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("%s\n", msg)
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}
@@ -229,7 +229,7 @@ func TestMode(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("%s\n", msg)
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}
@@ -270,7 +270,7 @@ func TestHashes(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Logf("%s\n", msg)
-			out := r.Run(bytes.NewBuffer(msg))
+			out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 			if len(out) == 0 {
 				t.Fatal("run failed")
 			}
@@ -311,7 +311,7 @@ func TestDecompressedHash(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("%s\n", msg)
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}
@@ -346,7 +346,7 @@ func TestAllHashes(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("%s\n", msg)
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}
@@ -378,7 +378,7 @@ func TestMaxDepth(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("%s\n", msg)
-	out := r.Run(bytes.NewBuffer(msg))
+	out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 	if len(out) == 0 {
 		t.Fatal("run failed")
 	}
@@ -448,7 +448,7 @@ func TestMacroal(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("%s\n", msg)
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}
@@ -596,7 +596,7 @@ func TestMismatch(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("%s\n", msg)
-		out := r.Run(bytes.NewBuffer(msg))
+		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
 		if len(out) == 0 {
 			t.Fatal("run failed")
 		}

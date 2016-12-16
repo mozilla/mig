@@ -19,7 +19,6 @@ import (
 	"github.com/mozilla/masche/listlibs"
 	"github.com/mozilla/masche/memaccess"
 	"github.com/mozilla/masche/process"
-	"io"
 	"mig.ninja/mig/modules"
 	"regexp"
 	"time"
@@ -302,7 +301,7 @@ func validateBytes(bytes string) error {
 	return nil
 }
 
-func (r *run) Run(in io.Reader) (out string) {
+func (r *run) Run(in modules.ModuleReader) (out string) {
 	var ts statistics
 	stats = ts
 	// in debug mode, we just panic

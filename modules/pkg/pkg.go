@@ -9,7 +9,6 @@ package pkg /* import "mig.ninja/mig/modules/pkg" */
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"regexp"
 	"runtime"
 	"time"
@@ -62,7 +61,7 @@ func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 	return
 }
 
-func (r *run) Run(in io.Reader) (resStr string) {
+func (r *run) Run(in modules.ModuleReader) (resStr string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// return error in json
