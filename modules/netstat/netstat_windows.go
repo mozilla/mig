@@ -2,7 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
+// Contributor(s):
+// - Julien Vehent jvehent@mozilla.com [:ulfr]
+// - Rob Murtha robmurtha@gmail.com [:robmurtha]
 
 package netstat /* import "mig.ninja/mig/modules/netstat" */
 
@@ -10,9 +12,10 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"net"
 	"os/exec"
 	"regexp"
-	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -64,12 +67,92 @@ func HasSeenMac(val string) (found bool, elements []element, err error) {
 }
 
 func HasIPConnected(val string) (found bool, elements []element, err error) {
-	err = fmt.Errorf("HasIPConnected() is not implemented on %s", runtime.GOOS)
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("HasIPConnected(): %v", e)
+		}
+	}()
+	found = false
+	var ipnet *net.IPNet
+
+	// if val contains a /, treat it as a cidr
+	if strings.IndexAny(val, "/") > 0 {
+		_, ipnet, err = net.ParseCIDR(val)
+		if err != nil {
+			panic(err)
+		}
+		// otherwise assume it's a single address (v4 /32 or v6 /128)
+	} else {
+		ip := net.ParseIP(val)
+		if ip == nil {
+			panic("Invalid IP")
+		}
+		ipnet = new(net.IPNet)
+		ipnet.IP = ip
+		// See if it's an IPv4 address, set our mask
+		if ipnet.IP.To4() != nil {
+			ipnet.Mask = net.CIDRMask(net.IPv4len*8, net.IPv4len*8)
+		} else {
+			ipnet.Mask = net.CIDRMask(net.IPv6len*8, net.IPv6len*8)
+		}
+	}
+
+	var out []byte
+	if ipnet.IP.To4() != nil {
+		tcp, err := exec.Command("netstat", "-na", "-p", "TCP").Output()
+		if err != nil {
+			panic(err)
+		}
+		udp, err := exec.Command("netstat", "-na", "-p", "UDP").Output()
+		if err != nil {
+			panic(err)
+		}
+		out = append(tcp, udp...)
+	} else {
+		tcp, err := exec.Command("netstat", "-na", "-p", "TCPv6").Output()
+		if err != nil {
+			panic(err)
+		}
+		udp, err := exec.Command("netstat", "-na", "-p", "UDPv6").Output()
+		if err != nil {
+			panic(err)
+		}
+		out = append(tcp, udp...)
+	}
+
+	net := new(NetstatWinOutput)
+	err = net.UnmarshalText(out)
+	if err != nil {
+		panic(err)
+	}
+	elements = net.HasIPConnected(ipnet)
+	found = len(elements) > 0
 	return
 }
 
 func HasListeningPort(port string) (found bool, elements []element, err error) {
-	err = fmt.Errorf("HasListeningPort() is not implemented on %s", runtime.GOOS)
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("HasListeningPort(): %v", e)
+		}
+	}()
+	portInt, err := strconv.Atoi(port)
+	if err != nil {
+		panic(err)
+	}
+
+	out, err := exec.Command("netstat", "-na").Output()
+	if err != nil {
+		panic(err)
+	}
+	net := new(NetstatWinOutput)
+	err = net.UnmarshalText(out)
+	if err != nil {
+		panic(err)
+	}
+
+	elements = net.HasListeningPort(portInt)
+	found = len(elements) > 0
 	return
 }
 
