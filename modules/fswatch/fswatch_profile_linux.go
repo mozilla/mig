@@ -6,17 +6,17 @@
 
 package fswatch /* import "mig.ninja/mig/modules/fswatch" */
 
-var localFsWatchProfile = fsWatchProfile{
-	[]fsWatchProfileEntry{
-		{"/boot", []fsWatchObject{}},
-		{"/etc/cron.d", []fsWatchObject{}},
-		{"/var/spool/cron", []fsWatchObject{}},
-		{"/bin", []fsWatchObject{}},
-		{"/sbin", []fsWatchObject{}},
-		{"/usr/bin", []fsWatchObject{}},
-		{"/usr/sbin", []fsWatchObject{}},
-		{"/etc", []fsWatchObject{}},
-		{"/etc/init.d", []fsWatchObject{}},
-		{"/etc/systemd/system", []fsWatchObject{}},
+var localFsWatchProfile = profile{
+	entries: []profileEntry{
+		{path: "/boot", recursive: false},
+		{path: "/etc/cron.d", recursive: false},
+		{path: "/var/spool/cron", recursive: false},
+		{path: "/bin", recursive: false},
+		{path: "/sbin", recursive: false},
+		{path: "/usr/bin", recursive: false},
+		{path: "/usr/sbin", recursive: false},
+		{path: "/etc", recursive: true},
+		{path: "/etc/init.d", recursive: false},
+		{path: "/etc/systemd", recursive: true},
 	},
 }
