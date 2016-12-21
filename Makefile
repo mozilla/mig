@@ -58,8 +58,8 @@ endif
 PREFIX		:= /usr/local/
 DESTDIR		:= /
 BINDIR		:= bin/$(OS)/$(ARCH)
-AGTCONF		:= mig-agent/configuration.go
-LOADERCONF	:= mig-loader/configuration.go
+AGTCONF		:= conf/mig-agent-conf.go.inc
+LOADERCONF	:= conf/mig-loader-conf.go.inc
 MSICONF		:= mig-agent-installer.wxs
 SIGNFLAGS	:=
 
@@ -93,9 +93,9 @@ create-bindir:
 mig-agent: create-bindir
 	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
-	# test if the agent configuration variable contains something different than the default value
-	# and if so, replace the link to the default configuration with the provided configuration
-	if [ $(AGTCONF) != "mig-agent/configuration.go" ]; then rm mig-agent/configuration.go; cp $(AGTCONF) mig-agent/configuration.go; fi
+	# Copy the configuration referenced by AGTCONF into place; you can override this variable
+	# to specify a built-in configuration to use other than conf/mig-agent-conf.go.inc
+	cp $(AGTCONF) mig-agent/configuration.go
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] || (echo FAILED && false)
@@ -119,9 +119,9 @@ mig-action-generator: create-bindir
 
 mig-loader: create-bindir
 	if [ ! -r $(LOADERCONF) ]; then echo "$(LOADERCONF) configuration file does not exist" ; exit 1; fi
-	# test if the loader configuration variable contains something different than the default value
-	# and if so, replace the link to the default configuration with the provided configuration
-	if [ $(LOADERCONF) != "mig-loader/configuration.go" ]; then rm mig-loader/configuration.go; cp $(LOADERCONF) mig-loader/configuration.go; fi
+	# Copy the configuration referenced by LOADERCONF into place; you can override this variable
+	# to specify a built-in configuration to use other than conf/mig-loader-conf.go.inc
+	cp $(LOADERCONF) mig-loader/configuration.go
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader $(GOLDFLAGS) mig.ninja/mig/mig-loader
 	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-loader; \
