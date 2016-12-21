@@ -134,7 +134,6 @@ The list of modules imported in the agent is maintained in
 		_ "mig/modules/file"
 		_ "mig/modules/netstat"
 		_ "mig/modules/timedrift"
-		//_ "mig/modules/upgrade"
 		_ "mig/modules/ping"
 	)
 

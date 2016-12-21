@@ -141,23 +141,6 @@
             }
         },
         {
-            "module": "upgrade",
-            "parameters": {
-                "to_version": "b9536d2-201403031435",
-                "location": "https://download.mig.example.net/mig-agent-b9536d2-201403031435",
-                "checksum": "c59d4eaeac728671c635ff645014e2afa935bebffdb5fbd207ffdeab"
-            }
-        },
-        {
-            "module": "process",
-            "parameters": {
-                "look for running process that belongs to rootkits": [
-                    "/usr/libexec/rootkitd",
-                    "/opt/rootkit/stealth_dangerous"
-                ]
-            }
-        },
-        {
             "module": "agentdestroy",
             "parameters": {
                 "pid": 12345,

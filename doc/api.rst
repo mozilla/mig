@@ -853,7 +853,7 @@ GET /api/v1/search
 	  Status depends on the type. Below are the available statuses per type:
 
 		- `action`: pending, scheduled, preparing, invalid, inflight, completed
-		- `agent`: online, upgraded, destroyed, offline, idle
+		- `agent`: online, destroyed, offline, idle
 		- `command`: prepared, sent, success, timeout, cancelled, expired, failed
 		- `investigator`: active, disabled
 

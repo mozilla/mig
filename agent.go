@@ -10,7 +10,6 @@ import "time"
 
 const (
 	AgtStatusOnline    string = "online"
-	AgtStatusUpgraded  string = "upgraded"
 	AgtStatusDestroyed string = "destroyed"
 	AgtStatusOffline   string = "offline"
 	AgtStatusIdle      string = "idle"
