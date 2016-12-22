@@ -60,6 +60,9 @@ DESTDIR		:= /
 BINDIR		:= bin/$(OS)/$(ARCH)
 AGTCONF		:= conf/mig-agent-conf.go.inc
 LOADERCONF	:= conf/mig-loader-conf.go.inc
+AVAILMOD	:= conf/available_modules.go
+AVAILMOD_PATHS	:= mig-agent/available_modules.go client/mig/available_modules.go \
+	client/mig-console/available_modules.go
 MSICONF		:= mig-agent-installer.wxs
 SIGNFLAGS	:=
 
@@ -90,7 +93,7 @@ all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-act
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
 
-mig-agent: create-bindir
+mig-agent: create-bindir available-modules
 	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
 	# Copy the configuration referenced by AGTCONF into place; you can override this variable
@@ -104,6 +107,11 @@ mig-agent: create-bindir
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX); \
 	fi
 	@echo SUCCESS
+
+available-modules: $(AVAILMOD_PATHS)
+
+$(AVAILMOD_PATHS): .FORCE
+	cp $(AVAILMOD) $@
 
 mig-scheduler: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig.ninja/mig/mig-scheduler
@@ -130,10 +138,10 @@ mig-loader: create-bindir
 mig-action-verifier: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
 
-mig-console: create-bindir
+mig-console: create-bindir available-modules
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig.ninja/mig/client/mig-console
 
-mig-cmd: create-bindir
+mig-cmd: create-bindir available-modules
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig $(GOLDFLAGS) mig.ninja/mig/client/mig
 
 mig-agent-search: create-bindir
@@ -427,5 +435,7 @@ clean: clean-agent
 	rm -rf bin
 	rm -rf tmp
 	rm -rf .builddir
+
+.FORCE:
 
 .PHONY: clean clean-agent doc agent-install-script agent-remove-script
