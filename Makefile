@@ -98,12 +98,8 @@ all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-act
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
 
-mig-agent: create-bindir available-modules
+mig-agent: create-bindir available-modules mig-agent/configuration.go
 	echo building mig-agent for $(OS)/$(ARCH)
-	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
-# Copy the configuration referenced by AGTCONF into place; you can override this variable
-# to specify a built-in configuration to use other than conf/mig-agent-conf.go.inc
-	cp $(AGTCONF) mig-agent/configuration.go
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] || (echo FAILED && false)
@@ -118,6 +114,10 @@ available-modules: $(AVAILMOD_PATHS)
 $(AVAILMOD_PATHS): .FORCE
 	cp $(AVAILMOD) $@
 
+mig-agent/configuration.go: .FORCE
+	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
+	cp $(AGTCONF) $@
+
 mig-scheduler: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig.ninja/mig/mig-scheduler
 
@@ -130,15 +130,15 @@ mig-runner: create-bindir
 mig-action-generator: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
 
-mig-loader: create-bindir
-	if [ ! -r $(LOADERCONF) ]; then echo "$(LOADERCONF) configuration file does not exist" ; exit 1; fi
-# Copy the configuration referenced by LOADERCONF into place; you can override this variable
-# to specify a built-in configuration to use other than conf/mig-loader-conf.go.inc
-	cp $(LOADERCONF) mig-loader/configuration.go
+mig-loader: create-bindir mig-loader/configuration.go
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader $(GOLDFLAGS) mig.ninja/mig/mig-loader
 	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-loader; \
 	fi
+
+mig-loader/configuration.go: .FORCE
+	if [ ! -r $(LOADERCONF) ]; then echo "$(LOADERCONF) configuration file does not exist" ; exit 1; fi
+	cp $(LOADERCONF) $@
 
 mig-action-verifier: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
