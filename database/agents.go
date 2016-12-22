@@ -130,7 +130,7 @@ func (db *DB) InsertAgent(agt mig.Agent, useTx *sql.Tx) (err error) {
 }
 
 // UpdateAgentHeartbeat updates the heartbeat timestamp of an agent in the database
-// unless the agent has been marked as destroyed or upgraded
+// unless the agent has been marked as destroyed
 func (db *DB) UpdateAgentHeartbeat(agt mig.Agent) (err error) {
 	_, err = db.c.Exec(`UPDATE agents SET status=$1, heartbeattime=$2 WHERE id=$3`,
 		mig.AgtStatusOnline, agt.HeartBeatTS, agt.ID)
@@ -292,16 +292,6 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 	if err != nil {
 		_ = txn.Rollback()
 		return
-	}
-	return
-}
-
-// MarkAgentUpgraded updated the status of an agent in the database
-func (db *DB) MarkAgentUpgraded(agent mig.Agent) (err error) {
-	_, err = db.c.Exec(`UPDATE agents SET status=$1 WHERE id=$2`,
-		mig.AgtStatusUpgraded, agent.ID)
-	if err != nil {
-		return fmt.Errorf("Failed to mark agent as upgraded in database: '%v'", err)
 	}
 	return
 }

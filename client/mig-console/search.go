@@ -74,7 +74,7 @@ The following search parameters are available, per search type:
 	- investigatorname=<str>search agents that ran an action signed by investigator named <str>
 	- version=<str>		search agents by version <str>
 	- status=<str>		search agents with a given status amongst:
-				online, upgraded, destroyed, offline, idle
+				online, destroyed, offline, idle
 * investigator:
 	- name=<str>		search investigators by name
 	- before=<rfc3339>	search investigators created or modified before <rfc3339 date>

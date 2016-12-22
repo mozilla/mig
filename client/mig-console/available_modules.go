@@ -15,6 +15,5 @@ import (
 	_ "mig.ninja/mig/modules/pkg"
 	_ "mig.ninja/mig/modules/scribe"
 	_ "mig.ninja/mig/modules/timedrift"
-	//_ "mig/modules/upgrade"
 	//_ "mig/modules/example"
 )
