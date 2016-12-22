@@ -71,13 +71,6 @@ AVAILMOD_PATHS	:= mig-agent/available_modules.go client/mig/available_modules.go
 MSICONF		:= mig-agent-installer.wxs
 SIGNFLAGS	:=
 
-GCC			:= gcc
-CFLAGS		:=
-LDFLAGS		:=
-GOOPTS		:=
-GO 			:= GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
-GOGETTER	:= GOPATH=$(shell pwd)/.tmpdeps go get -d
-MIGVERFLAGS	:= -X mig.ninja/mig.Version=$(BUILDREV)
 # If code signing is enabled for OSX binaries, pass the -s flag during linking
 # otherwise the signed binary will not execute correctly
 # https://github.com/golang/go/issues/11887
@@ -86,11 +79,18 @@ ifeq ($(OS),darwin)
 	STRIPOPT := -s
 endif
 endif
+
+GCC		:= gcc
+CFLAGS		:=
+LDFLAGS		:=
+GOOPTS		:=
+GO 		:= GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
+GOGETTER	:= GOPATH=$(shell pwd)/.tmpdeps go get -d
+MIGVERFLAGS	:= -X mig.ninja/mig.Version=$(BUILDREV)
 GOLDFLAGS	:= -ldflags "$(MIGVERFLAGS) $(STRIPOPT)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install
-
 
 all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-action-generator mig-action-verifier worker-agent-intel \
 	runner-compliance runner-scribe mig-loader
@@ -101,13 +101,13 @@ create-bindir:
 mig-agent: create-bindir available-modules
 	echo building mig-agent for $(OS)/$(ARCH)
 	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
-	# Copy the configuration referenced by AGTCONF into place; you can override this variable
-	# to specify a built-in configuration to use other than conf/mig-agent-conf.go.inc
+# Copy the configuration referenced by AGTCONF into place; you can override this variable
+# to specify a built-in configuration to use other than conf/mig-agent-conf.go.inc
 	cp $(AGTCONF) mig-agent/configuration.go
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] || (echo FAILED && false)
-	# If our build target is darwin and OSXPROCSIGID is set, sign the binary
+# If our build target is darwin and OSXPROCSIGID is set, sign the binary
 	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX); \
 	fi
@@ -132,8 +132,8 @@ mig-action-generator: create-bindir
 
 mig-loader: create-bindir
 	if [ ! -r $(LOADERCONF) ]; then echo "$(LOADERCONF) configuration file does not exist" ; exit 1; fi
-	# Copy the configuration referenced by LOADERCONF into place; you can override this variable
-	# to specify a built-in configuration to use other than conf/mig-loader-conf.go.inc
+# Copy the configuration referenced by LOADERCONF into place; you can override this variable
+# to specify a built-in configuration to use other than conf/mig-loader-conf.go.inc
 	cp $(LOADERCONF) mig-loader/configuration.go
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader $(GOLDFLAGS) mig.ninja/mig/mig-loader
 	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
@@ -284,11 +284,11 @@ agent-install-script-osx:
 	chmod 0755 tmp/agent_install.sh
 
 agent-remove-script-linux:
-	echo '#!/bin/sh'																> tmp/agent_remove.sh
+	echo '#!/bin/sh'														       > tmp/agent_remove.sh
 	echo 'for f in "/etc/cron.d/mig-agent" "/etc/init/mig-agent.conf" "/etc/init.d/mig-agent" "/etc/systemd/system/mig-agent.service"; do' >> tmp/agent_remove.sh
-	echo '    [ -e "$$f" ] && rm -f "$$f"'											>> tmp/agent_remove.sh
-	echo 'done'																		>> tmp/agent_remove.sh
-	echo 'echo mig-agent removed but not killed if running' >> tmp/agent_remove.sh
+	echo '    [ -e "$$f" ] && rm -f "$$f"'												       >> tmp/agent_remove.sh
+	echo 'done'															       >> tmp/agent_remove.sh
+	echo 'echo mig-agent removed but not killed if running'									 	       >> tmp/agent_remove.sh
 	chmod 0755 tmp/agent_remove.sh
 
 msi-agent: mig-agent
@@ -350,17 +350,17 @@ endif
 
 deb-server: mig-scheduler mig-api mig-runner worker-agent-intel
 	rm -rf tmp
-	# add binaries
+# add binaries
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/opt/mig/bin/mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-api tmp/opt/mig/bin/mig-api
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-runner tmp/opt/mig/bin/mig-runner
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-worker-agent-intel tmp/opt/mig/bin/mig-worker-agent-intel
 	$(INSTALL) -D -m 0755 tools/list_new_agents.sh tmp/opt/mig/bin/list_new_agents.sh
-	# add configuration templates
+# add configuration templates
 	$(INSTALL) -D -m 0640 conf/scheduler.cfg.inc tmp/etc/mig/scheduler.cfg
 	$(INSTALL) -D -m 0640 conf/api.cfg.inc tmp/etc/mig/api.cfg
 	$(INSTALL) -D -m 0640 conf/agent-intel-worker.cfg.inc tmp/etc/mig/agent-intel-worker.cfg
-	# add upstart configs
+# add upstart configs
 	$(INSTALL) -D -m 0640 conf/upstart/mig-scheduler.conf tmp/etc/init/mig-scheduler.conf
 	$(INSTALL) -D -m 0640 conf/upstart/mig-api.conf tmp/etc/init/mig-api.conf
 	$(INSTALL) -D -m 0640 conf/upstart/mig-agent-intel-worker.conf tmp/etc/init/mig-agent-intel-worker.conf
@@ -415,7 +415,7 @@ test:  test-modules
 	$(GO) test mig.ninja/mig
 
 test-modules:
-	# test all modules
+# test all modules
 	$(GO) test mig.ninja/mig/modules/...
 
 clean-agent:
