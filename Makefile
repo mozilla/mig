@@ -55,12 +55,17 @@ ifeq ($(ARCH),386)
 	FPMARCH := i386
 endif
 
-PREFIX		:= /usr/local/
-DESTDIR		:= /
-BINDIR		:= bin/$(OS)/$(ARCH)
+# These variables can be set to control which built-in configuration files will
+# be used to build the agent and loader, and which available_modules.go file
+# will be used. By default, these are set to the default built-in and
+# available_modules.go files under the conf/ directory.
 AGTCONF		:= conf/mig-agent-conf.go.inc
 LOADERCONF	:= conf/mig-loader-conf.go.inc
 AVAILMOD	:= conf/available_modules.go
+
+PREFIX		:= /usr/local/
+DESTDIR		:= /
+BINDIR		:= bin/$(OS)/$(ARCH)
 AVAILMOD_PATHS	:= mig-agent/available_modules.go client/mig/available_modules.go \
 	client/mig-console/available_modules.go
 MSICONF		:= mig-agent-installer.wxs
