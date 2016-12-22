@@ -653,7 +653,7 @@ var stats statistics
 
 var walkingErrors []string
 
-func (r *run) Run(in io.Reader) (resStr string) {
+func (r *run) Run(in modules.ModuleReader) (resStr string) {
 	var (
 		roots     []string
 		traversed []string

@@ -49,6 +49,7 @@ const (
 	MsgClassPing       MessageClass = "ping"
 	MsgClassLog        MessageClass = "log"
 	MsgClassRegister   MessageClass = "register"
+	MsgClassConfig     MessageClass = "config"
 )
 
 // Parameter format expected for a log message
@@ -59,6 +60,10 @@ type LogParams struct {
 // Parameter format expected for a register message
 type RegParams struct {
 	SockPath string `json:"sockpath"`
+}
+
+type ConfigParams struct {
+	Config interface{} `json:"config"`
 }
 
 // Result implement the base type for results returned by modules.
@@ -88,7 +93,7 @@ type Result struct {
 
 // Runner provides the interface to an execution of a module
 type Runner interface {
-	Run(io.Reader) string
+	Run(ModuleReader) string
 	ValidateParameters() error
 }
 
@@ -96,7 +101,37 @@ type Runner interface {
 // modules will satisfy Runner. Persistent modules will satisfy both Runner and
 // PersistRunner.
 type PersistRunner interface {
-	RunPersist(io.ReadCloser, io.WriteCloser)
+	RunPersist(ModuleReader, ModuleWriter)
+	PersistModConfig() interface{}
+}
+
+// ModuleReader is used to read module communications. It's intent is to
+// wrap the initial reader (e.g., stdin) with a buffered reader that will exist for
+// the lifetime of execution of the module. When the module reads input, it will
+// read from BufferReader inside ModuleReader since our communication is line delimited,
+// so we want to make sure we allocate this buffer only once.
+type ModuleReader struct {
+	Reader       io.Reader
+	BufferReader *bufio.Reader
+}
+
+// Create a new ModuleReader wrapping reader r.
+func NewModuleReader(r io.Reader) (ret ModuleReader) {
+	ret.Reader = r
+	ret.BufferReader = bufio.NewReader(ret.Reader)
+	return
+}
+
+// ModuleWriter is used to write module communications. We don't require bufio on
+// writes, but this type exists just to provide consistency with ModuleReader.
+type ModuleWriter struct {
+	Writer io.Writer
+}
+
+// Create a new ModuleWriter wrapping writer w.
+func NewModuleWriter(w io.Writer) (ret ModuleWriter) {
+	ret.Writer = w
+	return
 }
 
 // MakeMessage creates a new modules.Message with a given class and parameters and
@@ -164,6 +199,18 @@ func MakeMessageRegister(spec string) (rawMsg []byte, err error) {
 	return
 }
 
+// Creates a new message of class config.
+func MakeMessageConfig(cfgdata interface{}) (rawMsg []byte, err error) {
+	param := ConfigParams{Config: cfgdata}
+	msg := Message{Class: MsgClassConfig, Parameters: param}
+	rawMsg, err = json.Marshal(&msg)
+	if err != nil {
+		err = fmt.Errorf("Failed to make module config message: %v", err)
+		return
+	}
+	return
+}
+
 // Keep reading until we get a full line or an error, and return
 func readInputLine(rdr *bufio.Reader) ([]byte, error) {
 	var ret []byte
@@ -180,16 +227,15 @@ func readInputLine(rdr *bufio.Reader) ([]byte, error) {
 	return ret, nil
 }
 
-// ReadInput reads one line of input from stdin, unmarshal it into a modules.Message
+// ReadInput reads one line of input from ModuleReader r, unmarshal it into a modules.Message
 // and returns the message to the caller
-func ReadInput(r io.Reader) (msg Message, err error) {
+func ReadInput(r ModuleReader) (msg Message, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("ReadInput() -> %v", e)
 		}
 	}()
-	reader := bufio.NewReader(r)
-	linebuffer, err := readInputLine(reader)
+	linebuffer, err := readInputLine(r.BufferReader)
 	if err != nil {
 		panic(err)
 	}
@@ -200,10 +246,10 @@ func ReadInput(r io.Reader) (msg Message, err error) {
 	return
 }
 
-// ReadInputParameters reads the first line from stdin and expects to find a
+// ReadInputParameters reads the first line from ModuleReader r and expects to find a
 // modules.Message of class `parameters`. This function uses ReadInput and will
 // block waiting for data on stdin
-func ReadInputParameters(r io.Reader, p interface{}) (err error) {
+func ReadInputParameters(r ModuleReader, p interface{}) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("ReadInputParameters() -> %v", e)
@@ -231,7 +277,7 @@ func ReadInputParameters(r io.Reader, p interface{}) (err error) {
 // however it also validates a socket path has been specified to query the
 // persistent module, returning an error if this is not present. Populates
 // p and also returns the socket path.
-func ReadPersistInputParameters(r io.Reader, p interface{}) (spath string, err error) {
+func ReadPersistInputParameters(r ModuleReader, p interface{}) (spath string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("ReadPersistInputParameters() -> %v", e)
@@ -262,7 +308,7 @@ func ReadPersistInputParameters(r io.Reader, p interface{}) (spath string, err e
 // Write output in buf to writer w. buf is expected to contain a single line
 // of data, and a line feed is appended to terminate the line as module IO is
 // line delimited.
-func WriteOutput(buf []byte, w io.Writer) (err error) {
+func WriteOutput(buf []byte, w ModuleWriter) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("WriteOutput() -> %v", e)
@@ -272,7 +318,7 @@ func WriteOutput(buf []byte, w io.Writer) (err error) {
 	buf = append(buf, '\n')
 	left := len(buf)
 	for left > 0 {
-		nb, err := w.Write(buf)
+		nb, err := w.Writer.Write(buf)
 		if err != nil {
 			return err
 		}
@@ -284,7 +330,7 @@ func WriteOutput(buf []byte, w io.Writer) (err error) {
 
 // WatchForStop continuously reads stdin for a stop message. When one is received,
 // `true` is sent into the stop channel.
-func WatchForStop(r io.Reader, stopChan *chan bool) error {
+func WatchForStop(r ModuleReader, stopChan *chan bool) error {
 	for {
 		msg, err := ReadInput(r)
 		if err != nil {
@@ -300,8 +346,8 @@ func WatchForStop(r io.Reader, stopChan *chan bool) error {
 // A general management function that can be called by persistent modules from the
 // RunPersist function. Looks after replying to ping messages, writing logs, and other
 // communication between the agent and the running persistent module.
-func DefaultPersistHandlers(in io.ReadCloser, out io.WriteCloser, logch chan string,
-	errch chan error, regch chan string) {
+func DefaultPersistHandlers(in ModuleReader, out ModuleWriter, logch chan string,
+	errch chan error, regch chan string, confch chan []byte) {
 	inChan := make(chan Message, 0)
 	go func() {
 		for {
@@ -371,6 +417,24 @@ func DefaultPersistHandlers(in io.ReadCloser, out io.WriteCloser, logch chan str
 					failed = true
 					break
 				}
+			case "config":
+				var confparam ConfigParams
+				buf, err := json.Marshal(msg.Parameters)
+				if err != nil {
+					failed = true
+					break
+				}
+				err = json.Unmarshal(buf, &confparam)
+				if err != nil {
+					failed = true
+					break
+				}
+				buf, err = json.Marshal(confparam.Config)
+				if err != nil {
+					failed = true
+					break
+				}
+				confch <- buf
 			}
 		}
 
@@ -392,13 +456,15 @@ func HandlePersistRequest(l net.Listener, f func(interface{}) string, errch chan
 		}
 		go func() {
 			var p interface{}
-			err = ReadInputParameters(conn, &p)
+			mw := NewModuleWriter(conn)
+			mr := NewModuleReader(conn)
+			err = ReadInputParameters(mr, &p)
 			if err != nil {
 				errch <- err
 				return
 			}
 			resp := f(p)
-			WriteOutput([]byte(resp), conn)
+			WriteOutput([]byte(resp), mw)
 			err = conn.Close()
 			if err != nil {
 				errch <- err
@@ -452,11 +518,12 @@ func SendPersistRequest(p interface{}, sockspec string) (res string) {
 	if err != nil {
 		panic(err)
 	}
+	nw := NewModuleWriter(conn)
 	buf, err := MakeMessage(MsgClassParameters, p, false)
 	if err != nil {
 		panic(err)
 	}
-	err = WriteOutput(buf, conn)
+	err = WriteOutput(buf, nw)
 	if err != nil {
 		panic(err)
 	}

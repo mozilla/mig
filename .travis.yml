@@ -31,6 +31,7 @@ script:
     - diff mig-loader/configuration.go conf/mig-loader-conf.go.inc
     - diff client/mig-console/available_modules.go conf/available_modules.go
     - diff client/mig/available_modules.go conf/available_modules.go
+    - sed -i 's,//_,_,' conf/available_modules.go
     - make
     - yes | bash tools/standalone_install.sh
     - ./bin/linux/amd64/mig-agent-latest -i actions/example_v2.json

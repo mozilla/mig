@@ -32,6 +32,7 @@ type config struct {
 		Api              string
 		RefreshEnv       string
 		NoPersistMods    bool
+		PersistConfigDir string
 		ExtraPrivacyMode bool
 	}
 	Certs struct {
@@ -87,6 +88,9 @@ type globals struct {
 	// spawn persistent modules; if enabled in the built-in config this can be
 	// disabled at run-time using a config option or command line flag
 	spawnPersistent bool
+
+	// directory to look in for persistent module configuration files
+	persistConfigDir string
 
 	// how often the agent will refresh its environment. if 0 agent
 	// will only update environment at initialization.
@@ -151,6 +155,7 @@ func newGlobals() *globals {
 		checkin:            CHECKIN,
 		extraPrivacyMode:   EXTRAPRIVACYMODE,
 		spawnPersistent:    SPAWNPERSISTENT,
+		persistConfigDir:   MODULECONFIGDIR,
 		refreshEnv:         REFRESHENV,
 		loggingConf:        LOGGINGCONF,
 		amqBroker:          AMQPBROKER,
@@ -178,6 +183,9 @@ func (g globals) parseConfig(config config) error {
 	g.extraPrivacyMode = config.Agent.ExtraPrivacyMode
 	if config.Agent.NoPersistMods {
 		g.spawnPersistent = false
+	}
+	if config.Agent.PersistConfigDir != "" {
+		g.persistConfigDir = config.Agent.PersistConfigDir
 	}
 	if config.Agent.RefreshEnv != "" {
 		g.refreshEnv, err = time.ParseDuration(config.Agent.RefreshEnv)
@@ -242,6 +250,7 @@ func (g globals) apply() {
 	CHECKIN = g.checkin
 	EXTRAPRIVACYMODE = g.extraPrivacyMode
 	SPAWNPERSISTENT = g.spawnPersistent
+	MODULECONFIGDIR = g.persistConfigDir
 	REFRESHENV = g.refreshEnv
 	LOGGINGCONF = g.loggingConf
 	AMQPBROKER = g.amqBroker
