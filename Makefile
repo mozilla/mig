@@ -55,21 +55,22 @@ ifeq ($(ARCH),386)
 	FPMARCH := i386
 endif
 
+# These variables can be set to control which built-in configuration files will
+# be used to build the agent and loader, and which available_modules.go file
+# will be used. By default, these are set to the default built-in and
+# available_modules.go files under the conf/ directory.
+AGTCONF		:= conf/mig-agent-conf.go.inc
+LOADERCONF	:= conf/mig-loader-conf.go.inc
+AVAILMOD	:= conf/available_modules.go
+
 PREFIX		:= /usr/local/
 DESTDIR		:= /
 BINDIR		:= bin/$(OS)/$(ARCH)
-AGTCONF		:= mig-agent/configuration.go
-LOADERCONF	:= mig-loader/configuration.go
+AVAILMOD_PATHS	:= mig-agent/available_modules.go client/mig/available_modules.go \
+	client/mig-console/available_modules.go
 MSICONF		:= mig-agent-installer.wxs
 SIGNFLAGS	:=
 
-GCC			:= gcc
-CFLAGS		:=
-LDFLAGS		:=
-GOOPTS		:=
-GO 			:= GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
-GOGETTER	:= GOPATH=$(shell pwd)/.tmpdeps go get -d
-MIGVERFLAGS	:= -X mig.ninja/mig.Version=$(BUILDREV)
 # If code signing is enabled for OSX binaries, pass the -s flag during linking
 # otherwise the signed binary will not execute correctly
 # https://github.com/golang/go/issues/11887
@@ -78,11 +79,18 @@ ifeq ($(OS),darwin)
 	STRIPOPT := -s
 endif
 endif
+
+GCC		:= gcc
+CFLAGS		:=
+LDFLAGS		:=
+GOOPTS		:=
+GO 		:= GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
+GOGETTER	:= GOPATH=$(shell pwd)/.tmpdeps go get -d
+MIGVERFLAGS	:= -X mig.ninja/mig.Version=$(BUILDREV)
 GOLDFLAGS	:= -ldflags "$(MIGVERFLAGS) $(STRIPOPT)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install
-
 
 all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-action-generator mig-action-verifier worker-agent-intel \
 	runner-compliance runner-scribe mig-loader
@@ -90,20 +98,25 @@ all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-act
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
 
-mig-agent: create-bindir
+mig-agent: create-bindir available-modules mig-agent/configuration.go
 	echo building mig-agent for $(OS)/$(ARCH)
-	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
-	# test if the agent configuration variable contains something different than the default value
-	# and if so, replace the link to the default configuration with the provided configuration
-	if [ $(AGTCONF) != "mig-agent/configuration.go" ]; then rm mig-agent/configuration.go; cp $(AGTCONF) mig-agent/configuration.go; fi
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] || (echo FAILED && false)
-	# If our build target is darwin and OSXPROCSIGID is set, sign the binary
+# If our build target is darwin and OSXPROCSIGID is set, sign the binary
 	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX); \
 	fi
 	@echo SUCCESS
+
+available-modules: $(AVAILMOD_PATHS)
+
+$(AVAILMOD_PATHS): .FORCE
+	cp $(AVAILMOD) $@
+
+mig-agent/configuration.go: .FORCE
+	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
+	cp $(AGTCONF) $@
 
 mig-scheduler: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig.ninja/mig/mig-scheduler
@@ -117,23 +130,23 @@ mig-runner: create-bindir
 mig-action-generator: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
 
-mig-loader: create-bindir
-	if [ ! -r $(LOADERCONF) ]; then echo "$(LOADERCONF) configuration file does not exist" ; exit 1; fi
-	# test if the loader configuration variable contains something different than the default value
-	# and if so, replace the link to the default configuration with the provided configuration
-	if [ $(LOADERCONF) != "mig-loader/configuration.go" ]; then rm mig-loader/configuration.go; cp $(LOADERCONF) mig-loader/configuration.go; fi
+mig-loader: create-bindir mig-loader/configuration.go
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader $(GOLDFLAGS) mig.ninja/mig/mig-loader
 	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-loader; \
 	fi
 
+mig-loader/configuration.go: .FORCE
+	if [ ! -r $(LOADERCONF) ]; then echo "$(LOADERCONF) configuration file does not exist" ; exit 1; fi
+	cp $(LOADERCONF) $@
+
 mig-action-verifier: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
 
-mig-console: create-bindir
+mig-console: create-bindir available-modules
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig.ninja/mig/client/mig-console
 
-mig-cmd: create-bindir
+mig-cmd: create-bindir available-modules
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig $(GOLDFLAGS) mig.ninja/mig/client/mig
 
 mig-agent-search: create-bindir
@@ -271,11 +284,11 @@ agent-install-script-osx:
 	chmod 0755 tmp/agent_install.sh
 
 agent-remove-script-linux:
-	echo '#!/bin/sh'																> tmp/agent_remove.sh
+	echo '#!/bin/sh'														       > tmp/agent_remove.sh
 	echo 'for f in "/etc/cron.d/mig-agent" "/etc/init/mig-agent.conf" "/etc/init.d/mig-agent" "/etc/systemd/system/mig-agent.service"; do' >> tmp/agent_remove.sh
-	echo '    [ -e "$$f" ] && rm -f "$$f"'											>> tmp/agent_remove.sh
-	echo 'done'																		>> tmp/agent_remove.sh
-	echo 'echo mig-agent removed but not killed if running' >> tmp/agent_remove.sh
+	echo '    [ -e "$$f" ] && rm -f "$$f"'												       >> tmp/agent_remove.sh
+	echo 'done'															       >> tmp/agent_remove.sh
+	echo 'echo mig-agent removed but not killed if running'									 	       >> tmp/agent_remove.sh
 	chmod 0755 tmp/agent_remove.sh
 
 msi-agent: mig-agent
@@ -337,17 +350,17 @@ endif
 
 deb-server: mig-scheduler mig-api mig-runner worker-agent-intel
 	rm -rf tmp
-	# add binaries
+# add binaries
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/opt/mig/bin/mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-api tmp/opt/mig/bin/mig-api
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-runner tmp/opt/mig/bin/mig-runner
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-worker-agent-intel tmp/opt/mig/bin/mig-worker-agent-intel
 	$(INSTALL) -D -m 0755 tools/list_new_agents.sh tmp/opt/mig/bin/list_new_agents.sh
-	# add configuration templates
+# add configuration templates
 	$(INSTALL) -D -m 0640 conf/scheduler.cfg.inc tmp/etc/mig/scheduler.cfg
 	$(INSTALL) -D -m 0640 conf/api.cfg.inc tmp/etc/mig/api.cfg
 	$(INSTALL) -D -m 0640 conf/agent-intel-worker.cfg.inc tmp/etc/mig/agent-intel-worker.cfg
-	# add upstart configs
+# add upstart configs
 	$(INSTALL) -D -m 0640 conf/upstart/mig-scheduler.conf tmp/etc/init/mig-scheduler.conf
 	$(INSTALL) -D -m 0640 conf/upstart/mig-api.conf tmp/etc/init/mig-api.conf
 	$(INSTALL) -D -m 0640 conf/upstart/mig-agent-intel-worker.conf tmp/etc/init/mig-agent-intel-worker.conf
@@ -402,7 +415,7 @@ test:  test-modules
 	$(GO) test mig.ninja/mig
 
 test-modules:
-	# test all modules
+# test all modules
 	$(GO) test mig.ninja/mig/modules/...
 
 clean-agent:
@@ -427,5 +440,7 @@ clean: clean-agent
 	rm -rf bin
 	rm -rf tmp
 	rm -rf .builddir
+
+.FORCE:
 
 .PHONY: clean clean-agent doc agent-install-script agent-remove-script
