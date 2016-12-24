@@ -1,0 +1,244 @@
+{
+	"machine" : [
+		{
+			"string": "armeb",
+			"s2iS"  : 0,
+			"s2iI"	: 8
+		},
+		{
+			"name": "armv5tejl",
+			"s2iS"  : 6,
+			"s2iI"	: 8
+		},
+		{
+			"name": "armv7l",
+			"s2iS"  : 16,
+			"s2iI"	: 8
+		},
+		{
+			"name": "i386",
+			"s2iS"  : 23,
+			"s2iI"	: 0
+		},
+		{
+			"name": "i486",
+			"s2iS"  : 28,
+			"s2iI"	: 0
+		},
+		{
+			"name": "i586",
+			"s2iS"  : 33,
+			"s2iI"	: 0
+		},
+		{
+			"name": "i686",
+			"s2iS"  : 38,
+			"s2iI"	: 0
+		},
+		{
+			"name": "ia64",
+			"s2iS"  : 43,
+			"s2iI"	: 2
+		},
+		{
+			"name": "ppc",
+			"s2iS"  : 48,
+			"s2iI"	: 4
+		},
+		{
+			"name": "ppc64",
+			"s2iS"  : 52,
+			"s2iI"	: 3
+		},
+		{
+			"name": "s390",
+			"s2iS"  : 58,
+			"s2iI"	: 6
+		},
+		{
+			"name": "s390x",
+			"s2iS"  : 63,
+			"s2iI"	: 5
+		},
+		{
+			"name": "x86_64",
+			"s2iS"  : 69,
+			"s2iI"	: 1
+		}
+	],
+
+	"errStrings" : [
+		{
+			"string": "E2BIG",,
+			"s2iS"  : 0,
+			"s2iI"	: 8
+		},
+		{
+			"name": "EACCES",
+			"s2iS"  : 6,
+			"s2iI"	: 8
+		},
+		{
+			"name": "EADDRINUSE",
+			"s2iS"  : 16,
+			"s2iI"	: 8
+		},
+		{
+			"name": ,"EADDRNOTAVAIL",
+			"s2iS"  : 23,
+			"s2iI"	: 0
+		},
+		{
+			"name": ,"EADV",
+			"s2iS"  : 28,
+			"s2iI"	: 0
+		},
+		{
+			"name": ,"EAFNOSUPPORT",
+			"s2iS"  : 33,
+			"s2iI"	: 0
+		},
+		{
+			"name": ,"EAGAIN",
+			"s2iS"  : 38,
+			"s2iI"	: 0
+		},
+		{
+			"name": ,"EALREADY",
+			"s2iS"  : 43,
+			"s2iI"	: 0
+		},
+		{
+			"name": ,"EBADE",
+			"s2iS"  : 48,
+			"s2iI"	: 0
+		},
+		{
+			"name": ,"EBADF",
+			"s2iS"  : 52,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EBADFD",
+			"s2iS"  : 58,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EBADMSG",
+			"s2iS"  : 63,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EBADR",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EBADRQC",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": ,"EBADSLT",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": ,"EBFONT",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EBUSY",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "ECANCELED",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "ECHILD",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "ECHRNG",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "ECOMM",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "ECONNABORTED",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "ECONNREFUSED",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "ECONNRESET",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EDEADLK",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EDEADLOCK",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EDESTADDRREQ",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EDOM",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EDOTDOT",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EDQUOT",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EEXIST",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EFAULT",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EFBIG",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		},
+		{
+			"name": "EHOSTDOWN",
+			"s2iS"  : 69,
+			"s2iI"	: 0
+		}
+	]
+}
+
+////////// Need to make message type follow http://www.filewatcher.com/p/audit-debuginfo-1.7.7-6.el5.ia64.rpm.955920/usr/src/debug/audit-1.7.7/lib/msg_typetabs.h.html to make it

@@ -1,0 +1,14 @@
+# AuditGetReply should properly emulate auditd's version, we need audit_reply struct , probably reduce duplication of code
+
+#ask about libaudit.c audit_rule_fieldpair_data: strtol vs strtoul
+
+# ask this: -A exit,never -F dir=/usr/lib/nagios/plugins -F perm=x ( what this means, if directory is missing)
+
+better ways to show warnings
+
+Fix audit-go repo to point at the newest libaudit-go
+mention in audit-go README about creating new clients as the audit-go or mig audit module using libaudit go
+Make clear README examples
+
+
+BUG: the packed event in module will always be one less than the serial provided ( we need a next disrupting serial to call message handler on the packed event)
