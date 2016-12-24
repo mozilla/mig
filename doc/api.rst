@@ -16,7 +16,7 @@ endpoints. API responses follows the **cljs** format defined in
 Endpoints
 ---------
 
-The API root is at `/api/v1` by defualt. All the endpoints described below are
+The API root is at `/api/v1` by default. All the endpoints described below are
 reachable behind the root. If you change the location of the API root, update
 the query paths accordingly.
 
@@ -26,7 +26,7 @@ GET /api/v1/heartbeat
 * Parameters: none
 * Authentication: none
 * Response Code: 200 OK
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 .. code:: json
 
@@ -809,7 +809,7 @@ GET /api/v1/search
 
 		- `action`: select actions with a `validfrom` date greater than `after`.
 		- `agent`: select agents that have sent a heartbeat since `after`.
-		- `command`: select commands with a `starttime` date greated than `after`.
+		- `command`: select commands with a `starttime` date greater than `after`.
 		- `investigator`: select investigators with a `createdat` date greater
 		  than `after`.
 
@@ -824,7 +824,7 @@ GET /api/v1/search
 	  type:
 
 		- `action`: select actions with a `expireafter` date lower than `before`
-		- `agent`: select agents that have sent a heartbeat priot to `before`
+		- `agent`: select agents that have sent a heartbeat prior to `before`
 		- `command`: select commands with a `starttime` date lower than `before`
 		- `investigator`: select investigators with a `lastmodified` date lower
 		  than `before`
@@ -908,7 +908,7 @@ GET /api/v1/loader
 	- `loaderid`: ID of loader instance to return
 * Authentication: X-PGPAUTHORIZATION
 * Response Code: 200 OK
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 .. code:: json
 
@@ -947,7 +947,7 @@ POST /api/v1/loader/status/
         - `status`: New status, "enabled" or "disabled"
 * Authentication: X-PGPAUTHORIZATION
 * Response Code: 200 OK
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 POST /api/v1/loader/key/
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -957,7 +957,7 @@ POST /api/v1/loader/key/
         - `loaderkey`: New key for loader instance
 * Authentication: X-PGPAUTHORIZATION
 * Response Code: 200 OK
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 POST /api/v1/loader/new/
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -966,7 +966,7 @@ POST /api/v1/loader/new/
 	- `loader`: JSON marshaled mig.LoaderEntry data
 * Authentication: X-PGPAUTHORIZATION
 * Response Code: 201 Created
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 GET /api/v1/manifest/
 ~~~~~~~~~~~~~~~~~~~~~
@@ -975,7 +975,7 @@ GET /api/v1/manifest/
 	- `manifestid`: ID of manifest to return
 * Authentication: X-PGPAUTHORIZATION
 * Response Code: 200 OK
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 .. code:: json
 
@@ -1015,7 +1015,7 @@ POST /api/v1/manifest/sign/
         - `signature`: The signature to add
 * Authentication: X-PGPAUTHORIZATION
 * Response Code: 200 OK
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 POST /api/v1/manifest/status/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1025,7 +1025,7 @@ POST /api/v1/manifest/status/
         - `status`: Status for manifest, "staged" or "disabled"
 * Authentication: X-PGPAUTHORIZATION
 * Response Code: 200 OK
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 POST /api/v1/manifest/new/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1034,7 +1034,7 @@ POST /api/v1/manifest/new/
 	- `manifest`: JSON marshaled mig.ManifestRecord data
 * Authentication: X-PGPAUTHORIZATION
 * Response Code: 201 Created
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 GET /api/v1/manifest/loaders/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1043,7 +1043,7 @@ GET /api/v1/manifest/loaders/
 	- `manifestid`: ID of manifest to return loaders for
 * Authentication: X-PGPAUTHORIZATION
 * Response Code: 200 OK
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 .. code:: json
 
@@ -1097,7 +1097,7 @@ POST /api/v1/manifest/agent/
 	- `parameters`: JSON marshaled mig.ManifestParameters data
 * Authentication: X-LOADERKEY
 * Response Code: 200 OK
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 .. code:: json
 
@@ -1159,7 +1159,7 @@ POST /api/v1/manifest/fetch/
 	- `parameters`: JSON marshaled mig.ManifestParameters data
 * Authentication: X-LOADERKEY
 * Response Code: 200 OK
-* Reponse: Collection+JSON
+* Response: Collection+JSON
 
 .. code:: json
 
