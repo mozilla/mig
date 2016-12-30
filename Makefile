@@ -91,9 +91,14 @@ GOLDFLAGS	:= -ldflags "$(MIGVERFLAGS) $(STRIPOPT)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install
+SERVERTARGETS   := mig-scheduler mig-api mig-runner runner-compliance runner-scribe \
+		   worker-agent-intel
+CLIENTTARGETS   := mig-cmd mig-console mig-action-generator mig-action-verifier \
+		   mig-agent-search
+AGENTTARGETS	:= mig-agent mig-loader
+ALLTARGETS	:= $(AGENTTARGETS) $(SERVERTARGETS) $(CLIENTTARGETS)
 
-all: test mig-agent mig-scheduler mig-api mig-cmd mig-console mig-runner mig-action-generator mig-action-verifier worker-agent-intel \
-	runner-compliance runner-scribe mig-loader
+all: test $(ALLTARGETS)
 
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
@@ -370,13 +375,13 @@ deb-server: mig-scheduler mig-api mig-runner worker-agent-intel
 
 install: install-server install-client
 
-install-server:
+install-server: $(SERVERTARGETS)
 	$(INSTALL) -m 0755 $(BINDIR)/mig-scheduler $(PREFIX)/bin/mig-scheduler
 	$(INSTALL) -m 0755 $(BINDIR)/mig-api $(PREFIX)/bin/mig-api
 	$(INSTALL) -m 0755 $(BINDIR)/mig-runner $(PREFIX)/bin/mig-runner
 	$(INSTALL) -m 0755 $(BINDIR)/mig-worker-agent-intel $(PREFIX)/bin/mig-worker-agent-intel
 
-install-client:
+install-client: $(CLIENTTARGETS)
 	$(INSTALL) -m 0755 $(BINDIR)/mig $(PREFIX)/bin/mig
 	$(INSTALL) -m 0755 $(BINDIR)/mig-console $(PREFIX)/bin/mig-console
 	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-search $(PREFIX)/bin/mig-agent-search
