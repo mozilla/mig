@@ -91,7 +91,6 @@ pubkey			  show the armored public key of the investigator
 r			  refresh the investigator (get latest version from upstream)
 setperms [permissions...] set permissions for investigator, no arguments to apply default
 showperms                 display possible permission values
-setadmin <true|false>     enable or disable admin flag for investigator
 setstatus <status>	  changes the status of the investigator to <status> (can be 'active' or 'disabled')
 `)
 		case "lastactions":
