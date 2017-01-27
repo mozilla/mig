@@ -34,6 +34,7 @@ type config struct {
 		NoPersistMods    bool
 		PersistConfigDir string
 		ExtraPrivacyMode bool
+		VerifyAcls       bool
 	}
 	Certs struct {
 		Ca, Cert, Key string
@@ -123,6 +124,9 @@ type globals struct {
 	// timeout after which a module run is killed
 	moduleTimeout time.Duration
 
+	// Whether or not to verify investigators' permissions when issuing an action
+	verifyAcls bool
+
 	// Not supported by config
 	// Control modules permissions by PGP keys
 	// AGENTACL [...]string
@@ -164,6 +168,7 @@ func newGlobals() *globals {
 		socket:             SOCKET,
 		heartBeatFreq:      HEARTBEATFREQ,
 		moduleTimeout:      MODULETIMEOUT,
+		verifyAcls:         VERIFYACLS,
 		caCert:             CACERT,
 		agentCert:          AGENTCERT,
 		agentKey:           AGENTKEY,
@@ -193,9 +198,11 @@ func (g globals) parseConfig(config config) error {
 			return fmt.Errorf("config.Agent.RefreshEnv %v", err)
 		}
 	}
+
 	g.loggingConf = config.Logging
 	g.amqBroker = config.Agent.Relay
 	g.apiURL = config.Agent.Api
+	g.verifyAcls = config.Agent.VerifyAcls
 	if config.Agent.Proxies != "" {
 		g.proxies = strings.Split(config.Agent.Proxies, ",")
 	}
@@ -259,6 +266,7 @@ func (g globals) apply() {
 	SOCKET = g.socket
 	HEARTBEATFREQ = g.heartBeatFreq
 	MODULETIMEOUT = g.moduleTimeout
+	VERIFYACLS = g.verifyAcls
 	CACERT = g.caCert
 	AGENTCERT = g.agentCert
 	AGENTKEY = g.agentKey

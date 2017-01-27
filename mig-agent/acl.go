@@ -49,7 +49,7 @@ func checkActionAuthorization(a mig.Action, ctx *Context) (err error) {
 	}
 
 	// check ACLs, includes verifying signatures
-	err = a.VerifyACL(ctx.ACL, keyring)
+	err = a.VerifyACL(ctx.ACL, keyring, VERIFYACLS)
 	if err != nil {
 		desc := fmt.Sprintf("action ACL verification failed: %v", err)
 		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: desc}.Err()
