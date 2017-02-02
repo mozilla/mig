@@ -85,6 +85,7 @@ func (ctx *AgentContext) Differs(comp AgentContext) bool {
 
 func (ctx *AgentContext) ToAgent() (ret mig.Agent) {
 	ret.Name = ctx.Hostname
+	ret.QueueLoc = ctx.QueueLoc
 	ret.PID = os.Getpid()
 	ret.Env.OS = ctx.OS
 	ret.Env.Arch = ctx.Architecture
