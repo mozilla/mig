@@ -13,22 +13,18 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	mrand "math/rand"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"regexp"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
-	"mig.ninja/mig/modules"
 	"mig.ninja/mig/mig-agent/agentcontext"
+	"mig.ninja/mig/modules"
 )
 
 // Context contains all configuration variables as well as handlers for
@@ -193,10 +189,7 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	ctx.Agent.BinPath = actx.BinPath
 
 	// get the agent ID
-	ctx, err = initAgentID(ctx)
-	if err != nil {
-		panic(err)
-	}
+	ctx.Agent.UID = actx.UID
 
 	// build the agent message queue location
 	ctx.Agent.QueueLoc = fmt.Sprintf("%s.%s", ctx.Agent.Env.OS, ctx.Agent.UID)
@@ -298,108 +291,6 @@ func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx.Channels.Results = make(chan mig.Command, 5)
 	ctx.Channels.Log = make(chan mig.Log, 97)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
-	return
-}
-
-// initAgentID will retrieve an ID from disk, or request one if missing
-func initAgentID(orig_ctx Context) (ctx Context, err error) {
-	ctx = orig_ctx
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("initAgentID() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving initAgentID()"}.Debug()
-	}()
-	os.Chmod(ctx.Agent.RunDir, 0755)
-	idFile := ctx.Agent.RunDir + ".migagtid"
-	id, err := ioutil.ReadFile(idFile)
-	if err != nil {
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("unable to read agent id from '%s': %v", idFile, err)}.Debug()
-		// ID file doesn't exist, create it
-		id, err = createIDFile(ctx)
-		if err != nil {
-			panic(err)
-		}
-	}
-	// Make sure the obtained queue location matches the format that we expect, if
-	// it doesn't create a new one
-	mtch, err := regexp.Match("^[0-9a-zA-Z]{80,}$", id)
-	if err != nil {
-		panic(err)
-	}
-	if !mtch {
-		ctx.Channels.Log <- mig.Log{Desc: "invalid or deprecated agent ID, recreating"}.Info()
-		id, err = createIDFile(ctx)
-		if err != nil {
-			panic(err)
-		}
-	}
-	ctx.Agent.UID = fmt.Sprintf("%s", id)
-	os.Chmod(idFile, 0400)
-	return
-}
-
-// createIDFile will generate a new ID for this agent and store it on disk
-// the location depends on the operating system
-func createIDFile(ctx Context) (id []byte, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("createIDFile() -> %v", e)
-		}
-	}()
-	// generate an ID with 512 bits of entropy
-	r := mrand.New(mrand.NewSource(time.Now().UnixNano()))
-	var sid string
-	for i := 0; i < 8; i++ {
-		sid += strconv.FormatUint(uint64(r.Int63()), 36)
-	}
-
-	// check that the storage DIR exist, and that it's a dir
-	tdir, err := os.Open(ctx.Agent.RunDir)
-	defer tdir.Close()
-	if err != nil {
-		// dir doesn't exist, create it
-		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("agent rundir is missing from '%s'. creating it", ctx.Agent.RunDir)}.Debug()
-		err = os.MkdirAll(ctx.Agent.RunDir, 0755)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		// open worked, verify that it's a dir
-		tdirMode, err := tdir.Stat()
-		if err != nil {
-			panic(err)
-		}
-		if !tdirMode.Mode().IsDir() {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("'%s' is not a directory. removing it", ctx.Agent.RunDir)}.Debug()
-			// not a valid dir. destroy whatever it is, and recreate
-			err = os.Remove(ctx.Agent.RunDir)
-			if err != nil {
-				panic(err)
-			}
-			err = os.MkdirAll(ctx.Agent.RunDir, 0755)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-
-	idFile := ctx.Agent.RunDir + ".migagtid"
-
-	// something exists at the location of the id file, just plain remove it
-	_ = os.Remove(idFile)
-
-	// write the ID file
-	err = ioutil.WriteFile(idFile, []byte(sid), 0400)
-	if err != nil {
-		panic(err)
-	}
-	// read ID from disk
-	id, err = ioutil.ReadFile(idFile)
-	if err != nil {
-		panic(err)
-	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("agent id created in '%s'", idFile)}.Debug()
 	return
 }
 
