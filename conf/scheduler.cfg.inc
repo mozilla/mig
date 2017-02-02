@@ -20,6 +20,9 @@
     ; issue kill orders to duplicate agents running on the same endpoint
     killdupagents = false
 
+    ; include an entry in log each time an action is sent to an agent
+    logactions = false
+
 ; the collector continuously pulls
 ; pending messages from the spool
 [collector]

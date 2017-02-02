@@ -33,6 +33,7 @@ type Context struct {
 		// configuration
 		TimeOut, HeartbeatFreq, Whitelist string
 		DetectMultiAgents, KillDupAgents  bool
+		LogActions                        bool
 	}
 	Channels struct {
 		// internal

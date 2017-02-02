@@ -248,7 +248,8 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 	}
 	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc,
 		version, pid, starttime, destructiontime, heartbeattime, refreshtime, status,
-		mode, environment, tags
+		mode, environment, tags,
+		(SELECT loadername FROM loaders WHERE loaders.queueloc = agents.queueloc LIMIT 1)
 		FROM agents WHERE agents.status IN ('%s', '%s') AND (%s)
 		ORDER BY agents.queueloc ASC`, mig.AgtStatusOnline, mig.AgtStatusIdle, target))
 	if rows != nil {
@@ -260,10 +261,13 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 		return
 	}
 	for rows.Next() {
-		var agent mig.Agent
+		var (
+			agent      mig.Agent
+			loaderName sql.NullString
+		)
 		err = rows.Scan(&agent.ID, &agent.Name, &agent.QueueLoc, &agent.Version,
 			&agent.PID, &agent.StartTime, &agent.DestructionTime, &agent.HeartBeatTS,
-			&agent.RefreshTS, &agent.Status, &agent.Mode, &jEnv, &jTags)
+			&agent.RefreshTS, &agent.Status, &agent.Mode, &jEnv, &jTags, &loaderName)
 		if err != nil {
 			err = fmt.Errorf("Failed to retrieve agent data: '%v'", err)
 			return
@@ -277,6 +281,9 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 		if err != nil {
 			err = fmt.Errorf("failed to unmarshal agent environment")
 			return
+		}
+		if loaderName.Valid && loaderName.String != "" {
+			agent.LoaderName = loaderName.String
 		}
 		agents = append(agents, agent)
 	}
