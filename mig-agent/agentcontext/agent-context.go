@@ -37,6 +37,7 @@ type AgentContext struct {
 	Addresses    []string // IP addresses
 	PublicIP     string   // Systems public IP from perspective of API
 	UID          string   // Agent ID
+	QueueLoc     string   // Agent queue location
 
 	AWS AWSContext // AWS specific information
 }
@@ -150,6 +151,9 @@ func NewAgentContext(lch chan mig.Log, hints AgentContextHints) (ret AgentContex
 	if err != nil {
 		panic(err)
 	}
+
+	// build the agent message queue location
+	ret.QueueLoc = fmt.Sprintf("%s.%s", ret.OS, ret.UID)
 
 	if hints.DiscoverPublicIP {
 		ret, err = findPublicIP(ret, hints)

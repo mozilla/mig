@@ -191,8 +191,8 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 	// get the agent ID
 	ctx.Agent.UID = actx.UID
 
-	// build the agent message queue location
-	ctx.Agent.QueueLoc = fmt.Sprintf("%s.%s", ctx.Agent.Env.OS, ctx.Agent.UID)
+	// set the agent message queue location
+	ctx.Agent.QueueLoc = actx.QueueLoc
 
 	// daemonize if not in foreground mode
 	if !foreground {
