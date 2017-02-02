@@ -120,8 +120,14 @@ func (r *Request) GetPIN() (pin string, outerr error) {
 
 func runPass(bin string, args ...string) {
 	cmd := exec.Command(bin, args...)
+	cmd.Stdin  = os.Stdin
 	cmd.Stdout = os.Stdout
-	cmd.Run()
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("==> Error: %s\n", err.Error())
+	}
+	return "", nil;
 }
 
 func (r *Request) getPINNaïve() (string, error) {
@@ -129,7 +135,10 @@ func (r *Request) getPINNaïve() (string, error) {
 	if err != nil {
 		return "", errors.New("no pinentry or stty found")
 	}
-	runPass(stty, "-echo")
+	ret, err := runPass(stty, "-echo")
+	if err != nil {
+		os.Stderr.WriteString(err)
+	}
 	defer runPass(stty, "echo")
 
 	if r.Desc != "" {
