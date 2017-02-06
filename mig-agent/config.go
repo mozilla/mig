@@ -34,7 +34,7 @@ type config struct {
 		NoPersistMods    bool
 		PersistConfigDir string
 		ExtraPrivacyMode bool
-		VerifyAcls       bool
+		OnlyVerifyPubKey bool
 	}
 	Certs struct {
 		Ca, Cert, Key string
@@ -124,8 +124,8 @@ type globals struct {
 	// timeout after which a module run is killed
 	moduleTimeout time.Duration
 
-	// Whether or not to verify investigators' permissions when issuing an action
-	verifyAcls bool
+	// if true, only the investigator's public key is verified on actions and not ACLs.
+	onlyVerifyPubKey bool
 
 	// Not supported by config
 	// Control modules permissions by PGP keys
@@ -168,7 +168,7 @@ func newGlobals() *globals {
 		socket:             SOCKET,
 		heartBeatFreq:      HEARTBEATFREQ,
 		moduleTimeout:      MODULETIMEOUT,
-		verifyAcls:         VERIFYACLS,
+		onlyVerifyPubKey:   ONLYVERIFYPUBKEY,
 		caCert:             CACERT,
 		agentCert:          AGENTCERT,
 		agentKey:           AGENTKEY,
@@ -202,7 +202,7 @@ func (g globals) parseConfig(config config) error {
 	g.loggingConf = config.Logging
 	g.amqBroker = config.Agent.Relay
 	g.apiURL = config.Agent.Api
-	g.verifyAcls = config.Agent.VerifyAcls
+	g.onlyVerifyPubKey = config.Agent.OnlyVerifyPubKey
 	if config.Agent.Proxies != "" {
 		g.proxies = strings.Split(config.Agent.Proxies, ",")
 	}
@@ -266,7 +266,7 @@ func (g globals) apply() {
 	SOCKET = g.socket
 	HEARTBEATFREQ = g.heartBeatFreq
 	MODULETIMEOUT = g.moduleTimeout
-	VERIFYACLS = g.verifyAcls
+	ONLYVERIFYPUBKEY = g.onlyVerifyPubKey
 	CACERT = g.caCert
 	AGENTCERT = g.agentCert
 	AGENTKEY = g.agentKey

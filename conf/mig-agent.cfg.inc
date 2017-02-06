@@ -51,6 +51,9 @@
     ; if true, persistent modules will not be executed by the agent
     ; nopersistmods = off
 
+    ; if true, only the investigator's public key is verified on actions and not ACLs.
+    onlyVerifyPubKey = false
+
 [certs]
     ca  = "/path/to/ca/cert"
     cert= "/path/to/client/cert"

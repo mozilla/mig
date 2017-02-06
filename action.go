@@ -343,7 +343,7 @@ func (a Action) String() (str string, err error) {
 // permission is found, the default one `default` is used.
 // The first permission that is found to apply to an operation, but
 // doesn't allow the operation to run, will fail the verification globally
-func (a Action) VerifyACL(acl ACL, keyring io.Reader, verifyACLs bool) (err error) {
+func (a Action) VerifyACL(acl ACL, keyring io.Reader, onlyVerifyPubKey bool) (err error) {
 	// first, verify all signatures and get a list of PGP
 	// fingerprints of the signers
 	var fingerprints []string
@@ -372,7 +372,7 @@ func (a Action) VerifyACL(acl ACL, keyring io.Reader, verifyACLs bool) (err erro
 		return errors.New("No valid fingerprints found.")
 	}
 
-	if !verifyACLs {
+	if onlyVerifyPubKey {
 		return
 	}
 
