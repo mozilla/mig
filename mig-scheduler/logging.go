@@ -12,7 +12,7 @@ import (
 
 func logAgentAction(ctx Context, cmd mig.Command) (err error) {
 	var logmsg string
-	logmsg = fmt.Sprintf("Agent action: %q %q %q", cmd.Agent.Name, cmd.Agent.LoaderName, cmd.Action.Name)
+	logmsg = fmt.Sprintf("Agent action: agent=%q loader=%q name=%q", cmd.Agent.Name, cmd.Agent.LoaderName, cmd.Action.Name)
 	ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: logmsg}.Info()
 	return
 }
