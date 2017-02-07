@@ -179,6 +179,12 @@ func createCommand(ctx Context, action mig.Action, agent mig.Agent, emptyResults
 	cmd.ID = cmdid
 	cmd.StartTime = time.Now().UTC()
 	cmd.Results = emptyResults
+	if ctx.Agent.LogActions {
+		err = logAgentAction(ctx, cmd)
+		if err != nil {
+			panic(err)
+		}
+	}
 	ctx.Channels.CommandReady <- cmd
 	return
 }

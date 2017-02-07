@@ -24,6 +24,7 @@ type Agent struct {
 	Mode            string      `json:"mode"`
 	Version         string      `json:"version,omitempty"`
 	PID             int         `json:"pid,omitempty"`
+	LoaderName      string      `json:"loadername,omitempty"`
 	StartTime       time.Time   `json:"starttime,omitempty"`
 	DestructionTime time.Time   `json:"destructiontime,omitempty"`
 	HeartBeatTS     time.Time   `json:"heartbeatts,omitempty"`

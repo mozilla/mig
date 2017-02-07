@@ -31,7 +31,8 @@ CREATE TABLE agents (
     refreshtime         timestamp with time zone NOT NULL,
     status              character varying(255),
     environment         json,
-    tags                json
+    tags                json,
+    loadername          character varying(2048)
 );
 ALTER TABLE public.agents OWNER TO migadmin;
 ALTER TABLE ONLY agents
@@ -141,13 +142,15 @@ CREATE TABLE loaders (
 	tags          json,
 	lastseen      timestamp with time zone NOT NULL,
 	enabled       boolean NOT NULL DEFAULT false,
-	expectenv     character varying(2048)
+	expectenv     character varying(2048),
+	queueloc      character varying(2048)
 );
 ALTER TABLE ONLY loaders
     ADD CONSTRAINT loaders_pkey PRIMARY KEY (id);
 CREATE UNIQUE INDEX loaders_loadername_idx ON loaders USING btree(loadername);
 CREATE UNIQUE INDEX loaders_loaderkey_idx ON loaders USING btree(loaderkey);
 CREATE UNIQUE INDEX loaders_keyprefix_idx ON loaders USING btree(keyprefix);
+CREATE UNIQUE INDEX loaders_queueloc_idx ON loaders USING btree(queueloc);
 ALTER TABLE public.loaders OWNER TO migadmin;
 
 CREATE TABLE modules (
@@ -208,7 +211,7 @@ GRANT INSERT ON actions, signatures, manifests, manifestsig, loaders TO migapi;
 GRANT DELETE ON manifestsig TO migapi;
 GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified, permissions) ON investigators TO migapi;
 GRANT UPDATE (permissions, status, lastmodified) ON investigators TO migapi;
-GRANT UPDATE (name, env, tags, loaderkey, salt, lastseen, enabled, expectenv) ON loaders TO migapi;
+GRANT UPDATE (name, env, tags, loaderkey, salt, lastseen, enabled, expectenv, queueloc) ON loaders TO migapi;
 GRANT UPDATE (status) ON manifests TO migapi;
 GRANT USAGE ON SEQUENCE investigators_id_seq TO migapi;
 GRANT USAGE ON SEQUENCE loaders_id_seq TO migapi;
@@ -218,7 +221,7 @@ GRANT USAGE ON SEQUENCE manifests_id_seq TO migapi;
 CREATE ROLE migreadonly;
 ALTER ROLE migreadonly WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB NOLOGIN;
 GRANT SELECT ON actions, agents, agtmodreq, commands, invagtmodperm, modules, signatures TO migreadonly;
-GRANT SELECT (id, env, tags, expectenv) ON loaders TO migreadonly;
+GRANT SELECT (id, env, tags, expectenv, loadername, queueloc) ON loaders TO migreadonly;
 GRANT SELECT (id, name, pgpfingerprint, publickey, status, createdat, lastmodified) ON investigators TO migreadonly;
 GRANT migreadonly TO migapi;
 GRANT migreadonly TO migscheduler;

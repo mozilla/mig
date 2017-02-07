@@ -14,10 +14,15 @@ package agentcontext /* import "mig.ninja/mig/mig-agent/agentcontext" */
 import (
 	"fmt"
 	"github.com/kardianos/osext"
+	"io/ioutil"
+	mrand "math/rand"
 	"mig.ninja/mig"
 	"os"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Information from the system the agent is running on
@@ -31,6 +36,8 @@ type AgentContext struct {
 	Architecture string   // System architecture
 	Addresses    []string // IP addresses
 	PublicIP     string   // Systems public IP from perspective of API
+	UID          string   // Agent ID
+	QueueLoc     string   // Agent queue location
 
 	AWS AWSContext // AWS specific information
 }
@@ -78,6 +85,7 @@ func (ctx *AgentContext) Differs(comp AgentContext) bool {
 
 func (ctx *AgentContext) ToAgent() (ret mig.Agent) {
 	ret.Name = ctx.Hostname
+	ret.QueueLoc = ctx.QueueLoc
 	ret.PID = os.Getpid()
 	ret.Env.OS = ctx.OS
 	ret.Env.Arch = ctx.Architecture
@@ -140,6 +148,13 @@ func NewAgentContext(lch chan mig.Log, hints AgentContextHints) (ret AgentContex
 	if err != nil {
 		panic(err)
 	}
+	ret, err = initAgentID(ret)
+	if err != nil {
+		panic(err)
+	}
+
+	// build the agent message queue location
+	ret.QueueLoc = fmt.Sprintf("%s.%s", ret.OS, ret.UID)
 
 	if hints.DiscoverPublicIP {
 		ret, err = findPublicIP(ret, hints)
@@ -155,6 +170,108 @@ func NewAgentContext(lch chan mig.Log, hints AgentContextHints) (ret AgentContex
 		}
 	}
 
+	return
+}
+
+// initAgentID will retrieve an ID from disk, or request one if missing
+func initAgentID(orig_ctx AgentContext) (ctx AgentContext, err error) {
+	ctx = orig_ctx
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("initAgentID() -> %v", e)
+		}
+		logChan <- mig.Log{Desc: "leaving initAgentID()"}.Debug()
+	}()
+	os.Chmod(ctx.RunDir, 0755)
+	idFile := ctx.RunDir + ".migagtid"
+	id, err := ioutil.ReadFile(idFile)
+	if err != nil {
+		logChan <- mig.Log{Desc: fmt.Sprintf("unable to read agent id from '%s': %v", idFile, err)}.Debug()
+		// ID file doesn't exist, create it
+		id, err = createIDFile(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}
+	// Make sure the obtained queue location matches the format that we expect, if
+	// it doesn't create a new one
+	mtch, err := regexp.Match("^[0-9a-zA-Z]{80,}$", id)
+	if err != nil {
+		panic(err)
+	}
+	if !mtch {
+		logChan <- mig.Log{Desc: "invalid or deprecated agent ID, recreating"}.Info()
+		id, err = createIDFile(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}
+	ctx.UID = fmt.Sprintf("%s", id)
+	os.Chmod(idFile, 0400)
+	return
+}
+
+// createIDFile will generate a new ID for this agent and store it on disk
+// the location depends on the operating system
+func createIDFile(ctx AgentContext) (id []byte, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("createIDFile() -> %v", e)
+		}
+	}()
+	// generate an ID with 512 bits of entropy
+	r := mrand.New(mrand.NewSource(time.Now().UnixNano()))
+	var sid string
+	for i := 0; i < 8; i++ {
+		sid += strconv.FormatUint(uint64(r.Int63()), 36)
+	}
+
+	// check that the storage DIR exist, and that it's a dir
+	tdir, err := os.Open(ctx.RunDir)
+	defer tdir.Close()
+	if err != nil {
+		// dir doesn't exist, create it
+		logChan <- mig.Log{Desc: fmt.Sprintf("agent rundir is missing from '%s'. creating it", ctx.RunDir)}.Debug()
+		err = os.MkdirAll(ctx.RunDir, 0755)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		// open worked, verify that it's a dir
+		tdirMode, err := tdir.Stat()
+		if err != nil {
+			panic(err)
+		}
+		if !tdirMode.Mode().IsDir() {
+			logChan <- mig.Log{Desc: fmt.Sprintf("'%s' is not a directory. removing it", ctx.RunDir)}.Debug()
+			// not a valid dir. destroy whatever it is, and recreate
+			err = os.Remove(ctx.RunDir)
+			if err != nil {
+				panic(err)
+			}
+			err = os.MkdirAll(ctx.RunDir, 0755)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
+	idFile := ctx.RunDir + ".migagtid"
+
+	// something exists at the location of the id file, just plain remove it
+	_ = os.Remove(idFile)
+
+	// write the ID file
+	err = ioutil.WriteFile(idFile, []byte(sid), 0400)
+	if err != nil {
+		panic(err)
+	}
+	// read ID from disk
+	id, err = ioutil.ReadFile(idFile)
+	if err != nil {
+		panic(err)
+	}
+	logChan <- mig.Log{Desc: fmt.Sprintf("agent id created in '%s'", idFile)}.Debug()
 	return
 }
 

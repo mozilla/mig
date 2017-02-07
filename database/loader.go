@@ -70,9 +70,10 @@ func (db *DB) UpdateLoaderEntry(lid float64, agt mig.Agent) (err error) {
 	}
 	_, err = db.c.Exec(`UPDATE loaders
 		SET name=$1, env=$2, tags=$3,
+		queueloc=NULLIF($4, ''),
 		lastseen=now()
-		WHERE id=$4`,
-		agt.Name, jEnv, jTags, lid)
+		WHERE id=$5`,
+		agt.Name, jEnv, jTags, agt.QueueLoc, lid)
 	if err != nil {
 		return err
 	}
