@@ -91,6 +91,9 @@ var HEARTBEATFREQ time.Duration = 300 * time.Second
 // timeout after which a module run is killed
 var MODULETIMEOUT time.Duration = 300 * time.Second
 
+// if true, only the investigator's public key is verified on actions and not ACLs.
+var ONLYVERIFYPUBKEY = false
+
 // Control modules permissions by PGP keys
 var AGENTACL = [...]string{
 	`{
