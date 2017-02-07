@@ -106,22 +106,27 @@ func (db *DB) InsertAgent(agt mig.Agent, useTx *sql.Tx) (err error) {
 		return
 	}
 	agtid := mig.GenID()
+	// Insert the new agent; note here we also attempt to query the loaders table
+	// and see if we can get a loadername for the new agent instance, if it's not
+	// associated with a loader the value will just be NULL.
 	if useTx != nil {
 		_, err = useTx.Exec(`INSERT INTO agents
 		(id, name, queueloc, mode, version, pid, starttime, destructiontime,
-		heartbeattime, refreshtime, status, environment, tags)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		heartbeattime, refreshtime, status, environment, tags, loadername)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+		(SELECT loadername FROM loaders WHERE queueloc = $14 LIMIT 1))`,
 			agtid, agt.Name, agt.QueueLoc, agt.Mode, agt.Version, agt.PID,
 			agt.StartTime, agt.DestructionTime, agt.HeartBeatTS, agt.RefreshTS,
-			agt.Status, jEnv, jTags)
+			agt.Status, jEnv, jTags, agt.QueueLoc)
 	} else {
 		_, err = db.c.Exec(`INSERT INTO agents
 		(id, name, queueloc, mode, version, pid, starttime, destructiontime,
-		heartbeattime, refreshtime, status, environment, tags)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		heartbeattime, refreshtime, status, environment, tags, loadername)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+		(SELECT loadername FROM loaders WHERE queueloc = $14 LIMIT 1))`,
 			agtid, agt.Name, agt.QueueLoc, agt.Mode, agt.Version, agt.PID,
 			agt.StartTime, agt.DestructionTime, agt.HeartBeatTS, agt.RefreshTS,
-			agt.Status, jEnv, jTags)
+			agt.Status, jEnv, jTags, agt.QueueLoc)
 	}
 	if err != nil {
 		return fmt.Errorf("Failed to insert agent in database: '%v'", err)
@@ -132,8 +137,10 @@ func (db *DB) InsertAgent(agt mig.Agent, useTx *sql.Tx) (err error) {
 // UpdateAgentHeartbeat updates the heartbeat timestamp of an agent in the database
 // unless the agent has been marked as destroyed
 func (db *DB) UpdateAgentHeartbeat(agt mig.Agent) (err error) {
-	_, err = db.c.Exec(`UPDATE agents SET status=$1, heartbeattime=$2 WHERE id=$3`,
-		mig.AgtStatusOnline, agt.HeartBeatTS, agt.ID)
+	_, err = db.c.Exec(`UPDATE agents SET status=$1, heartbeattime=$2,
+		loadername=(SELECT loadername FROM loaders WHERE queueloc = $3 LIMIT 1)
+		WHERE id=$4`,
+		mig.AgtStatusOnline, agt.HeartBeatTS, agt.QueueLoc, agt.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to update agent in database: '%v'", err)
 	}
@@ -248,8 +255,7 @@ func (db *DB) ActiveAgentsByTarget(target string) (agents []mig.Agent, err error
 	}
 	rows, err := txn.Query(fmt.Sprintf(`SELECT DISTINCT ON (queueloc) id, name, queueloc,
 		version, pid, starttime, destructiontime, heartbeattime, refreshtime, status,
-		mode, environment, tags,
-		(SELECT loadername FROM loaders WHERE loaders.queueloc = agents.queueloc LIMIT 1)
+		mode, environment, tags, loadername
 		FROM agents WHERE agents.status IN ('%s', '%s') AND (%s)
 		ORDER BY agents.queueloc ASC`, mig.AgtStatusOnline, mig.AgtStatusIdle, target))
 	if rows != nil {

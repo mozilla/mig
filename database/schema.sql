@@ -31,7 +31,8 @@ CREATE TABLE agents (
     refreshtime         timestamp with time zone NOT NULL,
     status              character varying(255),
     environment         json,
-    tags                json
+    tags                json,
+    loadername          character varying(2048)
 );
 ALTER TABLE public.agents OWNER TO migadmin;
 ALTER TABLE ONLY agents
