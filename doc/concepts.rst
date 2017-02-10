@@ -176,7 +176,7 @@ The steps involved with issuing actions are:
 * target is the action target value: https://github.com/mozilla/mig/blob/master/actions/example_v2.json#L9
 *  validfrom is the unix timestamp in the UTC timezone of the action validfrom field. The validfrom field is normally in RFC3339 format in the UTC timezone, so for a given value "validfrom": "2017-02-10T14:15:31.01502Z", the unix timestamp would be 1486736131. https://play.golang.org/p/FfGpK8S9VO
 *  expireafter is the same unix timestamp as validfrom but with the expireafter value of the action
-*  operations is a JSON string that contains the entire actions operations array. This is where things get tricky a bit, because we use Golang serialization format and you will need to replicate it *exactly* in javascript.
+*  operations is a JSON string that contains the entire actions operations array. This is where things get tricky a bit, because we use Golang serialization format and you will need to replicate it *exactly* in another language.
 
 For example, if you run the following mig command: 
 
@@ -198,12 +198,12 @@ At the end of this, you should have a string representation of the action that l
 
   name=my fancy action;target=tags->>'operator'='opsec';validfrom=1486736196;expireafter=%!s(int64=1486736556);operations=[{"module":"file","parameters":{"searches":{"s1":{"names":["meihm"],"options":{"macroal":false,"matchall":true,"matchlimit":1000,"maxdepth":1000,"maxerrors":30,"mismatch":null},"paths":["/etc/passwd"]}}}}];
 
-3. Take the string representation of the action and sign it with the PGP private key of the investigator. This is where you will need openpgpjs to perform the signature. It supports various types, so the type you want is an "ARMORED DETACHED SIGNATURE". It will give you back the signature in a multiline wrapped format, like this:
+3. Take the string representation of the action and sign it with the PGP private key of the investigator. This is where you will need the PGP library or tool to perform the signature. PGP supports various signature types, so the type you want is an "ARMORED DETACHED SIGNATURE" to get the signature in a multiline wrapped format, like this:
 
 .. code::
 
   -----BEGIN PGP SIGNATURE-----
-  Version: OpenPGPJS blah blah blah
+  Version: PGP client blah blah blah
   Comment: random text
 
   iEYEARECAAYFAjdYCQoACgkQJ9S6ULt1dqz6IwCfQ7wP6i/i8HhbcOSKF4ELyQB1
@@ -213,7 +213,8 @@ At the end of this, you should have a string representation of the action that l
 
 4. Take the detached signature, remove the header, footer, version and comment, and store the rest as a one line string. Taking the example above, the signature would be:
 
-.. code:
+.. code::
+
   iEYEARECAAYFAjdYCQoACgkQJ9S6ULt1dqz6IwCfQ7wP6i/i8HhbcOSKF4ELyQB1oCoAoOuqpRqEzr4kOkQqHRLE/b8/Rw2k=y6kj
 
 5. Store the signature string in the action JSON under the "pgpsignatures" array. Technically, MIG supports multiple signatures per action, which is useful to require multiple investigators to approve an action. We won't address this use case in the UI yet.
