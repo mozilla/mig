@@ -166,6 +166,66 @@ Upon generation, additional fields are appended to the action:
 * **validfrom** and **expireafter**: two dates that constrain the validity of the
   action to a UTC time window.
 
+The steps involved with issuing actions are:
+
+1. Generate the JSON document of the action
+
+2. create a string representation of the action in the format `"name=%s;target=%s;validfrom=%d;expireafter=%s;operations=%s;"`, where:
+
+* name is the action name value: https://github.com/mozilla/mig/blob/master/actions/example_v2.json#L2
+* target is the action target value: https://github.com/mozilla/mig/blob/master/actions/example_v2.json#L9
+*  validfrom is the unix timestamp in the UTC timezone of the action validfrom field. The validfrom field is normally in RFC3339 format in the UTC timezone, so for a given value "validfrom": "2017-02-10T14:15:31.01502Z", the unix timestamp would be 1486736131. https://play.golang.org/p/FfGpK8S9VO
+*  expireafter is the same unix timestamp as validfrom but with the expireafter value of the action
+*  operations is a JSON string that contains the entire actions operations array. This is where things get tricky a bit, because we use Golang serialization format and you will need to replicate it *exactly* in javascript.
+
+For example, if you run the following mig command: 
+
+.. code::
+
+  mig file -t "tags->>'operator'='opsec'" -path /etc -name passwd
+
+The serialized operations string will be:
+
+.. code:: json
+
+  [{"module":"file","parameters":{"searches":{"s1":{"names":["passwd"],"options":{"macroal":false,"matchall":true,"matchlimit":1000,"maxdepth":1000,"maxerrors":30,"mismatch":null},"paths":["/etc"]}}}}]
+
+The order of the keys is very important here, because it must be exactly the same between the client that performs the signature and the agent that will reconstruct the string to verify the signature.
+
+At the end of this, you should have a string representation of the action that looks like this:
+
+.. code::
+
+  name=my fancy action;target=tags->>'operator'='opsec';validfrom=1486736196;expireafter=%!s(int64=1486736556);operations=[{"module":"file","parameters":{"searches":{"s1":{"names":["meihm"],"options":{"macroal":false,"matchall":true,"matchlimit":1000,"maxdepth":1000,"maxerrors":30,"mismatch":null},"paths":["/etc/passwd"]}}}}];
+
+3. Take the string representation of the action and sign it with the PGP private key of the investigator. This is where you will need openpgpjs to perform the signature. It supports various types, so the type you want is an "ARMORED DETACHED SIGNATURE". It will give you back the signature in a multiline wrapped format, like this:
+
+.. code::
+
+  -----BEGIN PGP SIGNATURE-----
+  Version: OpenPGPJS blah blah blah
+  Comment: random text
+
+  iEYEARECAAYFAjdYCQoACgkQJ9S6ULt1dqz6IwCfQ7wP6i/i8HhbcOSKF4ELyQB1
+  oCoAoOuqpRqEzr4kOkQqHRLE/b8/Rw2k
+  =y6kj
+  -----END PGP SIGNATURE-----
+
+4. Take the detached signature, remove the header, footer, version and comment, and store the rest as a one line string. Taking the example above, the signature would be:
+
+.. code:
+  iEYEARECAAYFAjdYCQoACgkQJ9S6ULt1dqz6IwCfQ7wP6i/i8HhbcOSKF4ELyQB1oCoAoOuqpRqEzr4kOkQqHRLE/b8/Rw2k=y6kj
+
+5. Store the signature string in the action JSON under the "pgpsignatures" array. Technically, MIG supports multiple signatures per action, which is useful to require multiple investigators to approve an action. We won't address this use case in the UI yet.
+
+.. code:: json
+
+  "pgpsignatures": [
+	"iEYEARECAAYFAjdYCQoACgkQJ9S6ULt1dqz6IwCfQ7wP6i/i8HhbcOSKF4ELyQB1oCoAoOuqpRqEzr4kOkQqHRLE/b8/Rw2k=y6kj"
+  ],
+
+6. Publish the JSON of the action to the POST /api/v1/action/create/ endpoint.
+
 Investigation workflow
 -----------------------
 The diagram below represents the full workflow from the launch of an action by
