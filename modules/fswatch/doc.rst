@@ -23,6 +23,7 @@ The module can queried using ``mig`` or ``mig-console`` to check its health, and
 it simple returns a small JSON document if it is operating normally.
 
 .. code:: json
+
     {
         "ok": true
     }
