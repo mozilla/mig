@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<?define ProductVersion = "REPLACE_WITH_MIG_LOADER_VERSION"?>
+<?define ProductUpgradeCode = "00e305bd-5758-4c13-b3da-80cda1c5517e"?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+
+	<Product Name='Mozilla InvestiGator Loader'
+			 Version='$(var.ProductVersion)'
+			 Id='4a53b243-8405-4a1f-a85a-05cd21428206'
+			 UpgradeCode='$(var.ProductUpgradeCode)'
+			 Language='1033'
+			 Manufacturer='Mozilla'>
+
+		<Package Comments='MIG Loader' InstallerVersion='100' Compressed='yes'/>
+
+		<Media Id='1' Cabinet='product.cab' EmbedCab='yes' />
+
+		<Property Id="ARPHELPLINK"	  Value="http://mig.mozilla.org"/>
+		<Property Id="ARPURLINFOABOUT"  Value="http://mig.mozilla.org"/>
+		<Property Id="ARPNOREPAIR"	  Value="1"/>
+		<Property Id="ARPNOMODIFY"	  Value="1"/>
+
+		<Upgrade Id="$(var.ProductUpgradeCode)">
+			<UpgradeVersion Minimum="$(var.ProductVersion)"
+							OnlyDetect="yes"
+							Property="NEWERVERSIONDETECTED"/>
+			<UpgradeVersion Minimum="00000000-0"
+							Maximum="$(var.ProductVersion)"
+							IncludeMinimum="yes"
+							IncludeMaximum="no"
+							Property="OLDERVERSIONBEINGUPGRADED"/>
+		</Upgrade>
+		<Condition Message="A newer version of this software is already installed.">NOT NEWERVERSIONDETECTED</Condition>
+
+		<Directory Id='TARGETDIR' Name='SourceDir'>
+			<Directory Id='ProgramFiles64Folder'>
+				<Directory Id='INSTALLDIR' Name='mig'>
+                    <Component Id='MainExecutable' Guid='9525c416-04b8-4bed-9567-ff6fb7dd4ea9'>
+                        <File Name='mig-loader-$(var.ProductVersion).exe'
+                              Id='MIGALoaderBinary'
+                              DiskId='1'
+                              Source='mig-loader-$(var.ProductVersion).exe'
+                              KeyPath='yes'/>
+                    </Component>
+                    <Component Id='MainExecutableShortcut' Guid='1ee43c48-8f05-4a1f-9745-ee1849018d3e'>
+			    <Shortcut Id='MIGLoaderShortcut'
+				    Name='mig-loader.exe'
+				    Description='MIG Loader'
+				    Target='[#MIGLoaderBinary]'
+				    WorkingDirectory='INSTALLDIR' />
+                    </Component>
+			    </Directory>
+			</Directory>
+		</Directory>
+
+		<Feature Id='Complete' Level='1'>
+			<ComponentRef Id='MainExecutable' />
+			<ComponentRef Id='MainExecutableShortcut' />
+		</Feature>
+	</Product>
+</Wix>

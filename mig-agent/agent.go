@@ -1,4 +1,5 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
+// This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
@@ -79,12 +80,15 @@ func main() {
 	}
 	runtime.GOMAXPROCS(cpus)
 
+	// platform specific defaults
+	setPlatformDefaults(&runOpt)
+
 	// parse command line argument
 	// -m selects the mode {agent, filechecker, ...}
 	flag.BoolVar(&runOpt.debug, "d", false, "Debug mode: run in foreground, log to stdout.")
 	flag.StringVar(&runOpt.mode, "m", "agent", "Module to run (eg. agent, filechecker).")
 	flag.StringVar(&runOpt.file, "i", "/path/to/file", "Load action from file.")
-	flag.StringVar(&runOpt.config, "c", "/etc/mig/mig-agent.cfg", "Load configuration from file.")
+	flag.StringVar(&runOpt.config, "c", runOpt.config, "Load configuration from file.")
 	flag.StringVar(&runOpt.query, "q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
 	flag.BoolVar(&runOpt.foreground, "f", false, "Agent will fork into background by default. Except if this flag is set.")
 	flag.BoolVar(&runOpt.upgrading, "u", false, "Used while upgrading an agent, means that this agent is started by another agent.")

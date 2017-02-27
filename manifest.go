@@ -363,6 +363,8 @@ var bundleEntryLinux = []BundleDictionaryEntry{
 	{"agentcert", "/etc/mig/agent.crt", "", 0644},
 	{"agentkey", "/etc/mig/agent.key", "", 0600},
 	{"cacert", "/etc/mig/ca.crt", "", 0644},
+	{"mig-cron", "/sbin/mig-cron", "", 0700},
+	{"configuration-cron", "/etc/mig/mig-cron.cfg", "", 0600},
 }
 
 var bundleEntryDarwin = []BundleDictionaryEntry{
@@ -372,11 +374,25 @@ var bundleEntryDarwin = []BundleDictionaryEntry{
 	{"agentcert", "/etc/mig/agent.crt", "", 0644},
 	{"agentkey", "/etc/mig/agent.key", "", 0600},
 	{"cacert", "/etc/mig/ca.crt", "", 0644},
+	{"mig-cron", "/usr/local/bin/mig-cron", "", 0700},
+	{"configuration-cron", "/etc/mig/mig-cron.cfg", "", 0600},
+}
+
+var bundleEntryWindows = []BundleDictionaryEntry{
+	{"mig-agent", Env_Win_Root_Defaut + "/mig/mig-agent", "", 0700},
+	{"mig-loader", Env_Win_Root_Defaut + "/mig/mig-loader", "", 0700},
+	{"configuration", Env_Win_Root_Defaut + "/mig/mig/mig-agent.cfg", "", 0600},
+	{"agentcert", Env_Win_Root_Defaut + "/mig/agent.crt", "", 0644},
+	{"agentkey", Env_Win_Root_Defaut + "/mig/agent.key", "", 0600},
+	{"cacert", Env_Win_Root_Defaut + "/mig/ca.crt", "", 0644},
+	{"mig-cron", Env_Win_Root_Defaut + "/mig/mig-cron.exe", "", 0700},
+	{"configuration-cron", Env_Win_Root_Defaut + "/mig/mig-cron.cfg", "", 0600},
 }
 
 var BundleDictionary = map[string][]BundleDictionaryEntry{
-	"linux":  bundleEntryLinux,
-	"darwin": bundleEntryDarwin,
+	"linux":   bundleEntryLinux,
+	"darwin":  bundleEntryDarwin,
+	"windows": bundleEntryWindows,
 }
 
 func GetHostBundle() ([]BundleDictionaryEntry, error) {
@@ -385,6 +401,8 @@ func GetHostBundle() ([]BundleDictionaryEntry, error) {
 		return bundleEntryLinux, nil
 	case "darwin":
 		return bundleEntryDarwin, nil
+	case "windows":
+		return bundleEntryWindows, nil
 	}
 	return nil, fmt.Errorf("no entry for %v in bundle dictionary", runtime.GOOS)
 }

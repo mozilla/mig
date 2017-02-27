@@ -21,4 +21,8 @@ const (
 
 	// dummy queue for scheduler heartbeats to the relays
 	Ev_Q_Sched_Hb = "scheduler.heartbeat"
+
+	// environment variables
+	Env_Win_Root        = "ProgramFiles(x86)"
+	Env_Win_Root_Defaut = "C:/Program Files (x86)"
 )
