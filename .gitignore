@@ -5,11 +5,13 @@ bin/*
 conf/*
 !conf/*.inc
 !conf/mig-agent-installer.wxs
+!conf/mig-loader-installer.wxs
 mig-agent/configuration.go
 */available_modules.go
 */*/available_modules.go
 */*/*/available_modules.go
 !conf/available_modules.go
+!conf/config_windows.go
 *.a
 *.so
 *.o

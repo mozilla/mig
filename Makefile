@@ -68,7 +68,8 @@ DESTDIR		:= /
 BINDIR		:= bin/$(OS)/$(ARCH)
 AVAILMOD_PATHS	:= mig-agent/available_modules.go client/mig/available_modules.go \
 	client/mig-console/available_modules.go
-MSICONF		:= mig-agent-installer.wxs
+MSIAGENTCONF := mig-agent-installer.wxs
+MSILOADERCONF := mig-loader-installer.wxs
 SIGNFLAGS	:=
 
 # If code signing is enabled for OSX binaries, pass the -s flag during linking
@@ -111,6 +112,29 @@ mig-agent: create-bindir available-modules mig-agent/configuration.go
 # If our build target is darwin and OSXPROCSIGID is set, sign the binary
 	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX); \
+	fi
+	@echo SUCCESS
+
+win-loader: create-bindir available-modules mig-loader/configuration.go
+	echo building mig-loader for $(OS)/$(ARCH)
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-loader
+	ln -fs "$$(pwd)/$(BINDIR)/mig-loader-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-loader-latest"
+	[ -x "$(BINDIR)/mig-loader-$(BUILDREV)$(BINSUFFIX)" ] || (echo FAILED && false)
+# If our build target is darwin and OSXPROCSIGID is set, sign the binary
+	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
+		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-loader-$(BUILDREV)$(BINSUFFIX); \
+	fi
+	@echo SUCCESS
+
+
+mig-cron: create-bindir
+	echo building mig-cron for $(OS)/$(ARCH)
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-cron-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-cron
+	ln -fs "$$(pwd)/$(BINDIR)/mig-cron-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-cron-latest"
+	[ -x "$(BINDIR)/mig-cron-$(BUILDREV)$(BINSUFFIX)" ] || (echo FAILED && false)
+# If our build target is darwin and OSXPROCSIGID is set, sign the binary
+	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
+		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-cron-$(BUILDREV)$(BINSUFFIX); \
 	fi
 	@echo SUCCESS
 
@@ -177,6 +201,7 @@ go_vendor_dependencies:
 	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) github.com/jvehent/gozdef
 	$(GOGETTER) github.com/jvehent/service-go
+	$(GOGETTER) github.com/kardianos/service
 	$(GOGETTER) github.com/kardianos/osext
 	$(GOGETTER) github.com/lib/pq
 	$(GOGETTER) github.com/mozilla/masche/listlibs
@@ -195,6 +220,7 @@ go_vendor_dependencies:
 	$(GOGETTER) gopkg.in/gcfg.v1
 	$(GOGETTER) github.com/cheggaaa/pb
 	$(GOGETTER) github.com/stretchr/testify
+	$(GOGETTER) github.com/robfig/cron
 	echo 'removing .git from vendored pkg and moving them to vendor'
 	find .tmpdeps/src -name ".git" ! -name ".gitignore" -exec rm -rf {} \; || exit 0
 	[ -d vendor ] && git rm -rf vendor/ || exit 0
@@ -302,12 +328,30 @@ ifneq ($(OS),windows)
 else
 	rm -fr tmp
 	mkdir 'tmp'
-	$(INSTALL) -m 0755 $(BINDIR)/mig-agent-$(BUILDREV).exe tmp/mig-agent-$(BUILDREV).exe
+	cp $(BINDIR)/mig-agent-$(BUILDREV).exe tmp/mig-agent-$(BUILDREV).exe
+	chmod 0755 tmp/mig-agent-$(BUILDREV).exe
 	cp conf/$(MSICONF) tmp/
 	sed -i "s/REPLACE_WITH_MIG_AGENT_VERSION/$(BUILDREV)/" tmp/$(MSICONF)
-	wixl tmp/mig-agent-installer.wxs
+	wixl tmp/$(MSICONF)
 	cp tmp/mig-agent-installer.msi mig-agent-$(BUILDREV).msi
 endif
+
+msi-loader: mig-loader mig-cron
+ifneq ($(OS),windows)
+	echo 'you must set OS=windows on the make command line to compile a MSI package'
+else
+	rm -fr tmp
+	mkdir 'tmp'
+	cp $(BINDIR)/mig-loader-$(BUILDREV).exe tmp/mig-loader-$(BUILDREV).exe
+	chmod 0755 tmp/mig-loader-$(BUILDREV).exe
+	cp conf/$(MSICONF) tmp/
+	sed -i "s/REPLACE_WITH_MIG_LOADER_VERSION/$(BUILDREV)/" tmp/$(MSICONF)
+	cp $(BINDIR)/mig-cron-$(BUILDREV).exe tmp/mig-cron-$(BUILDREV).exe
+	chmod 0755 tmp/mig-cron-$(BUILDREV).exe
+	wixl tmp/$(MSICONF)
+	cp tmp/mig-loader-installer.msi mig-loader-$(BUILDREV).msi
+endif
+
 
 package-linux-clients: rpm-clients deb-clients
 
