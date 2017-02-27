@@ -16,6 +16,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -489,14 +490,31 @@ func (o *object) alert() {
 
 // Main entry routine for file system monitor
 func fsWatch(cfg config) {
-	var err error
+	var (
+		err          error
+		localprofile profile
+	)
 	fshasher.initialize()
 	err = watcher.initialize()
 	if err != nil {
 		handlerErrChan <- err
 		return
 	}
-	localprofile := localFsWatchProfile
+	if len(cfg.Paths.Path) == 0 {
+		localprofile = localFsWatchProfile
+	} else {
+		// Construct a profile to use based on the paths in the configuration
+		for _, x := range cfg.Paths.Path {
+			var pent profileEntry
+			if strings.HasPrefix(x, "recursive:") {
+				pent.path = x[10:]
+				pent.recursive = true
+			} else {
+				pent.path = x
+			}
+			localprofile.entries = append(localprofile.entries, pent)
+		}
+	}
 	err = localprofile.initialize()
 	if err != nil {
 		handlerErrChan <- err

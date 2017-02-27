@@ -127,10 +127,7 @@ func requestHandler(p interface{}) (ret string) {
 }
 
 type config struct {
-	FSWatch struct {
-		Interval string
-	}
-	FSWatchPaths struct {
+	Paths struct {
 		Path []string
 	}
 }
