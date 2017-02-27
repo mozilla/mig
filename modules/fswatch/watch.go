@@ -256,6 +256,9 @@ func (pe *profileEntry) hasObject(path string) bool {
 func (pe *profileEntry) processDirectory() (err error) {
 	var paths []string
 	wf := func(p string, finfo os.FileInfo, lerr error) error {
+		if lerr != nil {
+			return nil
+		}
 		if !finfo.Mode().IsDir() {
 			return nil
 		}
