@@ -1,0 +1,27 @@
+{
+    "audit_rules": [
+        {
+            "key": "nonexist",
+            "path": "/non/existent/path",
+            "permission": "wa",
+            "strict_path_check": false
+        },
+        {
+            "actions": [
+                "always",
+                "exit"
+            ],
+            "fields": [
+                {
+                    "name": "arch",
+                    "op": "eq",
+                    "value": 64
+                }
+            ],
+            "key": "bypass",
+            "syscalls": [
+                "personality"
+            ]
+        }
+    ]
+}

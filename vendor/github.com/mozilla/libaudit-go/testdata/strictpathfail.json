@@ -1,0 +1,10 @@
+{
+    "audit_rules": [
+        {
+            "key": "nonexist",
+            "path": "/non/existent/path",
+            "permission": "wa",
+            "strict_path_check": true
+        }
+    ]
+}
