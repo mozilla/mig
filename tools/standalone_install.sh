@@ -353,6 +353,7 @@ sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '2' 'sudo /sbin/mig-agent -
 
 sleep 5
 /usr/local/bin/mig -i actions/integration_tests.json
+/usr/local/bin/mig scribe -t all -z -path actions/scribe/usn-2015.json -onlytrue -human
 
 cat << EOF
 

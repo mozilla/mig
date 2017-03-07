@@ -31,8 +31,6 @@ script:
     - sed -i 's,//_,_,' conf/available_modules.go
     - make
     - docker build -t mozilla/mig .
-    - ./bin/linux/amd64/mig-agent-latest -i actions/example_v2.json
-    - ./bin/linux/amd64/mig scribe -t all -z -path actions/scribe/usn-2015.json -onlytrue -human
     # If a TRAVIS_TAG is set, this build follows a git tag --push and should trigger
     # a release of a tagged container to dockerhub. Otherwise, we tag as latest.
     - |
