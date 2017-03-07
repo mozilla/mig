@@ -140,6 +140,16 @@ sudo chown mig /usr/local/bin/mig || fail
 sudo chmod 555 /usr/local/bin/mig || fail
 
 echo -e "\n---- Building Database\n"
+sudo service postgresql restart
+# wait for db to start
+pgstarted=0
+for i in $(seq 1 30); do
+    echo -n '.'
+    sleep 1
+    [ -S /var/run/postgresql/.s.PGSQL.5432 ] && pgstarted=1 && break
+done
+[ $pgstarted -eq 1 ] || fail
+
 cd database/
 dbpass=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
 sudo su - postgres -c "psql -c 'drop database mig'"
@@ -161,10 +171,10 @@ sudo chown mig /var/cache/mig -R || fail
 sudo chown mig /etc/mig || fail
 
 echo -e "\n---- Configuring RabbitMQ\n"
-(ps faux|grep "/var/lib/rabbitmq"|grep -v grep) 2>&1 1> /dev/null
-if [ $? -gt 0 ]; then
-    sudo service rabbitmq-server restart || fail
-fi
+
+echo 'NODENAME=rabbit@localhost' > /etc/rabbitmq/rabbitmq-env.conf
+sudo service rabbitmq-server restart || fail
+
 mqpass=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
 sudo rabbitmqctl delete_user admin
 sudo rabbitmqctl add_user admin $mqpass || fail
@@ -226,8 +236,8 @@ echo OK
 echo -e "\n---- Starting Scheduler and API in TMUX under mig user\n"
 sudo su mig -c "/usr/bin/tmux new-session -s 'mig' -d"
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-scheduler'"
-sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-api'"
-sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig_agent_verif_worker'"
+sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '1' '/usr/local/bin/mig-api'"
+sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '2' '/usr/local/bin/mig_agent_verif_worker'"
 echo OK
 
 # Unset proxy related environment variables from this point on, since we want to ensure we are
@@ -339,7 +349,7 @@ make mig-agent AGTCONF=conf/mig-agent-conf.go BUILDENV=demo || fail
 sudo cp bin/linux/amd64/mig-agent-latest /sbin/mig-agent || fail
 sudo chown root /sbin/mig-agent || fail
 sudo chmod 500 /sbin/mig-agent || fail
-sudo /sbin/mig-agent
+sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '2' 'sudo /sbin/mig-agent -d'"
 
 sleep 5
 /usr/local/bin/mig -i actions/integration_tests.json
