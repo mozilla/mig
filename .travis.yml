@@ -7,6 +7,8 @@ notifications:
     irc:
         channels:
             - "irc.mozilla.org#mig"
+services:
+    - docker
 before_install:
     # this is a fix to get rng-tools to work in travis-ci
     - sudo apt-get update -qq
