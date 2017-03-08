@@ -1,17 +1,14 @@
 language: go
 go:
-    - 1.7.3
+    - 1.8
 addons:
     postgresql: "9.4"
 notifications:
     irc:
         channels:
             - "irc.mozilla.org#mig"
-    email:
-        recipients:
-            - ulfr@mozilla.com
-        on_success: never
-        on_failure: always
+services:
+    - docker
 before_install:
     # this is a fix to get rng-tools to work in travis-ci
     - sudo apt-get update -qq
@@ -33,6 +30,16 @@ script:
     - diff client/mig/available_modules.go conf/available_modules.go
     - sed -i 's,//_,_,' conf/available_modules.go
     - make
-    - yes | bash tools/standalone_install.sh
-    - ./bin/linux/amd64/mig-agent-latest -i actions/example_v2.json
-    - ./bin/linux/amd64/mig scribe -t all -z -path actions/scribe/usn-2015.json -onlytrue -human
+    - docker build -t mozilla/mig .
+    # If a TRAVIS_TAG is set, this build follows a git tag --push and should trigger
+    # a release of a tagged container to dockerhub. Otherwise, we tag as latest.
+    - |
+        docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+        if [ ! -z "$TRAVIS_TAG" ]; then
+            docker tag app:build mozilla/mig:${TRAVIS_TAG}
+            docker push mozilla/mig:${TRAVIS_TAG}
+        else
+            docker tag app:build mozilla/mig:latest
+            docker push mozilla/mig:latest
+        fi
+        docker logout
