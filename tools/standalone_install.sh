@@ -172,7 +172,7 @@ sudo chown mig /etc/mig || fail
 
 echo -e "\n---- Configuring RabbitMQ\n"
 
-echo 'NODENAME=rabbit@localhost' > /etc/rabbitmq/rabbitmq-env.conf
+echo 'NODENAME=rabbit@localhost' | sudo tee --append /etc/rabbitmq/rabbitmq-env.conf
 sudo service rabbitmq-server restart || fail
 
 mqpass=$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${1:-32})
