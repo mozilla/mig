@@ -25,7 +25,7 @@ usage: %s <module> <global options> <module parameters>
 
 --- Global options ---
 
--c <path>	path to an alternative confiig file. If not set, use ~/.migrc
+-c <path>	path to an alternative config file. If not set, use ~/.migrc
 
 -e <duration>	time after which the action expires. 60 seconds by default.
 		example: -e 300s (5 minutes)
