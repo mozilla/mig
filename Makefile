@@ -100,6 +100,9 @@ ALLTARGETS	:= $(AGENTTARGETS) $(SERVERTARGETS) $(CLIENTTARGETS)
 
 all: test $(ALLTARGETS)
 
+tag:
+	git tag -s $(BUILDREV) -a -m "${MSG}"
+
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
 

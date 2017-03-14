@@ -135,23 +135,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// instantiate an API client
-	conf, err = client.ReadConfiguration(migrc)
-	if err != nil {
-		panic(err)
-	}
-	conf, err = client.ReadEnvConfiguration(conf)
-	if err != nil {
-		panic(err)
-	}
-	cli, err = client.NewClient(conf, "cmd-"+mig.Version)
-	if err != nil {
-		panic(err)
-	}
-	if verbose {
-		cli.EnableDebug()
-	}
-
 	// when reading the action from a file, go directly to launch
 	if os.Args[1] == "-i" {
 		err = fs.Parse(os.Args[1:])
@@ -271,6 +254,23 @@ func main() {
 
 	for _, arg := range os.Args[1:] {
 		a.Name += arg + " "
+	}
+
+	// instantiate an API client
+	conf, err = client.ReadConfiguration(migrc)
+	if err != nil {
+		panic(err)
+	}
+	conf, err = client.ReadEnvConfiguration(conf)
+	if err != nil {
+		panic(err)
+	}
+	cli, err = client.NewClient(conf, "cmd-"+mig.Version)
+	if err != nil {
+		panic(err)
+	}
+	if verbose {
+		cli.EnableDebug()
 	}
 
 	// Determine if the specified target was a macro, and if so get the correct
