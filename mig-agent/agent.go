@@ -497,6 +497,9 @@ func runAgent(runOpt runtimeOptions) (err error) {
 // startRoutines starts the goroutines that process commands, heartbeats, and look after
 // refreshing the agent environment.
 func startRoutines(ctx *Context) (err error) {
+	// Start up the HTTP stats socket
+	go initSocket(ctx)
+
 	// GoRoutine that parses and validates incoming commands
 	go func() {
 		for msg := range ctx.Channels.NewCommand {
