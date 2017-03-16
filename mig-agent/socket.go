@@ -47,6 +47,7 @@ table, td {
 }
 td:nth-child(2) {
   background-color: #1f1f1f;
+  white-space: pre;
 }
 </style>
 </head>
@@ -151,13 +152,13 @@ func socketHandleStatus(w http.ResponseWriter, req *http.Request) {
 	tdata := templateData{Context: sockCtx}
 	tdata.Pid = os.Getpid()
 	tdata.importAgentConfig()
-	buf, err := json.Marshal(sockCtx.Agent.Env)
+	buf, err := json.MarshalIndent(sockCtx.Agent.Env, "", "    ")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
 		return
 	}
 	tdata.Env = string(buf)
-	buf, err = json.Marshal(sockCtx.Agent.Tags)
+	buf, err = json.MarshalIndent(sockCtx.Agent.Tags, "", "    ")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
 		return
