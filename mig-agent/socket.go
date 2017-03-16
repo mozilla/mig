@@ -24,9 +24,13 @@ var statusTmpl = `<html>
 <head>
 <style>
 body {
-  background-color: linen;
-  font-family: "Lucida Console", Monaco, monospace;
-  font-size: 14px;
+  margin: 0;
+  padding: 0;
+  background: #151515;
+  color: #eaeaea;
+  font: 16px;
+  line-height: 1.5;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
 }
 div {
   padding-top: 12px;
@@ -42,7 +46,7 @@ table, td {
   font-size: 14px;
 }
 td:nth-child(2) {
-  background-color: #eeeeee;
+  background-color: #1f1f1f;
 }
 </style>
 </head>
