@@ -137,6 +137,18 @@ func main() {
 
 	// when reading the action from a file, go directly to launch
 	if os.Args[1] == "-i" {
+		conf, err = client.ReadConfiguration(migrc)
+		if err != nil {
+			panic(err)
+		}
+		conf, err = client.ReadEnvConfiguration(conf)
+		if err != nil {
+			panic(err)
+		}
+		cli, err = client.NewClient(conf, "cmd-"+mig.Version)
+		if err != nil {
+			panic(err)
+		}
 		err = fs.Parse(os.Args[1:])
 		if err != nil {
 			panic(err)
