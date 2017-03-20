@@ -33,17 +33,18 @@ var publication sync.Mutex
 // Agent runtime options; stores command line flags used when the agent was
 // executed.
 type runtimeOptions struct {
-	debug        bool
-	mode         string
-	persistmode  string
-	file         string
-	config       string
-	query        string
-	foreground   bool
-	upgrading    bool
-	pretty       bool
-	showversion  bool
-	norunpersist bool
+	debug         bool
+	mode          string
+	persistmode   string
+	file          string
+	config        string
+	query         string
+	foreground    bool
+	upgrading     bool
+	pretty        bool
+	showversion   bool
+	norunpersist  bool
+	printsettings bool
 }
 
 type moduleResult struct {
@@ -92,6 +93,7 @@ func main() {
 	flag.StringVar(&runOpt.persistmode, "P", "", "Run persistent module.")
 	flag.BoolVar(&runOpt.norunpersist, "n", false, "Force disable persistent modules.")
 	flag.BoolVar(&runOpt.showversion, "V", false, "Print Agent version to stdout and exit.")
+	flag.BoolVar(&runOpt.printsettings, "S", false, "Print Agent configuration settings.")
 
 	flag.Parse()
 
@@ -127,6 +129,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "[info] Using builtin conf.\n")
 	} else {
 		fmt.Fprintf(os.Stderr, "[info] Using external conf from %q\n", runOpt.config)
+	}
+
+	// Print configuration settings
+	if runOpt.printsettings {
+		printConfigSettings()
+		os.Exit(0)
 	}
 
 	if runOpt.debug {
@@ -956,4 +964,24 @@ func publish(ctx *Context, exchange, routingKey string, body []byte) (err error)
 	ctx.Channels.Log <- mig.Log{Desc: "Publishing failed 3 times in a row. Sending agent termination order."}.Emerg()
 	ctx.Channels.Terminate <- "Publication to relay is failing"
 	return
+}
+
+// Function to print current configuration settings for agent
+func printConfigSettings() {
+	fmt.Println("ISIMMORTAL        : ", ISIMMORTAL)
+	fmt.Println("MUSTINSTALLSERVICE: ", MUSTINSTALLSERVICE)
+	fmt.Println("DISCOVERPUBLICIP  : ", DISCOVERPUBLICIP)
+	fmt.Println("DISCOVERAWSMETA   : ", DISCOVERAWSMETA)
+	fmt.Println("CHECKIN           : ", CHECKIN)
+	fmt.Println("EXTRAPRIVACYMODE  : ", EXTRAPRIVACYMODE)
+	fmt.Println("SPAWNPERSISTENT   : ", SPAWNPERSISTENT)
+	fmt.Println("MODULECONFIGDIR   : ", MODULECONFIGDIR)
+	fmt.Println("REFRESHENV        : ", REFRESHENV)
+	fmt.Println("AMQPBROKER        : ", AMQPBROKER)
+	fmt.Println("APIURL            : ", APIURL)
+	fmt.Println("PROXIES           : ", PROXIES)
+	fmt.Println("SOCKET            : ", SOCKET)
+	fmt.Println("HEARTBEATFREQ     : ", HEARTBEATFREQ)
+	fmt.Println("MODULETIMEOUT     : ", MODULETIMEOUT)
+	fmt.Println("ONLYVERIFYPUBKEY  : ", ONLYVERIFYPUBKEY)
 }
