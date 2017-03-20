@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 fail() {
     echo configuration failed
     exit 1
@@ -10,7 +11,17 @@ if [ -z "$BASH_SOURCE" ]; then
 fi
 
 echo Standalone MIG demo deployment script
-which sudo 2>&1 1>/dev/null || (echo Install sudo and try again && exit 1)
+which sudo 2>&1 1>/dev/null
+if [[ $? -ne 0 ]]; then
+    echo Install sudo and try again
+    fail
+fi
+sudo -n true
+if [[ $? -ne 0 ]]; then
+    echo Ensure your user can run sudo commands without a password and retry
+    fail
+fi
+sudo sh -c "echo '%mig ALL=(ALL:ALL) NOPASSWD:ALL' > /etc/sudoers.d/mig" || fail
 
 MAKEGOPATH=false
 if [ "$1" == "makegopath" ]; then
@@ -18,7 +29,7 @@ if [ "$1" == "makegopath" ]; then
 fi
 
 echo -e "\n---- Checking build environment\n"
-if [[ -z $GOPATH && $MAKEGOPATH == "true" ]]; then
+if [[ -z "$GOPATH" && "$MAKEGOPATH" == "true" ]]; then
     echo "GOPATH env variable is not set. setting it to '$HOME/go'"
     export GOPATH="$HOME/go"
     mkdir -p "$GOPATH/src/mig.ninja/"
@@ -26,8 +37,7 @@ if [[ -z $GOPATH && $MAKEGOPATH == "true" ]]; then
     cd ..
     mv "$savepath" "$GOPATH/src/mig.ninja/"
     cd "$GOPATH/src/mig.ninja/"
-fi
-if [[ -z $GOPATH && $MAKEGOPATH == "false" ]]; then
+elif [[ -z "$GOPATH" && "$MAKEGOPATH" == "false" ]]; then
     echo "GOPATH env variable is not set. either set it, or ask this script to create it using: $ $0 makegopath"
     fail
 fi
@@ -45,7 +55,7 @@ echo -e "\n---- Destroying existing investigator conf & key\n"
 rm -rf -- ~/.migrc ~/.mig || echo "OK"
 sudo /sbin/mig-agent -q=shutdown || echo "OK"
 
-# packages dependencies
+# package dependencies
 pkglist=""
 installRabbitRPM=false
 isRPM=false
@@ -76,9 +86,7 @@ fi
 go_version=$(go version)
 echo $go_version | grep -E -q --regexp="go1\.[0-4]" && echo -e "installed version of go is ${go_version}\nwe need at least version 1.5" && fail
 
-which go   2>&1 1>/dev/null || pkglist="$pkglist golang"
 which git  2>&1 1>/dev/null || pkglist="$pkglist git"
-which hg   2>&1 1>/dev/null || pkglist="$pkglist mercurial"
 which make 2>&1 1>/dev/null || pkglist="$pkglist make"
 which gcc  2>&1 1>/dev/null || pkglist="$pkglist gcc"
 which tmux 2>&1 1>/dev/null || pkglist="$pkglist tmux"
@@ -237,7 +245,7 @@ echo -e "\n---- Starting Scheduler and API in TMUX under mig user\n"
 sudo su mig -c "/usr/bin/tmux new-session -s 'mig' -d"
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '0' '/usr/local/bin/mig-scheduler'"
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '1' '/usr/local/bin/mig-api'"
-sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '2' '/usr/local/bin/mig_agent_verif_worker'"
+sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '2' '/usr/local/bin/mig-worker-agent-verif'"
 echo OK
 
 # Unset proxy related environment variables from this point on, since we want to ensure we are
@@ -352,8 +360,8 @@ sudo chmod 500 /sbin/mig-agent || fail
 sudo su mig -c "/usr/bin/tmux new-window -t 'mig' -n '2' 'sudo /sbin/mig-agent -d'"
 
 sleep 5
-/usr/local/bin/mig -i actions/integration_tests.json
-/usr/local/bin/mig scribe -t all -z -path actions/scribe/usn-2015.json -onlytrue -human
+/usr/local/bin/mig -i actions/integration_tests.json || fail
+/usr/local/bin/mig scribe -t all -z -path actions/scribe/usn-2015.json -onlytrue -human || fail
 
 cat << EOF
 
