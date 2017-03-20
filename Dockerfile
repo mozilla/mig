@@ -1,22 +1,26 @@
-FROM golang:1.8
+FROM ubuntu:xenial
 MAINTAINER Mozilla
 
-RUN apt update && \
-    apt install sudo && \
+# standalone_install.sh also does some package installation, but we will
+# install packages ahead of time here to take advantage of the docker cache
+RUN apt-get update && \
+    apt-get install -y sudo golang git make \
+    curl rng-tools tmux postgresql rabbitmq-server \
+    libreadline-dev && \
     echo '%mig ALL=(ALL:ALL) NOPASSWD:ALL' > /etc/sudoers.d/mig && \
-    addgroup --gid 10001 mig && \
-    adduser --gid 10001 --uid 10001 \
-    --home /mig \
-    --disabled-password mig
+    groupadd -g 10001 mig && \
+    useradd -g 10001 -u 10001 -d /mig -m mig
 
 ADD . /go/src/mig.ninja/mig
-RUN chown mig /go -R
+RUN chown -R mig /go
 
 USER mig
-RUN cd /go/src/mig.ninja/mig && \
+RUN export GOPATH=/go && \
+    cd /go/src/mig.ninja/mig && \
     yes | bash ./tools/standalone_install.sh && \
     cp /go/src/mig.ninja/mig/tools/standalone_start_all.sh /mig/start.sh && \
-    chmod +x /mig/start.sh
+    chmod +x /mig/start.sh && \
+    sudo service postgresql stop
 
 WORKDIR /mig
 CMD /mig/start.sh && /bin/bash
