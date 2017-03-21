@@ -4,12 +4,35 @@ MIG: Mozilla InvestiGator
 
 [![Build Status](https://travis-ci.org/mozilla/mig.svg?branch=master)](https://travis-ci.org/mozilla/mig)
 
-Build one-liner:
-```bash
-$ go get mig.ninja/mig && cd $GOPATH/src/mig.ninja/mig && make
-````
+MIG is Mozilla's platform for investigative surgery of remote endpoints.
 
-MIG is OpSec's platform for investigative surgery of remote endpoints.
+Quick Start w/ Docker
+---------------------
+
+You can spin up a local-only MIG setup using docker. The container is not suitable for production use but lets you experiment with MIG quickly.
+
+```bash
+$ docker pull mozilla/mig
+$ docker run -it mozilla/mig
+```
+
+Once inside the container, you can use the MIG tools to query a local agent, as such:
+
+```bash
+mig@5345268590c8:~$ mig file -t all -path /usr/bin -sha2 5c1956eba492b2c3fffd8d3e43324b5c477c22727385be226119f7ffc24aad3f
+1 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
+Following action ID 7978299359234.
+ 1 / 1 [=========================================================] 100.00% 0/s4s
+100.0% done in 3.029105958s
+1 sent, 1 done, 1 succeeded
+ed11f485244a /usr/bin/wget [lastmodified:2016-07-05 15:32:42 +0000 UTC, mode:-rwxr-xr-x, size:419080] in search 's1'
+1 agent has found results
+```
+
+To explore the capabilities of MIG, take a look at the [CheatSheet](https://github.com/mozilla/mig/blob/master/doc/cheatsheet.rst).
+
+What is this?
+-------------
 
 MIG is composed of agents installed on all systems of an infrastructure that are
 be queried in real-time to investigate the file-systems, network state, memory

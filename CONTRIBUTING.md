@@ -43,7 +43,7 @@ Take a look at the list of [issues labelled "up for grabs"](https://github.com/m
   include the vendored packages in a separate commit.
 
 * When writing modules, follow the documentation at [Modules
-  writing](http://mig.mozilla.org/doc/modules.rst.html) and check that:
+  writing](https://github.com/mozilla/mig/blob/master/doc/modules.rst) and check that:
     - tests have been added that cover the core functionalities of the module
     - documentation has been written into modules/<modulename>/doc.rst
   Please don't pick a cute or clever name for your module. Pick a name that is
