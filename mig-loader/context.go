@@ -8,8 +8,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/jvehent/service-go"
 	"mig.ninja/mig"
+	"mig.ninja/mig/service"
 	"runtime"
 )
 

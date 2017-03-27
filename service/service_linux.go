@@ -1,4 +1,4 @@
-package service
+package service /* import "mig.ninja/mig/service" */
 
 import (
 	"bytes"
@@ -16,26 +16,28 @@ import (
 )
 
 const (
-	initSystemV = initFlavor(iota)
-	initUpstart
-	initSystemd
+	InitSystemV = initFlavor(iota)
+	InitUpstart
+	InitSystemd
 )
 
-// the default flavor is initSystemV. we lookup the command line of
-// process 1 to detect systemd or upstart
-func getFlavor() (initFlavor, error) {
+// the default flavor is InitSystemV. we lookup the command line of
+// process 1 to detect systemd or upstart. This function returns an
+// initFlavor value on success (e.g., InitSystemV) or an error on
+// failure.
+func GetFlavor() (initFlavor, error) {
 	initCmd, err := ioutil.ReadFile("/proc/1/cmdline")
 	if err != nil {
-		return initSystemV, err
+		return InitSystemV, err
 	}
 	// Trim any nul bytes from the result, which are present with some
 	// kernels but not others
 	init := string(bytes.TrimRight(initCmd, "\x00"))
 	if strings.Contains(init, "init [") {
-		return initSystemV, nil
+		return InitSystemV, nil
 	}
 	if strings.Contains(init, "systemd") {
-		return initSystemd, nil
+		return InitSystemd, nil
 	}
 	if strings.Contains(init, "init") {
 		// not so fast! you may think this is upstart, but it may be
@@ -47,17 +49,17 @@ func getFlavor() (initFlavor, error) {
 			target, err = filepath.EvalSymlinks(init)
 		}
 		if err == nil && strings.Contains(target, "systemd") {
-			return initSystemd, nil
+			return InitSystemd, nil
 		}
-		return initUpstart, nil
+		return InitUpstart, nil
 	}
 	// failed to detect init system, falling back to sysvinit
-	return initSystemV, nil
+	return InitSystemV, nil
 }
 
 func newService(c *Config) (Service, error) {
 	var err error
-	flavor, err := getFlavor()
+	flavor, err := GetFlavor()
 	if err != nil {
 		return nil, err
 	}
@@ -88,11 +90,11 @@ type initFlavor uint8
 
 func (f initFlavor) String() string {
 	switch f {
-	case initSystemV:
+	case InitSystemV:
 		return "sysvinit"
-	case initUpstart:
+	case InitUpstart:
 		return "upstart"
-	case initSystemd:
+	case InitSystemd:
 		return "systemd"
 	default:
 		return "unknown"
@@ -101,11 +103,11 @@ func (f initFlavor) String() string {
 
 func (f initFlavor) ConfigPath(name string) string {
 	switch f {
-	case initSystemd:
+	case InitSystemd:
 		return "/etc/systemd/system/" + name + ".service"
-	case initSystemV:
+	case InitSystemV:
 		return "/etc/init.d/" + name
-	case initUpstart:
+	case InitUpstart:
 		return "/etc/init/" + name + ".conf"
 	default:
 		return ""
@@ -115,11 +117,11 @@ func (f initFlavor) ConfigPath(name string) string {
 func (f initFlavor) GetTemplate() *template.Template {
 	var templ string
 	switch f {
-	case initSystemd:
+	case InitSystemd:
 		templ = systemdScript
-	case initSystemV:
+	case InitSystemV:
 		templ = systemVScript
-	case initUpstart:
+	case InitUpstart:
 		templ = upstartScript
 	}
 	return template.Must(template.New(f.String() + "Script").Parse(templ))
@@ -158,7 +160,7 @@ func (s *linuxService) Install() error {
 		return err
 	}
 
-	if s.flavor == initSystemV {
+	if s.flavor == InitSystemV {
 		if err = os.Chmod(confPath, 0755); err != nil {
 			return err
 		}
@@ -174,7 +176,7 @@ func (s *linuxService) Install() error {
 		}
 	}
 
-	if s.flavor == initSystemd {
+	if s.flavor == InitSystemd {
 		err = exec.Command("systemctl", "enable", s.name+".service").Run()
 		if err != nil {
 			return err
@@ -186,7 +188,7 @@ func (s *linuxService) Install() error {
 }
 
 func (s *linuxService) Remove() error {
-	if s.flavor == initSystemd {
+	if s.flavor == InitSystemd {
 		exec.Command("systemctl", "disable", s.name+".service").Run()
 	}
 	if err := os.Remove(s.flavor.ConfigPath(s.name)); err != nil {
@@ -215,9 +217,9 @@ func (s *linuxService) Run(onStart, onStop func() error) (err error) {
 
 func (s *linuxService) Start() error {
 	switch s.flavor {
-	case initSystemd:
+	case InitSystemd:
 		return exec.Command("systemctl", "start", s.name+".service").Run()
-	case initUpstart:
+	case InitUpstart:
 		return exec.Command("initctl", "start", s.name).Run()
 	default:
 		return exec.Command("service", s.name, "start").Run()
@@ -226,9 +228,9 @@ func (s *linuxService) Start() error {
 
 func (s *linuxService) Stop() error {
 	switch s.flavor {
-	case initSystemd:
+	case InitSystemd:
 		return exec.Command("systemctl", "stop", s.name+".service").Start()
-	case initUpstart:
+	case InitUpstart:
 		return exec.Command("initctl", "stop", s.name).Start()
 	default:
 		return exec.Command("service", s.name, "stop").Start()

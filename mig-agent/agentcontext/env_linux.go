@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mig.ninja/mig"
+	"mig.ninja/mig/service"
 	"os"
 	"os/exec"
 	"strings"
@@ -57,6 +58,8 @@ func findHostname(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	return
 }
 
+// findOSInfo gathers information about the Linux distribution if possible, and
+// determines the init type of the system.
 func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	defer func() {
@@ -66,13 +69,19 @@ func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 		logChan <- mig.Log{Desc: "leaving findOSInfo()"}.Debug()
 	}()
 	ctx.OSIdent, err = getLSBRelease()
-	if err != nil {
-		logChan <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Info()
-		ctx.OSIdent, err = getIssue()
-		if err != nil {
-			logChan <- mig.Log{Desc: fmt.Sprintf("getIssue() failed: %v", err)}.Info()
-		}
+	if err == nil {
+		logChan <- mig.Log{Desc: "using lsb release for distribution ident"}.Debug()
+		goto haveident
 	}
+	logChan <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Debug()
+	ctx.OSIdent, err = getIssue()
+	if err == nil {
+		logChan <- mig.Log{Desc: "using /etc/issue for distribution ident"}.Debug()
+		goto haveident
+	}
+	logChan <- mig.Log{Desc: fmt.Sprintf("getIssue() failed: %v", err)}.Debug()
+	logChan <- mig.Log{Desc: "warning, no valid linux os identification could be found"}.Info()
+haveident:
 	logChan <- mig.Log{Desc: fmt.Sprintf("Ident is %s", ctx.OSIdent)}.Debug()
 
 	ctx.Init, err = getInit()
@@ -101,9 +110,6 @@ func getLSBRelease() (desc string, err error) {
 	}
 	desc = fmt.Sprintf("%s", out[0:len(out)-1])
 	desc = cleanString(desc)
-	if err != nil {
-		panic(err)
-	}
 	return
 }
 
@@ -133,22 +139,20 @@ func getInit() (initname string, err error) {
 			err = fmt.Errorf("getInit() -> %v", e)
 		}
 	}()
-	initCmd, err := ioutil.ReadFile("/proc/1/cmdline")
+	itype, err := service.GetFlavor()
 	if err != nil {
 		panic(err)
 	}
-	init := fmt.Sprintf("%s", initCmd)
-	if strings.Contains(init, "init [") {
-		initname = "sysvinit"
-	} else if strings.Contains(init, "systemd") {
-		initname = "systemd"
-	} else if strings.Contains(init, "init") {
-		initname = "upstart"
-	} else {
-		// failed to detect init system, falling back to sysvinit
-		initname = "sysvinit-fallback"
+	switch itype {
+	case service.InitSystemV:
+		return "sysvinit", nil
+	case service.InitSystemd:
+		return "systemd", nil
+	case service.InitUpstart:
+		return "upstart", nil
+	default:
+		return "sysvinit-fallback", nil
 	}
-	return
 }
 
 func GetRunDir() string {
