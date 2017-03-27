@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mig.ninja/mig"
+	"mig.ninja/mig/service"
 	"os"
 	"os/exec"
 	"strings"
@@ -133,22 +134,20 @@ func getInit() (initname string, err error) {
 			err = fmt.Errorf("getInit() -> %v", e)
 		}
 	}()
-	initCmd, err := ioutil.ReadFile("/proc/1/cmdline")
+	itype, err := service.GetFlavor()
 	if err != nil {
 		panic(err)
 	}
-	init := fmt.Sprintf("%s", initCmd)
-	if strings.Contains(init, "init [") {
-		initname = "sysvinit"
-	} else if strings.Contains(init, "systemd") {
-		initname = "systemd"
-	} else if strings.Contains(init, "init") {
-		initname = "upstart"
-	} else {
-		// failed to detect init system, falling back to sysvinit
-		initname = "sysvinit-fallback"
+	switch itype {
+	case service.InitSystemV:
+		return "sysvinit", nil
+	case service.InitSystemd:
+		return "systemd", nil
+	case service.InitUpstart:
+		return "upstart", nil
+	default:
+		return "sysvinit-fallback", nil
 	}
-	return
 }
 
 func GetRunDir() string {
