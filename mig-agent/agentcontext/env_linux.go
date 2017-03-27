@@ -58,6 +58,8 @@ func findHostname(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	return
 }
 
+// findOSInfo gathers information about the Linux distribution if possible, and
+// determines the init type of the system.
 func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	ctx = orig_ctx
 	defer func() {
@@ -67,13 +69,19 @@ func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 		logChan <- mig.Log{Desc: "leaving findOSInfo()"}.Debug()
 	}()
 	ctx.OSIdent, err = getLSBRelease()
-	if err != nil {
-		logChan <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Info()
-		ctx.OSIdent, err = getIssue()
-		if err != nil {
-			logChan <- mig.Log{Desc: fmt.Sprintf("getIssue() failed: %v", err)}.Info()
-		}
+	if err == nil {
+		logChan <- mig.Log{Desc: "using lsb release for distribution ident"}.Debug()
+		goto haveident
 	}
+	logChan <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Debug()
+	ctx.OSIdent, err = getIssue()
+	if err == nil {
+		logChan <- mig.Log{Desc: "using /etc/issue for distribution ident"}.Debug()
+		goto haveident
+	}
+	logChan <- mig.Log{Desc: fmt.Sprintf("getIssue() failed: %v", err)}.Debug()
+	logChan <- mig.Log{Desc: "warning, no valid linux os identification could be found"}.Info()
+haveident:
 	logChan <- mig.Log{Desc: fmt.Sprintf("Ident is %s", ctx.OSIdent)}.Debug()
 
 	ctx.Init, err = getInit()
