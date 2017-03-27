@@ -1,0 +1,7 @@
+service is a package used within MIG for service management. This includes
+tasks such as installing/removing MIG components as OS services, and starting
+and stopping services.
+
+This code was originally forked from bitbucket.org/kardianos/service/ to
+github.com/jvehent/service-go. Since then the code has been modified for MIG,
+and as such now lives here.

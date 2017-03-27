@@ -19,11 +19,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
 	"mig.ninja/mig/mig-agent/agentcontext"
 	"mig.ninja/mig/modules"
+	"mig.ninja/mig/service"
 )
 
 // publication lock is used to prevent publication when the channels are not

@@ -1,6 +1,6 @@
 // Package service provides a simple way to create a system service.
 // Currently supports Windows, Linux/(systemd | Upstart | SysV), and OSX/Launchd.
-package service
+package service /* import "mig.ninja/mig/service" */
 
 import "github.com/kardianos/osext"
 

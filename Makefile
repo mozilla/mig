@@ -179,7 +179,6 @@ go_vendor_dependencies:
 	$(GOGETTER) github.com/gorilla/mux
 	$(GOGETTER) github.com/jvehent/cljs
 	$(GOGETTER) github.com/jvehent/gozdef
-	$(GOGETTER) github.com/jvehent/service-go
 	$(GOGETTER) github.com/kardianos/osext
 	$(GOGETTER) github.com/lib/pq
 	$(GOGETTER) github.com/mozilla/masche/listlibs
