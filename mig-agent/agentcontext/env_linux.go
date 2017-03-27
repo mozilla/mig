@@ -102,9 +102,6 @@ func getLSBRelease() (desc string, err error) {
 	}
 	desc = fmt.Sprintf("%s", out[0:len(out)-1])
 	desc = cleanString(desc)
-	if err != nil {
-		panic(err)
-	}
 	return
 }
 
