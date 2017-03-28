@@ -19,8 +19,6 @@ import (
 	"time"
 )
 
-const maxStatActions = 15 // Keep stats for last X number of actions
-
 // Defines statistics kept by the agent
 type agentStats struct {
 	Actions []agentStatsAction
@@ -33,12 +31,15 @@ type agentStats struct {
 func (s *agentStats) importAction(a mig.Action, accepted bool) error {
 	s.Lock()
 	defer s.Unlock()
+	if STATSMAXACTIONS == 0 {
+		return nil
+	}
 	ns := agentStatsAction{}
 	err := ns.importAction(a, accepted)
 	if err != nil {
 		return err
 	}
-	if len(s.Actions) == maxStatActions {
+	if len(s.Actions) == STATSMAXACTIONS {
 		s.Actions = s.Actions[1:]
 	}
 	s.Actions = append(s.Actions, ns)

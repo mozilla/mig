@@ -331,6 +331,7 @@ var MODULETIMEOUT time.Duration = 300 * time.Second
 var ONLYVERIFYPUBKEY = false
 var SPAWNPERSISTENT bool = true
 var MODULECONFIGDIR = "/etc/mig"
+var STATSMAXACTIONS = 15
 var AGENTACL = [...]string{
 \`{
     "default": {

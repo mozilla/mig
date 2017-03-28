@@ -36,6 +36,9 @@ type config struct {
 		ExtraPrivacyMode bool
 		OnlyVerifyPubKey bool
 	}
+	Stats struct {
+		MaxActions int
+	}
 	Certs struct {
 		Ca, Cert, Key string
 	}
@@ -127,6 +130,9 @@ type globals struct {
 	// if true, only the investigator's public key is verified on actions and not ACLs.
 	onlyVerifyPubKey bool
 
+	// Maximum number of past actions to keep statistics on in the agent, 0 to disable
+	statsMaxActions int
+
 	// Not supported by config
 	// Control modules permissions by PGP keys
 	// AGENTACL [...]string
@@ -169,6 +175,7 @@ func newGlobals() *globals {
 		heartBeatFreq:      HEARTBEATFREQ,
 		moduleTimeout:      MODULETIMEOUT,
 		onlyVerifyPubKey:   ONLYVERIFYPUBKEY,
+		statsMaxActions:    STATSMAXACTIONS,
 		caCert:             CACERT,
 		agentCert:          AGENTCERT,
 		agentKey:           AGENTKEY,
@@ -214,6 +221,10 @@ func (g globals) parseConfig(config config) error {
 	g.moduleTimeout, err = time.ParseDuration(config.Agent.ModuleTimeout)
 	if err != nil {
 		return fmt.Errorf("config.Agent.ModuleTimeout %v", err)
+	}
+	g.statsMaxActions = config.Stats.MaxActions
+	if g.statsMaxActions > 30 || g.statsMaxActions < 0 {
+		return fmt.Errorf("config.Stats.MaxActions must be from 0 - 30")
 	}
 	if config.Certs.Ca != "" {
 		cacert, err := ioutil.ReadFile(config.Certs.Ca)
@@ -267,6 +278,7 @@ func (g globals) apply() {
 	HEARTBEATFREQ = g.heartBeatFreq
 	MODULETIMEOUT = g.moduleTimeout
 	ONLYVERIFYPUBKEY = g.onlyVerifyPubKey
+	STATSMAXACTIONS = g.statsMaxActions
 	CACERT = g.caCert
 	AGENTCERT = g.agentCert
 	AGENTKEY = g.agentKey
