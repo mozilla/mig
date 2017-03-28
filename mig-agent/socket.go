@@ -60,6 +60,7 @@ table, td {
 <div>
 <table class="vl">
   <tr><th colspan=2>Agent status</th></tr>
+  <tr><td>Agent version</td><td>{{.Version}}</td></tr>
   <tr><td>Agent name</td><td>{{.Context.Agent.Hostname}}</td></tr>
   <tr><td>BinPath</td><td>{{.Context.Agent.BinPath}}</td></tr>
   <tr><td>RunDir</td><td>{{.Context.Agent.RunDir}}</td></tr>
@@ -118,6 +119,7 @@ type templateData struct {
 	Proxies          []string
 	HeartBeatFreq    time.Duration
 	ModuleTimeout    time.Duration
+	Version          string
 
 	Actions []agentStatsAction
 }
@@ -136,6 +138,7 @@ func (t *templateData) importAgentConfig() {
 	t.Proxies = PROXIES
 	t.HeartBeatFreq = HEARTBEATFREQ
 	t.ModuleTimeout = MODULETIMEOUT
+	t.Version = mig.Version
 }
 
 func initSocket(ctx *Context) {
