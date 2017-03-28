@@ -195,6 +195,7 @@ go_vendor_dependencies:
 	$(GOGETTER) golang.org/x/net/ipv4
 	$(GOGETTER) golang.org/x/net/ipv6
 	$(GOGETTER) gopkg.in/gcfg.v1
+	$(GOGETTER) github.com/hillu/go-yara
 	$(GOGETTER) github.com/cheggaaa/pb
 	$(GOGETTER) github.com/stretchr/testify
 	$(GOGETTER) github.com/fsnotify/fsnotify
