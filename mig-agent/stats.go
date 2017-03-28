@@ -15,6 +15,7 @@ package main
 
 import (
 	"mig.ninja/mig"
+	"strings"
 	"sync"
 	"time"
 )
@@ -51,12 +52,27 @@ type agentStatsAction struct {
 	Time     string
 	Name     string
 	Accepted string
+	Modules  string
 }
 
 // Add data to an agentStatsAction based on action a
 func (s *agentStatsAction) importAction(a mig.Action, accepted bool) error {
 	s.Time = time.Now().UTC().Format(time.RFC3339)
 	s.Name = a.Name
+	fl := make([]string, 0)
+	for _, x := range a.Operations {
+		found := false
+		for _, y := range fl {
+			if y == strings.ToLower(x.Module) {
+				found = true
+			}
+		}
+		if found {
+			continue
+		}
+		fl = append(fl, strings.ToLower(x.Module))
+	}
+	s.Modules = strings.Join(fl, ", ")
 	if accepted {
 		s.Accepted = "Accepted"
 	} else {

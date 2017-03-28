@@ -89,9 +89,9 @@ table, td {
 <div>
 <table class="hl">
 <tr><th colspan=2>Recent actions</th></tr>
-<tr><td>Time (UTC)</td><td>Name</td><td>Status</td></tr>
+<tr><td>Time (UTC)</td><td>Name</td><td>Modules</td><td>Status</td></tr>
 {{range .Actions}}
-  <tr><td>{{.Time}}</td><td>{{.Name}}</td><td>{{.Accepted}}</tr>
+  <tr><td>{{.Time}}</td><td>{{.Name}}</td><td>{{.Modules}}</td><td>{{.Accepted}}</tr>
 {{end}}
 </table>
 </div>
