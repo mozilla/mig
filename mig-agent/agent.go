@@ -620,8 +620,12 @@ func parseCommands(ctx *Context, msg []byte) (err error) {
 	// the signer is authorized to perform this action
 	err = checkActionAuthorization(cmd.Action, ctx)
 	if err != nil {
+		ctx.Stats.importAction(cmd.Action, false)
 		panic(err)
 	}
+
+	// Note this as a successful command for statistics
+	ctx.Stats.importAction(cmd.Action, true)
 
 	// Each operation is ran separately by a module, a channel is created to receive the results from each module
 	// a goroutine is created to read from the result channel, and when all modules are done, build the response

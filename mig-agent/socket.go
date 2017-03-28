@@ -45,7 +45,11 @@ table, td {
   border: 1px solid black;
   font-size: 14px;
 }
-td:nth-child(2) {
+.vl td:nth-child(2) {
+  background-color: #1f1f1f;
+  white-space: pre;
+}
+.hl tr:nth-of-type(2) ~ tr {
   background-color: #1f1f1f;
   white-space: pre;
 }
@@ -54,7 +58,7 @@ td:nth-child(2) {
 <body>
 <h1>mig-agent</h1>
 <div>
-<table>
+<table class="vl">
   <tr><th colspan=2>Agent status</th></tr>
   <tr><td>Agent name</td><td>{{.Context.Agent.Hostname}}</td></tr>
   <tr><td>BinPath</td><td>{{.Context.Agent.BinPath}}</td></tr>
@@ -65,7 +69,7 @@ td:nth-child(2) {
 </table>
 </div>
 <div>
-<table>
+<table class="vl">
   <tr><th colspan=2>Configuration</th></tr>
   <tr><td>Immortal</td><td>{{.Immortal}}</td></tr>
   <tr><td>Install as a service</td><td>{{.InstallService}}</td></tr>
@@ -80,6 +84,15 @@ td:nth-child(2) {
   <tr><td>Proxies</td><td>{{.Proxies}}</td></tr>
   <tr><td>Heartbeat frequency</td><td>{{.HeartBeatFreq}}</td></tr>
   <tr><td>Module timeout</td><td>{{.ModuleTimeout}}</td></tr>
+</table>
+</div>
+<div>
+<table class="hl">
+<tr><th colspan=2>Recent actions</th></tr>
+<tr><td>Time (UTC)</td><td>Name</td><td>Modules</td><td>Status</td></tr>
+{{range .Actions}}
+  <tr><td>{{.Time}}</td><td>{{.Name}}</td><td>{{.Modules}}</td><td>{{.Accepted}}</tr>
+{{end}}
 </table>
 </div>
 </body>
@@ -105,6 +118,8 @@ type templateData struct {
 	Proxies          []string
 	HeartBeatFreq    time.Duration
 	ModuleTimeout    time.Duration
+
+	Actions []agentStatsAction
 }
 
 func (t *templateData) importAgentConfig() {
@@ -164,6 +179,9 @@ func socketHandleStatus(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	tdata.Tags = string(buf)
+	sockCtx.Stats.Lock()
+	defer sockCtx.Stats.Unlock()
+	tdata.Actions = sockCtx.Stats.Actions
 	t, err := template.New("status").Parse(statusTmpl)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)

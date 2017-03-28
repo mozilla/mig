@@ -82,6 +82,7 @@ type Context struct {
 		Bind string
 	}
 	Logging mig.Logging
+	Stats   agentStats
 }
 
 // Update volatile/dynamic fields in c.Agent using information stored in
@@ -151,6 +152,12 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 		}
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "Logging routine initialized."}.Debug()
+
+	// Initialize the agent statistics tracking
+	ctx, err = initAgentStats(ctx)
+	if err != nil {
+		panic(err)
+	}
 
 	// Gather new agent context information to use as the context for this
 	// agent invocation

@@ -54,6 +54,11 @@
     ; if true, only the investigator's public key is verified on actions and not ACLs.
     onlyVerifyPubKey = false
 
+[stats]
+    ; number of previous actions the agent should keep a summary for. the summary can
+    ; be viewed over the agent stat socket. 0 to disable.
+    maxactions = 15
+
 [certs]
     ca  = "/path/to/ca/cert"
     cert= "/path/to/client/cert"

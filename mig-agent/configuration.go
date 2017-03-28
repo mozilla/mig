@@ -94,6 +94,11 @@ var MODULETIMEOUT time.Duration = 300 * time.Second
 // if true, only the investigator's public key is verified on actions and not ACLs.
 var ONLYVERIFYPUBKEY = false
 
+// the agent keeps a summary of recent actions it has processed, which can be
+// viewed over the agents status socket. this controls the number of recent
+// actions the summary is kept for (once limit is hit, older actions are removed).
+var STATSMAXACTIONS = 15
+
 // Control modules permissions by PGP keys
 var AGENTACL = [...]string{
 	`{
