@@ -55,7 +55,7 @@ type agentStatsAction struct {
 
 // Add data to an agentStatsAction based on action a
 func (s *agentStatsAction) importAction(a mig.Action, accepted bool) error {
-	s.Time = time.Now().UTC().Format("Jan 2 15:04:05 2006")
+	s.Time = time.Now().UTC().Format(time.RFC3339)
 	s.Name = a.Name
 	if accepted {
 		s.Accepted = "Accepted"
