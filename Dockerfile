@@ -6,7 +6,7 @@ MAINTAINER Mozilla
 RUN apt-get update && \
     apt-get install -y sudo golang git make \
     curl rng-tools tmux postgresql rabbitmq-server \
-    libreadline-dev && \
+    libreadline-dev automake autoconf libtool && \
     echo '%mig ALL=(ALL:ALL) NOPASSWD:ALL' > /etc/sudoers.d/mig && \
     groupadd -g 10001 mig && \
     useradd -g 10001 -u 10001 -d /mig -m mig

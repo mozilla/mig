@@ -86,12 +86,15 @@ fi
 go_version=$(go version)
 echo $go_version | grep -E -q --regexp="go1\.[0-4]" && echo -e "installed version of go is ${go_version}\nwe need at least version 1.5" && fail
 
-which git  2>&1 1>/dev/null || pkglist="$pkglist git"
-which make 2>&1 1>/dev/null || pkglist="$pkglist make"
-which gcc  2>&1 1>/dev/null || pkglist="$pkglist gcc"
-which tmux 2>&1 1>/dev/null || pkglist="$pkglist tmux"
-which curl 2>&1 1>/dev/null || pkglist="$pkglist curl"
-which rngd 2>&1 1>/dev/null || pkglist="$pkglist rng-tools"
+which git      2>&1 1>/dev/null || pkglist="$pkglist git"
+which make     2>&1 1>/dev/null || pkglist="$pkglist make"
+which gcc      2>&1 1>/dev/null || pkglist="$pkglist gcc"
+which tmux     2>&1 1>/dev/null || pkglist="$pkglist tmux"
+which curl     2>&1 1>/dev/null || pkglist="$pkglist curl"
+which rngd     2>&1 1>/dev/null || pkglist="$pkglist rng-tools"
+which autoconf 2>&1 1>/dev/null || pkglist="$pkglist autoconf"
+which automake 2>&1 1>/dev/null || pkglist="$pkglist automake"
+which libtool  2>&1 1>/dev/null || pkglist="$pkglist libtool"
 
 if [ "$pkglist" != "" ]; then
     echo "missing packages: $pkglist"
@@ -117,6 +120,13 @@ if [ "$isRPM" = true ]; then
     sudo service postgresql restart
 fi
 
+# Fetch and install a version of libyara with our desired configuration
+echo -e "\n---- Building libyara\n"
+curl -OL https://github.com/VirusTotal/yara/archive/v3.5.0.tar.gz || fail
+tar -zxf v3.5.0.tar.gz || fail
+(cd yara-3.5.0 && ./bootstrap.sh && ./configure --disable-shared --disable-magic --disable-cuckoo --without-crypto) || fail
+(cd yara-3.5.0 && make && sudo make install) || fail
+
 echo -e "\n---- Building MIG Scheduler\n"
 make mig-scheduler || fail
 id mig || sudo useradd -r mig || fail
@@ -137,12 +147,12 @@ sudo chown mig /usr/local/bin/mig-worker-agent-verif || fail
 sudo chmod 550 /usr/local/bin/mig-worker-agent-verif || fail
 
 echo -e "\n---- Building MIG Clients\n"
-make mig-console || fail
+make mig-console WITHYARA=yes || fail
 sudo cp bin/linux/amd64/mig-console /usr/local/bin/ || fail
 sudo chown mig /usr/local/bin/mig-console || fail
 sudo chmod 555 /usr/local/bin/mig-console || fail
 
-make mig-cmd || fail
+make mig-cmd WITHYARA=yes || fail
 sudo cp bin/linux/amd64/mig /usr/local/bin/ || fail
 sudo chown mig /usr/local/bin/mig || fail
 sudo chmod 555 /usr/local/bin/mig || fail
@@ -354,7 +364,7 @@ var AGENTKEY = []byte("")
 EOF
 
 echo -e "\n---- Building and running local agent\n"
-make mig-agent AGTCONF=conf/mig-agent-conf.go BUILDENV=demo || fail
+make mig-agent AGTCONF=conf/mig-agent-conf.go BUILDENV=demo WITHYARA=yes || fail
 sudo cp bin/linux/amd64/mig-agent-latest /sbin/mig-agent || fail
 sudo chown root /sbin/mig-agent || fail
 sudo chmod 500 /sbin/mig-agent || fail

@@ -16,5 +16,6 @@ import (
 	_ "mig.ninja/mig/modules/pkg"
 	_ "mig.ninja/mig/modules/scribe"
 	_ "mig.ninja/mig/modules/timedrift"
+	//_ "mig.ninja/mig/modules/yara"
 	//_ "mig.ninja/mig/modules/example"
 )

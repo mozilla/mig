@@ -12,7 +12,7 @@ services:
 before_install:
     # this is a fix to get rng-tools to work in travis-ci
     - sudo apt-get update -qq
-    - sudo apt-get install --yes rng-tools
+    - sudo apt-get install --yes rng-tools autoconf automake gcc
     - sudo rm -f /dev/random
     - sudo mknod -m 0666 /dev/random c 1 9
     - echo HRNGDEVICE=/dev/urandom | sudo tee /etc/default/rng-tools
@@ -20,6 +20,14 @@ before_install:
 script:
     - export OLDPATH=$(pwd)
     - cd
+    - curl -OL https://github.com/VirusTotal/yara/archive/v3.5.0.tar.gz
+    - tar -zxf v3.5.0.tar.gz
+    - cd yara-3.5.0
+    - ./bootstrap.sh
+    - ./configure --disable-shared --disable-magic --disable-cuckoo --without-crypto
+    - make
+    - sudo make install
+    - cd ..
     - mkdir -p "$GOPATH/src/mig.ninja/"
     - mv "$OLDPATH" "$GOPATH/src/mig.ninja/"
     - cd "$GOPATH/src/mig.ninja/mig"
@@ -33,7 +41,7 @@ script:
     - diff client/mig/available_modules.go conf/available_modules.go
     # enable all the modules we have for the test
     - sed -i 's,//_,_,' conf/available_modules.go
-    - make
+    - make WITHYARA=yes
     - docker build -t mozilla/mig .
     - |
         if [ ! -z "$TRAVIS_TAG" ]; then

@@ -14,6 +14,19 @@ else
 	BINSUFFIX := ""
 endif
 
+# Set this to yes if you want yara support and want to use the yara module
+#
+# This assumes yara has been compiled with the following options:
+# --disable-shared --disable-magic --disable-cuckoo --without-crypto
+#
+# If you have built yara some other way or have yara shared libraries
+# installed you will need to adjust the makefile
+#
+# You may have to set the CPATH and LIBRARY_PATH environment variables
+# if you have installed the yara headers and library somewhere the build
+# tools can't locate
+WITHYARA=no
+
 # These variables control signature operations used when building various
 # targets on OSX.
 #
@@ -21,7 +34,7 @@ endif
 # sign the mig-agent and mig-loader binaries when built on OSX. If empty,
 # the compiled binaries will not be signed.
 #
-# OSXPACKSIGID if set will result in the specified identify being used to
+# OSXPACKSIGID if set will result in the specified identity being used to
 # sign the mig-loader package (osx-loader-pkg). If empty the .pkg will not
 # be signed.
 #
@@ -83,6 +96,7 @@ endif
 GCC		:= gcc
 CFLAGS		:=
 LDFLAGS		:=
+CGOLDFLAGS	:=
 GOOPTS		:=
 GO 		:= GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
 GOGETTER	:= GOPATH=$(shell pwd)/.tmpdeps go get -d
@@ -97,6 +111,18 @@ CLIENTTARGETS   := mig-cmd mig-console mig-action-generator mig-action-verifier 
 		   mig-agent-search
 AGENTTARGETS	:= mig-agent mig-loader
 ALLTARGETS	:= $(AGENTTARGETS) $(SERVERTARGETS) $(CLIENTTARGETS)
+
+ifeq ($(WITHYARA),yes)
+ifeq ($(OS),linux)
+	CGOLDFLAGS += -lyara -lm
+else ifeq ($(OS),darwin)
+	# Nothing special required here for this to work on darwin
+else
+$(error WITHYARA not supported for this platform)
+endif
+endif
+
+export CGO_LDFLAGS = $(CGOLDFLAGS)
 
 all: test $(ALLTARGETS)
 
@@ -425,7 +451,22 @@ test:  test-modules
 
 test-modules:
 # test all modules
-	$(GO) test mig.ninja/mig/modules/...
+	$(GO) test mig.ninja/mig/modules/
+	$(GO) test mig.ninja/mig/modules/agentdestroy
+	$(GO) test mig.ninja/mig/modules/example
+	$(GO) test mig.ninja/mig/modules/examplepersist
+	$(GO) test mig.ninja/mig/modules/file
+	$(GO) test mig.ninja/mig/modules/fswatch
+	$(GO) test mig.ninja/mig/modules/memory
+	$(GO) test mig.ninja/mig/modules/netstat
+	$(GO) test mig.ninja/mig/modules/ping
+	$(GO) test mig.ninja/mig/modules/pkg
+	$(GO) test mig.ninja/mig/modules/scribe
+	$(GO) test mig.ninja/mig/modules/timedrift
+ifeq ($(WITHYARA),yes)
+	$(GO) test mig.ninja/mig/modules/yara
+endif
+
 
 clean-agent:
 	if [ -d bin/ ]; then \
