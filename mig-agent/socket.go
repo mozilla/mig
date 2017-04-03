@@ -143,10 +143,10 @@ func (t *templateData) importAgentConfig() {
 
 func initSocket(ctx *Context) {
 	sockCtx = ctx
+	http.HandleFunc("/pid", socketHandlePID)
+	http.HandleFunc("/shutdown", socketHandleShutdown)
+	http.HandleFunc("/", socketHandleStatus)
 	for {
-		http.HandleFunc("/pid", socketHandlePID)
-		http.HandleFunc("/shutdown", socketHandleShutdown)
-		http.HandleFunc("/", socketHandleStatus)
 		err := http.ListenAndServe(ctx.Socket.Bind, nil)
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Error from stat socket: %q", err)}.Err()
