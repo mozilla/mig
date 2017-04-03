@@ -465,14 +465,14 @@ func initMQ(orig_ctx Context, try_proxy bool, proxy string) (ctx Context, err er
 }
 
 func Destroy(ctx Context) (err error) {
-	close(ctx.Channels.Terminate)
 	close(ctx.Channels.NewCommand)
 	close(ctx.Channels.RunAgentCommand)
 	close(ctx.Channels.RunExternalCommand)
 	close(ctx.Channels.Results)
+	ctx.MQ.conn.Close()
 	// give one second for the goroutines to close
 	time.Sleep(1 * time.Second)
-	ctx.MQ.conn.Close()
+	close(ctx.Channels.Terminate)
 	return
 }
 
