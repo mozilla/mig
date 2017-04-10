@@ -24,7 +24,7 @@ func makePubring(ctx Context) (pubring io.ReadSeeker, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving makePubring()"}.Debug()
 	}()
-	keys, err := ctx.DB.ActiveInvestigatorsKeys()
+	keys, err := ctx.DB.ActiveInvestigatorsPubKeys()
 	if err != nil {
 		panic(err)
 	}

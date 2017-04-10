@@ -104,24 +104,25 @@ func createInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	// publickey is stored in a multipart post form, extract it
 	_, keyHeader, err := request.FormFile("publickey")
-	if err != nil {
-		panic(err)
-	}
-	keyReader, err := keyHeader.Open()
-	if err != nil {
-		panic(err)
-	}
-	inv.PublicKey, err = ioutil.ReadAll(keyReader)
-	if err != nil {
-		panic(err)
-	}
-	if len(inv.PublicKey) == 0 {
-		panic("Investigator Public Key must not be empty")
-	}
-	// validate the public key and obtain a fingerprint from it
-	inv.PGPFingerprint, err = pgp.LoadArmoredPubKey(inv.PublicKey)
-	if err != nil {
-		panic(err)
+	if err == nil {
+		// If a pubkey was included with the investigator creation request, we will
+		// add it to the new investigator
+		keyReader, err := keyHeader.Open()
+		if err != nil {
+			panic(err)
+		}
+		inv.PublicKey, err = ioutil.ReadAll(keyReader)
+		if err != nil {
+			panic(err)
+		}
+		if len(inv.PublicKey) == 0 {
+			panic("Investigator Public Key must not be empty")
+		}
+		// validate the public key and obtain a fingerprint from it
+		inv.PGPFingerprint, err = pgp.LoadArmoredPubKey(inv.PublicKey)
+		if err != nil {
+			panic(err)
+		}
 	}
 	// create the investigator in database
 	inv.ID, err = ctx.DB.InsertInvestigator(inv)
@@ -168,39 +169,51 @@ func updateInvestigator(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	inv.Status = request.FormValue("status")
 	invperm := request.FormValue("permissions")
-	if inv.Status == "" && invperm == "" {
+	apikey := request.FormValue("apikey")
+	if inv.Status == "" && invperm == "" && apikey == "" {
 		panic("No updates to the investigator were specified")
-	} else {
-		if inv.Status != "" && invperm == "" {
-			// update the investigator status in database
-			err = ctx.DB.UpdateInvestigatorStatus(inv)
-			if err != nil {
-				panic(err)
-			}
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f status changed to %s", inv.ID, inv.Status)}
-		} else if inv.Status == "" && invperm != "" {
-			err = json.Unmarshal([]byte(invperm), &inv.Permissions)
-			if err != nil {
-				panic(err)
-			}
-			err = ctx.DB.UpdateInvestigatorPerms(inv)
-			if err != nil {
-				panic(err)
-			}
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f permissions changed", inv.ID)}
-		} else {
-			// when both status and permissions are changed
-			var errStatus = ctx.DB.UpdateInvestigatorStatus(inv)
-			var errInvperm = json.Unmarshal([]byte(invperm), &inv.Permissions)
-			if errStatus != nil || errInvperm != nil {
-				panic(err)
-			}
-			errInvperm = ctx.DB.UpdateInvestigatorPerms(inv)
-			if errInvperm != nil {
-				panic(err)
-			}
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f permissions changed and status changed to %s", inv.ID, inv.Status)}
+	}
+	if inv.Status != "" {
+		// update the investigator status in database
+		err = ctx.DB.UpdateInvestigatorStatus(inv)
+		if err != nil {
+			panic(err)
 		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f status changed to %s", inv.ID, inv.Status)}
+	}
+	if invperm != "" {
+		err = json.Unmarshal([]byte(invperm), &inv.Permissions)
+		if err != nil {
+			panic(err)
+		}
+		err = ctx.DB.UpdateInvestigatorPerms(inv)
+		if err != nil {
+			panic(err)
+		}
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Investigator %.0f permissions changed", inv.ID)}
+	}
+	if apikey != "" {
+		var (
+			setkey  []byte
+			setsalt []byte
+			rkey    string
+		)
+		if apikey == "active" {
+			rkey = mig.RandAPIKeyString(APIKeyLength)
+			setkey, setsalt, err = hashAPIKey(rkey, nil, APIHashedKeyLength, APISaltLength)
+			if err != nil {
+				panic(err)
+			}
+		} else if apikey != "disabled" {
+			panic("Invalid value for apikey parameter")
+		}
+		err = ctx.DB.UpdateInvestigatorAPIKey(inv, setkey, setsalt)
+		if err != nil {
+			panic(err)
+		}
+		// Set the actual API key in the investigator we will return to the client, this API
+		// key is displayed only once when it is assigned
+		inv.APIKey = rkey
 	}
 	err = resource.AddItem(cljs.Item{
 		Href: fmt.Sprintf("%s/investigator?investigatorid=%.0f", ctx.Server.BaseURL, inv.ID),

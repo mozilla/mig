@@ -18,9 +18,13 @@ import (
 	"mig.ninja/mig"
 )
 
-func hashLoaderKey(key string, salt []byte) (ret []byte, retsalt []byte, err error) {
+const APIKeyLength = 32
+const APIHashedKeyLength = 32
+const APISaltLength = 16
+
+func hashAPIKey(key string, salt []byte, keylen int, saltlen int) (ret []byte, retsalt []byte, err error) {
 	if salt == nil {
-		retsalt = make([]byte, mig.LoaderSaltLength)
+		retsalt = make([]byte, saltlen)
 		_, err = rand.Read(retsalt)
 		if err != nil {
 			return
@@ -28,8 +32,33 @@ func hashLoaderKey(key string, salt []byte) (ret []byte, retsalt []byte, err err
 	} else {
 		retsalt = salt
 	}
-	ret = pbkdf2.Key([]byte(key), retsalt, 4096, mig.LoaderHashedKeyLength, sha256.New)
+	ret = pbkdf2.Key([]byte(key), retsalt, 4096, keylen, sha256.New)
 	return ret, retsalt, nil
+}
+
+// Verify an X-MIGAPIKEY header, if the supplied header value matches any key
+// configured for an investigator in the database, the investigator is returned,
+// otherwise an error is returned.
+func verifyAPIKey(key string) (inv mig.Investigator, err error) {
+	reterr := fmt.Errorf("API key authentication failed")
+	apiinvs, err := ctx.DB.InvestigatorAPIKeyAuthHelpers()
+	if err != nil {
+		return inv, reterr
+	}
+	for _, x := range apiinvs {
+		tryhash, _, err := hashAPIKey(key, x.Salt, len(x.APIKey), len(x.Salt))
+		if err != nil {
+			return inv, reterr
+		}
+		if bytes.Equal(tryhash, x.APIKey) {
+			inv, err = ctx.DB.InvestigatorByID(x.ID)
+			if err != nil {
+				return inv, reterr
+			}
+			return inv, nil
+		}
+	}
+	return inv, reterr
 }
 
 func hashAuthenticateLoader(lkey string) (ldr mig.LoaderEntry, err error) {
@@ -43,7 +72,7 @@ func hashAuthenticateLoader(lkey string) (ldr mig.LoaderEntry, err error) {
 	if err != nil {
 		return
 	}
-	tryhash, _, err := hashLoaderKey(suppkey, lad.Salt)
+	tryhash, _, err := hashAPIKey(suppkey, lad.Salt, mig.LoaderHashedKeyLength, mig.LoaderSaltLength)
 	if err != nil {
 		return
 	}

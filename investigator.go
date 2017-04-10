@@ -20,6 +20,7 @@ type Investigator struct {
 	Status         string    `json:"status"`
 	CreatedAt      time.Time `json:"createdat"`
 	LastModified   time.Time `json:"lastmodified"`
+	APIKey         string    `json:"apikey,omitempty"`
 
 	Permissions InvestigatorPerms `json:"permissions"`
 }
@@ -371,3 +372,12 @@ const (
 	StatusActiveInvestigator   string = "active"
 	StatusDisabledInvestigator string = "disabled"
 )
+
+// InvestigatorAPIAuthHelper is a small struct used to pass information between
+// the database and the API, and is used primarily for authorizing requests using
+// API keys.
+type InvestigatorAPIAuthHelper struct {
+	ID     float64 // Investigator ID
+	APIKey []byte  // Key hash
+	Salt   []byte  // Key salt
+}
