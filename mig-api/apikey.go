@@ -23,6 +23,10 @@ const APIHashedKeyLength = 32
 const APISaltLength = 16
 
 func hashAPIKey(key string, salt []byte, keylen int, saltlen int) (ret []byte, retsalt []byte, err error) {
+	if key == "" {
+		err = fmt.Errorf("loader key cannot be zero length")
+		return
+	}
 	if salt == nil {
 		retsalt = make([]byte, saltlen)
 		_, err = rand.Read(retsalt)

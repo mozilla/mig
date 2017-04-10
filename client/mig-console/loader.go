@@ -124,24 +124,20 @@ r                refresh the loader entry (get latest version from database)
 			}
 			fmt.Printf("%v\n", string(jsonle))
 		case "key":
-			fmt.Printf("New key component must be %v alphanumeric characters long, or type 'generate' to generate one\n", mig.LoaderKeyLength)
-			lkey, err := readline.String("New key for loader> ")
+			var nle mig.LoaderEntry
+			input, err := readline.String("generate new key for loader? (y/n)> ")
 			if err != nil {
 				panic(err)
 			}
-			if lkey == "" {
-				panic("invalid key specified")
+			if input != "y" {
+				break
 			}
-			if lkey == "generate" {
-				lkey = mig.GenerateLoaderKey()
-				fmt.Printf("New key will be set to %v\n", lkey)
-			}
-			fmt.Printf("New key including prefix to supply to client will be %q\n", le.Prefix+lkey)
-			err = cli.LoaderEntryKey(le, lkey)
+			nle, err = cli.LoaderEntryKey(le)
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("Loader key changed")
+			fmt.Print("Loader key changed\n")
+			fmt.Printf("Loader key including prefix to supply to client will be %q\n", nle.Prefix+nle.Key)
 		case "r":
 			reloadfunc()
 		case "":
@@ -180,10 +176,6 @@ func loaderCreator(cli client.Client) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Generating loader prefix...")
-	newle.Prefix = mig.GenerateLoaderPrefix()
-	fmt.Println("Generating loader key...")
-	newle.Key = mig.GenerateLoaderKey()
 	// Validate the new loader entry before sending it to the API
 	err = newle.Validate()
 	if err != nil {
@@ -194,7 +186,7 @@ func loaderCreator(cli client.Client) (err error) {
 		panic(err)
 	}
 	fmt.Printf("%s\n", jsonle)
-	fmt.Printf("Loader key including prefix to supply to client will be %q\n", newle.Prefix+newle.Key)
+	fmt.Print("Server will assign prefix and key on creation\n")
 	input, err := readline.String("create loader entry? (y/n)> ")
 	if err != nil {
 		panic(err)
@@ -203,10 +195,11 @@ func loaderCreator(cli client.Client) (err error) {
 		fmt.Println("abort")
 		return
 	}
-	err = cli.PostNewLoader(newle)
+	createdle, err := cli.PostNewLoader(newle)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("New entry successfully created but is disabled")
+	fmt.Printf("Loader key including prefix to supply to client will be %q\n", createdle.Prefix+createdle.Key)
+	fmt.Printf("New entry successfully created (id %v) but is disabled\n", createdle.ID)
 	return
 }

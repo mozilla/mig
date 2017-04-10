@@ -578,15 +578,7 @@ func keyLoader(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	lkey := request.FormValue("loaderkey")
-	if lkey == "" {
-		// bad request, return 400
-		resource.SetError(cljs.Error{
-			Code:    fmt.Sprintf("%.0f", opid),
-			Message: "Invalid key specified"})
-		respond(http.StatusBadRequest, resource, respWriter, request)
-		return
-	}
+	lkey := mig.GenerateLoaderKey()
 	err = mig.ValidateLoaderKey(lkey)
 	if err != nil {
 		panic(err)
@@ -599,6 +591,16 @@ func keyLoader(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	le, err := ctx.DB.GetLoaderFromID(loaderid)
+	if err != nil {
+		panic(err)
+	}
+	le.Key = lkey
+	li, err := loaderEntryToItem(le, ctx)
+	if err != nil {
+		panic(err)
+	}
+	resource.AddItem(li)
 
 	respond(http.StatusOK, resource, respWriter, request)
 }
@@ -637,16 +639,36 @@ func newLoader(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	// Generate the prefix and key will we use for this new loader entry
+	le.Prefix = mig.GenerateLoaderPrefix()
+	le.Key = mig.GenerateLoaderKey()
+	err = mig.ValidateLoaderPrefixAndKey(le.Prefix + le.Key)
+	if err != nil {
+		panic(err)
+	}
 	// Hash the loader key to provide it to LoaderAdd
 	hkey, salt, err := hashAPIKey(le.Key, nil, mig.LoaderHashedKeyLength, mig.LoaderSaltLength)
 	if err != nil {
 		panic(err)
 	}
-	err = ctx.DB.LoaderAdd(le, hkey, salt)
+	createle, err := ctx.DB.LoaderAdd(le, hkey, salt)
 	if err != nil {
 		panic(err)
 	}
+	// Retain the original loader entry rather than using createle directly here,
+	// since we will be echoing the new key back to the client and it is omitted from
+	// the returned LoaderEntry. We want to get the ID that was used for the new loader
+	// though.
+	le.ID = createle.ID
 
+	li, err := loaderEntryToItem(le, ctx)
+	if err != nil {
+		panic(err)
+	}
+	err = resource.AddItem(li)
+	if err != nil {
+		panic(err)
+	}
 	respond(http.StatusCreated, resource, respWriter, request)
 }
 
