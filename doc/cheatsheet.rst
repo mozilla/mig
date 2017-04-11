@@ -11,13 +11,19 @@ All examples use the MIG command line cli. You can run the examples on your
 local machine by specifying `-t local`. The `local` target invokes MIG modules
 in the cli instead of calling mig-agent like a normal investigation would.
 
+You may see some other values for -t here, which are forms of targeting
+strings. See the relevent section in the `configuration guide`_ for information
+on setting up targeting strings and macros.
+
+.. _`configuration guide`: configuration.rst#build-the-clients-and-create-an-investigator
+
 File module
 -----------
 
 You can find detailed documentation by running `mig file help` or in the
-online doc at `doc/module_file.html`_.
+online doc at `../modules/file/doc.rst`_.
 
-.. _`doc/module_file.html`: http://mig.mozilla.org/doc/module_file.html
+.. _`../modules/file/doc.rst`: ../modules/file/doc.rst
 
 Find files in /etc/cron.d that contain "mysql://" on hosts "*buildbot*"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -60,7 +66,7 @@ itself while searching for the command line.
 
 .. code:: bash
 
-    mig file -path /proc/ -name cmdline -content "^/sbin/auditd"
+    mig file -t all -path /proc/ -name cmdline -content "^/sbin/auditd"
 
 Another option, if using '^' is not possible, is to enclose one of the letter
 of the process name into brackets:
@@ -77,7 +83,7 @@ You can find more device id's with the command `lsusb`.
 
 .. code:: bash
 
-	mig file -matchany -path /sys/devices/ -name "^uevent$" -content "PRODUCT=20a0/4107"
+	mig file -t all -matchany -path /sys/devices/ -name "^uevent$" -content "PRODUCT=20a0/4107"
 
 Find "authorized_keys" files with unknown pubkeys
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -113,7 +119,7 @@ return files that have unknown keys.
 
 .. code:: bash
 
-	mig file -path /home -path /root -name "^authorized_keys" \
+	mig file -t all -path /home -path /root -name "^authorized_keys" \
 	-content "^((#.+)|(\s+)?|(ssh-rsa AAAAB3NznoMzq\+2r2Vx2bhFWMU3Uuid 1061157)|(ssh-rsa AAYWH\+0XAASw== ffxbld_rsa))$" \
 	-macroal -mismatch content
 
@@ -127,12 +133,15 @@ for.
 
 .. code:: bash
 
-        mig file -path /proc/ -maxdepth 2 -name "^status$" -content "^Uid:\s+(1664)\s+"
+        mig file -t myservers -path /proc/ -maxdepth 2 -name "^status$" -content "^Uid:\s+(1664)\s+"
 
 Netstat module
 --------------
 
-You can find detailed documentation by running `mig netstat help`.
+You can find detailed documentation by running `mig netstat help` or in the
+online doc at `../modules/netstat/doc.rst`_.
+
+.. _`../modules/netstat/doc.rst`: ../modules/netstat/doc.rst
 
 Searching for a fraudulent IP
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -142,7 +151,7 @@ module to verify that the IP isn't currently connected to any endpoint.
 
 .. code:: bash
 
-	mig netstat -ci 1.2.3.4
+	mig netstat -t all -ci 1.2.3.4
 
 `-ci` stands for connected IP, and accepts an IP or a CIDR, in v4 or v6.
 
@@ -154,7 +163,7 @@ their arp tables, which helps geographically locating an endpoint.
 
 .. code:: bash
 
-	mig netstat -nm 8c:70:5a:c8:be:50
+	mig netstat -t all -nm 8c:70:5a:c8:be:50
 
 `-nm` stands for neighbor mac and takes a regex (ex: `^8c:70:[0-9a-f]`).
 
@@ -167,7 +176,7 @@ CIDR (the netstat module doesn't have an `exclude` option).
 
 .. code:: bash
 
-	mig netstat -e 60s	-ci 1.0.0.0/8		-ci 2.0.0.0/7		-ci 4.0.0.0/6	-ci 8.0.0.0/7 \
+	mig netstat -t all -e 60s -ci 1.0.0.0/8		-ci 2.0.0.0/7		-ci 4.0.0.0/6	-ci 8.0.0.0/7 \
 	-ci 11.0.0.0/8		-ci 12.0.0.0/6		-ci 16.0.0.0/4		-ci 32.0.0.0/3	-ci 64.0.0.0/3 \
 	-ci 96.0.0.0/4		-ci 112.0.0.0/5		-ci 120.0.0.0/6		-ci 124.0.0.0/7	-ci 126.0.0.0/8 \
 	-ci 128.0.0.0/3		-ci 160.0.0.0/5		-ci 168.0.0.0/6		-ci 172.0.0.0/12 \
@@ -200,6 +209,21 @@ list endpoints that have failed the ping.
 
 	$ mig ping -t "name LIKE '%scl3%'" -show notfound -d 10.22.75.57 -p icmp
 
+pkg module
+----------
+
+The pkg module can be used to identify versions of software installed on various
+agent systems. This module integrates with the OS package manager.
+
+.. code:: bash
+
+        $ mig pkg -t all -name 'nginx'
+        4 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
+        host1 pkgmatch name=nginx version=1.10.0-0ubuntu0.16.04.4 type=dpkg arch=all
+        host1 pkgmatch name=nginx-common version=1.10.0-0ubuntu0.16.04.4 type=dpkg arch=all
+        host1 pkgmatch name=nginx-core version=1.10.0-0ubuntu0.16.04.4 type=dpkg arch=amd64
+        1 agents have found results
+
 Timedrift module
 ----------------
 
@@ -218,7 +242,7 @@ to evaluate drift from network time.
 	host1.dc2.example.net Local time is ahead of ntp host time.nist.gov by 3m2.660981781s
 	1 agents have found results
 
-Advanced targetting
+Advanced targeting
 -------------------
 
 MIG can use complex queries to target specific agents. The following examples
@@ -305,7 +329,7 @@ get mig.ninja/mig/client/mig-agent-search`.
 
 .. code:: bash
 
-	$ mig-agent-search "tags->>'operator'='opsec' AND environment->>'os'='linux' AND mode='daemon' AND status='online' AND name like 'mig-api%'"                                                                                  
+	$ mig-agent-search -t "tags->>'operator'='opsec' AND environment->>'os'='linux' AND mode='daemon' AND status='online' AND name like 'mig-api%'"
 	name; id; status; version; mode; os; arch; pid; starttime; heartbeattime; operator; ident; publicip; addresses
 	"mig-api3.use1.opsec.mozilla.com"; "4892412351434"; "online"; "20150910+3cf667c.prod"; "daemon"; "linux"; "amd64"; "20024"; "2015-09-10T19:00:05Z"; "2015-09-10T21:17:05Z"; "opsec"; "Ubuntu 14.04 trusty"; "52.1.207.252"; "[172.19.1.171/26 fe80::c6d:44ff:fead:edd9/64]"
 	"mig-api4.use1.opsec.mozilla.com"; "4892412350962"; "online"; "20150910+3cf667c.prod"; "daemon"; "linux"; "amd64"; "17967"; "2015-09-10T19:00:03Z"; "2015-09-10T21:18:03Z"; "opsec"; "Ubuntu 14.04 trusty"; "52.1.207.252"; "[172.19.1.13/26 fe80::107e:4fff:fe5c:97e5/64]"
