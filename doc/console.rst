@@ -450,6 +450,18 @@ By default unless specific investigators will be created with no
 additional permissions. Answering yes to the permission related
 questions grant the investigator additional access to API functionality.
 
+Providing a PGP public key for the investigator is optional. There may
+be scenarios you want to create an investigator without a public key. For
+example, if you want to create an investigator to be used solely for API
+access and make use of X-MIGAPIKEY authentication instead of requiring
+X-PGPAUTHORIZATION. If you do not assign a PGP key to the investigator
+at this stage, you will not be able to later. An example of a scenario
+where you may not want to add a PGP key, might be one where you want to
+integrate an external application with the capability to manage part of
+MIG. In this case, you could create an investigator without the PGP key, and
+later assign an API key to the investigator, granting this investigator
+access to the API using X-MIGAPIKEY authentication.
+
 You can either provide a local path to the public key file on disk,
 on provide a fingerprint in the format "0x<40 char sha1 hash>". When
 a fingerprint is provided, the console will attempt to retrieve the
