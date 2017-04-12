@@ -25,6 +25,20 @@ type windowsService struct {
 
 const version = "Windows Service"
 
+var interactive = false
+
+func init() {
+	var err error
+	interactive, err = svc.IsAnInteractiveSession()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func IsInteractive() bool {
+	return interactive
+}
+
 func (ws *windowsService) String() string {
 	return version
 }

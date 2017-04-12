@@ -8,9 +8,11 @@ package main
 
 import (
 	"fmt"
-	"mig.ninja/mig"
 	"os"
 	"os/exec"
+
+	"mig.ninja/mig"
+	"mig.ninja/mig/service"
 )
 
 // On Windows, processes aren't forked by the init, so when the service is
@@ -25,28 +27,31 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving daemonize()"}.Debug()
 	}()
 
-	if os.Getppid() == 1 {
+	if !service.IsInteractive() {
 		ctx.Channels.Log <- mig.Log{Desc: "Parent process is PID 1"}.Debug()
-		// if this agent has been launched as part of an upgrade, its parent will be
-		// detached to init, but no service would be launched, so we launch one
-		if upgrading && MUSTINSTALLSERVICE {
-			ctx.Channels.Log <- mig.Log{Desc: "Agent is upgrading. Deploying service."}.Debug()
-			ctx, err = serviceDeploy(ctx)
-			if err != nil {
-				panic(err)
-			}
-			// mig-agent service has been launched, exit this process
-			ctx.Channels.Log <- mig.Log{Desc: "Service deployed. Exit."}.Debug()
-			os.Exit(0)
-		}
-		// fork a new agent and detach. new agent will reattach to init
-		cmd := exec.Command(ctx.Agent.BinPath, "-f")
-		err = cmd.Start()
+		// We are being launched by the Windows SC manager; the Run function in the service
+		// package is utilized here to properly handle signalling between the new agent
+		// process and the SC manager.
+		svc, err := service.NewService("mig-agent", "MIG Agent", "Mozilla InvestiGator Agent")
 		if err != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to spawn new agent from '%s': '%v'", ctx.Agent.BinPath, err)}.Err()
+			panic(err)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "Started new foreground agent. Exit."}.Debug()
-		os.Exit(0)
+		ctx.Channels.Log <- mig.Log{Desc: "Running as a service."}.Debug()
+		// Create a couple functions here we will use to process start and stop signals
+		//
+		// XXX the ostop function should be adjusted to cleanly shut the agent down.
+		ostart := func() error {
+			return nil
+		}
+		ostop := func() error {
+			os.Exit(0)
+			return nil
+		}
+		// We don't want the agent to respawn itself if it's being supervised
+		ctx.Agent.Respawn = false
+		// Handle interactions with SC manager in a go-routine and then proceed on with
+		// initialization
+		go svc.Run(ostart, ostop)
 	} else {
 		// install the service
 		if MUSTINSTALLSERVICE {
