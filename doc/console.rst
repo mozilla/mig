@@ -235,7 +235,7 @@ Action parameters can be edited prior to launching it:
 
 	launcher> addoperation ping
 	Ping module checks connectivity between an endpoint and a remote host. It supports
-	icmp, tcp and udp ping. See doc at http://mig.mozilla.org/doc/module_ping.html
+	icmp, tcp and udp ping.
 
 	d <ip/fqdn>     Destination Address can be ipv4, ipv6 or FQDN
 					example: d www.mozilla.org

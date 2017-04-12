@@ -24,7 +24,7 @@ func printHelp(isCmd bool) {
 		dash = "-"
 	}
 	fmt.Printf(`Ping module checks connectivity between an endpoint and a remote host. It supports
-icmp, tcp and udp ping. See doc at http://mig.mozilla.org/doc/module_ping.html
+icmp, tcp and udp ping.
 
 %sd <ip/fqdn>	Destination Address can be ipv4, ipv6 or FQDN
 		example: %sd www.mozilla.org
