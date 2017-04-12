@@ -698,9 +698,10 @@ func (db *DB) SearchInvestigators(p search.Parameters) (investigators []mig.Inve
 	if err != nil {
 		return
 	}
-	columns := `investigators.id, investigators.name, investigators.pgpfingerprint,
-		investigators.status, investigators.createdat, investigators.lastmodified,
-		investigators.permissions`
+	columns := `investigators.id, investigators.name,
+		COALESCE(investigators.pgpfingerprint, ''),
+		investigators.status, investigators.createdat,
+		investigators.lastmodified, investigators.permissions`
 	join := ""
 	where := ""
 	vals := []interface{}{}

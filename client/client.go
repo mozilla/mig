@@ -57,9 +57,10 @@ type ApiConf struct {
 	SkipVerifyCert bool
 }
 type GpgConf struct {
-	Home      string
-	KeyID     string
-	Keyserver string
+	Home          string // Path to GPG keyrings
+	KeyID         string // GPG key ID to use for X-PGPAUTHORIZATION and action signing
+	Keyserver     string // Key server to fetch keys from if needed in mig-console
+	UseAPIKeyAuth string // Prefer X-MIGAPIKEY authentication for API access, set to API key
 }
 
 type TargetConf struct {
@@ -297,16 +298,22 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 		}
 	}()
 	r.Header.Set("User-Agent", "MIG Client "+cli.Version)
-	if cli.Token == "" {
-		cli.Token, err = cli.MakeSignedToken()
-		if err != nil {
-			panic(err)
+	// If API key authentication has been configured, use that rather than
+	// X-PGPAUTHORIZATION authentication for the API
+	if cli.Conf.GPG.UseAPIKeyAuth != "" {
+		r.Header.Set("X-MIGAPIKEY", cli.Conf.GPG.UseAPIKeyAuth)
+	} else {
+		if cli.Token == "" {
+			cli.Token, err = cli.MakeSignedToken()
+			if err != nil {
+				panic(err)
+			}
 		}
-	}
-	r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
-	if cli.debug {
-		fmt.Printf("debug: %s %s %s\ndebug: User-Agent: %s\ndebug: X-PGPAUTHORIZATION: %s\n",
-			r.Method, r.URL.String(), r.Proto, r.UserAgent(), r.Header.Get("X-PGPAUTHORIZATION"))
+		r.Header.Set("X-PGPAUTHORIZATION", cli.Token)
+		if cli.debug {
+			fmt.Printf("debug: %s %s %s\ndebug: User-Agent: %s\ndebug: X-PGPAUTHORIZATION: %s\n",
+				r.Method, r.URL.String(), r.Proto, r.UserAgent(), r.Header.Get("X-PGPAUTHORIZATION"))
+		}
 	}
 	// execute the request
 	resp, err = cli.API.Do(r)
@@ -319,7 +326,7 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 	}
 	// if the request failed because of an auth issue, it may be that the auth token has expired.
 	// try the request again with a fresh token
-	if resp.StatusCode == http.StatusUnauthorized {
+	if resp.StatusCode == http.StatusUnauthorized && cli.Conf.GPG.UseAPIKeyAuth == "" {
 		// Make sure we read the entire response body from the previous request before we close it
 		// to avoid connection cancellation issues and a panic in API.Do()
 		_, err = ioutil.ReadAll(resp.Body)
@@ -977,7 +984,8 @@ func (cli Client) GetInvestigator(iid float64) (inv mig.Investigator, err error)
 	return
 }
 
-// PostInvestigator creates an Investigator and returns the reflected investigator
+// PostInvestigator creates an Investigator and returns the reflected investigator. If pubkey
+// is zero-length, the investigator will be created without a PGP public key.
 func (cli Client) PostInvestigator(name string, pubkey []byte, pset mig.InvestigatorPerms) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1000,14 +1008,16 @@ func (cli Client) PostInvestigator(name string, pubkey []byte, pset mig.Investig
 	if err != nil {
 		panic(err)
 	}
-	// set the publickey form value
-	part, err := writer.CreateFormFile("publickey", fmt.Sprintf("%s.asc", name))
-	if err != nil {
-		panic(err)
-	}
-	_, err = io.Copy(part, bytes.NewReader(pubkey))
-	if err != nil {
-		panic(err)
+	if len(pubkey) > 0 {
+		// set the publickey form value
+		part, err := writer.CreateFormFile("publickey", fmt.Sprintf("%s.asc", name))
+		if err != nil {
+			panic(err)
+		}
+		_, err = io.Copy(part, bytes.NewReader(pubkey))
+		if err != nil {
+			panic(err)
+		}
 	}
 	// must close the writer to write trailing boundary
 	err = writer.Close()
@@ -1119,6 +1129,54 @@ func (cli Client) PostInvestigatorStatus(iid float64, newstatus string) (err err
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("error: HTTP %d. status update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	return
+}
+
+// PostInvestigatorAPIKeyStatus is used to either enable or disable API key based access
+// to the MIG API for an investigator. API key based access to the API can be used in
+// place of X-PGPAUTHORIZATION API authentication.
+//
+// If an API key is being set, the returned investigator APIKey value will contain the
+// assigned key. newstatus should be set to either 'active' or 'disabled'. If a key already
+// exists for an investigator, calling this with a status of 'active' will cause the existing
+// key to be replaced.
+func (cli Client) PostInvestigatorAPIKeyStatus(iid float64, newstatus string) (inv mig.Investigator, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("PostInvestigatorAPIKey() -> %v", e)
+		}
+	}()
+	data := url.Values{"id": {fmt.Sprintf("%.0f", iid)}, "apikey": {newstatus}}
+	r, err := http.NewRequest("POST", cli.Conf.API.URL+"investigator/update/", strings.NewReader(data.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := cli.Do(r)
+	if err != nil {
+		panic(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	var resource *cljs.Resource
+	if len(body) > 1 {
+		err = json.Unmarshal(body, &resource)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("error: HTTP %d. apikey update failed with error '%v' (code %s)",
+			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	inv, err = ValueToInvestigator(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
 		panic(err)
 	}
 	return

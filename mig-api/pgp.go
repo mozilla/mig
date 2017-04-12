@@ -25,7 +25,7 @@ func makeKeyring() (keyring io.ReadSeeker, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving makeKeyring()"}.Debug()
 	}()
-	keys, err := ctx.DB.ActiveInvestigatorsKeys()
+	keys, err := ctx.DB.ActiveInvestigatorsPubKeys()
 	if err != nil {
 		panic(err)
 	}

@@ -591,7 +591,7 @@ func keyLoader(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	hashkey, salt, err := hashLoaderKey(lkey, nil)
+	hashkey, salt, err := hashAPIKey(lkey, nil, mig.LoaderHashedKeyLength, mig.LoaderSaltLength)
 	if err != nil {
 		panic(err)
 	}
@@ -638,7 +638,7 @@ func newLoader(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	// Hash the loader key to provide it to LoaderAdd
-	hkey, salt, err := hashLoaderKey(le.Key, nil)
+	hkey, salt, err := hashAPIKey(le.Key, nil, mig.LoaderHashedKeyLength, mig.LoaderSaltLength)
 	if err != nil {
 		panic(err)
 	}

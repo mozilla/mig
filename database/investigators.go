@@ -16,8 +16,9 @@ import (
 )
 
 // ActiveInvestigators returns a slice of investigators keys marked as active
-func (db *DB) ActiveInvestigatorsKeys() (keys [][]byte, err error) {
-	rows, err := db.c.Query("SELECT publickey FROM investigators WHERE status='active'")
+func (db *DB) ActiveInvestigatorsPubKeys() (keys [][]byte, err error) {
+	rows, err := db.c.Query(`SELECT publickey FROM investigators WHERE status='active'
+		AND publickey IS NOT NULL`)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -46,10 +47,12 @@ func (db *DB) ActiveInvestigatorsKeys() (keys [][]byte, err error) {
 // InvestigatorByID searches the database for an investigator with a given ID
 func (db *DB) InvestigatorByID(iid float64) (inv mig.Investigator, err error) {
 	var perm int64
-	err = db.c.QueryRow(`SELECT id, name, pgpfingerprint, publickey, status,
-		createdat, lastmodified, permissions FROM investigators WHERE id=$1`,
+	err = db.c.QueryRow(`SELECT id, name, COALESCE(pgpfingerprint, ''),
+		COALESCE(publickey, ''), status, createdat, lastmodified, permissions,
+		CASE WHEN apikey IS NOT NULL THEN 'set' ELSE '' END
+		FROM investigators WHERE id=$1`,
 		iid).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey,
-		&inv.Status, &inv.CreatedAt, &inv.LastModified, &perm)
+		&inv.Status, &inv.CreatedAt, &inv.LastModified, &perm, &inv.APIKey)
 	if err != nil {
 		err = fmt.Errorf("Error while retrieving investigator: '%v'", err)
 		return
@@ -68,7 +71,8 @@ func (db *DB) InvestigatorByFingerprint(fp string) (inv mig.Investigator, err er
 	err = db.c.QueryRow(`SELECT investigators.id, investigators.name, investigators.pgpfingerprint,
 		investigators.publickey, investigators.status, investigators.createdat,
 		investigators.lastmodified, investigators.permissions
-		FROM investigators WHERE LOWER(pgpfingerprint)=LOWER($1)`,
+		FROM investigators WHERE pgpfingerprint IS NOT NULL AND
+		LOWER(pgpfingerprint)=LOWER($1)`,
 		fp).Scan(&inv.ID, &inv.Name, &inv.PGPFingerprint, &inv.PublicKey, &inv.Status,
 		&inv.CreatedAt, &inv.LastModified, &perm)
 	if err != nil && err != sql.ErrNoRows {
@@ -80,6 +84,30 @@ func (db *DB) InvestigatorByFingerprint(fp string) (inv mig.Investigator, err er
 		return
 	}
 	inv.Permissions.FromMask(perm)
+	return
+}
+
+// Returns a set of InvestigatorAPIAuthHelper structs that the API can utilize to
+// authorize requests containing the X-MIGAPIKEY header
+func (db *DB) InvestigatorAPIKeyAuthHelpers() (ret []mig.InvestigatorAPIAuthHelper, err error) {
+	rows, err := db.c.Query(`SELECT id, apikey, apisalt FROM investigators
+		WHERE apikey IS NOT NULL AND apisalt IS NOT NULL AND status='active'`)
+	if err != nil {
+		return
+	}
+	for rows.Next() {
+		var (
+			nh    mig.InvestigatorAPIAuthHelper
+			invid int
+		)
+		err = rows.Scan(&invid, &nh.APIKey, &nh.Salt)
+		if err != nil {
+			rows.Close()
+			return
+		}
+		nh.ID = float64(invid)
+		ret = append(ret, nh)
+	}
 	return
 }
 
@@ -118,22 +146,24 @@ func (db *DB) InvestigatorByActionID(aid float64) (invs []mig.Investigator, err 
 // InsertInvestigator creates a new investigator in the database and returns its ID,
 // or an error if the insertion failed, or if the investigator already exists
 func (db *DB) InsertInvestigator(inv mig.Investigator) (iid float64, err error) {
-	_, err = db.c.Exec(`INSERT INTO investigators
+	var newid int
+	err = db.c.QueryRow(`INSERT INTO investigators
 		(name, pgpfingerprint, publickey, status, createdat, lastmodified, permissions)
-		VALUES ($1, $2, $3, 'active', $4, $5, $6)`,
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, E'\\x'::bytea), 'active', $4, $5, $6)
+		RETURNING id`,
 		inv.Name, inv.PGPFingerprint, inv.PublicKey, time.Now().UTC(), time.Now().UTC(),
-		inv.Permissions.ToMask())
+		inv.Permissions.ToMask()).Scan(&newid)
 	if err != nil {
 		if err.Error() == `pq: duplicate key value violates unique constraint "investigators_pgpfingerprint_idx"` {
 			return iid, fmt.Errorf("Investigator's PGP Fingerprint already exists in database")
 		}
 		return iid, fmt.Errorf("Failed to create investigator: '%v'", err)
 	}
-	inv, err = db.InvestigatorByFingerprint(inv.PGPFingerprint)
+	iid = float64(newid)
+	inv, err = db.InvestigatorByID(iid)
 	if err != nil {
 		return 0, fmt.Errorf("Failed to retrieve investigator ID: '%v'", err)
 	}
-	iid = inv.ID
 	return
 }
 
@@ -167,6 +197,24 @@ func (db *DB) UpdateInvestigatorStatus(inv mig.Investigator) (err error) {
 		inv.Status, inv.ID)
 	if err != nil {
 		return fmt.Errorf("Failed to update investigator: '%v'", err)
+	}
+	return
+}
+
+// UpdateInvestigatorAPIKey enables or disabled a standard API key for an investigator
+func (db *DB) UpdateInvestigatorAPIKey(inv mig.Investigator, key []byte, salt []byte) (err error) {
+	if len(key) == 0 {
+		_, err = db.c.Exec(`UPDATE investigators SET apikey=NULL, apisalt=NULL
+			WHERE id=$1`, inv.ID)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = db.c.Exec(`UPDATE investigators SET apikey=$1, apisalt=$2
+			WHERE id=$3`, key, salt, inv.ID)
+		if err != nil {
+			return err
+		}
 	}
 	return
 }

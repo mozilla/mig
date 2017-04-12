@@ -9,7 +9,6 @@ package mig /* import "mig.ninja/mig" */
 import (
 	"errors"
 	"fmt"
-	mrand "math/rand"
 	"regexp"
 	"time"
 )
@@ -52,25 +51,12 @@ func (lad *LoaderAuthDetails) Validate() error {
 
 // Generate a new loader prefix value
 func GenerateLoaderPrefix() string {
-	return RandLoaderKeyString(LoaderPrefixLength)
+	return RandAPIKeyString(LoaderPrefixLength)
 }
 
 // Generate a new loader key value
 func GenerateLoaderKey() string {
-	return RandLoaderKeyString(LoaderKeyLength)
-}
-
-// RandLoaderKeyString is used for prefix and key generation, and just
-// returns a random string consisting of alphanumeric characters of
-// length characters long
-func RandLoaderKeyString(length int) string {
-	ret := make([]byte, length)
-	lset := []byte("abcdefghijklmnopqrstuvwxyzABCDEFCHIJKLMNOPQRSTUVWXYZ0123456789")
-	r := mrand.New(mrand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < len(ret); i++ {
-		ret[i] = lset[r.Int()%len(lset)]
-	}
-	return string(ret[:len(ret)])
+	return RandAPIKeyString(LoaderKeyLength)
 }
 
 // Various constants related to properties of the loader keys

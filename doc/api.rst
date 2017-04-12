@@ -104,7 +104,7 @@ GET /api/v1/dashboard
 * Description: returns a status dashboard with counters of active and idle
   agents, and a list of the last 10 actions ran.
 * Parameters: none
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
 * Response: Collection+JSON
 
@@ -287,7 +287,7 @@ GET /api/v1/dashboard
 GET /api/v1/action
 ~~~~~~~~~~~~~~~~~~
 * Description: retrieve an action by its ID. Include links to related commands.
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters:
 	- `actionid`: a uint64 that identifies an action by its ID
 * Response Code: 200 OK
@@ -414,7 +414,7 @@ GET /api/v1/action
 POST /api/v1/action/create/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: send a signed action to the API for submission to the scheduler.
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters: (POST body)
 	- `action`: a signed action in JSON format
 * Response Code: 202 Accepted
@@ -423,7 +423,7 @@ POST /api/v1/action/create/
 GET /api/v1/agent
 ~~~~~~~~~~~~~~~~~
 * Description: retrieve an agent by its ID
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters:
 	- `agentid`: a uint64 that identifies an agent by its ID
 * Response Code: 200 OK
@@ -478,7 +478,7 @@ GET /api/v1/agent
 GET /api/v1/command
 ~~~~~~~~~~~~~~~~~~~
 * Description: retrieve a command by its ID. Include link to related action.
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters:
 	- `commandid`: a uint64 that identifies a command by its ID
 * Response Code: 200 OK
@@ -707,7 +707,7 @@ GET /api/v1/investigator
 ~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: retrieve an investigator by its ID. Include link to the
   investigator's action history.
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters:
 	- `investigatorid`: a uint64 that identifies a command by its ID
 * Response Code: 200 OK
@@ -753,7 +753,7 @@ GET /api/v1/investigator
 POST /api/v1/investigator/create/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: create a new investigator in the database
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters: (POST body)
         - `name`: string that represents the full name
         - `publickey`: armored GPG public key
@@ -770,7 +770,7 @@ POST /api/v1/investigator/create/
 POST /api/v1/investigator/update/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Description: update an existing investigator in the database
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters: (POST body)
         - `id`: investigator id, to identify the target investigator
         - `status`: new status of the investigator, to be updated
@@ -788,7 +788,7 @@ One of either ``status`` or ``permissions`` must be passed to this API endpoint.
 GET /api/v1/search
 ~~~~~~~~~~~~~~~~~~
 * Description: search for actions, commands, agents or investigators.
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
 * Response: Collection+JSON
 * Parameters:
@@ -906,7 +906,7 @@ GET /api/v1/loader
 * Description: Returns the details of a particular loader instance
 * Parameters:
 	- `loaderid`: ID of loader instance to return
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
 * Response: Collection+JSON
 
@@ -945,7 +945,7 @@ POST /api/v1/loader/status/
 * Parameters: (POST body)
         - `loaderid`: ID of loader instance to modify
         - `status`: New status, "enabled" or "disabled"
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
 * Response: Collection+JSON
 
@@ -955,7 +955,7 @@ POST /api/v1/loader/key/
 * Parameters: (POST body)
         - `loaderid`: ID of loader instance to modify
         - `loaderkey`: New key for loader instance
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
 * Response: Collection+JSON
 
@@ -964,7 +964,7 @@ POST /api/v1/loader/new/
 * Description: Create a new loader instance
 * Parameters: (POST body)
 	- `loader`: JSON marshaled mig.LoaderEntry data
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 201 Created
 * Response: Collection+JSON
 
@@ -973,7 +973,7 @@ GET /api/v1/manifest/
 * Description: Return details of a given manifest
 * Parameters:
 	- `manifestid`: ID of manifest to return
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
 * Response: Collection+JSON
 
@@ -1013,7 +1013,7 @@ POST /api/v1/manifest/sign/
 * Parameters: (POST body)
         - `manifestid`: ID of manifest to sign
         - `signature`: The signature to add
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
 * Response: Collection+JSON
 
@@ -1023,7 +1023,7 @@ POST /api/v1/manifest/status/
 * Parameters: (POST body)
         - `manifestid`: ID of manifest to change
         - `status`: Status for manifest, "staged" or "disabled"
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
 * Response: Collection+JSON
 
@@ -1032,7 +1032,7 @@ POST /api/v1/manifest/new/
 * Description: Create a new manifest
 * Parameters: (POST body)
 	- `manifest`: JSON marshaled mig.ManifestRecord data
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 201 Created
 * Response: Collection+JSON
 
@@ -1041,7 +1041,7 @@ GET /api/v1/manifest/loaders/
 * Description: Return known loader instances this manifest will match
 * Parameters:
 	- `manifestid`: ID of manifest to return loaders for
-* Authentication: X-PGPAUTHORIZATION
+* Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
 * Response: Collection+JSON
 
@@ -1446,6 +1446,21 @@ Generating a token in Python
 			headers={'X-PGPAUTHORIZATION': token})
 		print token
 		print r.text
+
+Authentication with X-MIGAPIKEY
+-------------------------------
+X-PGPAUTHORIZATION is the preferred way clients authenticate with the MIG API. In addition
+to that method, clients can also authenticate using the X-MIGAPIKEY header. This is a standard
+API key header that simplifies API access in cases where using PGP to generate an X-PGPAUTHORIZATION
+header may not be ideal.
+
+Note that to create investigations, PGP is still required in order to sign actions, so clients
+which rely solely on X-MIGAPIKEY capability will not be able to interrogate agents. However, in
+cases where integration is desired with the API to perform basic API related functions such as
+adding users, managing loaders, etc, this integration can be achieved using API keys without
+needing to utilize PGP signing of the authorization header.
+
+Investigators can be assigned an API key using mig-console.
 
 Authentication with X-LOADERKEY
 -------------------------------
