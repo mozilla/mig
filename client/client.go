@@ -1134,7 +1134,7 @@ func (cli Client) PostInvestigatorStatus(iid float64, newstatus string) (err err
 	return
 }
 
-// PostInvestigatorAPIKey is used to either enable or disable API key based access
+// PostInvestigatorAPIKeyStatus is used to either enable or disable API key based access
 // to the MIG API for an investigator. API key based access to the API can be used in
 // place of X-PGPAUTHORIZATION API authentication.
 //
@@ -1142,7 +1142,7 @@ func (cli Client) PostInvestigatorStatus(iid float64, newstatus string) (err err
 // assigned key. newstatus should be set to either 'active' or 'disabled'. If a key already
 // exists for an investigator, calling this with a status of 'active' will cause the existing
 // key to be replaced.
-func (cli Client) PostInvestigatorAPIKey(iid float64, newstatus string) (inv mig.Investigator, err error) {
+func (cli Client) PostInvestigatorAPIKeyStatus(iid float64, newstatus string) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PostInvestigatorAPIKey() -> %v", e)

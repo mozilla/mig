@@ -84,7 +84,7 @@ func investigatorReader(input string, cli client.Client) (err error) {
 					break
 				}
 			}
-			retinv, err := cli.PostInvestigatorAPIKey(iid, newstatus)
+			retinv, err := cli.PostInvestigatorAPIKeyStatus(iid, newstatus)
 			if err != nil {
 				panic(err)
 			}
