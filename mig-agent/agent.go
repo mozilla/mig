@@ -85,7 +85,7 @@ func main() {
 	flag.BoolVar(&runOpt.debug, "d", false, "Debug mode: run in foreground, log to stdout.")
 	flag.StringVar(&runOpt.mode, "m", "agent", "Module to run (eg. agent, filechecker).")
 	flag.StringVar(&runOpt.file, "i", "/path/to/file", "Load action from file.")
-	flag.StringVar(&runOpt.config, "c", "/etc/mig/mig-agent.cfg", "Load configuration from file.")
+	flag.StringVar(&runOpt.config, "c", configDefault(), "Load configuration from file.")
 	flag.StringVar(&runOpt.query, "q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
 	flag.BoolVar(&runOpt.foreground, "f", false, "Agent will fork into background by default. Except if this flag is set.")
 	flag.BoolVar(&runOpt.upgrading, "u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
