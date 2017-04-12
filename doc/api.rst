@@ -954,7 +954,6 @@ POST /api/v1/loader/key/
 * Description: Change loader key for a loader instance
 * Parameters: (POST body)
         - `loaderid`: ID of loader instance to modify
-        - `loaderkey`: New key for loader instance
 * Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
 * Response: Collection+JSON

@@ -702,20 +702,13 @@ func (cli Client) LoaderEntryStatus(le mig.LoaderEntry, status bool) (err error)
 }
 
 // Change the key on an existing loader entry
-func (cli Client) LoaderEntryKey(le mig.LoaderEntry, key string) (err error) {
+func (cli Client) LoaderEntryKey(le mig.LoaderEntry) (newle mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("LoaderEntryKey() -> %v", e)
 		}
 	}()
-	if key == "" {
-		panic("invalid loader key specified")
-	}
-	err = mig.ValidateLoaderKey(key)
-	if err != nil {
-		panic(err)
-	}
-	data := url.Values{"loaderid": {fmt.Sprintf("%.0f", le.ID)}, "loaderkey": {key}}
+	data := url.Values{"loaderid": {fmt.Sprintf("%.0f", le.ID)}}
 	r, err := http.NewRequest("POST", cli.Conf.API.URL+"loader/key/",
 		strings.NewReader(data.Encode()))
 	if err != nil {
@@ -743,16 +736,25 @@ func (cli Client) LoaderEntryKey(le mig.LoaderEntry, key string) (err error) {
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
+	newle, err = ValueToLoaderEntry(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
 // Post a new loader entry for storage through the API
-func (cli Client) PostNewLoader(le mig.LoaderEntry) (err error) {
+func (cli Client) PostNewLoader(le mig.LoaderEntry) (newle mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PostNewLoader() -> %v", e)
 		}
 	}()
+	// When adding a new loader entry, the prefix and key values should
+	// be "", since the server will be generating them.
+	if le.Prefix != "" || le.Key != "" {
+		panic("loader key and prefix must be unset")
+	}
 	lebuf, err := json.Marshal(le)
 	if err != nil {
 		panic(err)
@@ -783,6 +785,10 @@ func (cli Client) PostNewLoader(le mig.LoaderEntry) (err error) {
 	if resp.StatusCode != http.StatusCreated {
 		err = fmt.Errorf("error: HTTP %d. Loader create failed with error '%v' (code %s).",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
+		panic(err)
+	}
+	newle, err = ValueToLoaderEntry(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
 		panic(err)
 	}
 	return
