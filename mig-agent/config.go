@@ -9,6 +9,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"runtime"
 	"strings"
 	"time"
 
@@ -43,6 +44,18 @@ type config struct {
 		Ca, Cert, Key string
 	}
 	Logging mig.Logging
+}
+
+// Return the default configuration path based on the platform
+func configDefault() string {
+	switch runtime.GOOS {
+	case "linux":
+	case "darwin":
+		return "/etc/mig/mig-agent.cfg"
+	case "windows":
+		return "C:\\mig\\mig-agent.cfg"
+	}
+	return ""
 }
 
 // configLoad reads a local configuration file and overwrite the global conf

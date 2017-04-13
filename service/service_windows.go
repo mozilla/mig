@@ -2,6 +2,7 @@ package service /* import "mig.ninja/mig/service" */
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/kardianos/osext"
 	"golang.org/x/sys/windows/svc"
@@ -24,6 +25,20 @@ type windowsService struct {
 }
 
 const version = "Windows Service"
+
+var interactive = false
+
+func init() {
+	var err error
+	interactive, err = svc.IsAnInteractiveSession()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func IsInteractive() bool {
+	return interactive
+}
 
 func (ws *windowsService) String() string {
 	return version
@@ -66,8 +81,6 @@ func (ws *windowsService) Install() error {
 	if err != nil {
 		return err
 	}
-	// Used if path contains a space.
-	exepath = `"` + exepath + `"`
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
@@ -103,12 +116,27 @@ func (ws *windowsService) Remove() error {
 	defer m.Disconnect()
 	s, err := m.OpenService(ws.name)
 	if err != nil {
+		// Try to remove the eventlog source as well here, just to ensure we are not
+		// in a situation where the eventlog object exists but the service does not
+		eventlog.Remove(ws.name)
 		return fmt.Errorf("service %s is not installed", ws.name)
 	}
-	defer s.Close()
 	err = s.Delete()
 	if err != nil {
 		return err
+	}
+	s.Close()
+	cutoff := time.Now().Add(time.Second * 30)
+	for {
+		s2, err := m.OpenService(ws.name)
+		if err != nil {
+			break
+		}
+		s2.Close()
+		time.Sleep(time.Millisecond * 250)
+		if time.Now().After(cutoff) {
+			break
+		}
 	}
 	err = eventlog.Remove(ws.name)
 	if err != nil {
