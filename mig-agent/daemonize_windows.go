@@ -38,8 +38,6 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "Running as a service."}.Debug()
 		// Create a couple functions here we will use to process start and stop signals
-		//
-		// XXX the ostop function should be adjusted to cleanly shut the agent down.
 		ostart := func() error {
 			return nil
 		}
