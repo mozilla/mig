@@ -44,7 +44,7 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 			return nil
 		}
 		ostop := func() error {
-			os.Exit(0)
+			ctx.Channels.Terminate <- "shutdown requested by windows"
 			return nil
 		}
 		// We don't want the agent to respawn itself if it's being supervised
