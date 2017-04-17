@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">		
+	<Product Id="*" 
+		 Name="MIG agent loader" 
+		 Language="1033" 
+		 Version="1.0.0.0" 
+		 Manufacturer="Mozilla" 
+		 UpgradeCode="7e018a5a-6b25-4b68-9580-d40d61ffff08">
+
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+		<WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+					
+		<UI Id="MIGUI">
+			<UIRef Id="WixUI_Minimal" />
+			<UIRef Id="WixUI_ErrorProgressText" />
+			<DialogRef Id="UserRegistrationDlg" />
+			<Publish Dialog="WelcomeEulaDlg" Control="Install" Event="NewDialog" Value="UserRegistrationDlg" Order="3">1</Publish>
+			<Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="UserRegistrationDlg">1</Publish>
+		</UI>
+
+		<Property Id="PIDTemplate"><![CDATA[????????????????????????????????????????]]></Property>
+		
+		<MediaTemplate EmbedCab="yes" />
+
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="MIG_dir" Name="mig" />
+		</Directory>
+
+		<Component Id="MainExec" Directory="MIG_dir" Guid="1ee43c48-8f05-4a1f-9745-ee1849018d3e">
+			<File Name='mig-loader.exe' Id='LoaderExec' Source="mig-loader.exe"/>
+			<ServiceInstall Id="InstallMLS"
+				Name="mig-loader"
+				Account="LocalSystem"
+				Arguments="-s"
+				Description="Mozilla InvestiGator Agent Loader"
+				Start="auto"
+				ErrorControl="normal"
+				Type="ownProcess"/>
+			<ServiceControl Id="ControlMLS"
+				Name="mig-loader"
+				Start="install"
+				Stop="both"
+				Remove="uninstall"
+				Wait="yes"/>
+		</Component>
+		
+		<InstallExecuteSequence>
+			<Custom Action="WriteKey" After="InstallFiles"/>
+		</InstallExecuteSequence>
+		
+		<CustomAction Id="WriteKey"
+			Directory="MIG_dir"
+			ExeCommand="cmd.exe /c &quot;echo [PIDKEY] > mig-loader.key&quot;"
+			/>
+		
+		<Feature Id="Complete" Level="1">
+			<ComponentRef Id="MainExec" />
+		</Feature>
+	
+	</Product>
+</Wix>

@@ -27,6 +27,13 @@ func runTriggers() (err error) {
 	if err != nil {
 		panic(err)
 	}
+	// Finally, handle any platform specific service related triggers
+	// we may want to run. Generally, this will only apply where the
+	// loader is replaced and it is running as a service.
+	err = serviceTriggers()
+	if err != nil {
+		panic(err)
+	}
 	return nil
 }
 
@@ -55,7 +62,13 @@ func agentServices() (err error) {
 		panic("no agent entry in host bundle")
 	}
 
-	migcomm := exec.Command(abe.Path)
+	// Call mig-agent to request it set itself up as a service. This will replace
+	// any existing MIG agent service present on the system.
+	//
+	// Pass the -u flag here to mig-agent (upgrading) as well, to help notify the
+	// agent that it should reconfigure it's service setup and exit and should not
+	// just be running as an agent normally for this invocation.
+	migcomm := exec.Command(abe.Path, "-u")
 	err = migcomm.Run()
 	if err != nil {
 		panic(err)

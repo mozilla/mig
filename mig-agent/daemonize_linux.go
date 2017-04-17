@@ -32,18 +32,6 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 	}()
 	if os.Getppid() == 1 {
 		ctx.Channels.Log <- mig.Log{Desc: "Parent process is PID 1"}.Debug()
-		// if this agent has been launched as part of an upgrade, its parent will be
-		// detached to init, but no service would be launched, so we launch one
-		if upgrading && MUSTINSTALLSERVICE {
-			ctx.Channels.Log <- mig.Log{Desc: "Agent is upgrading. Deploying service."}.Debug()
-			ctx, err = serviceDeploy(ctx)
-			if err != nil {
-				panic(err)
-			}
-			// mig-agent service has been launched, exit this process
-			ctx.Channels.Log <- mig.Log{Desc: "Service deployed. Exit."}.Debug()
-			os.Exit(0)
-		}
 		if ctx.Agent.Respawn {
 			// install a cron job that acts as a watchdog,
 			err = installCron(ctx)

@@ -27,7 +27,14 @@ func daemonize(orig_ctx Context, upgrading bool) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving daemonize()"}.Debug()
 	}()
 
-	if !service.IsInteractive() {
+	// Check if we are being run from an interactive session; if so we will proceed with service
+	// installation, otherwise we assume SCM is running us and we start up as a service.
+	//
+	// Note the additional check for the upgrading flag here. This is required with windows for
+	// scenarios where the loader, which also runs as a service is running mig-agent as part of
+	// an upgrade. If this happens, the session will not be interactive, but we will still want
+	// to bypass running as a service and proceed with service installation.
+	if !service.IsInteractive() && !upgrading {
 		ctx.Channels.Log <- mig.Log{Desc: "Parent process is PID 1"}.Debug()
 		// We are being launched by the Windows SC manager; the Run function in the service
 		// package is utilized here to properly handle signalling between the new agent

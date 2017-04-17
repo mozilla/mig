@@ -459,6 +459,8 @@ func getLoaderKeyfile() string {
 		return "/etc/mig/mig-loader.key"
 	case "darwin":
 		return "/etc/mig/mig-loader.key"
+	case "windows":
+		return "C:\\mig\\mig-loader.key"
 	}
 	panic("loader does not support this operating system")
 	return ""
@@ -482,12 +484,23 @@ func loaderInitializePathDarwin() error {
 	return os.Setenv("PATH", path)
 }
 
+func loaderInitializePathWindows() error {
+	path := os.Getenv("PATH")
+	if path != "" {
+		path = path + ";"
+	}
+	path = path + "C:\\mig"
+	return os.Setenv("PATH", path)
+}
+
 func loaderInitializePath() error {
 	switch runtime.GOOS {
 	case "linux":
 		return loaderInitializePathLinux()
 	case "darwin":
 		return loaderInitializePathDarwin()
+	case "windows":
+		return loaderInitializePathWindows()
 	}
 	return fmt.Errorf("loader does not support this operating system")
 }
@@ -524,12 +537,22 @@ func loadLoaderKey() error {
 func main() {
 	var (
 		initialMode bool
+		runService  bool
 		err         error
 	)
 	runtime.GOMAXPROCS(1)
 
 	flag.BoolVar(&initialMode, "i", false, "initialization mode")
+	flag.BoolVar(&runService, "s", false, "persistent service mode")
 	flag.Parse()
+
+	if runService {
+		err = serviceMode()
+		if err != nil {
+			logError("%v", err)
+		}
+		doExit(0)
+	}
 
 	err = initContext()
 	if err != nil {
