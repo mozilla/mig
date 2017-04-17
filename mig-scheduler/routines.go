@@ -197,6 +197,11 @@ func startRoutines(ctx Context) {
 				continue
 			}
 			// write to disk in Returned directory, discard and continue on failure
+			//
+			// Note: It is possible data returned by the agent (e.g., a command) has
+			// components of the document that have been compressed. Any routines loading
+			// data from these files should ensure decompression happens as part of the
+			// loading process.
 			dest := fmt.Sprintf("%s/%.0f", ctx.Directories.Command.Returned, ctx.OpID)
 			err = safeWrite(ctx, dest, delivery.Body)
 			if err != nil {

@@ -217,6 +217,16 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 		if err != nil {
 			panic(err)
 		}
+		// After the command has been written to the spool, apply compression to the
+		// command; this requires compressing and remarshaling it
+		err = cmd.Compress()
+		if err != nil {
+			panic(err)
+		}
+		data, err = json.Marshal(cmd)
+		if err != nil {
+			panic(err)
+		}
 		// send amqp message with an expiration timer
 		expire := cmd.Action.ExpireAfter.Sub(cmd.Action.ValidFrom)
 		msg := amqp.Publishing{

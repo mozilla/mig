@@ -616,6 +616,13 @@ func parseCommands(ctx *Context, msg []byte) (err error) {
 		panic(err)
 	}
 
+	// If required, decompress the action before we validate the signature
+	// on the message.
+	err = cmd.Decompress()
+	if err != nil {
+		panic(err)
+	}
+
 	// verify the PGP signature of the action, and verify that
 	// the signer is authorized to perform this action
 	err = checkActionAuthorization(cmd.Action, ctx)
@@ -876,6 +883,10 @@ func sendResults(ctx *Context, result mig.Command) (err error) {
 	}()
 	ctx.Channels.Log <- mig.Log{CommandID: result.ID, ActionID: result.Action.ID, Desc: "sending command results"}
 	result.Agent.QueueLoc = ctx.Agent.QueueLoc
+	err = result.Compress()
+	if err != nil {
+		panic(err)
+	}
 	body, err := json.Marshal(result)
 	if err != nil {
 		panic(err)
