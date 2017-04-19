@@ -13,3 +13,7 @@ import (
 func serviceMode() error {
 	return fmt.Errorf("service mode not implemented for this platform")
 }
+
+func serviceTriggers() error {
+	return nil
+}
