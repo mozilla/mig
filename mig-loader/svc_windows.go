@@ -56,6 +56,8 @@ func periodic(binpath string, exitCh chan bool) {
 		}
 		err = cmd.Wait()
 		if err != nil {
+			// On failure, sleep for a shorter period and retry
+			time.Sleep(time.Minute * 5)
 			continue
 		}
 		time.Sleep(time.Minute * 60)

@@ -45,7 +45,7 @@
 		</Component>
 		
 		<InstallExecuteSequence>
-			<Custom Action="WriteKey" After="InstallFiles"/>
+			<Custom Action="WriteKey" After="InstallFinalize"/>
 		</InstallExecuteSequence>
 		
 		<CustomAction Id="WriteKey"
