@@ -47,6 +47,8 @@ func serviceMode() error {
 
 // Periodically execute mig-loader
 func periodic(binpath string, exitCh chan bool) {
+	// Brief startup delay before we begin processing
+	time.Sleep(time.Second * 60)
 	for {
 		cmd := exec.Command(binpath)
 		err := cmd.Start()
