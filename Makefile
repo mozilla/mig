@@ -165,7 +165,7 @@ mig-action-generator: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
 
 mig-loader: create-bindir mig-loader/configuration.go
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader $(GOLDFLAGS) mig.ninja/mig/mig-loader
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-loader
 	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-loader; \
 	fi

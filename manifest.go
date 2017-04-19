@@ -374,9 +374,19 @@ var bundleEntryDarwin = []BundleDictionaryEntry{
 	{"cacert", "/etc/mig/ca.crt", "", 0644},
 }
 
+var bundleEntryWindows = []BundleDictionaryEntry{
+	{"mig-agent", "C:\\mig\\mig-agent.exe", "", 0700},
+	{"mig-loader", "C:\\mig\\mig-loader.exe", "", 0700},
+	{"configuration", "C:\\mig\\mig-agent.cfg", "", 0600},
+	{"agentcert", "C:\\mig\\agent.crt", "", 0644},
+	{"agentkey", "C:\\mig\\agent.key", "", 0600},
+	{"cacert", "C:\\mig\\ca.crt", "", 0644},
+}
+
 var BundleDictionary = map[string][]BundleDictionaryEntry{
-	"linux":  bundleEntryLinux,
-	"darwin": bundleEntryDarwin,
+	"linux":   bundleEntryLinux,
+	"darwin":  bundleEntryDarwin,
+	"windows": bundleEntryWindows,
 }
 
 func GetHostBundle() ([]BundleDictionaryEntry, error) {
@@ -385,6 +395,8 @@ func GetHostBundle() ([]BundleDictionaryEntry, error) {
 		return bundleEntryLinux, nil
 	case "darwin":
 		return bundleEntryDarwin, nil
+	case "windows":
+		return bundleEntryWindows, nil
 	}
 	return nil, fmt.Errorf("no entry for %v in bundle dictionary", runtime.GOOS)
 }

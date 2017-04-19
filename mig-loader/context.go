@@ -28,8 +28,18 @@ type Context struct {
 func getLoggingConf() (ret mig.Logging, err error) {
 	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
 		return getLoggingConfPosix()
+	} else if runtime.GOOS == "windows" {
+		return getLoggingConfWindows()
 	}
 	err = fmt.Errorf("unable to obtain logging configuration for platform")
+	return
+}
+
+func getLoggingConfWindows() (ret mig.Logging, err error) {
+	ret.Mode = "file"
+	ret.Level = "info"
+	ret.File = "C:\\mig\\mig-loader.log"
+	ret.MaxFileSize = 10485760
 	return
 }
 
