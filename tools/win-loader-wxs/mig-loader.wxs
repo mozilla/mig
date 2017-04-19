@@ -50,7 +50,7 @@
 		
 		<CustomAction Id="WriteKey"
 			Directory="MIG_dir"
-			ExeCommand="cmd.exe /c &quot;echo [PIDKEY] > mig-loader.key&quot;"
+			ExeCommand="cmd.exe /c &quot;echo [PIDKEY]> mig-loader.key&quot;"
 			/>
 		
 		<Feature Id="Complete" Level="1">
