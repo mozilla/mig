@@ -9,9 +9,10 @@ package main
 
 import (
 	"fmt"
+	"time"
+
 	"mig.ninja/mig"
 	"mig.ninja/mig/pgp"
-	"time"
 )
 
 // checkActionAuthorization verifies the PGP signatures of a given action
@@ -51,7 +52,7 @@ func checkActionAuthorization(a mig.Action, ctx *Context) (err error) {
 	// check ACLs, includes verifying signatures
 	err = a.VerifyACL(ctx.ACL, keyring, ONLYVERIFYPUBKEY)
 	if err != nil {
-		desc := fmt.Sprintf("action ACL verification failed: %v", err)
+		desc := fmt.Sprintf("action ACL verification failed: %vAction is rejected as it was sent by an unknown investigator", err)
 		ctx.Channels.Log <- mig.Log{ActionID: a.ID, Desc: desc}.Err()
 		panic(desc)
 	}
