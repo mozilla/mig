@@ -315,10 +315,8 @@ import(
     "mig.ninja/mig"
     "time"
 )
-var TAGS = struct {
-    Operator string \`json:"operator"\`
-}{
-    "MIGDemo",
+var TAGS = map[string]string {
+    "operator": "MIGDemo",
 }
 var ISIMMORTAL bool = false
 var MUSTINSTALLSERVICE bool = true

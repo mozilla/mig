@@ -36,6 +36,7 @@ type config struct {
 		PersistConfigDir string
 		ExtraPrivacyMode bool
 		OnlyVerifyPubKey bool
+		Tags             []string
 	}
 	Stats struct {
 		MaxActions int
@@ -167,6 +168,9 @@ type globals struct {
 
 	// Add the private client key below.
 	agentKey []byte
+
+	// Provides some meta data about agents and lets you target specific ones
+	tags map[string]string
 }
 
 func newGlobals() *globals {
@@ -192,13 +196,41 @@ func newGlobals() *globals {
 		caCert:             CACERT,
 		agentCert:          AGENTCERT,
 		agentKey:           AGENTKEY,
+		tags:               TAGS,
 	}
+}
+
+// Takes a string separated by colon and returns key, value pair
+func stringPair(pair string) (key, value string) {
+	parts := strings.Split(pair, ":")
+	if len(parts) == 0 {
+		return "", ""
+	}
+
+	key = strings.Trim(parts[0], " ")
+
+	if len(parts) == 1 {
+		return key, ""
+	}
+
+	return key, strings.Trim(parts[1], " ")
 }
 
 // parseConfig converts config settings into usable types for global vars
 // and reports errors when converting settings into go types.
 func (g globals) parseConfig(config config) error {
 	var err error
+
+	if len(config.Agent.Tags) > 0 {
+		for _, tag := range config.Agent.Tags {
+			key, val := stringPair(tag)
+			if key == "" {
+				continue
+			}
+
+			g.tags[key] = val
+		}
+	}
 
 	g.isImmortal = config.Agent.IsImmortal
 	g.mustInstallService = config.Agent.InstallService
@@ -295,4 +327,5 @@ func (g globals) apply() {
 	CACERT = g.caCert
 	AGENTCERT = g.agentCert
 	AGENTKEY = g.agentKey
+	TAGS = g.tags
 }

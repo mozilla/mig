@@ -54,6 +54,11 @@
     ; if true, only the investigator's public key is verified on actions and not ACLs.
     onlyVerifyPubKey = false
 
+    ; Tag the instance with attributes to filter investigation scope
+    tags = "operator:Ops_Emea"
+    tags = "role:web"
+
+
 [stats]
     ; number of previous actions the agent should keep a summary for. the summary can
     ; be viewed over the agent stat socket. 0 to disable.
