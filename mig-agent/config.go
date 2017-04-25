@@ -49,8 +49,7 @@ type config struct {
 // Return the default configuration path based on the platform
 func configDefault() string {
 	switch runtime.GOOS {
-	case "linux":
-	case "darwin":
+	case "darwin", "linux":
 		return "/etc/mig/mig-agent.cfg"
 	case "windows":
 		return "C:\\mig\\mig-agent.cfg"
