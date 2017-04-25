@@ -282,6 +282,10 @@ func (a Action) Sign(keyid string, secring io.Reader) (sig string, err error) {
 	if err != nil {
 		panic(err)
 	}
+	err = os.Remove(filename)
+	if err != nil {
+		panic(err)
+	}
 	str, err := a2.String()
 	if err != nil {
 		panic(err)
