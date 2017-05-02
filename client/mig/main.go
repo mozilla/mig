@@ -87,19 +87,19 @@ func continueOnFlagError() {
 
 func main() {
 	var (
-		conf                                    client.Configuration
-		cli                                     client.Client
-		err                                     error
-		op                                      mig.Operation
-		a                                       mig.Action
-		migrc, show, render, target, expiration string
-		afile, targetfound, targetnotfound      string
-		signAndOutput                           bool
-		printAndExit                            bool
-		verbose, showversion                    bool
-		compressAction                          bool
-		modargs                                 []string
-		run                                     interface{}
+		conf                                      client.Configuration
+		cli                                       client.Client
+		err                                       error
+		op                                        mig.Operation
+		a                                         mig.Action
+		migrc, show, render, target, expiration   string
+		afile, aname, targetfound, targetnotfound string
+		signAndOutput                             bool
+		printAndExit                              bool
+		verbose, showversion                      bool
+		compressAction                            bool
+		modargs                                   []string
+		run                                       interface{}
 	)
 	defer func() {
 		if e := recover(); e != nil {
@@ -118,6 +118,7 @@ func main() {
 	fs.StringVar(&targetnotfound, "target-notfound", "", "targets agents that haven't found results in a previous action.")
 	fs.StringVar(&expiration, "e", "300s", "expiration")
 	fs.StringVar(&afile, "i", "/path/to/file", "Load action from file")
+	fs.StringVar(&aname, "n", "action name", "A name for the action")
 	fs.BoolVar(&signAndOutput, "s", false, "Fully sign action and print to stdout, useful for dual-signing")
 	fs.BoolVar(&verbose, "v", false, "Enable verbose output")
 	fs.BoolVar(&showversion, "V", false, "Show version")
@@ -264,8 +265,17 @@ func main() {
 
 	a.Operations = append(a.Operations, op)
 
-	for _, arg := range os.Args[1:] {
-		a.Name += arg + " "
+	if aname != "action name" {
+		a.Name = aname
+	} else {
+		for _, arg := range os.Args[1:] {
+			a.Name += arg + " "
+			// don't generate action names longer than 100 characters
+			if len(a.Name) > 100 {
+				a.Name += "..."
+				break
+			}
+		}
 	}
 
 	// instantiate an API client
