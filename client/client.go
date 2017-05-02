@@ -120,6 +120,11 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 		Proxy: http.ProxyFromEnvironment,
 	}
 	cli.API = &http.Client{Transport: tr}
+	// If the client is using API key authentication to access the API, we don't have
+	// anything left to do here.
+	if conf.GPG.UseAPIKeyAuth != "" {
+		return
+	}
 	// if the env variable to the gpg agent socket isn't set, try to
 	// find the socket and set the variable
 	if os.Getenv("GPG_AGENT_INFO") == "" {
@@ -159,16 +164,20 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 		}
 	}
 	err = gcfg.ReadFileInto(&conf, file)
-	if conf.GPG.Home == "" {
-		gnupgdir := os.Getenv("GNUPGHOME")
-		if gnupgdir == "" {
-			gnupgdir = "/.gnupg"
+	// If standard PGP based authentication is being used, validate these settings
+	// from the configuration file
+	if conf.GPG.UseAPIKeyAuth == "" {
+		if conf.GPG.Home == "" {
+			gnupgdir := os.Getenv("GNUPGHOME")
+			if gnupgdir == "" {
+				gnupgdir = "/.gnupg"
+			}
+			conf.GPG.Home = FindHomedir() + gnupgdir
 		}
-		conf.GPG.Home = FindHomedir() + gnupgdir
-	}
-	_, err = os.Stat(conf.GPG.Home + "/secring.gpg")
-	if err != nil {
-		panic("secring.gpg not found")
+		_, err = os.Stat(conf.GPG.Home + "/secring.gpg")
+		if err != nil {
+			panic("secring.gpg not found")
+		}
 	}
 	// if trailing slash is missing from API url, add it
 	if conf.API.URL[len(conf.API.URL)-1] != '/' {
