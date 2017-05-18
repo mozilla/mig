@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -99,6 +100,8 @@ r               refresh the manifest (get latest version from database)
 
 reset           reset manifest status (marks manifest as staged, removes signatures)
 
+shasum          output sha sums of manifest objects in sha256sum style format
+
 sign            add a signature to the manifest record
 `)
 		case "exit":
@@ -149,6 +152,21 @@ sign            add a signature to the manifest record
 				panic(err)
 			}
 			fmt.Println("Manifest record has been reset")
+		case "shasum":
+			mre, err := mr.ManifestResponse()
+			if err != nil {
+				panic(err)
+			}
+			onames := make([]string, 0)
+			omap := make(map[string]string)
+			for _, x := range mre.Entries {
+				onames = append(onames, x.Name)
+				omap[x.Name] = x.SHA256
+			}
+			sort.Strings(onames)
+			for _, k := range onames {
+				fmt.Printf("%v  %v\n", omap[k], k)
+			}
 		case "sign":
 			sig, err := cli.SignManifest(mr)
 			if err != nil {
