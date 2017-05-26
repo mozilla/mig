@@ -48,21 +48,46 @@ func serviceMode() error {
 // Periodically execute mig-loader
 func periodic(binpath string, exitCh chan bool) {
 	// Brief startup delay before we begin processing
+	var (
+		nextmanfetch     time.Time
+		fetchingmanifest bool
+		err              error
+		cmd              *exec.Cmd
+	)
+	nextmanfetch = time.Now()
 	time.Sleep(time.Second * 60)
 	for {
-		cmd := exec.Command(binpath)
-		err := cmd.Start()
-		if err != nil {
-			exitCh <- true
-			return
+		fetchingmanifest = false
+		if time.Now().After(nextmanfetch) {
+			// It's time to attempt a manifest fetch, so execute the loader
+			// with no additional flags
+			fetchingmanifest = true
+			cmd = exec.Command(binpath)
+			err = cmd.Start()
+			if err != nil {
+				exitCh <- true
+				return
+			}
+		} else {
+			// Request the loader validate the agent is running and start it if not
+			cmd = exec.Command(binpath, "-c")
+			err = cmd.Start()
+			if err != nil {
+				exitCh <- true
+				return
+			}
 		}
 		err = cmd.Wait()
 		if err != nil {
-			// On failure, sleep for a shorter period and retry
+			// If something goes wrong with command execution, sleep for an additional
+			// period of time before we try again
 			time.Sleep(time.Minute * 5)
 			continue
 		}
-		time.Sleep(time.Minute * 60)
+		if fetchingmanifest {
+			nextmanfetch = time.Now().Add(60 * time.Minute)
+		}
+		time.Sleep(time.Minute * 2)
 	}
 }
 
