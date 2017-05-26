@@ -538,10 +538,12 @@ func main() {
 	var (
 		initialMode bool
 		runService  bool
+		checkOnly   bool
 		err         error
 	)
 	runtime.GOMAXPROCS(1)
 
+	flag.BoolVar(&checkOnly, "c", false, "only check if agent is running")
 	flag.BoolVar(&initialMode, "i", false, "initialization mode")
 	flag.BoolVar(&runService, "s", false, "persistent service mode")
 	flag.Parse()
@@ -578,6 +580,19 @@ func main() {
 			logError("%v", err)
 			doExit(1)
 		}
+	} else if checkOnly {
+		err = agentRunning()
+		if err != nil {
+			logInfo("agent does not appear to be running, trying to start")
+			err = runTriggers()
+			if err != nil {
+				logError("%v", err)
+				doExit(1)
+			}
+		} else {
+			logInfo("agent looks like it is running")
+		}
+		doExit(0)
 	}
 
 	// Get our current status from the file system.

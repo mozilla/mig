@@ -154,6 +154,10 @@ func (r *rotateLogWriter) initAndCheck() (err error) {
 	}
 	// Rotate the log and reinitialize it
 	// If the old file already exists remove it
+	//
+	// On Windows, close the existing logging file descriptor first before we
+	// attempt to rename the file.
+	r.fd.Close()
 	rotatefile := r.filename + ".1"
 	_, err = os.Stat(rotatefile)
 	if err == nil || !os.IsNotExist(err) {
@@ -167,8 +171,7 @@ func (r *rotateLogWriter) initAndCheck() (err error) {
 	if err != nil {
 		panic(err)
 	}
-	// Close existing descriptor and reinitialize
-	r.fd.Close()
+	// Reinitialize
 	r.fd, err = os.OpenFile(r.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0640)
 	if err != nil {
 		panic(err)
