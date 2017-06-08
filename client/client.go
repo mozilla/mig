@@ -140,8 +140,8 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 	// try to make a signed token, just to check that we can access the private key
 	_, err = cli.MakeSignedToken()
 	if err != nil {
-		err = fmt.Errorf("failed to generate a security token using key %s from %s\n",
-			conf.GPG.KeyID, conf.GPG.Home+"/secring.gpg")
+		err = fmt.Errorf("failed to generate a security token using key %v from %v: %v\n",
+			conf.GPG.KeyID, conf.GPG.Home+"/secring.gpg", err)
 		return
 	}
 	return
