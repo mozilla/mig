@@ -5,10 +5,11 @@
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 package main
 
-// some tags that are useful to differentiate agents. You can add whatever
-// you want in this map, it will be sent by the agent in each heartbeat
-var TAGS = map[string]string {
-    "operator": "MyFavoriteAdminTeam",
+// some tags that are useful to differentiate loaders. You can add whatever
+// you want in this struct, it will be sent by the loader as part of the
+// generated agent environment when it requests manifest information.
+var TAGS = map[string]string{
+	"operator": "MyFavoriteAdminTeam",
 }
 
 // attempt to discover the public IP of the endpoint by querying the api
@@ -32,7 +33,7 @@ var REQUIREDSIGNATURES = 1
 
 // PGP keys we accept manifest signatures from
 var MANIFESTPGPKEYS = [...]string{
-`
+	`
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1; Name: User for MIG test (Another test user for Mozilla Investigator) <usertest+mig@example.org>
 
@@ -43,7 +44,7 @@ lMVXz7c/B8T79KIH0EDAG8o6AbvZQdTMSZp+Ap562smLkV+xsPo1O1Zd/hDJKYuY
 =SWyb
 -----END PGP PUBLIC KEY BLOCK-----
 `,
-`
+	`
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1; Name: Test User (This is a test user for Mozilla Investigator) <testuser+mig@example.net>
 

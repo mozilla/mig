@@ -34,6 +34,7 @@ func TestConfigLoadCerts(t *testing.T) {
 	}
 
 	globals := globals{}
+	globals.tags = make(map[string]string)
 	config.Certs.Key = "../conf/mig-agent.cfg.inc"
 	config.Certs.Ca = "../conf/mig-agent.cfg.inc"
 	config.Certs.Cert = "../conf/mig-agent.cfg.inc"
@@ -43,15 +44,15 @@ func TestConfigLoadCerts(t *testing.T) {
 		t.Error("expected", expect, "got", err)
 	}
 	expect = `agentCert not empty`
-	if len(globals.agentCert) != 0 {
+	if len(AGENTCERT) == 0 {
 		t.Error("expected", expect)
 	}
 	expect = `agentKey not empty`
-	if len(globals.agentKey) != 0 {
+	if len(AGENTKEY) == 0 {
 		t.Error("expected", expect)
 	}
 	expect = `caCert not empty`
-	if len(globals.caCert) != 0 {
+	if len(CACERT) == 0 {
 		t.Error("expected", expect)
 	}
 }
@@ -93,15 +94,15 @@ func TestConfigLoadEmptyCerts(t *testing.T) {
 
 	//verify defaults are intact
 	expect = "caCert not empty"
-	if len(globals.caCert) == 0 {
+	if len(CACERT) == 0 {
 		t.Error("expected", expect)
 	}
 	expect = "agentCert not empty"
-	if len(globals.agentCert) == 0 {
+	if len(AGENTCERT) == 0 {
 		t.Error("expected", expect)
 	}
 	expect = "agentKey not empty"
-	if len(globals.agentKey) == 0 {
+	if len(AGENTKEY) == 0 {
 		t.Error("expected", expect)
 	}
 }
@@ -119,6 +120,7 @@ func TestConfigLoadCertErrors(t *testing.T) {
 
 	// start with empty globals for testing vs populated via NewGlobals
 	globals := &globals{}
+	globals.tags = make(map[string]string)
 
 	expect = `config.Certs.Ca open /path/to/ca/cert: no such file or directory`
 	err = globals.parseConfig(config)
@@ -151,7 +153,9 @@ func TestConfigLoadCertErrors(t *testing.T) {
 func TestConfigParseDurationErrors(t *testing.T) {
 	// test that an informative error is returned for invalid durations
 	var config config
-	var globals globals
+
+	globals := &globals{}
+	globals.tags = make(map[string]string)
 
 	path := `../conf/mig-agent.cfg.inc`
 	expect := `no error`
