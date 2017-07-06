@@ -34,6 +34,7 @@ func TestConfigLoadCerts(t *testing.T) {
 	}
 
 	globals := globals{}
+	globals.tags = make(map[string]string)
 	config.Certs.Key = "../conf/mig-agent.cfg.inc"
 	config.Certs.Ca = "../conf/mig-agent.cfg.inc"
 	config.Certs.Cert = "../conf/mig-agent.cfg.inc"
@@ -119,6 +120,7 @@ func TestConfigLoadCertErrors(t *testing.T) {
 
 	// start with empty globals for testing vs populated via NewGlobals
 	globals := &globals{}
+	globals.tags = make(map[string]string)
 
 	expect = `config.Certs.Ca open /path/to/ca/cert: no such file or directory`
 	err = globals.parseConfig(config)
@@ -151,7 +153,9 @@ func TestConfigLoadCertErrors(t *testing.T) {
 func TestConfigParseDurationErrors(t *testing.T) {
 	// test that an informative error is returned for invalid durations
 	var config config
-	var globals globals
+
+	globals := &globals{}
+	globals.tags = make(map[string]string)
 
 	path := `../conf/mig-agent.cfg.inc`
 	expect := `no error`
