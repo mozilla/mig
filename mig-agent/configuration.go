@@ -11,11 +11,9 @@ import (
 )
 
 // some tags that are useful to differentiate agents. You can add whatever
-// you want in this struct, it will be sent by the agent in each heartbeat
-var TAGS = struct {
-	Operator string `json:"operator"`
-}{
-	"MyFavoriteAdminTeam",
+// you want in this map, it will be sent by the agent in each heartbeat
+var TAGS = map[string]string {
+    "operator": "MyFavoriteAdminTeam",
 }
 
 // restart the agent on failures, don't let it die
