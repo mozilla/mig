@@ -43,15 +43,15 @@ func TestConfigLoadCerts(t *testing.T) {
 		t.Error("expected", expect, "got", err)
 	}
 	expect = `agentCert not empty`
-	if len(globals.agentCert) != 0 {
+	if len(AGENTCERT) == 0 {
 		t.Error("expected", expect)
 	}
 	expect = `agentKey not empty`
-	if len(globals.agentKey) != 0 {
+	if len(AGENTKEY) == 0 {
 		t.Error("expected", expect)
 	}
 	expect = `caCert not empty`
-	if len(globals.caCert) != 0 {
+	if len(CACERT) == 0 {
 		t.Error("expected", expect)
 	}
 }
