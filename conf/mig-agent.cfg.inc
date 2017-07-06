@@ -54,9 +54,11 @@
     ; if true, only the investigator's public key is verified on actions and not ACLs.
     onlyVerifyPubKey = false
 
-    ; Tag the instance with attributes to filter investigation scope
-    tags = "operator:Ops_Emea"
-    tags = "role:web"
+    ; Tags can be specified for a given agent at compile-time using the agent built-in
+    ; configuration TAGS value. Additional tags can be included in the configuration file
+    ; here if desired to override or extend the tags the agent has already been compiled
+    ; with.
+    ; tags = "tagname:tagvalue"
 
 
 [stats]
