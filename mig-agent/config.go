@@ -220,6 +220,9 @@ func stringPair(pair string) (key, value string) {
 func (g globals) parseConfig(config config) error {
 	var err error
 
+	// In addition to any tags that have already been included in the
+	// agent built-in configuration (e.g., configuration.go), also add
+	// any tags specified in the configuration file if present
 	if len(config.Agent.Tags) > 0 {
 		for _, tag := range config.Agent.Tags {
 			key, val := stringPair(tag)
