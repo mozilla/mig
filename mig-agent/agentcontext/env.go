@@ -41,7 +41,7 @@ func findPublicIP(orig_ctx AgentContext, hints AgentContextHints) (ctx AgentCont
 	ctx = orig_ctx
 
 	tr := &http.Transport{
-		Dial: (&net.Dialer{Timeout: 10 * time.Second}).Dial,
+		Dial: (&net.Dialer{Timeout: 5 * time.Second}).Dial,
 	}
 	client := &http.Client{Transport: tr}
 	var resp *http.Response
