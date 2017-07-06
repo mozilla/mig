@@ -12,8 +12,12 @@ import (
 
 // some tags that are useful to differentiate agents. You can add whatever
 // you want in this map, it will be sent by the agent in each heartbeat
-var TAGS = map[string]string {
-    "operator": "MyFavoriteAdminTeam",
+//
+// note that tags set here will be compiled into the agent binary, however
+// you can also specify tags in the agent configuration file if you are
+// not using the built-in configuration.
+var TAGS = map[string]string{
+	"operator": "MyFavoriteAdminTeam",
 }
 
 // restart the agent on failures, don't let it die
