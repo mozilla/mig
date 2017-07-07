@@ -186,6 +186,8 @@ func main() {
 			}
 		}
 	} else if *targetSearch != "" {
+		// Resolve macros if a macro was specified for the target
+		*targetSearch = cli.ResolveTargetMacro(*targetSearch)
 		// Search using an agent targeting string
 		agents, err := cli.EvaluateAgentTarget(*targetSearch)
 		if err != nil && !strings.Contains(err.Error(), "no results found") {
