@@ -9,6 +9,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -162,7 +163,7 @@ func main() {
 		// Search using mig-console style keywords
 		p, err := parseSearchQuery(*paramSearch)
 		if err != nil {
-			errex(err.Error())
+			errex("parsing search query: %v", err.Error())
 		}
 		resources, err := cli.GetAPIResource("search?" + p.String())
 		if err != nil && !strings.Contains(err.Error(), "no results found") {
@@ -224,12 +225,6 @@ func printAgent(agt mig.Agent) error {
 // This function is similar to the function in mig-console, however we do not include
 // parameters that are not relevant to agents.
 func parseSearchQuery(querystring string) (p migdbsearch.Parameters, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("parseSearchQuery() -> %v", e)
-		}
-	}()
-
 	p = migdbsearch.NewParameters()
 	p.Type = "agent"
 
@@ -244,7 +239,8 @@ func parseSearchQuery(querystring string) (p migdbsearch.Parameters, err error) 
 		}
 		params := strings.Split(order, "=")
 		if len(params) != 2 {
-			panic(fmt.Sprintf("Invalid `key=value` in search parameter '%s'", order))
+			err = fmt.Errorf("Invalid `key=value` in search parameter '%s'", order)
+			return
 		}
 		key := params[0]
 		value := params[1]
@@ -254,7 +250,8 @@ func parseSearchQuery(querystring string) (p migdbsearch.Parameters, err error) 
 		case "after":
 			p.After, err = time.Parse(time.RFC3339, value)
 			if err != nil {
-				panic("after date not in RFC3339 format, ex: 2015-09-23T14:14:16Z")
+				err = errors.New("after date not in RFC3339 format, ex: 2015-09-23T14:14:16Z")
+				return
 			}
 		case "agentid":
 			p.AgentID = value
@@ -265,19 +262,22 @@ func parseSearchQuery(querystring string) (p migdbsearch.Parameters, err error) 
 		case "before":
 			p.Before, err = time.Parse(time.RFC3339, value)
 			if err != nil {
-				panic("before date not in RFC3339 format, ex: 2015-09-23T14:14:16Z")
+				err = errors.New("before date not in RFC3339 format, ex: 2015-09-23T14:14:16Z")
+				return
 			}
 		case "limit":
 			p.Limit, err = strconv.ParseFloat(value, 64)
 			if err != nil {
-				panic("invalid limit parameter")
+				err = errors.New("invalid limit parameter")
+				return
 			}
 		case "status":
 			p.Status = value
 		case "name":
 			p.AgentName = value
 		default:
-			panic(fmt.Sprintf("Unknown search key '%s'", key))
+			err = fmt.Errorf("unknown search key %q", key)
+			return
 		}
 	}
 	return
