@@ -24,9 +24,13 @@ import (
 func usage() {
 	fmt.Fprintf(os.Stderr, `%s <query> - Search for MIG Agents
 
-Usage: %s -p "console style query" | -t "target style query"
+Usage: %s [-V] [-c path] -p "console style query" | -t "target style query"
 
-The -p or -t flag must be specified.
+The -p or -t flag must be specified to run a search.
+
+The -V flag can be used to display MIG version.
+
+Use -c to specify an alternate path to .migrc (by default, $HOME/.migrc)
 
 CONSOLE MODE QUERY
 ------------------
