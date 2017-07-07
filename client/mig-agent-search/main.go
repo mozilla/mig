@@ -21,16 +21,9 @@ import (
 	migdbsearch "mig.ninja/mig/database/search"
 )
 
-func main() {
-	defer func() {
-		if e := recover(); e != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", e)
-			os.Exit(1)
-		}
-	}()
+func usage() {
+	fmt.Fprintf(os.Stderr, `%s <query> - Search for MIG Agents
 
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `%s <query> - Search for MIG Agents
 Usage: %s -p "console style query" | -t "target style query"
 
 The -p or -t flag must be specified.
@@ -38,7 +31,7 @@ The -p or -t flag must be specified.
 CONSOLE MODE QUERY
 ------------------
 
-The console mode query allows specific of a query string as would be passed
+The console mode query allows specification of a query string as would be passed
 in mig-console using "search agent". It returns all matching agents.
 
 EXAMPLE CONSOLE MODE QUERIES
@@ -121,11 +114,18 @@ Linux agents in checkin mode that are currently idle but woke up in the last hou
 Agents operated by team "opsec"
   $ mig-agent-search -t "tags->>'operator'='opsec'"
 
-Command line flags:
-`,
-			os.Args[0], os.Args[0])
-		flag.PrintDefaults()
-	}
+Command line flags:`, os.Args[0], os.Args[0])
+}
+
+func main() {
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", e)
+			os.Exit(1)
+		}
+	}()
+
+	flag.Usage = usage
 
 	var err error
 	homedir := client.FindHomedir()
