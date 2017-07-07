@@ -165,7 +165,7 @@ func main() {
 			errex(err.Error())
 		}
 		resources, err := cli.GetAPIResource("search?" + p.String())
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "no results found") {
 			errex(err.Error())
 		}
 		fmt.Println("name; id; status; version; mode; os; arch; pid; starttime; heartbeattime; tags; environment")
@@ -187,7 +187,7 @@ func main() {
 	} else if *targetSearch != "" {
 		// Search using an agent targeting string
 		agents, err := cli.EvaluateAgentTarget(*targetSearch)
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "no results found") {
 			errex(err.Error())
 		}
 		fmt.Println("name; id; status; version; mode; os; arch; pid; starttime; heartbeattime; tags; environment")
