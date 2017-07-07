@@ -122,16 +122,6 @@ Command line flags:`, os.Args[0], os.Args[0])
 }
 
 func main() {
-	defer func() {
-		if e := recover(); e != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", e)
-			os.Exit(1)
-		}
-	}()
-
-	flag.Usage = usage
-
-	var err error
 	homedir := client.FindHomedir()
 	var (
 		err          error
@@ -143,6 +133,12 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	errex := func(s string, optarg ...interface{}) {
+		buf := fmt.Sprintf(s, optarg...)
+		fmt.Fprintf(os.Stderr, "error: %v\n", buf)
+		os.Exit(1)
+	}
+
 	if *showversion {
 		fmt.Println(mig.Version)
 		os.Exit(0)
@@ -151,26 +147,26 @@ func main() {
 	// Instantiate an API client
 	conf, err := client.ReadConfiguration(*config)
 	if err != nil {
-		panic(err)
+		errex(err.Error())
 	}
 	conf, err = client.ReadEnvConfiguration(conf)
 	if err != nil {
-		panic(err)
+		errex(err.Error())
 	}
 	cli, err := client.NewClient(conf, "agent-search-"+mig.Version)
 	if err != nil {
-		panic(err)
+		errex(err.Error())
 	}
 
 	if *paramSearch != "" {
 		// Search using mig-console style keywords
 		p, err := parseSearchQuery(*paramSearch)
 		if err != nil {
-			panic(err)
+			errex(err.Error())
 		}
 		resources, err := cli.GetAPIResource("search?" + p.String())
 		if err != nil {
-			panic(err)
+			errex(err.Error())
 		}
 		fmt.Println("name; id; status; version; mode; os; arch; pid; starttime; heartbeattime; tags; environment")
 		for _, item := range resources.Collection.Items {
@@ -180,11 +176,11 @@ func main() {
 				}
 				agt, err := client.ValueToAgent(data.Value)
 				if err != nil {
-					panic(err)
+					errex(err.Error())
 				}
 				err = printAgent(agt)
 				if err != nil {
-					panic(err)
+					errex(err.Error())
 				}
 			}
 		}
@@ -192,17 +188,17 @@ func main() {
 		// Search using an agent targeting string
 		agents, err := cli.EvaluateAgentTarget(*targetSearch)
 		if err != nil {
-			panic(err)
+			errex(err.Error())
 		}
 		fmt.Println("name; id; status; version; mode; os; arch; pid; starttime; heartbeattime; tags; environment")
 		for _, agt := range agents {
 			err = printAgent(agt)
 			if err != nil {
-				panic(err)
+				errex(err.Error())
 			}
 		}
 	} else {
-		panic("must specify -p or -t, see help")
+		errex("must specify -p or -t, see help")
 	}
 	os.Exit(0)
 }
