@@ -9,6 +9,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -21,24 +22,21 @@ import (
 	migdbsearch "mig.ninja/mig/database/search"
 )
 
-func main() {
-	defer func() {
-		if e := recover(); e != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", e)
-			os.Exit(1)
-		}
-	}()
+func usage() {
+	fmt.Fprintf(os.Stderr, `%s <query> - Search for MIG Agents
 
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `%s <query> - Search for MIG Agents
-Usage: %s -p "console style query" | -t "target style query"
+Usage: %s [-V] [-c path] -p "console style query" | -t "target style query"
 
-The -p or -t flag must be specified.
+The -p or -t flag must be specified to run a search.
+
+The -V flag can be used to display MIG version.
+
+Use -c to specify an alternate path to .migrc (by default, $HOME/.migrc)
 
 CONSOLE MODE QUERY
 ------------------
 
-The console mode query allows specific of a query string as would be passed
+The console mode query allows specification of a query string as would be passed
 in mig-console using "search agent". It returns all matching agents.
 
 EXAMPLE CONSOLE MODE QUERIES
@@ -121,19 +119,26 @@ Linux agents in checkin mode that are currently idle but woke up in the last hou
 Agents operated by team "opsec"
   $ mig-agent-search -t "tags->>'operator'='opsec'"
 
-Command line flags:
-`,
-			os.Args[0], os.Args[0])
-		flag.PrintDefaults()
-	}
+Command line flags:`, os.Args[0], os.Args[0])
+}
 
-	var err error
+func main() {
 	homedir := client.FindHomedir()
-	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
-	var showversion = flag.Bool("V", false, "Show build version and exit")
-	var paramSearch = flag.String("p", "", "Search using mig-console search style query")
-	var targetSearch = flag.String("t", "", "Search using agent targeting string")
+	var (
+		err          error
+		config       = flag.String("c", homedir+"/.migrc", "Load configuration from file")
+		showversion  = flag.Bool("V", false, "Show build version and exit")
+		paramSearch  = flag.String("p", "", "Search using mig-console search style query")
+		targetSearch = flag.String("t", "", "Search using agent targeting string")
+	)
+	flag.Usage = usage
 	flag.Parse()
+
+	errex := func(s string, optarg ...interface{}) {
+		buf := fmt.Sprintf(s, optarg...)
+		fmt.Fprintf(os.Stderr, "error: %v\n", buf)
+		os.Exit(1)
+	}
 
 	if *showversion {
 		fmt.Println(mig.Version)
@@ -143,26 +148,26 @@ Command line flags:
 	// Instantiate an API client
 	conf, err := client.ReadConfiguration(*config)
 	if err != nil {
-		panic(err)
+		errex(err.Error())
 	}
 	conf, err = client.ReadEnvConfiguration(conf)
 	if err != nil {
-		panic(err)
+		errex(err.Error())
 	}
 	cli, err := client.NewClient(conf, "agent-search-"+mig.Version)
 	if err != nil {
-		panic(err)
+		errex(err.Error())
 	}
 
 	if *paramSearch != "" {
 		// Search using mig-console style keywords
 		p, err := parseSearchQuery(*paramSearch)
 		if err != nil {
-			panic(err)
+			errex("parsing search query: %v", err.Error())
 		}
 		resources, err := cli.GetAPIResource("search?" + p.String())
-		if err != nil {
-			panic(err)
+		if err != nil && !strings.Contains(err.Error(), "no results found") {
+			errex(err.Error())
 		}
 		fmt.Println("name; id; status; version; mode; os; arch; pid; starttime; heartbeattime; tags; environment")
 		for _, item := range resources.Collection.Items {
@@ -172,29 +177,31 @@ Command line flags:
 				}
 				agt, err := client.ValueToAgent(data.Value)
 				if err != nil {
-					panic(err)
+					errex(err.Error())
 				}
 				err = printAgent(agt)
 				if err != nil {
-					panic(err)
+					errex(err.Error())
 				}
 			}
 		}
 	} else if *targetSearch != "" {
+		// Resolve macros if a macro was specified for the target
+		*targetSearch = cli.ResolveTargetMacro(*targetSearch)
 		// Search using an agent targeting string
 		agents, err := cli.EvaluateAgentTarget(*targetSearch)
-		if err != nil {
-			panic(err)
+		if err != nil && !strings.Contains(err.Error(), "no results found") {
+			errex(err.Error())
 		}
 		fmt.Println("name; id; status; version; mode; os; arch; pid; starttime; heartbeattime; tags; environment")
 		for _, agt := range agents {
 			err = printAgent(agt)
 			if err != nil {
-				panic(err)
+				errex(err.Error())
 			}
 		}
 	} else {
-		panic("must specify -p or -t, see help")
+		errex("must specify -p or -t, see help")
 	}
 	os.Exit(0)
 }
@@ -220,12 +227,6 @@ func printAgent(agt mig.Agent) error {
 // This function is similar to the function in mig-console, however we do not include
 // parameters that are not relevant to agents.
 func parseSearchQuery(querystring string) (p migdbsearch.Parameters, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("parseSearchQuery() -> %v", e)
-		}
-	}()
-
 	p = migdbsearch.NewParameters()
 	p.Type = "agent"
 
@@ -240,7 +241,8 @@ func parseSearchQuery(querystring string) (p migdbsearch.Parameters, err error) 
 		}
 		params := strings.Split(order, "=")
 		if len(params) != 2 {
-			panic(fmt.Sprintf("Invalid `key=value` in search parameter '%s'", order))
+			err = fmt.Errorf("Invalid `key=value` in search parameter '%s'", order)
+			return
 		}
 		key := params[0]
 		value := params[1]
@@ -250,7 +252,8 @@ func parseSearchQuery(querystring string) (p migdbsearch.Parameters, err error) 
 		case "after":
 			p.After, err = time.Parse(time.RFC3339, value)
 			if err != nil {
-				panic("after date not in RFC3339 format, ex: 2015-09-23T14:14:16Z")
+				err = errors.New("after date not in RFC3339 format, ex: 2015-09-23T14:14:16Z")
+				return
 			}
 		case "agentid":
 			p.AgentID = value
@@ -261,19 +264,22 @@ func parseSearchQuery(querystring string) (p migdbsearch.Parameters, err error) 
 		case "before":
 			p.Before, err = time.Parse(time.RFC3339, value)
 			if err != nil {
-				panic("before date not in RFC3339 format, ex: 2015-09-23T14:14:16Z")
+				err = errors.New("before date not in RFC3339 format, ex: 2015-09-23T14:14:16Z")
+				return
 			}
 		case "limit":
 			p.Limit, err = strconv.ParseFloat(value, 64)
 			if err != nil {
-				panic("invalid limit parameter")
+				err = errors.New("invalid limit parameter")
+				return
 			}
 		case "status":
 			p.Status = value
 		case "name":
 			p.AgentName = value
 		default:
-			panic(fmt.Sprintf("Unknown search key '%s'", key))
+			err = fmt.Errorf("unknown search key %q", key)
+			return
 		}
 	}
 	return
