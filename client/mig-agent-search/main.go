@@ -133,10 +133,14 @@ func main() {
 
 	var err error
 	homedir := client.FindHomedir()
-	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
-	var showversion = flag.Bool("V", false, "Show build version and exit")
-	var paramSearch = flag.String("p", "", "Search using mig-console search style query")
-	var targetSearch = flag.String("t", "", "Search using agent targeting string")
+	var (
+		err          error
+		config       = flag.String("c", homedir+"/.migrc", "Load configuration from file")
+		showversion  = flag.Bool("V", false, "Show build version and exit")
+		paramSearch  = flag.String("p", "", "Search using mig-console search style query")
+		targetSearch = flag.String("t", "", "Search using agent targeting string")
+	)
+	flag.Usage = usage
 	flag.Parse()
 
 	if *showversion {
