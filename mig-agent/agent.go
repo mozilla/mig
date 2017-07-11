@@ -513,7 +513,12 @@ func startRoutines(ctx *Context) (err error) {
 		for msg := range ctx.Channels.NewCommand {
 			err = parseCommands(ctx, msg)
 			if err != nil {
-				log := mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+				var log mig.Log
+				if strings.Contains(err.Error(), "signature made by unknown entity") {
+					log = mig.Log{Desc: fmt.Sprintf("%v \n Action rejected -- sent by unknown investigator.", err)}.Err()
+				} else {
+					log = mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
+				}
 				ctx.Channels.Log <- log
 			}
 		}
@@ -991,4 +996,5 @@ func printConfigSettings() {
 	fmt.Println("HEARTBEATFREQ     : ", HEARTBEATFREQ)
 	fmt.Println("MODULETIMEOUT     : ", MODULETIMEOUT)
 	fmt.Println("ONLYVERIFYPUBKEY  : ", ONLYVERIFYPUBKEY)
+
 }
