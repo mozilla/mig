@@ -15,15 +15,12 @@ Take a look at the list of [issues labelled "up for grabs"](https://github.com/m
 
 ## Coding guidelines
 
-* Commits must be prefixed with one of the following tag:
-    - `[doc]` for commits that update documentation
-    - `[minor]`, `[medium]`, `[major]` for regular commits, pick the level that
-      represents the importance of your commit the best.
-    - `[(level)/bug]` for commits that fix a bug
+* Commits must be descriptive of the change that is being made to the
+  source code.
 
 * If your commit is linked to a github issue, please add a reference
   to it in the commit message.
-  ex: `[minor] fix bad counter on agent stats, fixes #125123`
+  ex: `fix bad counter on agent stats, fixes #125123`
 
 * Pull requests must represent the final state of your commit. If you spent two
   weeks working on code, please only submit the commits that represent the
