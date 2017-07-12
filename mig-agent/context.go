@@ -120,10 +120,10 @@ func (c *Context) updateVolatileFromAgentContext(actx agentcontext.AgentContext)
 func Init(foreground, upgrade bool) (ctx Context, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("initAgent() -> %v", e)
+			err = fmt.Errorf("Init() -> %v", e)
 		}
 		if ctx.Channels.Log != nil {
-			ctx.Channels.Log <- mig.Log{Desc: "leaving initAgent()"}.Debug()
+			ctx.Channels.Log <- mig.Log{Desc: "leaving Init()"}.Debug()
 		}
 	}()
 	// Pick up a lock on Context Agent field as we will be updating or reading it here and in
