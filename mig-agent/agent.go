@@ -515,6 +515,10 @@ func startRoutines(ctx *Context) (err error) {
 			if err != nil {
 				log := mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
 				ctx.Channels.Log <- log
+				if strings.Contains(err.Error(), "signature made by unknown entity") {
+					actionRejectedLog := mig.Log{Desc: "Action rejected -- sent by unknown investigator."}.Err()
+					ctx.Channels.Log <- actionRejectedLog
+				}
 			}
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "closing parseCommands goroutine"}
