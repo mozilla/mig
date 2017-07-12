@@ -355,7 +355,7 @@ func runAgentCheckin(runOpt runtimeOptions) (err error) {
 	ctx, err = Init(runOpt.foreground, runOpt.upgrading)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Init failed: '%v'", err)
-		os.Exit(0)
+		os.Exit(1)
 	}
 
 	ctx.Agent.Mode = "checkin"
