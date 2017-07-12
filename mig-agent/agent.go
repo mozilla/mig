@@ -422,9 +422,9 @@ func runAgent(runOpt runtimeOptions) (err error) {
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
 		}
 		if runOpt.foreground {
-			// if in foreground mode, don't retry, just panic
+			// if in foreground mode, don't retry, just exit
 			time.Sleep(1 * time.Second)
-			panic(err)
+			os.Exit(1)
 		}
 		if ctx.Agent.Respawn {
 			// if init fails, sleep for one minute and try again. forever.
