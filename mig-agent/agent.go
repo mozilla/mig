@@ -355,7 +355,7 @@ func runAgentCheckin(runOpt runtimeOptions) (err error) {
 	ctx, err = Init(runOpt.foreground, runOpt.upgrading)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Init failed: '%v'", err)
-		os.Exit(0)
+		os.Exit(1)
 	}
 
 	ctx.Agent.Mode = "checkin"
@@ -422,9 +422,9 @@ func runAgent(runOpt runtimeOptions) (err error) {
 			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
 		}
 		if runOpt.foreground {
-			// if in foreground mode, don't retry, just panic
+			// if in foreground mode, don't retry, just exit
 			time.Sleep(1 * time.Second)
-			panic(err)
+			os.Exit(1)
 		}
 		if ctx.Agent.Respawn {
 			// if init fails, sleep for one minute and try again. forever.
@@ -515,6 +515,10 @@ func startRoutines(ctx *Context) (err error) {
 			if err != nil {
 				log := mig.Log{Desc: fmt.Sprintf("%v", err)}.Err()
 				ctx.Channels.Log <- log
+				if strings.Contains(err.Error(), "signature made by unknown entity") {
+					actionRejectedLog := mig.Log{Desc: "Action rejected -- sent by unknown investigator."}.Err()
+					ctx.Channels.Log <- actionRejectedLog
+				}
 			}
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "closing parseCommands goroutine"}

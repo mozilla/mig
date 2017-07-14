@@ -183,8 +183,14 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 		}
 	}
 	// if trailing slash is missing from API url, add it
-	if conf.API.URL[len(conf.API.URL)-1] != '/' {
-		conf.API.URL += "/"
+	n := len(conf.API.URL)
+	if n > 1 {
+		if conf.API.URL[n-1] != '/' {
+			conf.API.URL += "/"
+		}
+	} else {
+		err = fmt.Errorf("config API URL too short or undefined: len %d", n)
+		panic(err)
 	}
 	err = addTargetMacros(&conf)
 	if err != nil {
