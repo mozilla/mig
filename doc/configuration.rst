@@ -810,9 +810,11 @@ and will look after upgrading the agent automatically if you want to publish new
 agent updates. The upgrades can be controlled by a MIG administrator through the
 MIG API and console tools.
 
-For information on the loader, see `MIG LOADER`_ documentation. If you wish to
-use mig-loader, read the `MIG LOADER`_ documentation to understand how the rest
+For information on the loader, see `mig-loader`_ documentation. If you wish to
+use mig-loader, read the `mig-loader`_ documentation to understand how the rest
 of this guide fits into configuration with loader based deployment.
+
+.. _`mig-loader`: loader.rst
 
 Agent Configuration
 -------------------
