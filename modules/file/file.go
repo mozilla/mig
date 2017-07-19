@@ -13,10 +13,13 @@ package file /* import "mig.ninja/mig/modules/file" */
 
 import (
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash"
@@ -32,8 +35,6 @@ import (
 
 	"golang.org/x/crypto/sha3"
 	"mig.ninja/mig/modules"
-
-	"compress/gzip"
 )
 
 var debug = false
@@ -128,6 +129,7 @@ const (
 	checkSHA3_256
 	checkSHA3_384
 	checkSHA3_512
+	checkBytes
 )
 
 // check represents an individual check that is part of a search.
@@ -137,6 +139,7 @@ type check struct {
 	matched                uint64
 	matchedfiles           []string
 	value                  string
+	bytes                  []byte
 	regex                  *regexp.Regexp
 	minsize, maxsize       uint64
 	minmtime, maxmtime     time.Time
@@ -379,6 +382,20 @@ func (s *Search) makeChecks() (err error) {
 		s.checks = append(s.checks, c)
 		s.checkmask |= c.code
 	}
+	for _, v := range s.Bytes {
+		var c check
+		c.code = checkBytes
+		c.value = v
+		c.bytes, err = hex.DecodeString(v)
+		if err != nil {
+			return
+		}
+		s.checks = append(s.checks, c)
+		s.checkmask |= c.code
+		if debug {
+			fmt.Printf("adding byte check with value '%s'\n", c.value)
+		}
+	}
 	return
 }
 
@@ -619,6 +636,14 @@ func (r *run) ValidateParameters() (err error) {
 				return
 			}
 		}
+		for _, bytes := range s.Bytes {
+			debugprint("validating bytes '%s'\n", bytes)
+			err = validateBytes(bytes)
+			if err != nil {
+				return
+			}
+		}
+
 		for _, mismatch := range s.Options.Mismatch {
 			debugprint("validating mismatch '%s'\n", mismatch)
 			err = validateMismatch(mismatch)
@@ -633,6 +658,17 @@ func (r *run) ValidateParameters() (err error) {
 		}
 	}
 	return
+}
+
+func validateBytes(bytes string) error {
+	if len(bytes) < 1 {
+		return fmt.Errorf("Empty values are not permitted")
+	}
+	_, err := hex.DecodeString(bytes)
+	if err != nil {
+		return fmt.Errorf("Invalid bytes '%s'. Must be an hexadecimal byte string without leading 0x. ex: 'ff00d1ab'", bytes)
+	}
+	return nil
 }
 
 func validateLabel(label string) error {
@@ -1178,6 +1214,7 @@ func (r *run) evaluateFile(file string) (err error) {
 	// Optimize to only read a file once per check type
 	f := fileEntry{filename: file}
 	r.checkContent(f)
+	r.checkBytes(f)
 	r.checkHash(f, checkMD5)
 	r.checkHash(f, checkSHA1)
 	r.checkHash(f, checkSHA256)
@@ -1584,6 +1621,72 @@ func (r *run) checkHash(f fileEntry, hashtype checkType) {
 	return
 }
 
+func (r *run) checkBytes(f fileEntry) {
+	var (
+		err error
+	)
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("checkBytes() -> %v", e)
+		}
+	}()
+	reader := f.getReader()
+	defer f.Close()
+
+	// Must use the "label,search" for loop iteration because of
+	// map[string]search for parameters
+	for _, search := range r.Parameters.Searches {
+		if !search.isactive {
+			continue
+		}
+
+		for _, c := range search.checks {
+
+			decodedByte := make([]byte, hex.DecodedLen(len(c.bytes)))
+			_, err := hex.Decode(decodedByte, c.bytes)
+			if err != nil {
+				e := fmt.Sprintf("unable to decode byte query: %v ", err)
+				panic(e)
+			}
+			scansize := len(decodedByte) // Get the actual byte slice length
+			blocksize := 4 * (2 << 10)   // 4096, 4k
+
+			var bigbuf = make([]byte, (blocksize + (2 * scansize)))
+			// Read slightly more than 4k so we have a full buffer to scan through
+			// as we move into the for loop
+			_, err = reader.Read(bigbuf)
+			if err != nil && err != io.EOF {
+				panic(err)
+			}
+
+			for err != io.EOF {
+				if bytes.Contains(bigbuf, decodedByte) {
+					// We do find the intended hex values in our scan
+					// Break the loop and return
+					// Not certain exactly how to do that here
+					c.storeMatch(f.filename)
+					break
+				} else { //Explicitly, we do not find the hex value, and have not encountered EOF
+					tempBuf := make([]byte, blocksize)
+					_, err = reader.Read(tempBuf)
+					if err != nil && err != io.EOF {
+						panic(err)
+					}
+					// Take a small slice from bigbuf for sliding window
+					smallBuf := make([]byte, 2*scansize)
+					// Get the last two scan-lengths so as to permit the sliding window through End-of-Read
+					copy(smallBuf, bigbuf[blocksize:])
+					// Now make bigbuf out of two scan-lengths plus the 4k buffer read
+					var bigbuf = make([]byte, (2 * scansize))
+					copy(bigbuf, smallBuf)
+					bigbuf = append(bigbuf, tempBuf...)
+				}
+			}
+		}
+	}
+
+}
+
 // getHash calculates the hash of a file.
 func getHash(f fileEntry, hashType checkType) (hexhash string, err error) {
 	defer func() {
@@ -1750,6 +1853,8 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 				switch c.code {
 				case checkContent:
 					mf.Search.Contents = append(mf.Search.Contents, c.value)
+				case checkBytes:
+					mf.Search.Bytes = append(mf.Search.Bytes, c.value)
 				case checkName:
 					mf.Search.Names = append(mf.Search.Names, c.value)
 				case checkSize:
