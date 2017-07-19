@@ -232,7 +232,7 @@ When validation fails, an error with a descriptive validation failure must be
 returned to the caller.
 
 A good example of validating parameters can be found in the ``file`` module at
-https://github.com/mozilla/mig/blob/master/src/mig/modules/file/file.go
+https://github.com/mozilla/mig/blob/master/modules/file/file.go
 
 Results
 -------
