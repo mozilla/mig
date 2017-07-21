@@ -44,6 +44,10 @@ func printHelp(isCmd bool) {
 		  suffix with d, h, m for days, hours and minutes
 		  ex: %smtime <90d (match files modified since last 90 days)
 
+%sbytes <hex>	- match an hex byte string against the memory of a process
+		  ex: %sbyte "6d69672e6d6f7a696c6c612e6f7267"
+		             (mig.mozilla.org)
+
 %scontent <regex> - regex to match against file content. use !<regex> to inverse it.
 		  ex: %scontent ^root:\$1\$10CXRS19\$/h
 
@@ -241,6 +245,13 @@ func (r *run) ParamsCreator() (interface{}, error) {
 					continue
 				}
 				search.Contents = append(search.Contents, checkValue)
+			case "bytes":
+				err = validateBytes(checkValue)
+				if err != nil {
+					fmt.Printf("ERROR: %v\nTry again.\n", err)
+					continue
+				}
+				search.Bytes = append(search.Bytes, checkValue)
 			case "md5":
 				if checkValue == "" {
 					fmt.Println("Missing parameter, try again")
@@ -422,6 +433,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	fs.Var(&sizes, "size", "see help")
 	fs.Var(&modes, "mode", "see help")
 	fs.Var(&mtimes, "mtime", "see help")
+	fs.Var(&bytes, "bytes", "see help")
 	fs.Var(&contents, "content", "see help")
 	fs.Var(&md5s, "md5", "see help")
 	fs.Var(&sha1s, "sha1", "see help")
@@ -447,6 +459,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	s.Sizes = sizes
 	s.Modes = modes
 	s.Mtimes = mtimes
+	s.Bytes = bytes
 	s.Contents = contents
 	s.MD5 = md5s
 	s.SHA1 = sha1s
