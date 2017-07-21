@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Fprintf(out, "\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", cli.Conf.API.URL)
+	fmt.Fprintf(out, "\nConnected to %s. Exit with \x1b[32;1mctrl+d\x1b[0m. Type \x1b[32;1mhelp\x1b[0m for help.\n", cli.GetConfiguration().API.URL)
 	for {
 		// completion
 		var symbols = []string{"action", "agent", "create", "command", "help", "history",
@@ -227,8 +227,9 @@ status			display platform status: connected agents, latest actions, ...
 				log.Println(err)
 			}
 		case "showcfg":
+			conf := cli.GetConfiguration()
 			fmt.Printf("homedir = %s\n[api]\n    url = %s\n[gpg]\n    home = %s\n    keyid = %s\n",
-				cli.Conf.API.URL, cli.Conf.Homedir, cli.Conf.GPG.Home, cli.Conf.GPG.KeyID)
+				conf.API.URL, conf.Homedir, conf.GPG.Home, conf.GPG.KeyID)
 		case "status":
 			err = printStatus(cli)
 			if err != nil {

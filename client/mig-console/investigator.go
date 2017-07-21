@@ -349,7 +349,7 @@ func investigatorCreator(cli client.Client) (err error) {
 		re := regexp.MustCompile(`^0x[ABCDEF0-9]{8,64}$`)
 		if re.MatchString(input) {
 			var keyserver string
-			if cli.Conf.GPG.Keyserver == "" {
+			if cli.GetConfiguration().GPG.Keyserver == "" {
 				keyserver = "http://gpg.mozilla.org"
 			}
 			fmt.Println("retrieving public key from", keyserver)
