@@ -8,6 +8,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
+
+// Package gozdef provides an interface for submitting events to MozDef in a
+// standardized format.
 package gozdef
 
 import (
@@ -24,16 +27,17 @@ import (
 	"time"
 )
 
-// a Publisher sends events to MozDef, either via AMQP (if initialized
-// with InitAmqp()) or via rest API (if initialized via InitApi())
+// Publisher sends events to MozDef, either via AMQP (if initialized
+// with InitAmqp()) or via rest API (if initialized via InitAPI())
 type Publisher struct {
-	use_amqp  bool          // selects the sending mode, if set to false use rest api instead of amqp
+	useAmqp   bool          // selects the sending mode, if set to false use rest api instead of amqp
 	amqpChan  *amqp.Channel // channel handler
 	mqconf    MqConf        // rabbitmq configuration the publisher was initialized with
 	apiClient *http.Client  // http client handler
-	apiconf   ApiConf       // api configuration the publisher was initialized with
+	apiconf   APIConf       // api configuration the publisher was initialized with
 }
 
+// Send submits an event indicated by ExternalEvent e to the initialized publisher p
 func (p Publisher) Send(e ExternalEvent) error {
 	err := e.Validate()
 	if err != nil {
@@ -43,7 +47,8 @@ func (p Publisher) Send(e ExternalEvent) error {
 	if err != nil {
 		return err
 	}
-	if p.use_amqp {
+	// If using AMQP, publish the event on the configured queue
+	if p.useAmqp {
 		msg := amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			Timestamp:    time.Now(),
@@ -51,14 +56,14 @@ func (p Publisher) Send(e ExternalEvent) error {
 			Body:         data,
 		}
 		return p.amqpChan.Publish(p.mqconf.Exchange, p.mqconf.RoutingKey, false, false, msg)
-	} else {
-		b := bytes.NewBufferString(string(data))
-		resp, err := p.apiClient.Post(p.apiconf.Url, "application/json", b)
-		if err != nil {
-			return err
-		}
-		resp.Body.Close()
 	}
+	// Otherwise, we will be sending the event to the REST API
+	b := bytes.NewBufferString(string(data))
+	resp, err := p.apiClient.Post(p.apiconf.URL, "application/json", b)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
 	return nil
 }
 
@@ -150,21 +155,24 @@ func InitAmqp(conf MqConf) (p Publisher, err error) {
 	if err != nil {
 		panic(err)
 	}
-	p.use_amqp = true
+	p.useAmqp = true
 	p.mqconf = conf
 	return
 }
 
-type ApiConf struct {
-	Url string // a fully qualified URL where events are posted
+// APIConf holds the configuration parameters to publish events to the REST API
+type APIConf struct {
+	URL string // a fully qualified URL where events are posted
 }
 
-func InitApi(conf ApiConf) (p Publisher, err error) {
-	if conf.Url == "" {
-		return p, fmt.Errorf("must set Url value in ApiConf")
+// InitAPI initializes a new Publisher that can be used to submit events to the
+// REST API
+func InitAPI(conf APIConf) (p Publisher, err error) {
+	if conf.URL == "" {
+		return p, fmt.Errorf("must set URL value in APIConf")
 	}
 	p.apiClient = &http.Client{}
-	p.use_amqp = false
+	p.useAmqp = false
 	p.apiconf = conf
 	return p, nil
 }
