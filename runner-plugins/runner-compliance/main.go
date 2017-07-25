@@ -103,8 +103,8 @@ func sendItem(item gozdef.ComplianceItem) (err error) {
 	ev.Tags = append(ev.Tags, "compliance")
 	ev.Info()
 	ev.Details = item
-	ac := gozdef.ApiConf{Url: conf.MozDef.URL}
-	pub, err := gozdef.InitApi(ac)
+	ac := gozdef.APIConf{URL: conf.MozDef.URL}
+	pub, err := gozdef.InitAPI(ac)
 	if err != nil {
 		return
 	}
@@ -123,18 +123,9 @@ func makeComplianceItem(cmd mig.Command) (items []gozdef.ComplianceItem, err err
 	ci.Check.Ref = cmd.Action.Threat.Ref
 	ci.Check.Description = cmd.Action.Name
 	ci.Link = fmt.Sprintf("%s/command?commandid=%.0f", conf.MIG.API, cmd.ID)
-	if cmd.Agent.Tags != nil {
-		operator := ""
-		if _, ok := cmd.Agent.Tags.(map[string]interface{})["operator"]; ok {
-			operator = cmd.Agent.Tags.(map[string]interface{})["operator"].(string)
-		}
-		team := getTeam(cmd.Agent, conf)
-		ci.Tags = struct {
-			Operator string `json:"operator"`
-			Team     string `json:"team"`
-		}{
-			Operator: operator,
-			Team:     team,
+	if len(cmd.Agent.Tags) != 0 {
+		if _, ok := cmd.Agent.Tags["operator"]; ok {
+			ci.Tags["operator"] = cmd.Agent.Tags["operator"]
 		}
 	}
 	for i, result := range cmd.Results {
