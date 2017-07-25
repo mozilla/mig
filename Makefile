@@ -105,8 +105,7 @@ GOLDFLAGS	:= -ldflags "$(MIGVERFLAGS) $(STRIPOPT)"
 GOCFLAGS	:=
 MKDIR		:= mkdir
 INSTALL		:= install
-SERVERTARGETS   := mig-scheduler mig-api mig-runner runner-compliance runner-scribe \
-		   worker-agent-intel
+SERVERTARGETS   := mig-scheduler mig-api mig-runner runner-compliance runner-scribe
 CLIENTTARGETS   := mig-cmd mig-console mig-action-generator mig-action-verifier \
 		   mig-agent-search
 AGENTTARGETS	:= mig-agent mig-loader
@@ -188,9 +187,6 @@ mig-agent-search: create-bindir
 
 worker-agent-verif: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-worker-agent-verif $(GOLDFLAGS) mig.ninja/mig/workers/mig-worker-agent-verif
-
-worker-agent-intel: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-worker-agent-intel $(GOLDFLAGS) mig.ninja/mig/workers/mig-worker-agent-intel
 
 runner-compliance: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-compliance $(GOLDFLAGS) mig.ninja/mig/runner-plugins/runner-compliance
@@ -383,22 +379,19 @@ else
 		-o ./mig-clients-$(BUILDREV)-$(FPMARCH).dmg tmpdmg
 endif
 
-deb-server: mig-scheduler mig-api mig-runner worker-agent-intel
+deb-server: mig-scheduler mig-api mig-runner
 	rm -rf tmp
 # add binaries
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-scheduler tmp/opt/mig/bin/mig-scheduler
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-api tmp/opt/mig/bin/mig-api
 	$(INSTALL) -D -m 0755 $(BINDIR)/mig-runner tmp/opt/mig/bin/mig-runner
-	$(INSTALL) -D -m 0755 $(BINDIR)/mig-worker-agent-intel tmp/opt/mig/bin/mig-worker-agent-intel
 	$(INSTALL) -D -m 0755 tools/list_new_agents.sh tmp/opt/mig/bin/list_new_agents.sh
 # add configuration templates
 	$(INSTALL) -D -m 0640 conf/scheduler.cfg.inc tmp/etc/mig/scheduler.cfg
 	$(INSTALL) -D -m 0640 conf/api.cfg.inc tmp/etc/mig/api.cfg
-	$(INSTALL) -D -m 0640 conf/agent-intel-worker.cfg.inc tmp/etc/mig/agent-intel-worker.cfg
 # add upstart configs
 	$(INSTALL) -D -m 0640 conf/upstart/mig-scheduler.conf tmp/etc/init/mig-scheduler.conf
 	$(INSTALL) -D -m 0640 conf/upstart/mig-api.conf tmp/etc/init/mig-api.conf
-	$(INSTALL) -D -m 0640 conf/upstart/mig-agent-intel-worker.conf tmp/etc/init/mig-agent-intel-worker.conf
 	$(MKDIR) -p tmp/var/cache/mig
 	fpm -C tmp -n mig-server --license GPL --vendor mozilla --description "Mozilla InvestiGator Server" \
 		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) -s dir -t deb .
@@ -409,7 +402,6 @@ install-server: $(SERVERTARGETS)
 	$(INSTALL) -m 0755 $(BINDIR)/mig-scheduler $(PREFIX)/bin/mig-scheduler
 	$(INSTALL) -m 0755 $(BINDIR)/mig-api $(PREFIX)/bin/mig-api
 	$(INSTALL) -m 0755 $(BINDIR)/mig-runner $(PREFIX)/bin/mig-runner
-	$(INSTALL) -m 0755 $(BINDIR)/mig-worker-agent-intel $(PREFIX)/bin/mig-worker-agent-intel
 
 install-client: $(CLIENTTARGETS)
 	$(INSTALL) -m 0755 $(BINDIR)/mig $(PREFIX)/bin/mig
