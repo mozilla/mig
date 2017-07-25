@@ -3,11 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
-package main
 
-// This plugin is intended to process the results of scribe actions and
-// dispatch those results to MozDef. The plugin should be used with
-// mig-runner and not run directly.
+// runner-scribe is a mig-runner plugin that processes results coming from automated
+// actions and forwards the results as vulnerability events to MozDef
+package main
 
 import (
 	"encoding/json"
@@ -15,10 +14,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"os/exec"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/jvehent/gozdef"
 	"gopkg.in/gcfg.v1"
@@ -26,26 +22,20 @@ import (
 	scribemod "mig.ninja/mig/modules/scribe"
 )
 
-// Configuration structure for runner-scribe
+// config represents the configuration used by runner-scribe, and is read in on
+// initialization
 //
 // URL and Source are mandatory settings
-//
-// Note that if the returned scribe event contains a "category" tag, this
-// tag will be appended to the source identifier like "<source>-<tag>"
-type Config struct {
+type config struct {
 	MozDef struct {
 		URL    string // URL to post events to MozDef
 		Source string // Source identifier for vulnerability events
-	}
-	Vmintgr struct {
-		// Location of vmintgr wrapper executable
-		Bin string
 	}
 }
 
 const configPath string = "/etc/mig/runner-scribe.conf"
 
-var conf Config
+var conf config
 
 func main() {
 	defer func() {
@@ -73,24 +63,30 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	var items []gozdef.VulnEvent
 	for _, x := range results.Commands {
-		items, err := makeVulnerability(x)
+		// Process the incoming commands, under normal circumstances we will have one
+		// returned command per host. However, this function can handle cases where
+		// more than one command applies to a given host. If data for a host already
+		// exists in items, makeVulnerability should attempt to append this data to
+		// the host rather than add a new item.
+		var err error
+		items, err = makeVulnerability(items, x)
 		if err != nil {
 			panic(err)
 		}
-		for _, y := range items {
-			err = sendVulnerability(y)
-			if err != nil {
-				panic(err)
-			}
+	}
+	for _, y := range items {
+		err = sendVulnerability(y)
+		if err != nil {
+			panic(err)
 		}
 	}
 }
 
-// Send a vulnerability event to MozDef
 func sendVulnerability(item gozdef.VulnEvent) (err error) {
-	ac := gozdef.ApiConf{Url: conf.MozDef.URL}
-	pub, err := gozdef.InitApi(ac)
+	ac := gozdef.APIConf{URL: conf.MozDef.URL}
+	pub, err := gozdef.InitAPI(ac)
 	if err != nil {
 		return
 	}
@@ -98,34 +94,56 @@ func sendVulnerability(item gozdef.VulnEvent) (err error) {
 	return
 }
 
-// Convert a MIG command result into a MozDef compliance event
-func makeVulnerability(cmd mig.Command) (items []gozdef.VulnEvent, err error) {
-	var ve gozdef.VulnEvent
-	ve.UTCTimestamp = time.Now().UTC()
-	ve.Description = "MIG vulnerability identification"
-	ve.OS = cmd.Agent.Env.OS
-	ve.Asset.AssetID = int(cmd.Agent.ID)
-	ve.Asset.Hostname = cmd.Agent.Name
+func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command) (items []gozdef.VulnEvent, err error) {
+	var (
+		itemptr                       *gozdef.VulnEvent
+		assethostname, assetipaddress string
+		insertNew                     bool
+	)
+	items = initems
+
+	assethostname = cmd.Agent.Name
 	for _, x := range cmd.Agent.Env.Addresses {
 		if !strings.Contains(x, ".") {
 			continue
 		}
-		ipt, _, errt := net.ParseCIDR(x)
-		if errt != nil {
+		ipt, _, err := net.ParseCIDR(x)
+		if err != nil {
 			continue
 		}
-		ve.Asset.IPv4 = ipt.String()
+		assetipaddress = ipt.String()
 		break
 	}
-	if cmd.Agent.Tags != nil {
-		operator := ""
-		if _, ok := cmd.Agent.Tags.(map[string]interface{})["operator"]; ok {
-			operator = cmd.Agent.Tags.(map[string]interface{})["operator"].(string)
+
+	// First, see if we can locate a preexisting item for this asset
+	for i := range items {
+		if items[i].Asset.Hostname == assethostname &&
+			items[i].Asset.IPAddress == assetipaddress {
+			itemptr = &items[i]
+			break
 		}
-		team := getTeam(cmd.Agent, conf)
-		ve.Asset.Operator = operator
-		ve.Asset.Autogroup = team
 	}
+	if itemptr == nil {
+		// Initialize a new event we will insert later
+		newevent, err := gozdef.NewVulnEvent()
+		if err != nil {
+			return items, err
+		}
+		newevent.Description = "MIG vulnerability identification"
+		newevent.Asset.Hostname = assethostname
+		newevent.Asset.IPAddress = assetipaddress
+		newevent.Asset.OS = cmd.Agent.Env.OS
+		if len(cmd.Agent.Tags) != 0 {
+			if _, ok := cmd.Agent.Tags["operator"]; ok {
+				newevent.Asset.Owner.Operator = cmd.Agent.Tags["operator"]
+			}
+		}
+		// Always set credentialed checks here
+		newevent.CredentialedChecks = true
+		insertNew = true
+		itemptr = &newevent
+	}
+
 	for _, result := range cmd.Results {
 		var el scribemod.ScribeElements
 		err = result.GetElements(&el)
@@ -133,76 +151,89 @@ func makeVulnerability(cmd mig.Command) (items []gozdef.VulnEvent, err error) {
 			return items, err
 		}
 		for _, x := range el.Results {
-			ve.SourceName = conf.MozDef.Source
+			itemptr.SourceName = conf.MozDef.Source
 			if !x.MasterResult {
+				// Result was false (vulnerability did not match)
 				continue
 			}
-			ve.Vuln.Title = x.TestID
-			ve.Vuln.Description = x.Description
-			ve.Vuln.Status = "open"
-			ve.Vuln.VulnID = x.TestID
+			newve := gozdef.VulnVuln{}
+			newve.Name = x.TestName
 			for _, y := range x.Tags {
-				if y.Key == "cve" {
-					ve.Vuln.CVE = strings.Split(y.Value, ",")
-				} else if y.Key == "cvss" {
-					var cvss float64
-					cvss, err = strconv.ParseFloat(y.Value, 64)
-					if err != nil {
-						continue
-					}
-					ve.Vuln.CVSS = cvss
-				} else if y.Key == "category" {
-					ve.SourceName += "-" + y.Value
+				if y.Key == "severity" {
+					newve.Risk = y.Value
+				} else if y.Key == "link" {
+					newve.Link = y.Value
 				}
 			}
-			// Set the impact label based on the CVSS score
-			if ve.Vuln.CVSS >= 9.0 {
-				ve.Vuln.ImpactLabel = "maximum"
-			} else if ve.Vuln.CVSS >= 7.0 {
-				ve.Vuln.ImpactLabel = "high"
-			} else {
-				ve.Vuln.ImpactLabel = "mediumlow"
+			// If no risk value is set on the vulnerability, we just treat this as
+			// informational and ignore it. This will apply to things like the result
+			// from platform dependency checks associated with real vulnerability checks.
+			if newve.Risk == "" {
+				continue
+			}
+			newve.Risk = normalizeRisk(newve.Risk)
+			newve.LikelihoodIndicator = likelihoodFromRisk(newve.Risk)
+			if newve.CVSS == "" {
+				newve.CVSS = cvssFromRisk(newve.Risk)
 			}
 			// Use the identifier for each true subresult in the
 			// test as a proof section
 			for _, y := range x.Results {
 				if y.Result {
-					ve.Vuln.Proof = "Object " + y.Identifier + " is vulnerable"
-					items = append(items, ve)
+					newve.Packages = append(newve.Packages, y.Identifier)
 				}
 			}
+			itemptr.Vuln = append(itemptr.Vuln, newve)
 		}
+	}
+	if insertNew {
+		items = append(items, *itemptr)
 	}
 	return
 }
 
-type VmintgrOutput struct {
-	Host string `json:"host"`
-	Ip   string `json:"ip"`
-	Team string `json:"team"`
+// cvssFromRisk returns a synthesized CVSS score as a string given a risk label
+func cvssFromRisk(risk string) string {
+	switch risk {
+	case "critical":
+		return "10.0"
+	case "high":
+		return "8.0"
+	case "medium":
+		return "5.0"
+	case "low":
+		return "2.5"
+	}
+	return "0.0"
 }
 
-func getTeam(agt mig.Agent, conf Config) string {
-	var vmout VmintgrOutput
-	if conf.Vmintgr.Bin == "" {
-		return ""
+// likelihoodFromRisk returns a likelihood indicator value given a risk label
+func likelihoodFromRisk(risk string) string {
+	switch risk {
+	case "high":
+		return "high"
+	case "medium":
+		return "medium"
+	case "low":
+		return "low"
+	case "critical":
+		return "maximum"
 	}
-	for i := 0; i <= len(agt.Env.Addresses); i++ {
-		query := "host:" + agt.Name
-		if i > 0 {
-			query = "ip:" + agt.Env.Addresses[i-1]
-		}
-		out, err := exec.Command(conf.Vmintgr.Bin, query).Output()
-		if err != nil {
-			return ""
-		}
-		err = json.Unmarshal(out, &vmout)
-		if err != nil {
-			return ""
-		}
-		if vmout.Team != "default" {
-			return vmout.Team
-		}
+	return "unknown"
+}
+
+// normalizeRisk converts known risk labels into a standardized form, if we can't identify
+// the value we just return it as is
+func normalizeRisk(in string) string {
+	switch strings.ToLower(in) {
+	case "high":
+		return "high"
+	case "medium":
+		return "medium"
+	case "low":
+		return "low"
+	case "critical":
+		return "critical"
 	}
-	return "default"
+	return in
 }
