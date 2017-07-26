@@ -21,9 +21,10 @@ type VulnEvent struct {
 	CredentialedChecks bool       `json:"credentialed_checks"`
 	Vuln               []VulnVuln `json:"vulnerabilities"`
 	ExemptVuln         []VulnVuln `json:"exempt_vulnerabilities"`
+	Zone               string     `json:"zone"`
 
 	Asset struct {
-		IPAddress string `json:"ipv4address"`
+		IPAddress string `json:"ipaddress"`
 		Hostname  string `json:"hostname"`
 		OS        string `json:"os"`
 		Owner     struct {
