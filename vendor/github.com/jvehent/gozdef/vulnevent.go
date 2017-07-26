@@ -21,6 +21,7 @@ type VulnEvent struct {
 	CredentialedChecks bool       `json:"credentialed_checks"`
 	Vuln               []VulnVuln `json:"vulnerabilities"`
 	ExemptVuln         []VulnVuln `json:"exempt_vulnerabilities"`
+	Version            int        `json:"version"`
 	Zone               string     `json:"zone"`
 
 	Asset struct {
@@ -51,6 +52,7 @@ type VulnVuln struct {
 // to MozDef
 func NewVulnEvent() (e VulnEvent, err error) {
 	e.UTCTimestamp = time.Now().UTC()
+	e.Version = 2
 	return
 }
 
