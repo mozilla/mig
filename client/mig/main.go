@@ -288,7 +288,10 @@ func main() {
 		panic(err)
 	}
 	cli, err = client.NewClient(conf, "cmd-"+mig.Version)
-	if err != nil {
+	// We only treat this error as fatal if we are not in printAndExit mode; an error
+	// being returned from NewClient indicates the private key may not have been accessible,
+	// but it is not required to print the action.
+	if err != nil && !printAndExit {
 		panic(err)
 	}
 	if verbose {
