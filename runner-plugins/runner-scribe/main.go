@@ -130,6 +130,7 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command) (items []goz
 			return items, err
 		}
 		newevent.Description = "MIG vulnerability identification"
+		newevent.Zone = "mig"
 		newevent.Asset.Hostname = assethostname
 		newevent.Asset.IPAddress = assetipaddress
 		newevent.Asset.OS = cmd.Agent.Env.OS
