@@ -139,6 +139,17 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command) (items []goz
 				newevent.Asset.Owner.Operator = cmd.Agent.Tags["operator"]
 			}
 		}
+		// Apply a v2bkey to the event. This should be set using integration
+		// with service-map, but here for now we just apply it based on the operator
+		// and team values which may be present in the event.
+		if newevent.Asset.Owner.V2Bkey == "" {
+			if newevent.Asset.Owner.Operator != "" {
+				newevent.Asset.Owner.V2Bkey = newevent.Asset.Owner.Operator
+			}
+			if newevent.Asset.Owner.Team != "" {
+				newevent.Asset.Owner.V2Bkey += "-" + newevent.Asset.Owner.Team
+			}
+		}
 		// Always set credentialed checks here
 		newevent.CredentialedChecks = true
 		insertNew = true
