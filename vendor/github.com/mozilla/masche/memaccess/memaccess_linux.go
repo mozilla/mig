@@ -8,8 +8,8 @@ import (
 	"os"
 )
 
-func nextReadableMemoryRegion(p process.Process, address uintptr) (region MemoryRegion, harderror error,
-	softerrors []error) {
+func nextReadableMemoryRegion(p process.Process, address uintptr) (region MemoryRegion, softerrors []error,
+	harderror error) {
 
 	mapsFile, harderror := os.Open(common.MapsFilePathFromPid(p.Pid()))
 	if harderror != nil {
@@ -25,12 +25,12 @@ func nextReadableMemoryRegion(p process.Process, address uintptr) (region Memory
 		items := common.SplitMapsFileEntry(line)
 
 		if len(items) != 6 {
-			return region, fmt.Errorf("Unrecognised maps line: %s", line), softerrors
+			return region, softerrors, fmt.Errorf("Unrecognised maps line: %s", line)
 		}
 
 		start, end, err := common.ParseMapsFileMemoryLimits(items[0])
 		if err != nil {
-			return region, err, softerrors
+			return region, softerrors, err
 		}
 
 		if end <= address {
@@ -48,7 +48,7 @@ func nextReadableMemoryRegion(p process.Process, address uintptr) (region Memory
 			// If we were already reading a region this will just finish it. We only report the softerror when we
 			// were actually trying to read it.
 			if region.Address != 0 {
-				return region, nil, softerrors
+				return region, softerrors, nil
 			}
 
 			softerrors = append(softerrors, fmt.Errorf("Unreadable memory %s", items[0]))
@@ -70,40 +70,40 @@ func nextReadableMemoryRegion(p process.Process, address uintptr) (region Memory
 		}
 
 		// This map is outside the current region, so we are ready
-		return region, nil, softerrors
+		return region, softerrors, nil
 	}
 
 	// No region left
 	if err := scanner.Err(); err != nil {
-		return NoRegionAvailable, err, softerrors
+		return NoRegionAvailable, softerrors, err
 	}
 
 	// The last map was a valid region, so it was not closed by an invalid/non-contiguous one and we have to return it
 	if region.Address > 0 {
-		return region, harderror, softerrors
+		return region, softerrors, harderror
 	}
 
-	return NoRegionAvailable, nil, softerrors
+	return NoRegionAvailable, softerrors, nil
 }
 
-func copyMemory(p process.Process, address uintptr, buffer []byte) (harderror error, softerrors []error) {
+func copyMemory(p process.Process, address uintptr, buffer []byte) (softerrors []error, harderror error) {
 	mem, harderror := os.Open(common.MemFilePathFromPid(p.Pid()))
 
 	if harderror != nil {
 		harderror := fmt.Errorf("Error while reading %d bytes starting at %x: %s", len(buffer), address, harderror)
-		return harderror, softerrors
+		return softerrors, harderror
 	}
 	defer mem.Close()
 
-	bytes_read, harderror := mem.ReadAt(buffer, int64(address))
+	bytesRead, harderror := mem.ReadAt(buffer, int64(address))
 	if harderror != nil {
 		harderror := fmt.Errorf("Error while reading %d bytes starting at %x: %s", len(buffer), address, harderror)
-		return harderror, softerrors
+		return softerrors, harderror
 	}
 
-	if bytes_read != len(buffer) {
-		return fmt.Errorf("Could not read the entire buffer"), softerrors
+	if bytesRead != len(buffer) {
+		return softerrors, fmt.Errorf("Could not read the entire buffer")
 	}
 
-	return nil, softerrors
+	return softerrors, nil
 }

@@ -20,7 +20,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ps, hard, soft := process.OpenByName(r)
+	ps, soft, hard := process.OpenByName(r)
 	if hard != nil {
 		log.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func main() {
 	}
 
 	for _, p := range ps {
-		name, hard, soft := p.Name()
+		name, soft, hard := p.Name()
 		if hard != nil {
 			log.Fatal(err)
 		}

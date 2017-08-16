@@ -4,10 +4,11 @@
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/4j2f9oep8nnfrmov/branch/master?svg=true)](https://ci.appveyor.com/project/oschwald/maxminddb-golang/branch/master)
 [![GoDoc](https://godoc.org/github.com/oschwald/maxminddb-golang?status.png)](https://godoc.org/github.com/oschwald/maxminddb-golang)
 
-
-This is a Go reader for the MaxMind DB format. This can be used to read
-[GeoLite2](http://dev.maxmind.com/geoip/geoip2/geolite2/) and
-[GeoIP2](http://www.maxmind.com/en/geolocation_landing) databases.
+This is a Go reader for the MaxMind DB format. Although this can be used to
+read [GeoLite2](http://dev.maxmind.com/geoip/geoip2/geolite2/) and
+[GeoIP2](https://www.maxmind.com/en/geoip2-databases) databases,
+[geoip2](https://github.com/oschwald/geoip2-golang) provides a higher-level
+API for doing so.
 
 This is not an official MaxMind API.
 

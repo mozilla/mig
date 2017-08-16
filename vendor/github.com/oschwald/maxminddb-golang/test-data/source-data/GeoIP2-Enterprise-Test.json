@@ -1,0 +1,96 @@
+[
+   {
+      "::74.209.24.0/116" : {
+         "city" : {
+            "confidence" : "11",
+            "geoname_id" : "5112335",
+            "names" : {
+               "en" : "Chatham"
+            }
+         },
+         "continent" : {
+            "code" : "NA",
+            "geoname_id" : "6255149",
+            "names" : {
+               "de" : "Nordamerika",
+               "en" : "North America",
+               "es" : "Norteamérica",
+               "fr" : "Amérique du Nord",
+               "ja" : "北アメリカ",
+               "pt-BR" : "América do Norte",
+               "ru" : "Северная Америка",
+               "zh-CN" : "北美洲"
+            }
+         },
+         "country" : {
+            "confidence" : "99",
+            "geoname_id" : "6252001",
+            "iso_code" : "US",
+            "names" : {
+               "de" : "USA",
+               "en" : "United States",
+               "es" : "Estados Unidos",
+               "fr" : "États-Unis",
+               "ja" : "アメリカ合衆国",
+               "pt-BR" : "Estados Unidos",
+               "ru" : "США",
+               "zh-CN" : "美国"
+            }
+         },
+         "location" : {
+            "accuracy_radius" : "27",
+            "latitude" : "42.347800",
+            "longitude" : "-73.554900",
+            "metro_code" : "532",
+            "time_zone" : "America/New_York"
+         },
+         "postal" : {
+            "code" : "12037",
+            "confidence" : "11"
+         },
+         "registered_country" : {
+            "geoname_id" : "6252001",
+            "iso_code" : "US",
+            "names" : {
+               "de" : "USA",
+               "en" : "United States",
+               "es" : "Estados Unidos",
+               "fr" : "États-Unis",
+               "ja" : "アメリカ合衆国",
+               "pt-BR" : "Estados Unidos",
+               "ru" : "США",
+               "zh-CN" : "美国"
+            }
+         },
+         "subdivisions" : [
+            {
+               "confidence" : "93",
+               "geoname_id" : "5128638",
+               "iso_code" : "NY",
+               "names" : {
+                  "de" : "New York",
+                  "en" : "New York",
+                  "es" : "Nueva York",
+                  "fr" : "New York",
+                  "ja" : "ニューヨーク州",
+                  "pt-BR" : "Nova Iorque",
+                  "ru" : "Нью-Йорк",
+                  "zh-CN" : "纽约州"
+               }
+            }
+         ],
+         "traits" : {
+            "autonomous_system_number" : "14671",
+            "autonomous_system_organization" : "FairPoint Communications",
+            "connection_type" : "Cable/DSL",
+            "domain" : "frpt.net",
+            "is_anonymous_proxy" : true,
+            "is_legitimate_proxy" : true,
+            "is_satellite_provider" : true,
+            "isp" : "Fairpoint Communications",
+            "organization" : "Fairpoint Communications",
+            "user_type" : "residential"
+         }
+      }
+   }
+]

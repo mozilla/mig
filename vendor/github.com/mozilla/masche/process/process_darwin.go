@@ -13,21 +13,21 @@ import (
 	"unsafe"
 )
 
-func (p process) Name() (name string, harderror error, softerrors []error) {
+func (p process) Name() (name string, softerrors []error, harderror error) {
 	cname := C.malloc(C.PROC_PIDPATHINFO_MAXSIZE)
 	defer C.free(cname)
 
 	_, err := C.proc_pidpath(C.int(p.pid), cname, C.PROC_PIDPATHINFO_MAXSIZE)
 	if err != nil {
 		harderr := fmt.Errorf("Error while reading name of process %d: %v", p.pid, err)
-		return "", harderr, nil
+		return "", nil, harderr
 	}
 
 	name, harderror = filepath.EvalSymlinks(C.GoString((*C.char)(cname)))
 	return
 }
 
-func getAllPids() (pids []uint, harderror error, softerrors []error) {
+func getAllPids() (pids []uint, softerrors []error, harderror error) {
 	var pid C.pid_t
 	pidSize := unsafe.Sizeof(pid)
 	cpidsSize := pidSize * 1024 * 2
@@ -36,7 +36,7 @@ func getAllPids() (pids []uint, harderror error, softerrors []error) {
 
 	bytesUsed, err := C.proc_listpids(C.PROC_ALL_PIDS, 0, cpids, C.int(cpidsSize))
 	if err != nil {
-		return nil, err, nil
+		return nil, nil, err
 	}
 
 	numberOfPids := uintptr(bytesUsed) / pidSize
@@ -47,7 +47,7 @@ func getAllPids() (pids []uint, harderror error, softerrors []error) {
 			Len:  int(numberOfPids),
 			Cap:  int(numberOfPids)}))
 
-	for i, _ := range cpidsSlice {
+	for i := range cpidsSlice {
 		if cpidsSlice[i] == 0 {
 			continue
 		}

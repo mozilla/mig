@@ -1,9 +1,6 @@
 package maxminddb
 
-import (
-	"fmt"
-	"reflect"
-)
+import "reflect"
 
 type verifier struct {
 	reader *Reader
@@ -106,7 +103,7 @@ func (v *verifier) verifySearchTree() (map[uint]bool, error) {
 		if err != nil {
 			return nil, err
 		}
-		offsets[offset] = true
+		offsets[uint(offset)] = true
 	}
 	if err := it.Err(); err != nil {
 		return nil, err
@@ -121,7 +118,7 @@ func (v *verifier) verifyDataSectionSeparator() error {
 
 	for _, b := range separator {
 		if b != 0 {
-			return fmt.Errorf("unexpected byte in data separator: %v", separator)
+			return newInvalidDatabaseError("unexpected byte in data separator: %v", separator)
 		}
 	}
 	return nil
@@ -137,12 +134,12 @@ func (v *verifier) verifyDataSection(offsets map[uint]bool) error {
 	for offset < bufferLen {
 		var data interface{}
 		rv := reflect.ValueOf(&data)
-		newOffset, err := decoder.decode(offset, rv)
+		newOffset, err := decoder.decode(offset, rv, 0)
 		if err != nil {
-			return fmt.Errorf("received decoding error (%v) at offset of %v", err, offset)
+			return newInvalidDatabaseError("received decoding error (%v) at offset of %v", err, offset)
 		}
 		if newOffset <= offset {
-			return fmt.Errorf("data section offset unexpectedly went from %v to %v", offset, newOffset)
+			return newInvalidDatabaseError("data section offset unexpectedly went from %v to %v", offset, newOffset)
 		}
 
 		pointer := offset
@@ -150,14 +147,14 @@ func (v *verifier) verifyDataSection(offsets map[uint]bool) error {
 		if _, ok := offsets[pointer]; ok {
 			delete(offsets, pointer)
 		} else {
-			return fmt.Errorf("found data (%v) at %v that the search tree does not point to", data, pointer)
+			return newInvalidDatabaseError("found data (%v) at %v that the search tree does not point to", data, pointer)
 		}
 
 		offset = newOffset
 	}
 
 	if offset != bufferLen {
-		return fmt.Errorf(
+		return newInvalidDatabaseError(
 			"unexpected data at the end of the data section (last offset: %v, end: %v)",
 			offset,
 			bufferLen,
@@ -165,7 +162,7 @@ func (v *verifier) verifyDataSection(offsets map[uint]bool) error {
 	}
 
 	if len(offsets) != 0 {
-		return fmt.Errorf(
+		return newInvalidDatabaseError(
 			"found %v pointers (of %v) in the search tree that we did not see in the data section",
 			len(offsets),
 			pointerCount,
@@ -179,7 +176,7 @@ func testError(
 	expected interface{},
 	actual interface{},
 ) error {
-	return fmt.Errorf(
+	return newInvalidDatabaseError(
 		"%v - Expected: %v Actual: %v",
 		field,
 		expected,

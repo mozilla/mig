@@ -15,7 +15,7 @@ import (
 	"github.com/mozilla/masche/cresponse"
 )
 
-func (p process) Name() (name string, harderror error, softerrors []error) {
+func (p process) Name() (name string, softerrors []error, harderror error) {
 	var cname uintptr
 	r := C.GetProcessName(p.hndl, (**C.char)(unsafe.Pointer(&cname)))
 

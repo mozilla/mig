@@ -15,7 +15,7 @@ func TestOpenFromPid(t *testing.T) {
 	defer cmd.Process.Kill()
 
 	pid := uint(cmd.Process.Pid)
-	proc, err, softerrors := OpenFromPid(pid)
+	proc, softerrors, err := OpenFromPid(pid)
 	defer proc.Close()
 	test.PrintSoftErrors(softerrors)
 	if err != nil {
@@ -31,14 +31,14 @@ func TestProcessName(t *testing.T) {
 	defer cmd.Process.Kill()
 
 	pid := uint(cmd.Process.Pid)
-	proc, err, softerrors := OpenFromPid(pid)
+	proc, softerrors, err := OpenFromPid(pid)
 	defer proc.Close()
 	test.PrintSoftErrors(softerrors)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	name, err, softerrors := proc.Name()
+	name, softerrors, err := proc.Name()
 	test.PrintSoftErrors(softerrors)
 	if err != nil {
 		t.Fatal(err)
@@ -57,7 +57,7 @@ func TestOpenByName(t *testing.T) {
 	defer cmd.Process.Kill()
 
 	r := regexp.MustCompile("test[/\\\\]tools[/\\\\]test")
-	procs, err, softerrors := OpenByName(r)
+	procs, softerrors, err := OpenByName(r)
 	defer CloseAll(procs)
 	test.PrintSoftErrors(softerrors)
 	if len(procs) == 0 {
@@ -65,7 +65,7 @@ func TestOpenByName(t *testing.T) {
 	}
 
 	for _, proc := range procs {
-		name, err, softerrors := proc.Name()
+		name, softerrors, err := proc.Name()
 		test.PrintSoftErrors(softerrors)
 		if err != nil {
 			t.Fatal(err)

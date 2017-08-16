@@ -36,7 +36,7 @@ var (
 	fileneedle = flag.String("fileneedle", "example.in", "Filename that contains hex-encoded needle (spaces are ignored)")
 )
 
-func logErrors(harderror error, softerrors []error) {
+func logErrors(softerrors []error, harderror error) {
 	if harderror != nil {
 		log.Fatal(harderror)
 	}
@@ -48,8 +48,8 @@ func logErrors(harderror error, softerrors []error) {
 func main() {
 	flag.Parse()
 
-	proc, harderror, softerrors := process.OpenFromPid(uint(*pid))
-	logErrors(harderror, softerrors)
+	proc, softerrors, harderror := process.OpenFromPid(uint(*pid))
+	logErrors(softerrors, harderror)
 
 	switch *action {
 
@@ -65,15 +65,15 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		found, address, harderror, softerrors := memsearch.FindBytesSequence(proc, uintptr(*addr), data)
-		logErrors(harderror, softerrors)
+		found, address, softerrors, harderror := memsearch.FindBytesSequence(proc, uintptr(*addr), data)
+		logErrors(softerrors, harderror)
 		if found {
 			log.Printf("Found in address: %x\n", address)
 		}
 
 	case "search":
-		found, address, harderror, softerrors := memsearch.FindBytesSequence(proc, uintptr(*addr), []byte(*needle))
-		logErrors(harderror, softerrors)
+		found, address, softerrors, harderror := memsearch.FindBytesSequence(proc, uintptr(*addr), []byte(*needle))
+		logErrors(softerrors, harderror)
 		if found {
 			log.Printf("Found in address: %x\n", address)
 		}
@@ -84,16 +84,16 @@ func main() {
 			log.Fatal(err)
 		}
 
-		found, address, harderror, softerrors := memsearch.FindRegexpMatch(proc, uintptr(*addr), r)
-		logErrors(harderror, softerrors)
+		found, address, softerrors, harderror := memsearch.FindRegexpMatch(proc, uintptr(*addr), r)
+		logErrors(softerrors, harderror)
 		if found {
 			log.Printf("Found in address: %x\n", address)
 		}
 
 	case "print":
 		buf := make([]byte, *size)
-		harderror, softerrors = memaccess.CopyMemory(proc, uintptr(*addr), buf)
-		logErrors(harderror, softerrors)
+		softerrors, harderror = memaccess.CopyMemory(proc, uintptr(*addr), buf)
+		logErrors(softerrors, harderror)
 		log.Println(string(buf))
 
 	default:

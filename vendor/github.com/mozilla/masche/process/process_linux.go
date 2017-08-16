@@ -18,7 +18,7 @@ func (p proc) Pid() uint {
 	return uint(p)
 }
 
-func (p proc) Name() (name string, harderror error, softerrors []error) {
+func (p proc) Name() (name string, softerrors []error, harderror error) {
 	exePath := filepath.Join("/proc", fmt.Sprintf("%d", p.Pid()), "exe")
 	name, err := filepath.EvalSymlinks(exePath)
 
@@ -30,13 +30,13 @@ func (p proc) Name() (name string, harderror error, softerrors []error) {
 		statusPath := filepath.Join("/proc", fmt.Sprintf("%d", p.Pid()), "status")
 		statusFile, err := os.Open(statusPath)
 		if err != nil {
-			return name, err, nil
+			return name, nil, err
 		}
 
 		r := bufio.NewReader(statusFile)
 		for line, _, err := r.ReadLine(); err != io.EOF; line, _, err = r.ReadLine() {
 			if err != nil {
-				return name, err, nil
+				return name, nil, err
 			}
 
 			namePrefix := "Name:"
@@ -48,13 +48,13 @@ func (p proc) Name() (name string, harderror error, softerrors []error) {
 			}
 		}
 
-		return name, fmt.Errorf("No name found for pid %v", p.Pid()), nil
+		return name, nil, fmt.Errorf("No name found for pid %v", p.Pid())
 	}
 
-	return name, err, nil
+	return name, nil, err
 }
 
-func (p proc) Close() (harderror error, softerrors []error) {
+func (p proc) Close() (softerrors []error, harderror error) {
 	return nil, nil
 }
 
@@ -62,10 +62,10 @@ func (p proc) Handle() uintptr {
 	return uintptr(p)
 }
 
-func getAllPids() (pids []uint, harderror error, softerrors []error) {
+func getAllPids() (pids []uint, softerrors []error, harderror error) {
 	files, err := ioutil.ReadDir("/proc/")
 	if err != nil {
-		return nil, err, nil
+		return nil, nil, err
 	}
 
 	pids = make([]uint, 0)
@@ -81,8 +81,8 @@ func getAllPids() (pids []uint, harderror error, softerrors []error) {
 	return pids, nil, nil
 }
 
-func openFromPid(pid uint) (p Process, harderror error, softerrors []error) {
-	// Check if we have premissions to read the process memory
+func openFromPid(pid uint) (p Process, softerrors []error, harderror error) {
+	// Check if we have permissions to read the process memory
 	memPath := common.MemFilePathFromPid(pid)
 	memFile, err := os.Open(memPath)
 	if err != nil {

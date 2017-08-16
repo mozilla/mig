@@ -4,11 +4,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/streadway/amqp"
 	"io"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/streadway/amqp"
 )
 
 type tlsServer struct {
@@ -83,7 +84,7 @@ func TestTLSHandshake(t *testing.T) {
 	cert, _ := tls.X509KeyPair([]byte(clientCert), []byte(clientKey))
 	cfg.Certificates = append(cfg.Certificates, cert)
 
-	_, err := amqp.DialTLS(srv.URL, cfg)
+	c, err := amqp.DialTLS(srv.URL, cfg)
 
 	select {
 	case <-time.After(10 * time.Millisecond):
@@ -92,6 +93,10 @@ func TestTLSHandshake(t *testing.T) {
 		if string(header) != "AMQP" {
 			t.Fatalf("expected to handshake a TLS connection, got err: %v", err)
 		}
+	}
+
+	if st := c.ConnectionState(); !st.HandshakeComplete {
+		t.Errorf("TLS handshake failed, TLS connection state: %+v", st)
 	}
 }
 

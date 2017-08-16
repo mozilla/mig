@@ -11,12 +11,12 @@ import (
 	"fmt"
 )
 
-// A scribe document. Contains all tests and other information used to execute
-// the document.
+// Document describes a scribe document; a document contains all tests and other
+// infomration used to execute a policy check
 type Document struct {
-	Variables []Variable `json:"variables,omitempty"`
-	Objects   []Object   `json:"objects,omitempty"`
-	Tests     []Test     `json:"tests,omitempty"`
+	Variables []Variable `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Objects   []Object   `json:"objects,omitempty" yaml:"objects,omitempty"`
+	Tests     []Test     `json:"tests,omitempty" yaml:"tests,omitempty"`
 }
 
 // Validate a scribe document for consistency. This identifies any errors in
@@ -38,7 +38,8 @@ func (d *Document) Validate() error {
 	return nil
 }
 
-// Return the test IDs of all tests present in a document.
+// GetTestIdentifiers returns the test identifiers for all tests present in
+// the document.
 func (d *Document) GetTestIdentifiers() []string {
 	ret := make([]string, 0)
 	for _, x := range d.Tests {
@@ -49,7 +50,7 @@ func (d *Document) GetTestIdentifiers() []string {
 
 func (d *Document) prepareObjects() error {
 	// Mark any chain objects; these will be skipped during preparation
-	// as they are dependant on evaluation of the root object. Chain
+	// as they are dependent on evaluation of the root object. Chain
 	// objects are objects that contain chain variables; that is they
 	// cannot be evaluated as they depend on information being passed
 	// from the previous object in the chain.
@@ -98,7 +99,7 @@ func (d *Document) runTests() error {
 }
 
 // Return a pointer to a test instance of the test whose identifier matches
-func (d *Document) getTest(testid string) (*Test, error) {
+func (d *Document) GetTest(testid string) (*Test, error) {
 	for i := range d.Tests {
 		if d.Tests[i].TestID == testid {
 			return &d.Tests[i], nil

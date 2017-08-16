@@ -374,8 +374,8 @@
    },
    {
       "::16.0.0.0/104" : {
-         "$" : "Hewlett-Packard Company",
          "autonomous_system_number" : 71,
+         "autonomous_system_organization" : "Hewlett-Packard Company",
          "isp" : "Hewlett-Packard Company",
          "organization" : "Hewlett-Packard Company"
       }
