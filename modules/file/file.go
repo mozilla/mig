@@ -889,35 +889,34 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 	// verify that we have at least one search interested in the current directory
 	activesearches := 0
 	for label, search := range r.Parameters.Searches {
-		// check if a search needs to be activated by comparing
-		// the search paths with the current path. if one matches,
-		// then the search is activated.
+		// We need to determine if the search path we are in is in the scope of this
+		// search (is current) and also, if we should activate the search. Activating the
+		// search means files under the path will be examined. Even if we do not activate, we
+		// want to make sure the search is marked as current so we properly track depth
+		// changes.
+		//
+		searchInScope := false
+		// First, lets scan the search paths in this given search and compare it to determine
+		// if it's in scope.
 		for _, p := range search.Paths {
 			debugprint("comparing current path '%s' with candidate search '%s'\n", path, p)
 			if len(path) >= len(p) && p == path[:len(p)] {
-				search.activate()
-				search.markcurrent()
-				search.increasedepth()
-			} else {
-				search.unmarkcurrent()
+				searchInScope = true
+				break
 			}
 		}
-		// we're entering a new directory, increase the depth counter
-		// of active searches, and deactivate a search that is too deep
-		if search.isactive {
-			if search.currentdepth > uint64(search.Options.MaxDepth) {
-				debugprint("deactivating search '%s' because depth %d > %.0f\n", label, search.currentdepth, search.Options.MaxDepth)
-				search.deactivate()
-			} else {
+		if searchInScope {
+			// The search is in scope, so note the depth change and mark it current.
+			search.increasedepth()
+			search.markcurrent()
+
+			// Next, see if we can activate the search. For activation, we need to meet the maximum
+			// depth criteria and be under our match limit
+			if search.currentdepth <= uint64(search.Options.MaxDepth) &&
+				stats.Totalhits < search.Options.MatchLimit {
+				search.activate()
 				activesearches++
 			}
-		}
-		// if we reached the limit of matches we're allowed to return, deactivate this search
-		if stats.Totalhits >= search.Options.MatchLimit {
-			search.deactivate()
-			search.unmarkcurrent()
-			activesearches--
-			r.Parameters.Searches[label] = search
 		}
 		r.Parameters.Searches[label] = search
 	}
