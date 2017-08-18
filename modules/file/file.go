@@ -36,8 +36,8 @@ import (
 	"compress/gzip"
 )
 
-var debug bool = false
-var tryDecompress bool = false
+var debug = false
+var tryDecompress = false
 
 func debugprint(format string, a ...interface{}) {
 	if debug {
@@ -345,7 +345,7 @@ func parseSize(size string) (minsize, maxsize uint64, err error) {
 
 func parseMtime(mtime string) (minmtime, maxmtime time.Time, err error) {
 	var (
-		isDays bool   = false
+		isDays        = false
 		n      uint64 = 0
 	)
 	suffix := mtime[len(mtime)-1]
