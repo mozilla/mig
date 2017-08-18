@@ -1520,6 +1520,7 @@ func getHash(f fileEntry, hashType checkType) (hexhash string, err error) {
 	return
 }
 
+// SearchResults is the search result element for an invocation of the file module
 type SearchResults map[string]searchresult
 
 type searchresult []matchedfile
