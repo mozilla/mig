@@ -840,9 +840,8 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 		// loop over the content of the directory
 		for _, dirEntry := range dirContent {
 			entryAbsPath := path
-			// append path separator if missing & not a symlink
-			// (usefull for first path)
-			if entryAbsPath[len(entryAbsPath)-1] != os.PathSeparator && (dirEntry.Mode()&os.ModeSymlink != os.ModeSymlink) {
+			// append path separator if missing
+			if entryAbsPath[len(entryAbsPath)-1] != os.PathSeparator {
 				entryAbsPath += string(os.PathSeparator)
 			}
 			entryAbsPath += dirEntry.Name()
