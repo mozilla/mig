@@ -4,12 +4,11 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-/* The file module provides functions to scan a file system. It can look into files
-using regexes. It can search files by name. It can match hashes in md5, sha1,
-sha256, sha384, sha512, sha3_224, sha3_256, sha3_384 and sha3_512.
-The filesystem can be searched using patterns, as described in the Parameters
-documentation at http://mig.mozilla.org/doc/module_file.html .
-*/
+// Package file provides functions to scan a file system as an agent module.
+// It can look into files using regexes. It can search files by name. It can
+// match hashes in md5, sha1, sha256, sha384, sha512, sha3_224, sha3_256, sha3_384
+// and sha3_512.  The filesystem can be searched using patterns, as described in
+// the Parameters documentation at http://mig.mozilla.org/doc/module_file.html.
 package file /* import "mig.ninja/mig/modules/file" */
 
 import (
