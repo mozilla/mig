@@ -57,16 +57,18 @@ func init() {
 }
 
 type run struct {
-	Parameters Parameters
+	Parameters parameters
 	Results    modules.Result
 }
 
-type Parameters struct {
+// parameters describes the parameters the file module uses as input upon
+// invocation
+type parameters struct {
 	Searches map[string]search `json:"searches,omitempty"`
 }
 
-func newParameters() *Parameters {
-	var p Parameters
+func newParameters() *parameters {
+	var p parameters
 	p.Searches = make(map[string]search)
 	return &p
 }
