@@ -12,7 +12,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
+	"path"
+	"strconv"
 	"testing"
 	"time"
 
@@ -20,10 +21,54 @@ import (
 	"mig.ninja/mig/testutil"
 )
 
+// basedir is the base directory for the tests, initialized in createFiles
 var basedir string
 
+// subdirs contains the subdirectory structure that will be created to place files in,
+// initialized in createFiles
+var subdirs string
+
+// subdirEntries is joined in createFiles using os specific path separators to populate subdirs
+var subdirEntries = []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n"}
+
 func TestMain(m *testing.M) {
-	basedir = createFiles()
+	createFiles()
+
+	// For all of our test files, dynamically append checks to the test table that tests checksums and
+	// sizes
+	for _, x := range testFiles {
+		if x.link { // Skip symlinks
+			continue
+		}
+		params := []string{"size", "md5", "sha1", "sha2", "sha3"}
+		for _, y := range params {
+			np := testParams{}
+			switch y {
+			case "size":
+				np.size = append(np.size, strconv.Itoa(x.size))
+			case "md5":
+				np.md5 = append(np.md5, x.md5)
+			case "sha1":
+				np.sha1 = append(np.sha1, x.sha1)
+			case "sha2":
+				np.sha2 = append(np.sha2, x.sha2)
+			case "sha3":
+				np.sha3 = append(np.sha3, x.sha3)
+			}
+			np.description = fmt.Sprintf("generated %v test for %v", y, x.filename)
+			np.expectedfilesroot = append(np.expectedfilesroot, x.filename)
+			np.expectedfilessub = append(np.expectedfilessub, x.filename)
+			// See if this file is a destination for a symlink, if so we will also add the link
+			for _, z := range testFiles {
+				if z.linkdest == x.filename {
+					np.expectedfilesroot = append(np.expectedfilesroot, z.filename)
+					np.expectedfilessub = append(np.expectedfilessub, z.filename)
+				}
+			}
+			testData = append(testData, np)
+		}
+	}
+
 	r := m.Run()
 	err := os.RemoveAll(basedir)
 	if err != nil {
@@ -36,577 +81,29 @@ func TestRegistration(t *testing.T) {
 	testutil.CheckModuleRegistration(t, "file")
 }
 
-func TestNameSearch(t *testing.T) {
-	for _, tp := range TESTDATA {
-		var (
-			r run
-			s Search
-		)
-		var expectedfiles = []string{
-			basedir + "/" + tp.name,
-			basedir + subdirs + tp.name,
-		}
-		r.Parameters = *newParameters()
-		s.Paths = append(s.Paths, basedir)
-		s.Names = append(s.Names, "^"+tp.name+"$")
-		s.Names = append(s.Names, "!^"+tp.name+"FOOBAR$")
-		s.Options.MatchAll = true
-		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s\n", msg)
-		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-		if len(out) == 0 {
-			t.Fatal("run failed")
-		}
-		t.Log(out)
-		err = evalResults([]byte(out), expectedfiles)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func TestContentSearch(t *testing.T) {
-	for _, tp := range TESTDATA {
-		var (
-			r run
-			s Search
-		)
-		var expectedfiles = []string{
-			basedir + "/" + tp.name,
-			basedir + subdirs + tp.name,
-		}
-		r.Parameters = *newParameters()
-		s.Paths = append(s.Paths, basedir)
-		s.Contents = append(s.Contents, tp.content)
-		s.Contents = append(s.Contents, "!^FOOBAR$")
-		s.Options.MatchAll = true
-		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s\n", msg)
-		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-		if len(out) == 0 {
-			t.Fatal("run failed")
-		}
-		t.Log(out)
-		err = evalResults([]byte(out), expectedfiles)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func TestDecompressedContentSearch(t *testing.T) {
-	for _, tp := range TESTDATA {
-		var (
-			r run
-			s Search
-		)
-		var expectedfiles = []string{
-			basedir + "/" + tp.name,
-			basedir + subdirs + tp.name,
-		}
-		// testfile8 is a corrupt gzip and should fail to decompress
-		if tp.name == "testfile8" {
-			expectedfiles = []string{""}
-		}
-		r.Parameters = *newParameters()
-		s.Paths = append(s.Paths, basedir)
-		if tp.decompressedcontent != "" {
-			s.Contents = append(s.Contents, tp.decompressedcontent)
-		} else {
-			s.Contents = append(s.Contents, tp.content)
-		}
-		s.Contents = append(s.Contents, "!^FOOBAR$")
-		s.Options.MatchAll = true
-		s.Options.Decompress = true
-		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s\n", msg)
-		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-		if len(out) == 0 {
-			t.Fatal("run failed")
-		}
-		t.Log(out)
-		err = evalResults([]byte(out), expectedfiles)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func TestSize(t *testing.T) {
-	for _, tp := range TESTDATA {
-		var (
-			r run
-			s Search
-		)
-		var expectedfiles = []string{
-			basedir + "/" + tp.name,
-			basedir + subdirs + tp.name,
-		}
-		r.Parameters = *newParameters()
-		s.Paths = append(s.Paths, basedir)
-		s.Sizes = append(s.Sizes, tp.size)
-		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s\n", msg)
-		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-		if len(out) == 0 {
-			t.Fatal("run failed")
-		}
-		t.Log(out)
-		err = evalResults([]byte(out), expectedfiles)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func TestMTime(t *testing.T) {
-	for _, tp := range TESTDATA {
-		var (
-			r run
-			s Search
-		)
-		var expectedfiles = []string{
-			basedir + "/" + tp.name,
-			basedir + subdirs + tp.name,
-		}
-		r.Parameters = *newParameters()
-		s.Paths = append(s.Paths, basedir)
-		s.Names = append(s.Names, tp.name)
-		s.Mtimes = append(s.Mtimes, tp.mtime)
-		s.Options.MatchAll = true
-		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s\n", msg)
-		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-		if len(out) == 0 {
-			t.Fatal("run failed")
-		}
-		t.Log(out)
-		err = evalResults([]byte(out), expectedfiles)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func TestMode(t *testing.T) {
-	for _, tp := range TESTDATA {
-		var (
-			r run
-			s Search
-		)
-		var expectedfiles = []string{
-			basedir + "/" + tp.name,
-			basedir + subdirs + tp.name,
-		}
-		r.Parameters = *newParameters()
-		s.Paths = append(s.Paths, basedir)
-		s.Names = append(s.Names, tp.name)
-		s.Modes = append(s.Modes, tp.mode)
-		s.Options.MatchAll = true
-		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s\n", msg)
-		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-		if len(out) == 0 {
-			t.Fatal("run failed")
-		}
-		t.Log(out)
-		err = evalResults([]byte(out), expectedfiles)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func TestHashes(t *testing.T) {
-	for _, hashtype := range []string{`md5`, `sha1`, `sha2`, `sha3`} {
-		for _, tp := range TESTDATA {
-			var (
-				r run
-				s Search
-			)
-			var expectedfiles = []string{
-				basedir + "/" + tp.name,
-				basedir + subdirs + tp.name,
-			}
-			r.Parameters = *newParameters()
-			s.Paths = append(s.Paths, basedir)
-			switch hashtype {
-			case `md5`:
-				s.MD5 = append(s.MD5, tp.md5)
-			case `sha1`:
-				s.SHA1 = append(s.SHA1, tp.sha1)
-			case `sha2`:
-				s.SHA2 = append(s.SHA2, tp.sha2)
-			case `sha3`:
-				s.SHA3 = append(s.SHA3, tp.sha3)
-			}
-			r.Parameters.Searches["s1"] = s
-			msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-			if err != nil {
-				t.Fatal(err)
-			}
-			t.Logf("%s\n", msg)
-			out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-			if len(out) == 0 {
-				t.Fatal("run failed")
-			}
-			t.Log(out)
-			err = evalResults([]byte(out), expectedfiles)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-}
-
-func TestDecompressedHash(t *testing.T) {
-	for _, tp := range TESTDATA {
-		var (
-			r run
-			s Search
-		)
-		var expectedfiles = []string{
-			basedir + "/" + tp.name,
-			basedir + subdirs + tp.name,
-		}
-		// testfile8 is a corrupt gzip and should fail to decompress
-		if tp.name == "testfile8" {
-			expectedfiles = []string{""}
-		}
-		r.Parameters = *newParameters()
-		s.Paths = append(s.Paths, basedir)
-		if tp.decompressedmd5 != "" {
-			s.MD5 = append(s.MD5, tp.decompressedmd5)
-		} else {
-			s.MD5 = append(s.MD5, tp.md5)
-		}
-		s.Options.Decompress = true
-		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s\n", msg)
-		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-		if len(out) == 0 {
-			t.Fatal("run failed")
-		}
-		t.Log(out)
-		err = evalResults([]byte(out), expectedfiles)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func TestAllHashes(t *testing.T) {
-	for _, tp := range TESTDATA {
-		var (
-			r run
-			s Search
-		)
-		var expectedfiles = []string{
-			basedir + "/" + tp.name,
-			basedir + subdirs + tp.name,
-		}
-		r.Parameters = *newParameters()
-		s.Paths = append(s.Paths, basedir)
-		s.MD5 = append(s.MD5, tp.md5)
-		s.SHA1 = append(s.SHA1, tp.sha1)
-		s.SHA2 = append(s.SHA2, tp.sha2)
-		s.SHA3 = append(s.SHA3, tp.sha3)
-		s.Options.MatchAll = true
-		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s\n", msg)
-		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-		if len(out) == 0 {
-			t.Fatal("run failed")
-		}
-		t.Log(out)
-		err = evalResults([]byte(out), expectedfiles)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func TestMaxDepth(t *testing.T) {
+func TestValidateParameters(t *testing.T) {
 	var (
 		r run
 		s Search
 	)
-	var expectedfiles = []string{
-		basedir + "/" + TESTDATA[0].name,
-	}
 	r.Parameters = *newParameters()
-	s.Paths = append(s.Paths, basedir)
-	s.Names = append(s.Names, "^"+TESTDATA[0].name+"$")
-	s.Contents = append(s.Contents, TESTDATA[0].content)
-	s.Options.MatchAll = true
-	s.Options.MaxDepth = 5
-	r.Parameters.Searches["s1"] = s
-	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
+	err := r.ValidateParameters()
 	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("%s\n", msg)
-	out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-	if len(out) == 0 {
-		t.Fatal("run failed")
-	}
-	t.Log(out)
-	if evalResults([]byte(out), expectedfiles) != nil {
-		t.Fatal(err)
-	}
-}
-
-/* Test all cases of macroal
- Regex     | Inverse | MACROAL | Result
------------+---------+---------+--------
- Match     |  False  |  True   | pass	-> must match all lines and current line matched
- Match     |  True   |  True   | fail	-> must match no line but current line matches
- Not Match |  True   |  True   | pass	-> must match no line and current line didn't match
- Not Match |  False  |  True   | fail	-> much match all lines and current line didn't match
-*/
-type macroaltest struct {
-	desc, name, content string
-	expectedfiles       []string
-}
-
-func TestMacroal(t *testing.T) {
-	var MacroalTestCases = []macroaltest{
-		macroaltest{
-			desc:    "want testfile0 with all lines matching '^(.+)?$', should find 2 files",
-			name:    "^" + TESTDATA[0].name + "$",
-			content: "^(.+)?$",
-			expectedfiles: []string{
-				basedir + "/" + TESTDATA[0].name,
-				basedir + subdirs + TESTDATA[0].name},
-		},
-		macroaltest{
-			desc:          "want testfile0 with no line matching '^(.+)?$', should find 0 file",
-			name:          "^" + TESTDATA[0].name + "$",
-			content:       "!^(.+)?$",
-			expectedfiles: []string{""},
-		},
-		macroaltest{
-			desc:    "want testfile0 with no line matching '!FOOBAR', should find 2 files",
-			name:    "^" + TESTDATA[0].name + "$",
-			content: "!FOOBAR",
-			expectedfiles: []string{
-				basedir + "/" + TESTDATA[0].name,
-				basedir + subdirs + TESTDATA[0].name},
-		},
-		macroaltest{
-			desc:          "want testfile0 with all lines matching 'FOOBAR', should find 0 file",
-			name:          "^" + TESTDATA[0].name + "$",
-			content:       "FOOBAR",
-			expectedfiles: []string{""},
-		},
-	}
-	for _, mt := range MacroalTestCases {
-		t.Log(mt.desc)
-		var r run
-		var s Search
-		r.Parameters = *newParameters()
-		s.Paths = append(s.Paths, basedir)
-		s.Names = append(s.Names, mt.name)
-		s.Contents = append(s.Contents, mt.content)
-		s.Options.MatchAll = true
-		s.Options.Macroal = true
-		r.Parameters.Searches["s1"] = s
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s\n", msg)
-		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-		if len(out) == 0 {
-			t.Fatal("run failed")
-		}
-		t.Log(out)
-		err = evalResults([]byte(out), mt.expectedfiles)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-type mismatchtest struct {
-	desc          string
-	search        Search
-	expectedfiles []string
-}
-
-func TestMismatch(t *testing.T) {
-	var MismatchTestCases = []mismatchtest{
-		mismatchtest{
-			desc: "want files that don't match name '^testfile0' with maxdepth=1, should find testfile1, 2, 3, 4, 5, 6, 7 & 8",
-			search: Search{
-				Paths: []string{basedir},
-				Names: []string{"^" + TESTDATA[0].name + "$"},
-				Options: options{
-					MaxDepth: 1,
-					Mismatch: []string{"name"},
-				},
-			},
-			expectedfiles: []string{
-				basedir + "/" + TESTDATA[1].name,
-				basedir + "/" + TESTDATA[2].name,
-				basedir + "/" + TESTDATA[3].name,
-				basedir + "/" + TESTDATA[4].name,
-				basedir + "/" + TESTDATA[5].name,
-				basedir + "/" + TESTDATA[6].name,
-				basedir + "/" + TESTDATA[7].name,
-				basedir + "/" + TESTDATA[8].name},
-		},
-		mismatchtest{
-			desc: "want files that don't have a size of 190 bytes or larger than 10{k,m,g,t} or smaller than 10 bytes, should find testfile1, 2, 3, 4, 5, 6, 7 & 8",
-			search: Search{
-				Paths: []string{basedir},
-				Sizes: []string{"190", ">10k", ">10m", ">10g", ">10t", "<10"},
-				Options: options{
-					MaxDepth: 1,
-					MatchAll: true,
-					Mismatch: []string{"size"},
-				},
-			},
-			expectedfiles: []string{
-				basedir + "/" + TESTDATA[1].name,
-				basedir + "/" + TESTDATA[2].name,
-				basedir + "/" + TESTDATA[3].name,
-				basedir + "/" + TESTDATA[4].name,
-				basedir + "/" + TESTDATA[5].name,
-				basedir + "/" + TESTDATA[6].name,
-				basedir + "/" + TESTDATA[7].name,
-				basedir + "/" + TESTDATA[8].name},
-		},
-		mismatchtest{
-			desc: "want files that have not been modified in the last hour ago, should find nothing",
-			search: Search{
-				Paths:  []string{basedir + subdirs, basedir},
-				Mtimes: []string{"<1h"},
-				Options: options{
-					Mismatch: []string{"mtime"},
-				},
-			},
-			expectedfiles: []string{""},
-		},
-		mismatchtest{
-			desc: "want files that don't have 644 permissions, should find nothing",
-			search: Search{
-				Paths: []string{basedir},
-				Modes: []string{"-rw-r--r--"},
-				Options: options{
-					Mismatch: []string{"mode"},
-				},
-			},
-			expectedfiles: []string{""},
-		},
-		mismatchtest{
-			desc: "want files that don't have a name different than testfile0, should find testfile0",
-			search: Search{
-				Paths: []string{basedir},
-				Names: []string{"!^testfile0$"},
-				Options: options{
-					Mismatch: []string{"name"},
-				},
-			},
-			expectedfiles: []string{
-				basedir + "/" + TESTDATA[0].name,
-				basedir + subdirs + TESTDATA[0].name},
-		},
-		mismatchtest{
-			desc: "test matchall+macroal+mismatch: want file where at least one line fails to match the regex on testfile0, should find testfile1 that has the extra line 'some other other text'",
-			search: Search{
-				Paths:    []string{basedir},
-				Names:    []string{"^testfile(0|1)$"},
-				Contents: []string{`^((---.+)|(#.+)|(\s+)|(some (other )?text))?$`},
-				Options: options{
-					MatchAll: true,
-					Macroal:  true,
-					Mismatch: []string{"content"},
-				},
-			},
-			expectedfiles: []string{
-				basedir + "/" + TESTDATA[1].name,
-				basedir + subdirs + TESTDATA[1].name},
-		},
-		mismatchtest{
-			desc: "want files that don't match the hashes of testfile2, should find testfile0, 1, 3, 4, 5, 6, 7 & 8",
-			search: Search{
-				Paths: []string{basedir},
-				MD5:   []string{TESTDATA[2].md5},
-				SHA1:  []string{TESTDATA[2].sha1},
-				SHA2:  []string{TESTDATA[2].sha2},
-				SHA3:  []string{TESTDATA[2].sha3},
-				Options: options{
-					MaxDepth: 1,
-					MatchAll: true,
-					Mismatch: []string{`md5`, `sha1`, `sha2`, `sha3`},
-				},
-			},
-			expectedfiles: []string{
-				basedir + "/" + TESTDATA[0].name,
-				basedir + "/" + TESTDATA[1].name,
-				basedir + "/" + TESTDATA[3].name,
-				basedir + "/" + TESTDATA[4].name,
-				basedir + "/" + TESTDATA[5].name,
-				basedir + "/" + TESTDATA[6].name,
-				basedir + "/" + TESTDATA[7].name,
-				basedir + "/" + TESTDATA[8].name},
-		},
+		t.Fatal("ValidateParameters: %v", err)
 	}
 
-	for _, mt := range MismatchTestCases {
-		t.Log(mt.desc)
-		var r run
-		r.Parameters = *newParameters()
-		r.Parameters.Searches["s1"] = mt.search
-		msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s\n", msg)
-		out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
-		if len(out) == 0 {
-			t.Fatal("run failed")
-		}
-		t.Log(out)
-		err = evalResults([]byte(out), mt.expectedfiles)
-		if err != nil {
-			t.Fatal(err)
-		}
+	r.Parameters.Searches["s1"] = s
+	err = r.ValidateParameters()
+	if err == nil {
+		t.Fatalf("parameters with empty search path should not validate", err)
 	}
 
+	s.Paths = append(s.Paths, "/testing")
+	r.Parameters.Searches["s1"] = s
+	err = r.ValidateParameters()
+	if err != nil {
+		t.Fatalf("ValidateParameters: %v", err)
+	}
 }
 
 func TestParamsParser(t *testing.T) {
@@ -615,18 +112,18 @@ func TestParamsParser(t *testing.T) {
 		args []string
 		err  error
 	)
-	args = append(args, "-path", basedir+"/")
-	args = append(args, "-name", TESTDATA[0].name)
-	args = append(args, "-content", TESTDATA[0].content)
-	args = append(args, "-size", TESTDATA[0].size)
+	args = append(args, "-path", "/a/path")
+	args = append(args, "-name", "^.*testfile.*$")
+	args = append(args, "-content", "content match")
+	args = append(args, "-size", "<10k")
 	args = append(args, "-size", ">1")
 	args = append(args, "-size", "<100000k")
-	args = append(args, "-mode", TESTDATA[0].mode)
-	args = append(args, "-mtime", TESTDATA[0].mtime)
-	args = append(args, "-md5", TESTDATA[0].md5)
-	args = append(args, "-sha1", TESTDATA[0].sha1)
-	args = append(args, "-sha2", TESTDATA[0].sha2)
-	args = append(args, "-sha3", TESTDATA[0].sha3)
+	args = append(args, "-mode", "-rw-r--r--")
+	args = append(args, "-mtime", "<1h")
+	args = append(args, "-md5", "e499c1912bd9af4f7e8ccaf27f7b04d2")
+	args = append(args, "-sha1", "d7bbc3dd7adf6e347c93a4c8b9bfb8ef4748c0fb")
+	args = append(args, "-sha2", "4d8ef27c4415d71cbbfad1eaa97d6f2a3ddacc9708b66efbb726133b9fd3d79a")
+	args = append(args, "-sha3", "a7ba1e66174848ecea143b612f22168b006979e3827e09f0ae6395e8")
 	args = append(args, "-matchany")
 	args = append(args, "-matchall")
 	args = append(args, "-macroal")
@@ -636,84 +133,126 @@ func TestParamsParser(t *testing.T) {
 	args = append(args, "-maxerrors", "31")
 	args = append(args, "-verbose")
 	args = append(args, "-decompress")
-	t.Logf("%s\n", args)
 	_, err = r.ParamsParser(args)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("ParamsParser: %v", err)
 	}
 }
 
-func evalResults(jsonresults []byte, expectedfiles []string) error {
+func TestMakeChecksBadSize(t *testing.T) {
+	var s Search
+	s.Paths = append(s.Paths, "/test")
+	s.Sizes = []string{"BADSIZE"}
+	err := s.makeChecks()
+	if err == nil {
+		t.Fatalf("makeChecks should have failed with invalid size value")
+	}
+	s.Sizes = []string{"<BADSIZEg"}
+	err = s.makeChecks()
+	if err == nil {
+		t.Fatalf("makeChecks should have failed with invalid size value")
+	}
+	s.Sizes = []string{">>>>BADSIZEm"}
+	err = s.makeChecks()
+	if err == nil {
+		t.Fatalf("makeChecks should have failed with invalid size value")
+	}
+	s.Sizes = []string{"m"}
+	err = s.makeChecks()
+	if err == nil {
+		t.Fatalf("makeChecks should have failed with invalid size value")
+	}
+	s.Sizes = []string{"<"}
+	err = s.makeChecks()
+	if err == nil {
+		t.Fatalf("makeChecks should have failed with invalid size value")
+	}
+}
+
+func TestMakeChecksBadMTime(t *testing.T) {
+	var s Search
+	s.Paths = append(s.Paths, "/test")
+	s.Mtimes = append(s.Mtimes, "BADMTIME")
+	err := s.makeChecks()
+	if err == nil {
+		t.Fatalf("makeChecks should have failed with invalid mtime value")
+	}
+}
+
+func TestBadRunParameters(t *testing.T) {
 	var (
+		r  run
+		s  Search
 		mr modules.Result
-		sr SearchResults
 	)
-	err := json.Unmarshal(jsonresults, &mr)
+
+	// Reinitialize various globals in the file module upon each test run
+	debug = false
+	walkingErrors = make([]string, 0)
+	tryDecompress = false
+	stats.Filescount = 0
+	stats.Openfailed = 0
+	stats.Totalhits = 0
+	stats.Exectime = ""
+
+	r.Parameters = *newParameters()
+	s.Paths = append(s.Paths, basedir)
+	s.SHA1 = append(s.SHA1, "NOTASHA1")
+	r.Parameters.Searches["s1"] = s
+	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 	if err != nil {
-		return err
+		t.Fatalf("modules.MakeMessage: %v", err)
 	}
-	if !mr.Success {
-		return fmt.Errorf("failed to run file search")
+	out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
+	if len(out) == 0 {
+		t.Fatal("module returned no output")
 	}
-	if !mr.FoundAnything {
-		return fmt.Errorf("should have found %d files in '%s' but didn't",
-			len(expectedfiles), basedir)
+	err = json.Unmarshal([]byte(out), &mr)
+	if err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
 	}
-	if mr.GetElements(&sr) != nil {
-		return fmt.Errorf("failed to retrieve search results")
+	if mr.Success {
+		t.Fatal("module should have indicated it failed")
 	}
-	if len(expectedfiles) == 1 && expectedfiles[0] == "" {
-		// should not have found anything to succeed
-		if len(sr["s1"]) != 1 {
-			return fmt.Errorf("expected to find nothing but found %d files",
-				len(sr["s1"]))
-		} else if sr["s1"][0].File != "" {
-			return fmt.Errorf("expected to find nothing but found file '%s'",
-				sr["s1"][0].File)
-		}
+	if mr.FoundAnything {
+		t.Fatal("module should have indicated it found nothing")
 	}
-	if len(sr["s1"]) != len(expectedfiles) {
-		if len(sr["s1"]) == 1 && sr["s1"][0].File == "" {
-			return fmt.Errorf("expected to find %d files but found nothing",
-				len(expectedfiles))
-		}
-		return fmt.Errorf("expected to find %d files but found %d",
-			len(expectedfiles), len(sr["s1"]))
-	}
-	for _, found := range sr["s1"] {
-		for i, expectedfile := range expectedfiles {
-			if filepath.Clean(found.File) == filepath.Clean(expectedfile) {
-				// good result, remove expected file from list of expected files
-				expectedfiles = expectedfiles[:i+copy(expectedfiles[i:], expectedfiles[i+1:])]
-			}
-		}
-	}
-	if len(expectedfiles) != 0 {
-		return fmt.Errorf("did not find %d files: %s", len(expectedfiles), expectedfiles)
-	}
-	return nil
 }
 
-func createFiles() (basedir string) {
-	basedir = os.TempDir() + "/migfiletest" + time.Now().Format("15-04-05.99999999")
-	err := os.MkdirAll(basedir+subdirs, 0700)
+// createFiles creates the file structure the tests will be executed against
+func createFiles() {
+	bdname := fmt.Sprintf("migfiletest%v", time.Now().Format("15-04-05.99999999"))
+	basedir = path.Join(os.TempDir(), bdname)
+
+	subdirEntries = append([]string{basedir}, subdirEntries...)
+	subdirs = path.Join(subdirEntries...)
+
+	err := os.MkdirAll(subdirs, 0700)
 	if err != nil {
-		log.Fatalf("failed to create test directories %s%s: %v\n",
-			basedir, subdirs, err)
+		log.Fatalf("MkDirAll: %v", err)
 	}
-	for _, dir := range []string{basedir, basedir + subdirs} {
-		for i, tp := range TESTDATA {
-			fd, err := os.Create(fmt.Sprintf("%s/testfile%d", dir, i))
-			if err != nil {
-				log.Fatalf("failed to create testfile1: %v\n", err)
+	for _, dir := range []string{basedir, subdirs} {
+		for _, tp := range testFiles {
+			tfpath := path.Join(dir, tp.filename)
+			if tp.link {
+				linkdestpath := path.Join(dir, tp.linkdest)
+				err = os.Symlink(linkdestpath, tfpath)
+				if err != nil {
+					log.Fatalf("Symlink: %v", err)
+				}
+				continue
 			}
-			os.Chmod(fmt.Sprintf("%s/testfile%d", dir, i), 0644)
+			fd, err := os.Create(tfpath)
+			if err != nil {
+				log.Fatalf("Create: %v", err)
+			}
+			os.Chmod(tfpath, 0644)
 			n, err := fd.Write(tp.data)
 			if err != nil {
-				log.Fatalf("failed to write content to %s: %v\n", fd.Name(), err)
+				log.Fatalf("Write: %v: %v", fd.Name(), err)
 			}
 			if n != len(tp.data) {
-				log.Fatalf("wrote %d bytes when content had %d\n", n, len(tp.data))
+				log.Fatalf("Write: short write, wanted %v wrote %v", len(tp.data), n)
 			}
 			fd.Close()
 		}
@@ -721,17 +260,444 @@ func createFiles() (basedir string) {
 	return
 }
 
-const subdirs string = `/a/b/c/d/e/f/g/h/i/j/k/l/m/n/`
-
-type testParams struct {
-	data []byte
-	name, size, mode, mtime, content,
-	md5, sha1, sha2, sha3,
-	decompressedcontent, decompressedmd5 string
+func TestRunTestParams(t *testing.T) {
+	for _, x := range testData {
+		x.runTest(t)
+	}
 }
 
-var TESTDATA = []testParams{
+// testParams is used to define standard test cases for the file module
+type testParams struct {
+	description string
+
+	// Search parameters, if set these values will be applied to a given search
+	name                []string
+	size                []string
+	mode                []string
+	mtime               []string
+	content             []string
+	md5                 []string
+	sha1                []string
+	sha2                []string
+	sha3                []string
+	decompressedcontent []string
+	decompressedmd5     []string
+	macroal             bool
+	mismatch            []string
+	maxdepth            float64
+
+	searchpath        []string // Override search in normal test path
+	expectedfilesroot []string // The files we expect to find for this search in the root path
+	expectedfilessub  []string // The files we expect to find in the subdirectory path
+}
+
+func (tp *testParams) getExpectedFiles() (ret []string) {
+	for _, x := range tp.expectedfilesroot {
+		rp := path.Join(basedir, x)
+		ret = append(ret, rp)
+	}
+	for _, x := range tp.expectedfilessub {
+		rp := path.Join(subdirs, x)
+		ret = append(ret, rp)
+	}
+	return
+}
+
+var testData = []testParams{
+	// Simple content tests
 	testParams{
+		description:       "find testfile0 by content, should see testfile9 which is a link too",
+		content:           []string{"^--- header for first file ---$"},
+		expectedfilesroot: []string{"testfile0", "testfile9"},
+		expectedfilessub:  []string{"testfile0", "testfile9"},
+	},
+	testParams{
+		description:       "find testfile1 by content",
+		content:           []string{"^--- header for second file ---$"},
+		expectedfilesroot: []string{"testfile1"},
+		expectedfilessub:  []string{"testfile1"},
+	},
+	testParams{
+		description:       "find testfile2 by content",
+		content:           []string{"skZ0"},
+		expectedfilesroot: []string{"testfile2"},
+		expectedfilessub:  []string{"testfile2"},
+	},
+	testParams{
+		description:       "find testfile3 by content",
+		content:           []string{"^--- header for fourth file ---$"},
+		expectedfilesroot: []string{"testfile3"},
+		expectedfilessub:  []string{"testfile3"},
+	},
+	testParams{
+		description:       "find testfile4 by content",
+		content:           []string{"^--- header for fifth file ---$"},
+		expectedfilesroot: []string{"testfile4"},
+		expectedfilessub:  []string{"testfile4"},
+	},
+	testParams{
+		description:       "find testfile5 by content",
+		content:           []string{"^--- header for sixth file ---$"},
+		expectedfilesroot: []string{"testfile5"},
+		expectedfilessub:  []string{"testfile5"},
+	},
+	testParams{
+		description:       "find testfile6 by content",
+		content:           []string{"KO3B"},
+		expectedfilesroot: []string{"testfile6"},
+		expectedfilessub:  []string{"testfile6"},
+	},
+	testParams{
+		description:       "find testfile7 by content",
+		content:           []string{"t6Pl"},
+		expectedfilesroot: []string{"testfile7"},
+		expectedfilessub:  []string{"testfile7"},
+	},
+	testParams{
+		description:       "find testfile8 by content",
+		content:           []string{",'XL"},
+		expectedfilesroot: []string{"testfile8"},
+		expectedfilessub:  []string{"testfile8"},
+	},
+	testParams{
+		description:       "find testfile2 by size",
+		size:              []string{"1024"},
+		expectedfilesroot: []string{"testfile2"},
+		expectedfilessub:  []string{"testfile2"},
+	},
+	testParams{
+		description:       "find testfile4 by md5",
+		md5:               []string{"5d5a4fdeafc1677dca8255ef9624d522"},
+		expectedfilesroot: []string{"testfile4"},
+		expectedfilessub:  []string{"testfile4"},
+	},
+	testParams{
+		description:       "find testfile4 by sha2",
+		sha2:              []string{"a4001843158a7a374e5ddcc22644c0e37738bc64ffd50179fc18fb443e0a62393b43384d9ac734e7a64c204e862ae3424094381afb33dfc639c52517afad1f32"},
+		expectedfilesroot: []string{"testfile4"},
+		expectedfilessub:  []string{"testfile4"},
+	},
+	testParams{
+		description:       "find testfile4 by sha3",
+		sha3:              []string{"2028feaccf974066aa7c47070f24c72d349ed6a6575cb801cc606c4a2b59020af4339b60dbedd0049a7341edde14133ee6f8b199f1a7c6ef36493fd217501607"},
+		expectedfilesroot: []string{"testfile4"},
+		expectedfilessub:  []string{"testfile4"},
+	},
+	testParams{
+		description:       "find testfile6 by sha2",
+		sha2:              []string{"bb4e449df74edae0292d60d2733a3b1801d90ae23560484b1e04fb52f111a14f"},
+		expectedfilesroot: []string{"testfile6"},
+		expectedfilessub:  []string{"testfile6"},
+	},
+	testParams{
+		description:       "find testfile7 by all hashes",
+		md5:               []string{"52fa96013b5c6aa9302d39ee7fe2f6a5"},
+		sha1:              []string{"31952c0d2772c302ec94b303c2b80b67cf830060"},
+		sha2:              []string{"f6032dc9b4ba112397a6f8bcb778ab10708c1acd38e48f637ace15c3ae417ded"},
+		sha3:              []string{"3f4dacf0b2347d0a0ab6f09b7d7c98fd12cb2030d4af8baeacaf55a9"},
+		expectedfilesroot: []string{"testfile7"},
+		expectedfilessub:  []string{"testfile7"},
+	},
+	testParams{
+		description:       "find testfile0 and testfile6",
+		name:              []string{".*testfile(0|6)$"},
+		expectedfilesroot: []string{"testfile0", "testfile6"},
+		expectedfilessub:  []string{"testfile0", "testfile6"},
+	},
+	testParams{
+		description: "find all files by modification time in minutes",
+		mtime:       []string{"<1m"},
+		expectedfilesroot: []string{"testfile0", "testfile1", "testfile2", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8",
+			"testfile9"},
+		expectedfilessub: []string{"testfile0", "testfile1", "testfile2", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8",
+			"testfile9"},
+	},
+	testParams{
+		description:       "find testfile0 by modification time in days with name",
+		name:              []string{"^testfile0$"},
+		mtime:             []string{"<1d"},
+		expectedfilesroot: []string{"testfile0"},
+		expectedfilessub:  []string{"testfile0"},
+	},
+	testParams{
+		description:       "find no files with modification time which should not match",
+		mtime:             []string{">1h", ">30m", ">15m"},
+		expectedfilesroot: []string{},
+		expectedfilessub:  []string{},
+	},
+	testParams{
+		description:       "find testfile0 using maxdepth",
+		name:              []string{"^.*0$"},
+		maxdepth:          1,
+		expectedfilesroot: []string{"testfile0"},
+		expectedfilessub:  []string{},
+	},
+	testParams{
+		description: "inverted content match on testfile0",
+		content:     []string{"!^--- header for first file ---$"},
+		maxdepth:    1,
+		expectedfilesroot: []string{"testfile1", "testfile2", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8"},
+		expectedfilessub: []string{},
+	},
+	testParams{
+		description: "find files with specific mode",
+		mode:        []string{"-rw-r--r--"},
+		expectedfilesroot: []string{"testfile0", "testfile1", "testfile2", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8", "testfile9"},
+		expectedfilessub: []string{"testfile0", "testfile1", "testfile2", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8", "testfile9"},
+	},
+	testParams{
+		description:       "find testfile0 with two checks which will match the same file",
+		name:              []string{".*0", "^testfile0$"},
+		maxdepth:          1,
+		expectedfilesroot: []string{"testfile0"},
+		expectedfilessub:  []string{},
+	},
+	// Various error conditions
+	testParams{
+		description:       "search a nonexistent root",
+		name:              []string{".*testfile.*"},
+		expectedfilesroot: []string{},
+		expectedfilessub:  []string{},
+		searchpath:        []string{"/doesnotexist"},
+	},
+	// MACROAL tests
+	// Regex     | Inverse | MACROAL | Result
+	// -----------+---------+---------+--------
+	// Match     |  False  |  True   | pass	-> must match all lines and current line matched
+	// Match     |  True   |  True   | fail	-> must match no line but current line matches
+	// Not Match |  True   |  True   | pass	-> must match no line and current line didn't match
+	// Not Match |  False  |  True   | fail	-> much match all lines and current line didn't match
+	testParams{
+		description:       "macroal match on testfile0",
+		macroal:           true,
+		content:           []string{"^(.+)?$"},
+		name:              []string{"^testfile0$"},
+		expectedfilesroot: []string{"testfile0"},
+		expectedfilessub:  []string{"testfile0"},
+	},
+	testParams{
+		description:       "macroal match on testfile0, negated",
+		macroal:           true,
+		content:           []string{"!^(.+)?$"},
+		name:              []string{"^testfile0$"},
+		expectedfilesroot: []string{},
+		expectedfilessub:  []string{},
+	},
+	testParams{
+		description:       "macroal match on testfile0, negated with non-matching expression",
+		macroal:           true,
+		content:           []string{"!FOOBAR"},
+		name:              []string{"^testfile0$"},
+		expectedfilesroot: []string{"testfile0"},
+		expectedfilessub:  []string{"testfile0"},
+	},
+	testParams{
+		description:       "macroal match on testfile0, with non-matching expression",
+		macroal:           true,
+		content:           []string{"FOOBAR"},
+		name:              []string{"^testfile0$"},
+		expectedfilesroot: []string{},
+		expectedfilessub:  []string{},
+	},
+	// Mismatch tests
+	testParams{
+		description: "mismatch match files that do not match name testfile0",
+		name:        []string{"^testfile0$"},
+		mismatch:    []string{"name"},
+		expectedfilesroot: []string{"testfile1", "testfile2", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8",
+			"testfile9"},
+		expectedfilessub: []string{"testfile1", "testfile2", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8",
+			"testfile9"},
+	},
+	testParams{
+		description: "mismatch match files that do not meet specified size criteria",
+		size:        []string{"190", ">10k", ">10m", ">10g", ">10t", "<10"},
+		mismatch:    []string{"size"},
+		expectedfilesroot: []string{"testfile1", "testfile2", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8"},
+		expectedfilessub: []string{"testfile1", "testfile2", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8"},
+	},
+	testParams{
+		description:       "mismatch match files that have not been modified in last hour",
+		mtime:             []string{"<1h"},
+		mismatch:          []string{"mtime"},
+		expectedfilesroot: []string{},
+		expectedfilessub:  []string{},
+	},
+	testParams{
+		description:       "mismatch match files that do not have mode 0644",
+		mode:              []string{"-rw-r--r--"},
+		mismatch:          []string{"mode"},
+		expectedfilesroot: []string{},
+		expectedfilessub:  []string{},
+	},
+	testParams{
+		description:       "mismatch match files that do not have name different than !testfile0",
+		name:              []string{"!^testfile0$"},
+		mismatch:          []string{"name"},
+		expectedfilesroot: []string{"testfile0"},
+		expectedfilessub:  []string{"testfile0"},
+	},
+	testParams{
+		description:       "mismatch match content test with macroal and matchall",
+		name:              []string{"^testfile(0|1)$"},
+		content:           []string{"^((---.+)|(#.+)|(\\s+)|(some (other )?text))?$"},
+		macroal:           true,
+		mismatch:          []string{"content"},
+		expectedfilesroot: []string{"testfile1"},
+		expectedfilessub:  []string{"testfile1"},
+	},
+	testParams{
+		description: "mismatch match files that do not have testfile2 hash value",
+		mismatch:    []string{"md5", "sha1", "sha2", "sha3"},
+		md5:         []string{"8d3a7afb7e59693b383d52396243a5b8"},
+		sha1:        []string{"d82bc1145d471714b056940b268032f9ab0df2ae"},
+		sha2:        []string{"3b495fae5bae9751ea4706c29e992002ba277bce30bd83a827b01ba977eabc2f"},
+		sha3:        []string{"fdb23afa808c265284c3199013e4ded9704eebf54ffdc1f016dacc12"},
+		expectedfilesroot: []string{"testfile0", "testfile1", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8",
+			"testfile9"},
+		expectedfilessub: []string{"testfile0", "testfile1", "testfile3",
+			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8",
+			"testfile9"},
+	},
+}
+
+func (tp *testParams) runTest(t *testing.T) {
+	var (
+		r  run
+		s  Search
+		mr modules.Result
+		sr SearchResults
+	)
+
+	// Reinitialize various globals in the file module upon each test run
+	debug = false
+	walkingErrors = make([]string, 0)
+	tryDecompress = false
+	stats.Filescount = 0
+	stats.Openfailed = 0
+	stats.Totalhits = 0
+	stats.Exectime = ""
+
+	t.Logf("runTest: %v", tp.description)
+	r.Parameters = *newParameters()
+	if len(tp.searchpath) != 0 {
+		s.Paths = append(s.Paths, tp.searchpath...)
+	} else {
+		s.Paths = append(s.Paths, basedir)
+	}
+	if len(tp.content) != 0 {
+		s.Contents = append(s.Contents, tp.content...)
+	}
+	if len(tp.name) != 0 {
+		s.Names = append(s.Names, tp.name...)
+	}
+	if len(tp.size) != 0 {
+		s.Sizes = append(s.Sizes, tp.size...)
+	}
+	if len(tp.mode) != 0 {
+		s.Modes = append(s.Modes, tp.mode...)
+	}
+	if len(tp.mtime) != 0 {
+		s.Mtimes = append(s.Mtimes, tp.mtime...)
+	}
+	if len(tp.md5) != 0 {
+		s.MD5 = append(s.MD5, tp.md5...)
+	}
+	if len(tp.sha1) != 0 {
+		s.SHA1 = append(s.SHA1, tp.sha1...)
+	}
+	if len(tp.sha2) != 0 {
+		s.SHA2 = append(s.SHA2, tp.sha2...)
+	}
+	if len(tp.sha3) != 0 {
+		s.SHA3 = append(s.SHA3, tp.sha3...)
+	}
+	if tp.maxdepth != 0 {
+		s.Options.MaxDepth = tp.maxdepth
+	}
+	if tp.macroal {
+		s.Options.Macroal = true
+	}
+	if len(tp.mismatch) != 0 {
+		s.Options.Mismatch = append(s.Options.Mismatch, tp.mismatch...)
+	}
+	s.Options.MatchAll = true
+	r.Parameters.Searches["s1"] = s
+	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
+	if err != nil {
+		t.Fatalf("modules.MakeMessage: %v", err)
+	}
+	out := r.Run(modules.NewModuleReader(bytes.NewBuffer(msg)))
+	if len(out) == 0 {
+		t.Fatal("module returned no output")
+	}
+
+	err = json.Unmarshal([]byte(out), &mr)
+	if err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if !mr.Success {
+		t.Fatal("module result indicated it was not successful")
+	}
+	err = mr.GetElements(&sr)
+	if err != nil {
+		t.Fatalf("GetElements: %v", err)
+	}
+	// Build a list of the files we got back from the search
+	gotfiles := make([]string, 0)
+	for _, x := range sr["s1"] {
+		if x.File == "" {
+			continue
+		}
+		gotfiles = append(gotfiles, x.File)
+	}
+	expected := tp.getExpectedFiles()
+	// If the number of expected files is 0, than FoundAnything should be false
+	if len(expected) == 0 {
+		if mr.FoundAnything {
+			t.Logf("%v", out)
+			t.Fatal("expected 0 files, but module run indicating it found something")
+		}
+	}
+	if len(gotfiles) != len(expected) {
+		t.Fatalf("test should have returned %v files, but returned %v", len(expected),
+			len(gotfiles))
+	}
+	for _, x := range expected {
+		found := false
+		for _, y := range gotfiles {
+			if x == y {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("%v not found in results", x)
+		}
+	}
+}
+
+type testFile struct {
+	filename              string
+	data                  []byte
+	link                  bool   // If true, created file will be a symlink
+	linkdest              string // Destination file name for symlink, must be in same directory
+	md5, sha1, sha2, sha3 string
+	size                  int
+}
+
+var testFiles = []testFile{
+	testFile{
+		filename: "testfile0",
 		data: []byte(`--- header for first file ---
 # this is a comment
                                        
@@ -740,17 +706,14 @@ var TESTDATA = []testParams{
 # above is an empty line, no spaces
 some text
 some other text`),
-		name:    `testfile0`,
-		size:    `190`,
-		mode:    `-rw-r--r--`,
-		mtime:   `<1m`,
-		content: `^--- header for first file ---$`,
-		md5:     `e499c1912bd9af4f7e8ccaf27f7b04d2`,
-		sha1:    `d7bbc3dd7adf6e347c93a4c8b9bfb8ef4748c0fb`,
-		sha2:    `4d8ef27c4415d71cbbfad1eaa97d6f2a3ddacc9708b66efbb726133b9fd3d79a`,
-		sha3:    `a7ba1e66174848ecea143b612f22168b006979e3827e09f0ae6395e8`,
+		md5:  "e499c1912bd9af4f7e8ccaf27f7b04d2",
+		sha1: "d7bbc3dd7adf6e347c93a4c8b9bfb8ef4748c0fb",
+		sha2: "4d8ef27c4415d71cbbfad1eaa97d6f2a3ddacc9708b66efbb726133b9fd3d79a",
+		sha3: "a7ba1e66174848ecea143b612f22168b006979e3827e09f0ae6395e8",
+		size: 190,
 	},
-	testParams{
+	testFile{
+		filename: "testfile1",
 		data: []byte(`--- header for second file ---
 # this is a comment
                                        
@@ -758,17 +721,14 @@ some other text`),
 # above is an empty line, no spaces
 some text
 some other other text`),
-		name:    `testfile1`,
-		size:    `196`,
-		mode:    `-rw-r--r--`,
-		mtime:   `<1m`,
-		content: `^--- header for second file ---$`,
-		md5:     `072841679be61acd27de062da1ad6fdf`,
-		sha1:    `21f4a0f1d86915f9fa676b96a823c4c3142eb22b`,
-		sha2:    `72573e5f095cb29afa2486b519928ed153558a8c036f15a9d1f790c8989e96c3`,
-		sha3:    `7ec2e3b36e220b3c5ea9ad0129a1cdcd6dd7f545c92a90f8419ea05d408ca9d5ec999452fd804df7ede9ca0f0647195ae03eba1be7fae0c2217a8f24eaf7cce0`,
+		md5:  "072841679be61acd27de062da1ad6fdf",
+		sha1: "21f4a0f1d86915f9fa676b96a823c4c3142eb22b",
+		sha2: "72573e5f095cb29afa2486b519928ed153558a8c036f15a9d1f790c8989e96c3",
+		sha3: "7ec2e3b36e220b3c5ea9ad0129a1cdcd6dd7f545c92a90f8419ea05d408ca9d5ec999452fd804df7ede9ca0f0647195ae03eba1be7fae0c2217a8f24eaf7cce0",
+		size: 196,
 	},
-	testParams{
+	testFile{
+		filename: "testfile2",
 		data: []byte("\x35\xF3\x40\xD8\xE9\xCE\x96\x38\xBD\x02\x80\xE4\xED\xA8\xCE\x5F\x5D\xEB\xDB\x92" +
 			"\x2A\x63\xB0\x66\x5F\xC7\xCA\x57\xB5\xFC\x76\x9B\x44\x89\x48\x9E\x73\x6B\x5A\x30" +
 			"\x8E\xC7\x60\xD3\xF2\xA8\x36\x7F\xED\xCE\xC7\x1E\xE9\xB2\x1B\x73\xC4\x72\xE8\xAE" +
@@ -821,67 +781,55 @@ some other other text`),
 			"\x00\xF3\x39\x34\x84\x6D\x76\x69\xF0\x7D\x90\x39\x16\x84\x37\x52\xA5\x79\xCF\x20" +
 			"\x18\xC2\x00\x31\xCD\x6C\x38\x25\x5D\x47\xB6\x2B\x3F\xA0\x7D\xB3\x69\x85\xBF\xF8" +
 			"\x25\x38\x32\x35"),
-		name:    `testfile2`,
-		size:    `1024`,
-		mode:    `-rw-r--r--`,
-		mtime:   `<1m`,
-		content: `skZ0`,
-		md5:     `8d3a7afb7e59693b383d52396243a5b8`,
-		sha1:    `d82bc1145d471714b056940b268032f9ab0df2ae`,
-		sha2:    `3b495fae5bae9751ea4706c29e992002ba277bce30bd83a827b01ba977eabc2f`,
-		sha3:    `fdb23afa808c265284c3199013e4ded9704eebf54ffdc1f016dacc12`,
+		md5:  "8d3a7afb7e59693b383d52396243a5b8",
+		sha1: "d82bc1145d471714b056940b268032f9ab0df2ae",
+		sha2: "3b495fae5bae9751ea4706c29e992002ba277bce30bd83a827b01ba977eabc2f",
+		sha3: "fdb23afa808c265284c3199013e4ded9704eebf54ffdc1f016dacc12",
+		size: 1024,
 	},
-	testParams{
+	testFile{
+		filename: "testfile3",
 		data: []byte(`--- header for fourth file ---
 # above is an line filled with spaces
 
 # above is an empty line, no spaces
 some text
 some other text`),
-		name:    `testfile3`,
-		size:    `131`,
-		mode:    `-rw-r--r--`,
-		mtime:   `<1m`,
-		content: `^--- header for fourth file ---$`,
-		md5:     `d6b008f34e7cf207cb9bc74a2153fffd`,
-		sha1:    `9ee0213f3227fe4f3658af0c3de315669b36ccf9`,
-		sha2:    `fb9758f30549a282d41a4eb125790704c17309e55443dbb54895379b8e33438f2825b78b938aa3735f99f3305d3b98e8`,
-		sha3:    `fe66d22caa59899c386e0a041f641d1c8130ded8f7365330957cbf69`,
+		md5:  "d6b008f34e7cf207cb9bc74a2153fffd",
+		sha1: "9ee0213f3227fe4f3658af0c3de315669b36ccf9",
+		sha2: "fb9758f30549a282d41a4eb125790704c17309e55443dbb54895379b8e33438f2825b78b938aa3735f99f3305d3b98e8",
+		sha3: "fe66d22caa59899c386e0a041f641d1c8130ded8f7365330957cbf69",
+		size: 131,
 	},
-	testParams{
+	testFile{
+		filename: "testfile4",
 		data: []byte(`--- header for fifth file ---
 # this is a comment
                                        
 # above is an empty line, no spaces
 some text
 some other text`),
-		name:    `testfile4`,
-		size:    `151`,
-		mode:    `-rw-r--r--`,
-		mtime:   `<1m`,
-		content: `^--- header for fifth file ---$`,
-		md5:     `5d5a4fdeafc1677dca8255ef9624d522`,
-		sha1:    `caf4ce81c990785e5041bfc410526f471ea1ba6f`,
-		sha2:    `a4001843158a7a374e5ddcc22644c0e37738bc64ffd50179fc18fb443e0a62393b43384d9ac734e7a64c204e862ae3424094381afb33dfc639c52517afad1f32`,
-		sha3:    `2028feaccf974066aa7c47070f24c72d349ed6a6575cb801cc606c4a2b59020af4339b60dbedd0049a7341edde14133ee6f8b199f1a7c6ef36493fd217501607`,
+		md5:  "5d5a4fdeafc1677dca8255ef9624d522",
+		sha1: "caf4ce81c990785e5041bfc410526f471ea1ba6f",
+		sha2: "a4001843158a7a374e5ddcc22644c0e37738bc64ffd50179fc18fb443e0a62393b43384d9ac734e7a64c204e862ae3424094381afb33dfc639c52517afad1f32",
+		sha3: "2028feaccf974066aa7c47070f24c72d349ed6a6575cb801cc606c4a2b59020af4339b60dbedd0049a7341edde14133ee6f8b199f1a7c6ef36493fd217501607",
+		size: 151,
 	},
-	testParams{
+	testFile{
+		filename: "testfile5",
 		data: []byte(`--- header for sixth file ---
 # this is a comment
                                        
 some text
 some other text`),
-		name:    `testfile5`,
-		size:    `115`,
-		mode:    `-rw-r--r--`,
-		mtime:   `<1m`,
-		content: `^--- header for sixth file ---$`,
-		md5:     `f9132062fccc09cba5f93474724a57e3`,
-		sha1:    `fb03d2d4ac2a82090bc29934f75c1d6914bacc91`,
-		sha2:    `8871b2ff047be05571549398e54c1f36163ae171e05a89900468688ea3bac4f9f3d7c922f0bebc24fdac28d0b2d38fb2718209fb5976c9245e7c837170b79819`,
-		sha3:    `cb086f02b728d57e299651f89e1fb0f89c659db50c7c780ec2689a8143e55c8e5e63ab47fe20897be7155e409151c190`,
+		md5:  "f9132062fccc09cba5f93474724a57e3",
+		sha1: "fb03d2d4ac2a82090bc29934f75c1d6914bacc91",
+		sha2: "8871b2ff047be05571549398e54c1f36163ae171e05a89900468688ea3bac4f9f3d7c922f0bebc24fdac28d0b2d38fb2718209fb5976c9245e7c837170b79819",
+		sha3: "cb086f02b728d57e299651f89e1fb0f89c659db50c7c780ec2689a8143e55c8e5e63ab47fe20897be7155e409151c190",
+		size: 115,
 	},
-	testParams{
+	testFile{
+		filename: "testfile6",
 		data: []byte("\x1f\x8b\x08\x08\xd9\xdc\x88\x56\x00\x03\x74\x65\x73\x74\x00\x8d" +
 			"\x8e\xcd\x0a\xc3\x30\x0c\x83\xef\x79\x0a\xc1\xae\xf3\x43\x65\xad" +
 			"\x4a\x0c\x49\x1c\x1a\xb3\xbf\xa7\x5f\x96\xb2\x4b\x4f\x33\x42\x18" +
@@ -891,19 +839,14 @@ some other text`),
 			"\xa1\xb7\xb8\xb0\x87\x13\xc6\xd2\xfc\x35\xe1\x2b\xaa\xfd\xa0\x6e" +
 			"\x85\x70\x3e\xfd\xd8\xcc\xd3\xf8\xf7\xf0\x79\xfd\x00\x4c\x08\xa4" +
 			"\x7a\xc6\x00\x00\x00"),
-		name:                `testfile6`,
-		size:                `133`,
-		mode:                `-rw-r--r--`,
-		mtime:               `<1m`,
-		content:             `KO3B`,
-		md5:                 `31d38eee231318166538e1569631aba9`,
-		sha1:                `bd1f24d8cbb000bbf7bcd618c2aec73280388721`,
-		sha2:                `bb4e449df74edae0292d60d2733a3b1801d90ae23560484b1e04fb52f111a14f`,
-		sha3:                `433b84f162d1b00481e6da022c5738fb4d04c3bb4317f73266746dd1`,
-		decompressedcontent: `^--- header for zipped file ---$`,
-		decompressedmd5:     `5bb23d3b1eaaddc6e108e3fb0ee80a61`,
+		md5:  "31d38eee231318166538e1569631aba9",
+		sha1: "bd1f24d8cbb000bbf7bcd618c2aec73280388721",
+		sha2: "bb4e449df74edae0292d60d2733a3b1801d90ae23560484b1e04fb52f111a14f",
+		sha3: "433b84f162d1b00481e6da022c5738fb4d04c3bb4317f73266746dd1",
+		size: 133,
 	},
-	testParams{
+	testFile{
+		filename: "testfile7",
 		data: []byte("\x1f\x8b\x08\x00\xd9\xe3\x8f\x56\x00\x03\xed\xd4\xcb\x6a\x84\x30" +
 			"\x14\x06\x60\xd7\xf3\x14\x07\xba\xad\x60\xe2\xed\x09\xfa\x02\x5d" +
 			"\x14\xba\x4c\xf5\x0c\x86\x6a\x22\xe6\xf4\xfa\xf4\x8d\xce\x74\x28" +
@@ -922,19 +865,14 @@ some other text`),
 			"\x01\x70\x77\x73\x7b\x8f\x53\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
 			"\x00\x00\x00\x00\x00\x00\x00\xfe\xaf\x0f\x60\x69\x1f\x15\x00\x28" +
 			"\x00\x00"),
-		name:                `testfile7`,
-		size:                `274`,
-		mode:                `-rw-r--r--`,
-		mtime:               `<1m`,
-		content:             `t6Pl`,
-		md5:                 `52fa96013b5c6aa9302d39ee7fe2f6a5`,
-		sha1:                `31952c0d2772c302ec94b303c2b80b67cf830060`,
-		sha2:                `f6032dc9b4ba112397a6f8bcb778ab10708c1acd38e48f637ace15c3ae417ded`,
-		sha3:                `3f4dacf0b2347d0a0ab6f09b7d7c98fd12cb2030d4af8baeacaf55a9`,
-		decompressedcontent: `ustar`,
-		decompressedmd5:     `7f82b4c1613fd10208ad1f71de17ebb5`,
+		md5:  "52fa96013b5c6aa9302d39ee7fe2f6a5",
+		sha1: "31952c0d2772c302ec94b303c2b80b67cf830060",
+		sha2: "f6032dc9b4ba112397a6f8bcb778ab10708c1acd38e48f637ace15c3ae417ded",
+		sha3: "3f4dacf0b2347d0a0ab6f09b7d7c98fd12cb2030d4af8baeacaf55a9",
+		size: 274,
 	},
-	testParams{
+	testFile{
+		filename: "testfile8",
 		data: []byte("\x1f\x8b\x08\x08\x2c\xe8\x8f\x56\x00\x03\x74\x65\x73\x74\x66\x69" +
 			"\x6c\x65\x33\x00\x8d\x8e\x4b\x0a\x03\x31\x0c\x43\xf7\x73\x0a\x41" +
 			"\xb7\xf5\xa1\xd2\x19\x0d\x09\x24\x71\x48\xdc\xef\xe9\xeb\xa6\xcc" +
@@ -944,14 +882,15 @@ some other text`),
 			"\x5c\x91\x53\xe5\xa7\x37\x7b\xfd\x3d\x59\xc4\x68\x61\xe5\x58\x7e" +
 			"\x30\x96\x66\xcf\x09\x9f\x51\xf5\x80\x86\x16\xc2\xf8\xb0\xef\xa6" +
 			"\x16\xfd\xf3\x79\xbf\x01\x7b\xae\xde\x84\xca\x00\x00\x00"),
-		name:    `testfile8`,
-		size:    `142`,
-		mode:    `-rw-r--r--`,
-		mtime:   `<1m`,
-		content: `,'XL`,
-		md5:     `df7b577ceb59f700d5b03db9d12d174e`,
-		sha1:    `ea033d30e996ac443bc50e9c37eb25b37505302e`,
-		sha2:    `2f4f81c0920501f178085032cd2784b8aa811b8c8e94da7ff85a43a361cd96cc`,
-		sha3:    `d171566f8026a4ca6b4cdf8e6491a651625f98fbc15f9cb601833b64`,
+		md5:  "df7b577ceb59f700d5b03db9d12d174e",
+		sha1: "ea033d30e996ac443bc50e9c37eb25b37505302e",
+		sha2: "2f4f81c0920501f178085032cd2784b8aa811b8c8e94da7ff85a43a361cd96cc",
+		sha3: "d171566f8026a4ca6b4cdf8e6491a651625f98fbc15f9cb601833b64",
+		size: 142,
+	},
+	testFile{
+		filename: "testfile9",
+		link:     true,
+		linkdest: "testfile0",
 	},
 }

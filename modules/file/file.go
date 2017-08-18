@@ -412,6 +412,7 @@ func (s *Search) unmarkcurrent() {
 
 func (c *check) storeMatch(file string) {
 	store := true
+	debugprint("storing match %v\n", file)
 	for _, storedFile := range c.matchedfiles {
 		// only store files once per check
 		if file == storedFile {
