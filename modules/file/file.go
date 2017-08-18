@@ -1096,38 +1096,31 @@ func (c check) wantThis(match bool) bool {
 			if c.mismatch {
 				debugprint("wantThis=true\n")
 				return true
-			} else {
-				debugprint("wantThis=false\n")
-				return false
 			}
-		} else {
-			if c.mismatch {
-				debugprint("wantThis=false\n")
-				return false
-			} else {
-				debugprint("wantThis=true\n")
-				return true
-			}
+			debugprint("wantThis=false\n")
+			return false
 		}
-	} else {
-		if c.inversematch {
-			if c.mismatch {
-				debugprint("wantThis=false\n")
-				return false
-			} else {
-				debugprint("wantThis=true\n")
-				return true
-			}
-		} else {
-			if c.mismatch {
-				debugprint("wantThis=true\n")
-				return true
-			} else {
-				debugprint("wantThis=false\n")
-				return false
-			}
+		if c.mismatch {
+			debugprint("wantThis=false\n")
+			return false
 		}
+		debugprint("wantThis=true\n")
+		return true
 	}
+	if c.inversematch {
+		if c.mismatch {
+			debugprint("wantThis=false\n")
+			return false
+		}
+		debugprint("wantThis=true\n")
+		return true
+	}
+	if c.mismatch {
+		debugprint("wantThis=true\n")
+		return true
+	}
+	debugprint("wantThis=false\n")
+	return false
 }
 
 func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
