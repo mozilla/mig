@@ -1724,11 +1724,11 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 		"Execution time:   %s\n",
 		stats.Filescount, stats.Openfailed,
 		stats.Totalhits, stats.Exectime)
-	JsonResults, err := json.Marshal(res)
+	JSONResults, err := json.Marshal(res)
 	if err != nil {
 		panic(err)
 	}
-	resStr = string(JsonResults[:])
+	resStr = string(JSONResults[:])
 	return
 }
 
