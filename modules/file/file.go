@@ -299,7 +299,7 @@ func (s *search) hasMismatch(filter string) bool {
 func parseSize(size string) (minsize, maxsize uint64, err error) {
 	var (
 		multiplier uint64 = 1
-		n          uint64 = 0
+		n          uint64
 	)
 	switch size[len(size)-1] {
 	case 'k':
@@ -347,8 +347,8 @@ func parseSize(size string) (minsize, maxsize uint64, err error) {
 
 func parseMtime(mtime string) (minmtime, maxmtime time.Time, err error) {
 	var (
-		isDays        = false
-		n      uint64 = 0
+		isDays = false
+		n      uint64
 	)
 	suffix := mtime[len(mtime)-1]
 	if suffix == 'd' {
