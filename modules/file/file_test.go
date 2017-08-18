@@ -40,7 +40,7 @@ func TestNameSearch(t *testing.T) {
 	for _, tp := range TESTDATA {
 		var (
 			r run
-			s search
+			s Search
 		)
 		var expectedfiles = []string{
 			basedir + "/" + tp.name,
@@ -73,7 +73,7 @@ func TestContentSearch(t *testing.T) {
 	for _, tp := range TESTDATA {
 		var (
 			r run
-			s search
+			s Search
 		)
 		var expectedfiles = []string{
 			basedir + "/" + tp.name,
@@ -106,7 +106,7 @@ func TestDecompressedContentSearch(t *testing.T) {
 	for _, tp := range TESTDATA {
 		var (
 			r run
-			s search
+			s Search
 		)
 		var expectedfiles = []string{
 			basedir + "/" + tp.name,
@@ -148,7 +148,7 @@ func TestSize(t *testing.T) {
 	for _, tp := range TESTDATA {
 		var (
 			r run
-			s search
+			s Search
 		)
 		var expectedfiles = []string{
 			basedir + "/" + tp.name,
@@ -179,7 +179,7 @@ func TestMTime(t *testing.T) {
 	for _, tp := range TESTDATA {
 		var (
 			r run
-			s search
+			s Search
 		)
 		var expectedfiles = []string{
 			basedir + "/" + tp.name,
@@ -212,7 +212,7 @@ func TestMode(t *testing.T) {
 	for _, tp := range TESTDATA {
 		var (
 			r run
-			s search
+			s Search
 		)
 		var expectedfiles = []string{
 			basedir + "/" + tp.name,
@@ -246,7 +246,7 @@ func TestHashes(t *testing.T) {
 		for _, tp := range TESTDATA {
 			var (
 				r run
-				s search
+				s Search
 			)
 			var expectedfiles = []string{
 				basedir + "/" + tp.name,
@@ -287,7 +287,7 @@ func TestDecompressedHash(t *testing.T) {
 	for _, tp := range TESTDATA {
 		var (
 			r run
-			s search
+			s Search
 		)
 		var expectedfiles = []string{
 			basedir + "/" + tp.name,
@@ -327,7 +327,7 @@ func TestAllHashes(t *testing.T) {
 	for _, tp := range TESTDATA {
 		var (
 			r run
-			s search
+			s Search
 		)
 		var expectedfiles = []string{
 			basedir + "/" + tp.name,
@@ -361,7 +361,7 @@ func TestAllHashes(t *testing.T) {
 func TestMaxDepth(t *testing.T) {
 	var (
 		r run
-		s search
+		s Search
 	)
 	var expectedfiles = []string{
 		basedir + "/" + TESTDATA[0].name,
@@ -435,7 +435,7 @@ func TestMacroal(t *testing.T) {
 	for _, mt := range MacroalTestCases {
 		t.Log(mt.desc)
 		var r run
-		var s search
+		var s Search
 		r.Parameters = *newParameters()
 		s.Paths = append(s.Paths, basedir)
 		s.Names = append(s.Names, mt.name)
@@ -462,7 +462,7 @@ func TestMacroal(t *testing.T) {
 
 type mismatchtest struct {
 	desc          string
-	search        search
+	search        Search
 	expectedfiles []string
 }
 
@@ -470,7 +470,7 @@ func TestMismatch(t *testing.T) {
 	var MismatchTestCases = []mismatchtest{
 		mismatchtest{
 			desc: "want files that don't match name '^testfile0' with maxdepth=1, should find testfile1, 2, 3, 4, 5, 6, 7 & 8",
-			search: search{
+			search: Search{
 				Paths: []string{basedir},
 				Names: []string{"^" + TESTDATA[0].name + "$"},
 				Options: options{
@@ -490,7 +490,7 @@ func TestMismatch(t *testing.T) {
 		},
 		mismatchtest{
 			desc: "want files that don't have a size of 190 bytes or larger than 10{k,m,g,t} or smaller than 10 bytes, should find testfile1, 2, 3, 4, 5, 6, 7 & 8",
-			search: search{
+			search: Search{
 				Paths: []string{basedir},
 				Sizes: []string{"190", ">10k", ">10m", ">10g", ">10t", "<10"},
 				Options: options{
@@ -511,7 +511,7 @@ func TestMismatch(t *testing.T) {
 		},
 		mismatchtest{
 			desc: "want files that have not been modified in the last hour ago, should find nothing",
-			search: search{
+			search: Search{
 				Paths:  []string{basedir + subdirs, basedir},
 				Mtimes: []string{"<1h"},
 				Options: options{
@@ -522,7 +522,7 @@ func TestMismatch(t *testing.T) {
 		},
 		mismatchtest{
 			desc: "want files that don't have 644 permissions, should find nothing",
-			search: search{
+			search: Search{
 				Paths: []string{basedir},
 				Modes: []string{"-rw-r--r--"},
 				Options: options{
@@ -533,7 +533,7 @@ func TestMismatch(t *testing.T) {
 		},
 		mismatchtest{
 			desc: "want files that don't have a name different than testfile0, should find testfile0",
-			search: search{
+			search: Search{
 				Paths: []string{basedir},
 				Names: []string{"!^testfile0$"},
 				Options: options{
@@ -546,7 +546,7 @@ func TestMismatch(t *testing.T) {
 		},
 		mismatchtest{
 			desc: "test matchall+macroal+mismatch: want file where at least one line fails to match the regex on testfile0, should find testfile1 that has the extra line 'some other other text'",
-			search: search{
+			search: Search{
 				Paths:    []string{basedir},
 				Names:    []string{"^testfile(0|1)$"},
 				Contents: []string{`^((---.+)|(#.+)|(\s+)|(some (other )?text))?$`},
@@ -562,7 +562,7 @@ func TestMismatch(t *testing.T) {
 		},
 		mismatchtest{
 			desc: "want files that don't match the hashes of testfile2, should find testfile0, 1, 3, 4, 5, 6, 7 & 8",
-			search: search{
+			search: Search{
 				Paths: []string{basedir},
 				MD5:   []string{TESTDATA[2].md5},
 				SHA1:  []string{TESTDATA[2].sha1},

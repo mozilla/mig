@@ -109,7 +109,7 @@ func (r *run) ParamsCreator() (interface{}, error) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		var label string
-		var search search
+		var search Search
 		// sane defaults
 		search.Options.MatchAll = true
 		search.Options.MaxDepth = 1000
@@ -441,7 +441,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	var s search
+	var s Search
 	s.Paths = paths
 	s.Names = names
 	s.Sizes = sizes

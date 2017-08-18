@@ -64,16 +64,17 @@ type run struct {
 // parameters describes the parameters the file module uses as input upon
 // invocation
 type parameters struct {
-	Searches map[string]search `json:"searches,omitempty"`
+	Searches map[string]Search `json:"searches,omitempty"`
 }
 
 func newParameters() *parameters {
 	var p parameters
-	p.Searches = make(map[string]search)
+	p.Searches = make(map[string]Search)
 	return &p
 }
 
-type search struct {
+// Search contains the fields used to execute an individual search
+type Search struct {
 	Description  string   `json:"description,omitempty"`
 	Paths        []string `json:"paths"`
 	Contents     []string `json:"contents,omitempty"`
@@ -141,7 +142,7 @@ type check struct {
 // pretty much infinity when it comes to file searches
 const unlimited float64 = 1125899906842624
 
-func (s *search) makeChecks() (err error) {
+func (s *Search) makeChecks() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("makeChecks() -> %v", e)
@@ -287,7 +288,7 @@ func (s *search) makeChecks() (err error) {
 	return
 }
 
-func (s *search) hasMismatch(filter string) bool {
+func (s *Search) hasMismatch(filter string) bool {
 	for _, fi := range s.Options.Mismatch {
 		if fi == filter {
 			return true
@@ -379,32 +380,32 @@ func parseMtime(mtime string) (minmtime, maxmtime time.Time, err error) {
 	return
 }
 
-func (s *search) activate() {
+func (s *Search) activate() {
 	s.isactive = true
 	return
 }
 
-func (s *search) deactivate() {
+func (s *Search) deactivate() {
 	s.isactive = false
 	return
 }
 
-func (s *search) increasedepth() {
+func (s *Search) increasedepth() {
 	s.currentdepth++
 	return
 }
 
-func (s *search) decreasedepth() {
+func (s *Search) decreasedepth() {
 	s.currentdepth--
 	return
 }
 
-func (s *search) markcurrent() {
+func (s *Search) markcurrent() {
 	s.iscurrent = true
 	return
 }
 
-func (s *search) unmarkcurrent() {
+func (s *Search) unmarkcurrent() {
 	s.iscurrent = false
 	return
 }
@@ -1123,7 +1124,7 @@ func (c check) wantThis(match bool) bool {
 	return false
 }
 
-func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
+func (s Search) checkName(file string, fi os.FileInfo) (matchedall bool) {
 	matchedall = true
 	if (s.checkmask & checkName) != 0 {
 		for i, c := range s.checks {
@@ -1145,7 +1146,7 @@ func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
 	return
 }
 
-func (s search) checkMode(file string, fi os.FileInfo) (matchedall bool) {
+func (s Search) checkMode(file string, fi os.FileInfo) (matchedall bool) {
 	matchedall = true
 	if (s.checkmask & checkMode) != 0 {
 		for i, c := range s.checks {
@@ -1168,7 +1169,7 @@ func (s search) checkMode(file string, fi os.FileInfo) (matchedall bool) {
 	return
 }
 
-func (s search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
+func (s Search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
 	matchedall = true
 	if (s.checkmask & checkSize) != 0 {
 		for i, c := range s.checks {
@@ -1192,7 +1193,7 @@ func (s search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
 	return
 }
 
-func (s search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
+func (s Search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
 	matchedall = true
 	if (s.checkmask & checkMtime) != 0 {
 		for i, c := range s.checks {
@@ -1521,17 +1522,22 @@ func getHash(f fileEntry, hashType checkType) (hexhash string, err error) {
 }
 
 // SearchResults is the search result element for an invocation of the file module
-type SearchResults map[string]searchresult
+type SearchResults map[string]SearchResult
 
-type searchresult []matchedfile
+// SearchResult is the results of a single search the file module has executed. It contains
+// a list of the files which were matched as a result of the search.
+type SearchResult []MatchedFile
 
-type matchedfile struct {
-	File     string   `json:"file"`
-	Search   search   `json:"search"`
-	FileInfo fileinfo `json:"fileinfo"`
+// MatchedFile describes a single file matched as a result of a search.
+type MatchedFile struct {
+	File     string `json:"file"`
+	Search   Search `json:"search"`
+	FileInfo Info   `json:"fileinfo"`
 }
 
-type fileinfo struct {
+// Info describes the metadata associated with a file matched as a result of a
+// search.
+type Info struct {
 	Size   float64 `json:"size"`
 	Mode   string  `json:"mode"`
 	Mtime  string  `json:"lastmodified"`
@@ -1553,7 +1559,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 	elements := res.Elements.(SearchResults)
 	var maxerrors int
 	for label, search := range r.Parameters.Searches {
-		var sr searchresult
+		var sr SearchResult
 		// first pass on the results: if matchall is set, verify that all
 		// the checks matched on all the files
 		if search.Options.MatchAll {
@@ -1599,7 +1605,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 			}
 			// now that we have a clean list of files that matched all checks, store it
 			for _, matchedFile := range matchedFiles {
-				var mf matchedfile
+				var mf MatchedFile
 				mf.File = matchedFile
 				if mf.File != "" {
 					stats.Totalhits++
@@ -1642,7 +1648,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 				c.matchedfiles = append(c.matchedfiles, "")
 			}
 			for _, file := range c.matchedfiles {
-				var mf matchedfile
+				var mf MatchedFile
 				mf.File = file
 				if mf.File != "" {
 					stats.Totalhits++
