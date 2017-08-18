@@ -25,10 +25,10 @@ var basedir string
 func TestMain(m *testing.M) {
 	basedir = createFiles()
 	r := m.Run()
-	//err := os.RemoveAll(basedir)
-	//if err != nil {
-	//	log.Fatalf("failed to remove %s: %v\n", basedir, err)
-	//}
+	err := os.RemoveAll(basedir)
+	if err != nil {
+		log.Fatalf("failed to remove %s: %v\n", basedir, err)
+	}
 	os.Exit(r)
 }
 
