@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -312,6 +313,20 @@ var testData = []testParams{
 		expectedfilessub:  []string{"testfile0", "testfile9"},
 	},
 	testParams{
+		description:       "find testfile0 by content using file itself as a path",
+		content:           []string{"^--- header for first file ---$"},
+		expectedfilesroot: []string{"testfile0"},
+		expectedfilessub:  []string{},
+		searchpath:        []string{"SEARCHBASE+testfile0"},
+	},
+	testParams{
+		description:       "find testfile0 by content using file itself as a path via symlink",
+		content:           []string{"^--- header for first file ---$"},
+		expectedfilesroot: []string{"testfile0"},
+		expectedfilessub:  []string{},
+		searchpath:        []string{"SEARCHBASE+testfile9"},
+	},
+	testParams{
 		description:       "find testfile1 by content",
 		content:           []string{"^--- header for second file ---$"},
 		expectedfilesroot: []string{"testfile1"},
@@ -594,6 +609,15 @@ func (tp *testParams) runTest(t *testing.T) {
 		s.Paths = append(s.Paths, tp.searchpath...)
 	} else {
 		s.Paths = append(s.Paths, basedir)
+	}
+	// Substitute any tokens out of the search paths, used for some special path
+	// value manipulation in certain tests
+	for i := range s.Paths {
+		if !strings.HasPrefix(s.Paths[i], "SEARCHBASE+") {
+			continue
+		}
+		fcomponent := s.Paths[i][11:]
+		s.Paths[i] = path.Join(basedir, fcomponent)
 	}
 	if len(tp.content) != 0 {
 		s.Contents = append(s.Contents, tp.content...)
