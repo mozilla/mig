@@ -4,12 +4,11 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-/* The file module provides functions to scan a file system. It can look into files
-using regexes. It can search files by name. It can match hashes in md5, sha1,
-sha256, sha384, sha512, sha3_224, sha3_256, sha3_384 and sha3_512.
-The filesystem can be searched using patterns, as described in the Parameters
-documentation at http://mig.mozilla.org/doc/module_file.html .
-*/
+// Package file provides functions to scan a file system as an agent module.
+// It can look into files using regexes. It can search files by name. It can
+// match hashes in md5, sha1, sha256, sha384, sha512, sha3_224, sha3_256, sha3_384
+// and sha3_512.  The filesystem can be searched using patterns, as described in
+// the Parameters documentation at http://mig.mozilla.org/doc/module_file.html.
 package file /* import "mig.ninja/mig/modules/file" */
 
 import (
@@ -37,8 +36,8 @@ import (
 	"compress/gzip"
 )
 
-var debug bool = false
-var tryDecompress bool = false
+var debug = false
+var tryDecompress = false
 
 func debugprint(format string, a ...interface{}) {
 	if debug {
@@ -58,38 +57,43 @@ func init() {
 }
 
 type run struct {
-	Parameters Parameters
+	Parameters parameters
 	Results    modules.Result
 }
 
-type Parameters struct {
-	Searches map[string]search `json:"searches,omitempty"`
+// parameters describes the parameters the file module uses as input upon
+// invocation
+type parameters struct {
+	Searches map[string]*Search `json:"searches,omitempty"`
 }
 
-func newParameters() *Parameters {
-	var p Parameters
-	p.Searches = make(map[string]search)
+func newParameters() *parameters {
+	var p parameters
+	p.Searches = make(map[string]*Search)
 	return &p
 }
 
-type search struct {
-	Description  string   `json:"description,omitempty"`
-	Paths        []string `json:"paths"`
-	Contents     []string `json:"contents,omitempty"`
-	Names        []string `json:"names,omitempty"`
-	Sizes        []string `json:"sizes,omitempty"`
-	Modes        []string `json:"modes,omitempty"`
-	Mtimes       []string `json:"mtimes,omitempty"`
-	MD5          []string `json:"md5,omitempty"`
-	SHA1         []string `json:"sha1,omitempty"`
-	SHA2         []string `json:"sha2,omitempty"`
-	SHA3         []string `json:"sha3,omitempty"`
-	Options      options  `json:"options,omitempty"`
-	checks       []check
-	checkmask    checkType
-	isactive     bool
-	iscurrent    bool
-	currentdepth uint64
+// Search contains the fields used to execute an individual search
+type Search struct {
+	Description      string   `json:"description,omitempty"`
+	Paths            []string `json:"paths"`
+	Contents         []string `json:"contents,omitempty"`
+	Names            []string `json:"names,omitempty"`
+	Sizes            []string `json:"sizes,omitempty"`
+	Modes            []string `json:"modes,omitempty"`
+	Mtimes           []string `json:"mtimes,omitempty"`
+	MD5              []string `json:"md5,omitempty"`
+	SHA1             []string `json:"sha1,omitempty"`
+	SHA2             []string `json:"sha2,omitempty"`
+	SHA3             []string `json:"sha3,omitempty"`
+	Options          options  `json:"options,omitempty"`
+	checks           []check
+	checkmask        checkType
+	isactive         bool
+	iscurrent        bool
+	currentdepth     uint64
+	matchChan        chan checkMatchNotify // Channel to notify search processor of a check hit
+	filesMatchingAll []string              // If Options.MatchAll, stores files matching all checks
 }
 
 type options struct {
@@ -126,7 +130,9 @@ const (
 	checkSHA3_512
 )
 
+// check represents an individual check that is part of a search.
 type check struct {
+	checkid                int // Internal check ID, set by the search parent
 	code                   checkType
 	matched                uint64
 	matchedfiles           []string
@@ -135,17 +141,107 @@ type check struct {
 	minsize, maxsize       uint64
 	minmtime, maxmtime     time.Time
 	inversematch, mismatch bool
+	matchChan              chan checkMatchNotify
+	waitNotify             chan bool
+}
+
+// checkMatchNotify is sent from the check to the parent Search via the checks matchChan to
+// notify the Search type's search processor that a match has been found for an individual check.
+type checkMatchNotify struct {
+	checkid int
+	file    string
 }
 
 // pretty much infinity when it comes to file searches
 const unlimited float64 = 1125899906842624
 
-func (s *search) makeChecks() (err error) {
+// processMatch processes incoming matches from individual checks which are part of the search. It
+// also manages the total hit statistics. The match processor does some preprocessing, such as identifying
+// files that match all checks for a search if MatchAll is set, to make building the results simpler.
+//
+// Although this function runs in a goroutine, execution is serialized via a wait channel this function
+// will write to when its ready for the next result.
+func (s *Search) processMatch() {
+	for {
+		var c *check
+		match := <-s.matchChan
+
+		c = nil
+		for i := range s.checks {
+			if s.checks[i].checkid == match.checkid {
+				c = &s.checks[i]
+			}
+		}
+		if c == nil {
+			// This is fatal, and means we received a result for a check which we
+			// do not know about
+			panic("processMatch received check result for invalid check id")
+		}
+		// See if we need to add the file for this check, if it already exists we are done
+		found := false
+		for _, x := range c.matchedfiles {
+			if x == match.file {
+				found = true
+				break
+			}
+		}
+		if found {
+			c.waitNotify <- true
+			continue
+		}
+		c.matchedfiles = append(c.matchedfiles, match.file)
+		c.matched++
+
+		// If this search has MatchAll set, see if this file now matches all checks in
+		// the search. If so, add it to the allMatched list.
+		if s.Options.MatchAll && !s.allChecksMatched(match.file) {
+			allmatch := true
+			for _, c := range s.checks {
+				if !c.hasMatch(match.file) {
+					allmatch = false
+					break
+				}
+			}
+			if allmatch {
+				s.filesMatchingAll = append(s.filesMatchingAll, match.file)
+				// Since this should be considered a match now, increment the hits
+				// counter
+				stats.Totalhits++
+			}
+		} else {
+			// MatchAll isn't set, so we just count every hit here as a match
+			stats.Totalhits++
+		}
+
+		c.waitNotify <- true
+	}
+}
+
+// allChecksMatched returns true if the file is in the filesMatchingAll list for a search
+func (s *Search) allChecksMatched(file string) bool {
+	for _, f := range s.filesMatchingAll {
+		if f == file {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Search) makeChecks() (err error) {
+	var nextCheckID int
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("makeChecks() -> %v", e)
 		}
 	}()
+	nextCID := func() check {
+		ret := check{}
+		nextCheckID++
+		ret.checkid = nextCheckID
+		ret.matchChan = s.matchChan
+		ret.waitNotify = make(chan bool, 0)
+		return ret
+	}
 	if s.Options.Debug == "print" {
 		debug = true
 	}
@@ -159,7 +255,7 @@ func (s *search) makeChecks() (err error) {
 		s.Options.MatchLimit = unlimited
 	}
 	for _, v := range s.Contents {
-		var c check
+		c := nextCID()
 		c.code = checkContent
 		c.value = v
 		if len(v) > 1 && v[:1] == "!" {
@@ -174,7 +270,7 @@ func (s *search) makeChecks() (err error) {
 		s.checkmask |= c.code
 	}
 	for _, v := range s.Names {
-		var c check
+		c := nextCID()
 		c.code = checkName
 		c.value = v
 		if len(v) > 1 && v[:1] == "!" {
@@ -189,7 +285,7 @@ func (s *search) makeChecks() (err error) {
 		s.checkmask |= c.code
 	}
 	for _, v := range s.Sizes {
-		var c check
+		c := nextCID()
 		c.code = checkSize
 		c.value = v
 		c.minsize, c.maxsize, err = parseSize(v)
@@ -203,7 +299,7 @@ func (s *search) makeChecks() (err error) {
 		s.checkmask |= c.code
 	}
 	for _, v := range s.Modes {
-		var c check
+		c := nextCID()
 		c.code = checkMode
 		c.value = v
 		if s.hasMismatch("mode") {
@@ -214,7 +310,7 @@ func (s *search) makeChecks() (err error) {
 		s.checkmask |= c.code
 	}
 	for _, v := range s.Mtimes {
-		var c check
+		c := nextCID()
 		c.code = checkMtime
 		c.value = v
 		if s.hasMismatch("mtime") {
@@ -228,7 +324,7 @@ func (s *search) makeChecks() (err error) {
 		s.checkmask |= c.code
 	}
 	for _, v := range s.MD5 {
-		var c check
+		c := nextCID()
 		c.code = checkMD5
 		c.value = strings.ToUpper(v)
 		if s.hasMismatch("md5") {
@@ -238,7 +334,7 @@ func (s *search) makeChecks() (err error) {
 		s.checkmask |= c.code
 	}
 	for _, v := range s.SHA1 {
-		var c check
+		c := nextCID()
 		c.code = checkSHA1
 		c.value = strings.ToUpper(v)
 		if s.hasMismatch("sha1") {
@@ -248,7 +344,7 @@ func (s *search) makeChecks() (err error) {
 		s.checkmask |= c.code
 	}
 	for _, v := range s.SHA2 {
-		var c check
+		c := nextCID()
 		c.value = strings.ToUpper(v)
 		if s.hasMismatch("sha2") {
 			c.mismatch = true
@@ -265,7 +361,7 @@ func (s *search) makeChecks() (err error) {
 		s.checkmask |= c.code
 	}
 	for _, v := range s.SHA3 {
-		var c check
+		c := nextCID()
 		c.value = strings.ToUpper(v)
 		if s.hasMismatch("sha3") {
 			c.mismatch = true
@@ -286,7 +382,7 @@ func (s *search) makeChecks() (err error) {
 	return
 }
 
-func (s *search) hasMismatch(filter string) bool {
+func (s *Search) hasMismatch(filter string) bool {
 	for _, fi := range s.Options.Mismatch {
 		if fi == filter {
 			return true
@@ -298,7 +394,7 @@ func (s *search) hasMismatch(filter string) bool {
 func parseSize(size string) (minsize, maxsize uint64, err error) {
 	var (
 		multiplier uint64 = 1
-		n          uint64 = 0
+		n          uint64
 	)
 	switch size[len(size)-1] {
 	case 'k':
@@ -346,8 +442,8 @@ func parseSize(size string) (minsize, maxsize uint64, err error) {
 
 func parseMtime(mtime string) (minmtime, maxmtime time.Time, err error) {
 	var (
-		isDays bool   = false
-		n      uint64 = 0
+		isDays = false
+		n      uint64
 	)
 	suffix := mtime[len(mtime)-1]
 	if suffix == 'd' {
@@ -378,49 +474,54 @@ func parseMtime(mtime string) (minmtime, maxmtime time.Time, err error) {
 	return
 }
 
-func (s *search) activate() {
+func (s *Search) activate() {
 	s.isactive = true
 	return
 }
 
-func (s *search) deactivate() {
+func (s *Search) deactivate() {
 	s.isactive = false
 	return
 }
 
-func (s *search) increasedepth() {
+func (s *Search) increasedepth() {
 	s.currentdepth++
 	return
 }
 
-func (s *search) decreasedepth() {
+func (s *Search) decreasedepth() {
 	s.currentdepth--
 	return
 }
 
-func (s *search) markcurrent() {
+func (s *Search) markcurrent() {
 	s.iscurrent = true
 	return
 }
 
-func (s *search) unmarkcurrent() {
+func (s *Search) unmarkcurrent() {
 	s.iscurrent = false
 	return
 }
 
+// storeMatch writes a matched file to the check's parent Search type results
+// processor, where it can be processed and stored with the check.
 func (c *check) storeMatch(file string) {
-	store := true
-	for _, storedFile := range c.matchedfiles {
-		// only store files once per check
-		if file == storedFile {
-			store = false
+	c.matchChan <- checkMatchNotify{
+		file:    file,
+		checkid: c.checkid,
+	}
+	_ = <-c.waitNotify
+}
+
+// hasMatch returns true if a check has matched against a file
+func (c *check) hasMatch(file string) bool {
+	for _, x := range c.matchedfiles {
+		if x == file {
+			return true
 		}
 	}
-	if store {
-		c.matched++
-		c.matchedfiles = append(c.matchedfiles, file)
-	}
-	return
+	return false
 }
 
 func (r *run) ValidateParameters() (err error) {
@@ -685,6 +786,12 @@ func (r *run) Run(in modules.ModuleReader) (resStr string) {
 	}
 
 	for label, search := range r.Parameters.Searches {
+		// Allocate our match input channel; checks will write the filename and their respective
+		// check ID to this channel when a match is identified
+		search.matchChan = make(chan checkMatchNotify, 0)
+		// Start the incoming match processor for the search entry
+		go search.processMatch()
+		// Create all the checks for the search
 		debugprint("making checks for label %s\n", label)
 		err := search.makeChecks()
 		if err != nil {
@@ -839,6 +946,15 @@ func (r *run) pathWalk(path string, roots []string) (traversed []string, err err
 		}
 		// loop over the content of the directory
 		for _, dirEntry := range dirContent {
+			// While we are iterating over the directory content, consult Totalhits to
+			// make sure we do not exceed our match limit. If we hit the match limit, we
+			// deactivate the search.
+			for _, search := range r.Parameters.Searches {
+				if stats.Totalhits >= search.Options.MatchLimit {
+					search.deactivate()
+					activesearches--
+				}
+			}
 			entryAbsPath := path
 			// append path separator if missing
 			if entryAbsPath[len(entryAbsPath)-1] != os.PathSeparator {
@@ -1095,47 +1211,41 @@ func (c check) wantThis(match bool) bool {
 			if c.mismatch {
 				debugprint("wantThis=true\n")
 				return true
-			} else {
-				debugprint("wantThis=false\n")
-				return false
 			}
-		} else {
-			if c.mismatch {
-				debugprint("wantThis=false\n")
-				return false
-			} else {
-				debugprint("wantThis=true\n")
-				return true
-			}
+			debugprint("wantThis=false\n")
+			return false
 		}
-	} else {
-		if c.inversematch {
-			if c.mismatch {
-				debugprint("wantThis=false\n")
-				return false
-			} else {
-				debugprint("wantThis=true\n")
-				return true
-			}
-		} else {
-			if c.mismatch {
-				debugprint("wantThis=true\n")
-				return true
-			} else {
-				debugprint("wantThis=false\n")
-				return false
-			}
+		if c.mismatch {
+			debugprint("wantThis=false\n")
+			return false
 		}
+		debugprint("wantThis=true\n")
+		return true
 	}
+	if c.inversematch {
+		if c.mismatch {
+			debugprint("wantThis=false\n")
+			return false
+		}
+		debugprint("wantThis=true\n")
+		return true
+	}
+	if c.mismatch {
+		debugprint("wantThis=true\n")
+		return true
+	}
+	debugprint("wantThis=false\n")
+	return false
 }
 
-func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
+func (s Search) checkName(file string, fi os.FileInfo) (matchedall bool) {
 	matchedall = true
 	if (s.checkmask & checkName) != 0 {
-		for i, c := range s.checks {
-			if (c.code & checkName) == 0 {
+		for i := range s.checks {
+			if (s.checks[i].code & checkName) == 0 {
 				continue
 			}
+			c := &s.checks[i]
 			match := c.regex.MatchString(path.Base(fi.Name()))
 			if match {
 				debugprint("file name '%s' matches regex '%s'\n", fi.Name(), c.value)
@@ -1145,19 +1255,19 @@ func (s search) checkName(file string, fi os.FileInfo) (matchedall bool) {
 			} else {
 				matchedall = false
 			}
-			s.checks[i] = c
 		}
 	}
 	return
 }
 
-func (s search) checkMode(file string, fi os.FileInfo) (matchedall bool) {
+func (s Search) checkMode(file string, fi os.FileInfo) (matchedall bool) {
 	matchedall = true
 	if (s.checkmask & checkMode) != 0 {
-		for i, c := range s.checks {
-			if (c.code & checkMode) == 0 {
+		for i := range s.checks {
+			if (s.checks[i].code & checkMode) == 0 {
 				continue
 			}
+			c := &s.checks[i]
 			match := c.regex.MatchString(fi.Mode().String())
 			if match {
 				debugprint("file '%s' mode '%s' matches regex '%s'\n",
@@ -1168,19 +1278,19 @@ func (s search) checkMode(file string, fi os.FileInfo) (matchedall bool) {
 			} else {
 				matchedall = false
 			}
-			s.checks[i] = c
 		}
 	}
 	return
 }
 
-func (s search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
+func (s Search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
 	matchedall = true
 	if (s.checkmask & checkSize) != 0 {
-		for i, c := range s.checks {
-			if (c.code & checkSize) == 0 {
+		for i := range s.checks {
+			if (s.checks[i].code & checkSize) == 0 {
 				continue
 			}
+			c := &s.checks[i]
 			match := false
 			if fi.Size() >= int64(c.minsize) && fi.Size() <= int64(c.maxsize) {
 				match = true
@@ -1192,19 +1302,19 @@ func (s search) checkSize(file string, fi os.FileInfo) (matchedall bool) {
 			} else {
 				matchedall = false
 			}
-			s.checks[i] = c
 		}
 	}
 	return
 }
 
-func (s search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
+func (s Search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
 	matchedall = true
 	if (s.checkmask & checkMtime) != 0 {
-		for i, c := range s.checks {
-			if (c.code & checkMtime) == 0 {
+		for i := range s.checks {
+			if (s.checks[i].code & checkMtime) == 0 {
 				continue
 			}
+			c := &s.checks[i]
 			match := false
 			if fi.ModTime().After(c.minmtime) && fi.ModTime().Before(c.maxmtime) {
 				match = true
@@ -1217,7 +1327,6 @@ func (s search) checkMtime(file string, fi os.FileInfo) (matchedall bool) {
 			} else {
 				matchedall = false
 			}
-			s.checks[i] = c
 		}
 	}
 	return
@@ -1243,8 +1352,8 @@ func (r *run) checkContent(f fileEntry) {
 		if !search.isactive {
 			continue
 		}
-		for i, c := range search.checks {
-			if c.code&checkContent == 0 {
+		for i := range search.checks {
+			if search.checks[i].code&checkContent == 0 {
 				continue
 			}
 			// init the map
@@ -1277,11 +1386,12 @@ func (r *run) checkContent(f fileEntry) {
 			// the macroal flag is set to false
 			macroalstatus[label] = true
 			// apply the content checks regexes to the current scan
-			for i, c := range search.checks {
+			for i := range search.checks {
 				// skip this check if it's not a content check or if it has already matched
-				if c.code&checkContent == 0 || (checksstatus[label][i] && !search.Options.Macroal) {
+				if search.checks[i].code&checkContent == 0 || (checksstatus[label][i] && !search.Options.Macroal) {
 					continue
 				}
+				c := &search.checks[i]
 				hasactivechecks = true
 
 				/* Matching Logic
@@ -1355,7 +1465,6 @@ func (r *run) checkContent(f fileEntry) {
 						}
 					}
 				}
-				search.checks[i] = c
 			}
 			if search.Options.Macroal && !macroalstatus[label] {
 				// we have failed to match all content regexes on this line,
@@ -1380,23 +1489,24 @@ func (r *run) checkContent(f fileEntry) {
 			// we match all content regexes on all lines of the file,
 			// as requested via the Macroal flag
 			// now store the filename in all checks
-			for i, c := range search.checks {
-				if c.code&checkContent == 0 {
+			for i := range search.checks {
+				if search.checks[i].code&checkContent == 0 {
 					continue
 				}
+				c := &search.checks[i]
 				if c.wantThis(checksstatus[label][i]) {
 					c.storeMatch(f.filename)
 				}
-				search.checks[i] = c
 			}
 			// we're done with this search
 			continue
 		}
 		// 2. If any check with inversematch=true failed to match, record that as a success
-		for i, c := range search.checks {
-			if c.code&checkContent == 0 {
+		for i := range search.checks {
+			if search.checks[i].code&checkContent == 0 {
 				continue
 			}
+			c := &search.checks[i]
 			if !checksstatus[label][i] && c.inversematch {
 				debugprint("in search '%s' on file '%s', check '%s' has not matched and is set to inversematch, record this as a positive result\n",
 					label, f.filename, c.value)
@@ -1405,26 +1515,24 @@ func (r *run) checkContent(f fileEntry) {
 				}
 				// adjust check status to true because the check did in fact match as an inverse
 				checksstatus[label][i] = true
-				search.checks[i] = c
 			}
 		}
 		// 3. deactivate searches that have matchall=true, but did not match against
 		if search.isactive && (search.checkmask&checkContent != 0) && search.Options.MatchAll {
-			for i, c := range search.checks {
-				if c.code&checkContent == 0 {
+			for i := range search.checks {
+				if search.checks[i].code&checkContent == 0 {
 					continue
 				}
+				c := &search.checks[i]
 				// check hasn't matched, or has matched and we didn't want it to, deactivate the search
 				if !checksstatus[label][i] || (checksstatus[label][i] && c.inversematch) {
 					if c.wantThis(checksstatus[label][i]) {
 						c.storeMatch(f.filename)
-						search.checks[i] = c
 					}
 					search.deactivate()
 				}
 			}
 		}
-		r.Parameters.Searches[label] = search
 	}
 	return
 }
@@ -1455,10 +1563,11 @@ func (r *run) checkHash(f fileEntry, hashtype checkType) {
 	}
 	for label, search := range r.Parameters.Searches {
 		if search.isactive && (search.checkmask&hashtype) != 0 {
-			for i, c := range search.checks {
-				if c.code&hashtype == 0 {
+			for i := range search.checks {
+				if search.checks[i].code&hashtype == 0 {
 					continue
 				}
+				c := &search.checks[i]
 				match := false
 				if c.value == hash {
 					match = true
@@ -1469,7 +1578,6 @@ func (r *run) checkHash(f fileEntry, hashtype checkType) {
 				} else if search.Options.MatchAll {
 					search.deactivate()
 				}
-				search.checks[i] = c
 			}
 		}
 		r.Parameters.Searches[label] = search
@@ -1526,17 +1634,23 @@ func getHash(f fileEntry, hashType checkType) (hexhash string, err error) {
 	return
 }
 
-type SearchResults map[string]searchresult
+// SearchResults is the search result element for an invocation of the file module
+type SearchResults map[string]SearchResult
 
-type searchresult []matchedfile
+// SearchResult is the results of a single search the file module has executed. It contains
+// a list of the files which were matched as a result of the search.
+type SearchResult []MatchedFile
 
-type matchedfile struct {
-	File     string   `json:"file"`
-	Search   search   `json:"search"`
-	FileInfo fileinfo `json:"fileinfo"`
+// MatchedFile describes a single file matched as a result of a search.
+type MatchedFile struct {
+	File     string `json:"file"`
+	Search   Search `json:"search"`
+	FileInfo Info   `json:"fileinfo"`
 }
 
-type fileinfo struct {
+// Info describes the metadata associated with a file matched as a result of a
+// search.
+type Info struct {
 	Size   float64 `json:"size"`
 	Mode   string  `json:"mode"`
 	Mtime  string  `json:"lastmodified"`
@@ -1558,56 +1672,19 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 	elements := res.Elements.(SearchResults)
 	var maxerrors int
 	for label, search := range r.Parameters.Searches {
-		var sr searchresult
+		var sr SearchResult
 		// first pass on the results: if matchall is set, verify that all
 		// the checks matched on all the files
 		if search.Options.MatchAll {
-			// collect all the files that were found across all checks of this search
-			var allFiles, matchedFiles []string
-			for _, c := range search.checks {
-				// populate allFiles as a slice of unique files
-				for _, matchedFile := range c.matchedfiles {
-					store := true
-					for _, afile := range allFiles {
-						if afile == matchedFile {
-							store = false
-						}
-					}
-					if store {
-						allFiles = append(allFiles, matchedFile)
-					}
-				}
+			// The results processor which is part of the search has already prepared a list
+			// of files that match all searches, so we leverage that to build our results.
+			if len(search.filesMatchingAll) == 0 {
+				search.filesMatchingAll = append(search.filesMatchingAll, "")
 			}
-			// verify that each file has matched on all the checks
-			for _, foundFile := range allFiles {
-				debugprint("checking if file %s matched all checks\n", foundFile)
-				matchedallchecks := true
-				for _, c := range search.checks {
-					found := false
-					for _, matchedFile := range c.matchedfiles {
-						if foundFile == matchedFile {
-							found = true
-						}
-					}
-					if !found {
-						debugprint("check %d did not match\n", c.code)
-						matchedallchecks = false
-						break
-					}
-				}
-				if matchedallchecks {
-					matchedFiles = append(matchedFiles, foundFile)
-				}
-			}
-			if len(matchedFiles) == 0 {
-				matchedFiles = append(matchedFiles, "")
-			}
-			// now that we have a clean list of files that matched all checks, store it
-			for _, matchedFile := range matchedFiles {
-				var mf matchedfile
+			for _, matchedFile := range search.filesMatchingAll {
+				var mf MatchedFile
 				mf.File = matchedFile
 				if mf.File != "" {
-					stats.Totalhits++
 					fi, err := os.Stat(mf.File)
 					if err != nil {
 						panic(err)
@@ -1623,7 +1700,7 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 						}
 					}
 				}
-				mf.Search = search
+				mf.Search = *search
 				mf.Search.Options.MatchLimit = 0
 				// store the value of maxerrors if greater than the one
 				// we already have, we'll need it further down to return
@@ -1647,10 +1724,9 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 				c.matchedfiles = append(c.matchedfiles, "")
 			}
 			for _, file := range c.matchedfiles {
-				var mf matchedfile
+				var mf MatchedFile
 				mf.File = file
 				if mf.File != "" {
-					stats.Totalhits++
 					fi, err := os.Stat(file)
 					if err != nil {
 						panic(err)
@@ -1730,11 +1806,11 @@ func (r *run) buildResults(t0 time.Time) (resStr string, err error) {
 		"Execution time:   %s\n",
 		stats.Filescount, stats.Openfailed,
 		stats.Totalhits, stats.Exectime)
-	JsonResults, err := json.Marshal(res)
+	JSONResults, err := json.Marshal(res)
 	if err != nil {
 		panic(err)
 	}
-	resStr = string(JsonResults[:])
+	resStr = string(JSONResults[:])
 	return
 }
 
