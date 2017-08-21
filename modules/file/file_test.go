@@ -286,6 +286,7 @@ type testParams struct {
 	macroal             bool
 	mismatch            []string
 	maxdepth            float64
+	nomatchall          bool
 
 	searchpath        []string // Override search in normal test path
 	expectedfilesroot []string // The files we expect to find for this search in the root path
@@ -480,6 +481,14 @@ var testData = []testParams{
 		expectedfilessub:  []string{},
 		searchpath:        []string{"/doesnotexist"},
 	},
+	testParams{
+		description:       "search for testfile0 and testfile7 without matchall",
+		name:              []string{"^testfile0$"},
+		size:              []string{"274"},
+		nomatchall:        true,
+		expectedfilesroot: []string{"testfile0", "testfile7"},
+		expectedfilessub:  []string{"testfile0", "testfile7"},
+	},
 	// MACROAL tests
 	// Regex     | Inverse | MACROAL | Result
 	// -----------+---------+---------+--------
@@ -655,7 +664,11 @@ func (tp *testParams) runTest(t *testing.T) {
 	if len(tp.mismatch) != 0 {
 		s.Options.Mismatch = append(s.Options.Mismatch, tp.mismatch...)
 	}
-	s.Options.MatchAll = true
+	if !tp.nomatchall {
+		s.Options.MatchAll = true
+	} else {
+		s.Options.MatchAll = false
+	}
 	r.Parameters.Searches["s1"] = s
 	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 	if err != nil {
