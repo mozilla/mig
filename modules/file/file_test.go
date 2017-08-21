@@ -691,7 +691,6 @@ func (tp *testParams) runTest(t *testing.T) {
 		t.Fatal("module returned no output")
 	}
 
-	t.Logf("%v", out)
 	err = json.Unmarshal([]byte(out), &mr)
 	if err != nil {
 		t.Fatalf("json.Unmarshal: %v", err)
