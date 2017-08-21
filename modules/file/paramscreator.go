@@ -392,7 +392,7 @@ func (r *run) ParamsCreator() (interface{}, error) {
 			}
 			fmt.Printf("Stored %s %s\nEnter a new parameter, or 'done' to exit.\n", checkType, checkValue)
 		}
-		p.Searches[label] = search
+		p.Searches[label] = &search
 		fmt.Println("Stored search", label)
 	}
 exit:
@@ -467,7 +467,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 		s.Options.Debug = "print"
 	}
 	p := newParameters()
-	p.Searches["s1"] = s
+	p.Searches["s1"] = &s
 	r.Parameters = *p
 	return r.Parameters, r.ValidateParameters()
 }
