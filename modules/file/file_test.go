@@ -93,14 +93,14 @@ func TestValidateParameters(t *testing.T) {
 		t.Fatal("ValidateParameters: %v", err)
 	}
 
-	r.Parameters.Searches["s1"] = s
+	r.Parameters.Searches["s1"] = &s
 	err = r.ValidateParameters()
 	if err == nil {
 		t.Fatalf("parameters with empty search path should not validate", err)
 	}
 
 	s.Paths = append(s.Paths, "/testing")
-	r.Parameters.Searches["s1"] = s
+	r.Parameters.Searches["s1"] = &s
 	err = r.ValidateParameters()
 	if err != nil {
 		t.Fatalf("ValidateParameters: %v", err)
@@ -199,7 +199,7 @@ func TestBadRunParameters(t *testing.T) {
 	r.Parameters = *newParameters()
 	s.Paths = append(s.Paths, basedir)
 	s.SHA1 = append(s.SHA1, "NOTASHA1")
-	r.Parameters.Searches["s1"] = s
+	r.Parameters.Searches["s1"] = &s
 	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 	if err != nil {
 		t.Fatalf("modules.MakeMessage: %v", err)
@@ -286,11 +286,13 @@ type testParams struct {
 	macroal             bool
 	mismatch            []string
 	maxdepth            float64
+	matchlimit          float64
 	nomatchall          bool
 
 	searchpath        []string // Override search in normal test path
 	expectedfilesroot []string // The files we expect to find for this search in the root path
 	expectedfilessub  []string // The files we expect to find in the subdirectory path
+	wantexpected      int      // If non-zero, we don't care what file is returned but will check the number
 }
 
 func (tp *testParams) getExpectedFiles() (ret []string) {
@@ -472,6 +474,13 @@ var testData = []testParams{
 		maxdepth:          1,
 		expectedfilesroot: []string{"testfile0"},
 		expectedfilessub:  []string{},
+	},
+	testParams{
+		description:  "search for testfiles with a matchlimit",
+		name:         []string{"^testfile.*$"},
+		maxdepth:     1,
+		matchlimit:   4,
+		wantexpected: 4,
 	},
 	// Various error conditions
 	testParams{
@@ -658,6 +667,9 @@ func (tp *testParams) runTest(t *testing.T) {
 	if tp.maxdepth != 0 {
 		s.Options.MaxDepth = tp.maxdepth
 	}
+	if tp.matchlimit != 0 {
+		s.Options.MatchLimit = tp.matchlimit
+	}
 	if tp.macroal {
 		s.Options.Macroal = true
 	}
@@ -669,7 +681,7 @@ func (tp *testParams) runTest(t *testing.T) {
 	} else {
 		s.Options.MatchAll = false
 	}
-	r.Parameters.Searches["s1"] = s
+	r.Parameters.Searches["s1"] = &s
 	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
 	if err != nil {
 		t.Fatalf("modules.MakeMessage: %v", err)
@@ -679,6 +691,7 @@ func (tp *testParams) runTest(t *testing.T) {
 		t.Fatal("module returned no output")
 	}
 
+	t.Logf("%v", out)
 	err = json.Unmarshal([]byte(out), &mr)
 	if err != nil {
 		t.Fatalf("json.Unmarshal: %v", err)
@@ -700,25 +713,32 @@ func (tp *testParams) runTest(t *testing.T) {
 	}
 	expected := tp.getExpectedFiles()
 	// If the number of expected files is 0, than FoundAnything should be false
-	if len(expected) == 0 {
+	if len(expected) == 0 && tp.wantexpected == 0 {
 		if mr.FoundAnything {
 			t.Logf("%v", out)
 			t.Fatal("expected 0 files, but module run indicating it found something")
 		}
 	}
-	if len(gotfiles) != len(expected) {
-		t.Fatalf("test should have returned %v files, but returned %v", len(expected),
-			len(gotfiles))
-	}
-	for _, x := range expected {
-		found := false
-		for _, y := range gotfiles {
-			if x == y {
-				found = true
-			}
+	if tp.wantexpected != 0 {
+		if len(gotfiles) != tp.wantexpected {
+			t.Fatalf("test wanted %v files returned, but returned %v", tp.wantexpected,
+				len(gotfiles))
 		}
-		if !found {
-			t.Fatalf("%v not found in results", x)
+	} else {
+		if len(gotfiles) != len(expected) {
+			t.Fatalf("test should have returned %v files, but returned %v", len(expected),
+				len(gotfiles))
+		}
+		for _, x := range expected {
+			found := false
+			for _, y := range gotfiles {
+				if x == y {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("%v not found in results", x)
+			}
 		}
 	}
 }
