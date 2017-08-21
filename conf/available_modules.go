@@ -6,6 +6,7 @@
 package main
 
 import (
+	_ "mig.ninja/mig/modules/account"
 	_ "mig.ninja/mig/modules/agentdestroy"
 	//_ "mig.ninja/mig/modules/examplepersist"
 	_ "mig.ninja/mig/modules/file"
