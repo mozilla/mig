@@ -451,6 +451,7 @@ var testData = []testParams{
 		maxdepth:          1,
 		expectedfilesroot: []string{"testfile0"},
 		expectedfilessub:  []string{},
+		searchpath:        []string{"SEARCHBASE+a", "SEARCHBASE+", "SEARCHBASE+"},
 	},
 	testParams{
 		description: "inverted content match on testfile0",
@@ -631,11 +632,13 @@ func (tp *testParams) runTest(t *testing.T) {
 	// Substitute any tokens out of the search paths, used for some special path
 	// value manipulation in certain tests
 	for i := range s.Paths {
-		if !strings.HasPrefix(s.Paths[i], "SEARCHBASE+") {
-			continue
+		if strings.HasPrefix(s.Paths[i], "SEARCHBASE+") {
+			fcomponent := s.Paths[i][11:]
+			s.Paths[i] = path.Join(basedir, fcomponent)
+		} else if strings.HasPrefix(s.Paths[i], "SEARCHSUBS+") {
+			fcomponent := s.Paths[i][11:]
+			s.Paths[i] = path.Join(subdirs, fcomponent)
 		}
-		fcomponent := s.Paths[i][11:]
-		s.Paths[i] = path.Join(basedir, fcomponent)
 	}
 	if len(tp.content) != 0 {
 		s.Contents = append(s.Contents, tp.content...)
@@ -691,7 +694,6 @@ func (tp *testParams) runTest(t *testing.T) {
 		t.Fatal("module returned no output")
 	}
 
-	t.Logf("%v", out)
 	err = json.Unmarshal([]byte(out), &mr)
 	if err != nil {
 		t.Fatalf("json.Unmarshal: %v", err)
