@@ -285,6 +285,10 @@ times			show the various timestamps of the action
 			_ = actionReader(fmt.Sprintf("action %.0f", a.ID), cli)
 			goto exit
 		case "listagents":
+			if a.Target == "" {
+				fmt.Println("A target string has not been set, use settarget first")
+				break
+			}
 			agents, err := cli.EvaluateAgentTarget(a.Target)
 			if err != nil {
 				fmt.Println(err)
