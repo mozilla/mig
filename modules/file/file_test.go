@@ -772,7 +772,11 @@ func (tp *testParams) runTest(t *testing.T) {
 	// error related to the bad directory symlink in the test file system, unless a max depth option
 	// is present as we won't descend that far
 	if len(tp.errorre) == 0 && tp.maxdepth == 0 {
-		tp.errorre = append(tp.errorre, "^ERROR: followSymLink()")
+		if tp.enhanceprivacy {
+			tp.errorre = append(tp.errorre, "^masked$")
+		} else {
+			tp.errorre = append(tp.errorre, "^ERROR: followSymLink()")
+		}
 	}
 	for _, e := range mr.Errors {
 		match := false
