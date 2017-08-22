@@ -11,13 +11,17 @@ import (
 	"fmt"
 )
 
+// Object describes data that will be sourced from the system and used in a
+// test. Tests specify the criteria that will be applied to determine a true
+// or false result, and tests reference an Object which provides the data the
+// criteria will be compared to.
 type Object struct {
-	Object      string      `json:"object"`
-	FileContent FileContent `json:"filecontent"`
-	FileName    FileName    `json:"filename"`
-	Package     Pkg         `json:"package"`
-	Raw         Raw         `json:"raw"`
-	HasLine     HasLine     `json:"hasline"`
+	Object      string      `json:"object" yaml:"object"`
+	FileContent FileContent `json:"filecontent" yaml:"filecontent"`
+	FileName    FileName    `json:"filename" yaml:"filename"`
+	Package     Pkg         `json:"package" yaml:"package"`
+	Raw         Raw         `json:"raw" yaml:"raw"`
+	HasLine     HasLine     `json:"hasline" yaml:"hasline"`
 
 	isChain  bool  // True if object is part of an import chain.
 	prepared bool  // True if object has been prepared.

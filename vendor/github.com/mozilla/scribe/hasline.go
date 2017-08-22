@@ -12,10 +12,12 @@ import (
 	"regexp"
 )
 
+// HasLine is used to perform tests against whether or not a file contains a given
+// regular expression
 type HasLine struct {
-	Path       string `json:"path,omitempty"`
-	File       string `json:"file,omitempty"`
-	Expression string `json:"expression,omitempty"`
+	Path       string `json:"path,omitempty" yaml:"path,omitempty"`
+	File       string `json:"file,omitempty" yaml:"file,omitempty"`
+	Expression string `json:"expression,omitempty" yaml:"expression,omitempty"`
 
 	matches []haslineStatus
 }

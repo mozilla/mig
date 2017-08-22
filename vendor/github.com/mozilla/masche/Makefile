@@ -9,6 +9,12 @@ get:
 	go get -u github.com/mozilla/masche/memaccess
 	go get -u github.com/mozilla/masche/listlibs
 
+lint:
+	golint github.com/mozilla/masche/...
+
+vet:
+	go vet github.com/mozilla/masche/...
+
 run_tests64: testbin64
 	go test $(TESTS)
 

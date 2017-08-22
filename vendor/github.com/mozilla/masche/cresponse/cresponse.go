@@ -10,7 +10,7 @@ import (
 	"unsafe"
 )
 
-// CError is the Go represnentation of responce.h's error_t.
+// CError is the Go represnentation of response.h's error_t.
 type CError struct {
 	number      int
 	description string
@@ -20,11 +20,11 @@ func (err CError) Error() string {
 	return fmt.Sprintf("System error number %d: %s", err.number, err.description)
 }
 
-// GetGetResponsesErrors returns the Go representation of the errors present in a C.reponse_t.
+// GetResponsesErrors returns the Go representation of the errors present in a C.response_t.
 //
 // NOTE: cgo types are private to each module, so exporting a function that expects a *C.response_t doesn't make sense,
 // so we export a function with an unsafe.Pointer and we cast it internally.
-func GetResponsesErrors(responsePointer unsafe.Pointer) (harderror error, softerrors []error) {
+func GetResponsesErrors(responsePointer unsafe.Pointer) (softerrors []error, harderror error) {
 	response := (*C.response_t)(responsePointer)
 	if response.fatal_error != nil && int(response.fatal_error.error_number) != 0 {
 		harderror = cErrorFromErrorT(*response.fatal_error)

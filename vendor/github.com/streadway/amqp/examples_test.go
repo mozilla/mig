@@ -26,13 +26,18 @@ func ExampleConfig_timeout() {
 }
 
 func ExampleDialTLS() {
-	// To get started with SSL/TLS follow the instructions for adding SSL/TLS
-	// support in RabbitMQ with a private certificate authority here:
+	// This example assume you have a RabbitMQ node running on localhost
+	// with TLS enabled.
 	//
+	// The easiest way to create the CA, certificates and keys required for these
+	// examples is by using tls-gen: https://github.com/michaelklishin/tls-gen
+	//
+	// A comprehensive RabbitMQ TLS guide can be found at
 	// http://www.rabbitmq.com/ssl.html
 	//
-	// Then in your rabbitmq.config, disable the plain AMQP port, verify clients
-	// and fail if no certificate is presented with the following:
+	// Once you have the required TLS files in place, use the following
+	// rabbitmq.config example for the RabbitMQ node that you will run on
+	// localhost:
 	//
 	//   [
 	//   {rabbit, [
@@ -45,26 +50,41 @@ func ExampleDialTLS() {
 	//                    {fail_if_no_peer_cert,true}]}
 	//     ]}
 	//   ].
-
-	cfg := new(tls.Config)
-
-	// The self-signing certificate authority's certificate must be included in
-	// the RootCAs to be trusted so that the server certificate can be verified.
 	//
-	// Alternatively to adding it to the tls.Config you can add the CA's cert to
+	//
+	// In the above rabbitmq.config example, we are disabling the plain AMQP port
+	// and verifying that clients and fail if no certificate is presented.
+	//
+	// The self-signing certificate authority's certificate (cacert.pem) must be
+	// included in the RootCAs to be trusted, otherwise the server certificate
+	// will fail certificate verification.
+	//
+	// Alternatively to adding it to the tls.Config. you can add the CA's cert to
 	// your system's root CAs.  The tls package will use the system roots
-	// specific to each support OS.  Under OS X, add (drag/drop) your cacert.pem
+	// specific to each support OS.  Under OS X, add (drag/drop) cacert.pem
 	// file to the 'Certificates' section of KeyChain.app to add and always
-	// trust.
+	// trust.  You can also add it via the command line:
 	//
-	// Or with the command line add and trust the DER encoded certificate:
-	//
-	//   security add-certificate testca/cacert.cer
-	//   security add-trusted-cert testca/cacert.cer
+	//   security add-certificate testca/cacert.pem
+	//   security add-trusted-cert testca/cacert.pem
 	//
 	// If you depend on the system root CAs, then use nil for the RootCAs field
-	// so the system roots will be loaded.
+	// so the system roots will be loaded instead.
+	//
+	// Server names are validated by the crypto/tls package, so the server
+	// certificate must be made for the hostname in the URL.  Find the commonName
+	// (CN) and make sure the hostname in the URL matches this common name.  Per
+	// the RabbitMQ instructions (or tls-gen) for a self-signed cert, this defaults to the
+	// current hostname.
+	//
+	//   openssl x509 -noout -in /path/to/certificate.pem -subject
+	//
+	// If your server name in your certificate is different than the host you are
+	// connecting to, set the hostname used for verification in
+	// ServerName field of the tls.Config struct.
+	cfg := new(tls.Config)
 
+	// see at the top
 	cfg.RootCAs = x509.NewCertPool()
 
 	if ca, err := ioutil.ReadFile("testca/cacert.pem"); err == nil {
@@ -78,18 +98,7 @@ func ExampleDialTLS() {
 		cfg.Certificates = append(cfg.Certificates, cert)
 	}
 
-	// Server names are validated by the crypto/tls package, so the server
-	// certificate must be made for the hostname in the URL.  Find the commonName
-	// (CN) and make sure the hostname in the URL matches this common name.  Per
-	// the RabbitMQ instructions for a self-signed cert, this defautls to the
-	// current hostname.
-	//
-	//   openssl x509 -noout -in server/cert.pem -subject
-	//
-	// If your server name in your certificate is different than the host you are
-	// connecting to, set the hostname used for verification in
-	// ServerName field of the tls.Config struct.
-
+	// see a note about Common Name (CN) at the top
 	conn, err := amqp.DialTLS("amqps://server-name-from-certificate/", cfg)
 
 	log.Printf("conn: %v, err: %v", conn, err)
@@ -186,7 +195,7 @@ func ExampleChannel_Confirm_bridge() {
 
 		if err != nil {
 			msg.Nack(false, false)
-			log.Fatalf("basic.publish destination: %s", msg)
+			log.Fatalf("basic.publish destination: %+v", msg)
 		}
 
 		// only ack the source delivery when the destination acks the publishing

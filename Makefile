@@ -195,39 +195,7 @@ runner-scribe: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-scribe $(GOLDFLAGS) mig.ninja/mig/runner-plugins/runner-scribe
 
 go_vendor_dependencies:
-	GOOS="linux" $(GOGETTER) github.com/bobappleyard/readline
-	GOOS="darwin" $(GOGETTER) github.com/bobappleyard/readline
-	GOOS="windows" $(GOGETTER) github.com/golang/sys/windows/svc/eventlog
-	$(GOGETTER) github.com/gorilla/mux
-	$(GOGETTER) github.com/jvehent/cljs
-	$(GOGETTER) github.com/jvehent/gozdef
-	$(GOGETTER) github.com/kardianos/osext
-	$(GOGETTER) github.com/lib/pq
-	$(GOGETTER) github.com/mozilla/masche/listlibs
-	$(GOGETTER) github.com/mozilla/masche/memsearch
-	$(GOGETTER) github.com/mozilla/masche/process
-	$(GOGETTER) github.com/mozilla/scribe
-	$(GOGETTER) github.com/oschwald/geoip2-golang
-	$(GOGETTER) github.com/streadway/amqp
-	$(GOGETTER) github.com/gorhill/cronexpr
-	$(GOGETTER) golang.org/x/crypto/openpgp
-	$(GOGETTER) golang.org/x/crypto/sha3
-	$(GOGETTER) golang.org/x/crypto/pbkdf2
-	$(GOGETTER) golang.org/x/net/icmp
-	$(GOGETTER) golang.org/x/net/ipv4
-	$(GOGETTER) golang.org/x/net/ipv6
-	$(GOGETTER) gopkg.in/gcfg.v1
-	$(GOGETTER) github.com/hillu/go-yara
-	$(GOGETTER) github.com/cheggaaa/pb
-	$(GOGETTER) github.com/stretchr/testify
-	$(GOGETTER) github.com/fsnotify/fsnotify
-	echo 'removing .git from vendored pkg and moving them to vendor'
-	find .tmpdeps/src -name ".git" ! -name ".gitignore" -exec rm -rf {} \; || exit 0
-	[ -d vendor ] && git rm -rf vendor/ || exit 0
-	mkdir vendor/ || exit 0
-	cp -ar .tmpdeps/src/* vendor/
-	git add vendor/
-	rm -rf .tmpdeps
+	govend -v -u
 
 rpm: rpm-agent rpm-scheduler
 

@@ -1,4 +1,4 @@
-// This package contains utility methos for testing
+// Package test contains utility methos for testing
 package test
 
 import (
@@ -10,6 +10,7 @@ import (
 	"runtime"
 )
 
+// GetTestCasePath returns the path for test case executable
 func GetTestCasePath() string {
 	//TODO: Right now the command is hardcoded. We should decide how to fix this.
 	dirPath, err := filepath.Abs("../test/tools")
@@ -34,13 +35,14 @@ func GetTestCasePath() string {
 	return path
 }
 
+// PrintSoftErrors method prints all softerrors on Stderr
 func PrintSoftErrors(softerrors []error) {
 	for _, err := range softerrors {
 		fmt.Fprintln(os.Stderr, err.Error())
 	}
 }
 
-// this method redirects the process's stdout to the test stdout
+// LaunchTestCase method redirects the process's stdout to the test stdout
 func LaunchTestCase() (*exec.Cmd, error) {
 	cmd := exec.Command(GetTestCasePath())
 	cmd.Stdout = os.Stdout
@@ -49,6 +51,7 @@ func LaunchTestCase() (*exec.Cmd, error) {
 	return cmd, err
 }
 
+// LaunchTestCaseAndWaitForInitialization method launches test case and waits for initialization
 func LaunchTestCaseAndWaitForInitialization() (*exec.Cmd, error) {
 	return launchProcessAndWaitInitialization(GetTestCasePath())
 }

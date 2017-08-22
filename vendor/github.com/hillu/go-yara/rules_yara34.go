@@ -47,6 +47,7 @@ func (r *Rules) ScanFileDescriptor(fd uintptr, flags ScanFlags, timeout time.Dur
 		C.YR_CALLBACK_FUNC(C.rules_callback),
 		unsafe.Pointer(id),
 		C.int(timeout/time.Second)))
+	r.keepAlive()
 	return
 }
 
@@ -61,6 +62,7 @@ func (r *Rules) Write(wr io.Writer) (err error) {
 	stream.write = C.YR_STREAM_WRITE_FUNC(C.streamWrite)
 
 	err = newError(C.yr_rules_save_stream(r.cptr, stream))
+	r.keepAlive()
 	return
 }
 

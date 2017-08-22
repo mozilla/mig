@@ -30,6 +30,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -81,6 +82,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "37",
             "longitude" : "127.5",
             "time_zone" : "Asia/Seoul"
@@ -132,6 +134,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "37",
             "longitude" : "127.5",
             "time_zone" : "Asia/Seoul"
@@ -183,6 +186,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "24",
             "longitude" : "121",
             "time_zone" : "Asia/Taipei"
@@ -234,6 +238,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -285,6 +290,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35",
             "longitude" : "105"
          },
@@ -335,6 +341,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35",
             "longitude" : "105"
          },
@@ -385,6 +392,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35",
             "longitude" : "105"
          },
@@ -435,6 +443,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35",
             "longitude" : "105"
          },
@@ -485,6 +494,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -536,6 +546,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -587,6 +598,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -638,6 +650,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "37",
             "longitude" : "127.5",
             "time_zone" : "Asia/Seoul"
@@ -689,6 +702,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -740,6 +754,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "37",
             "longitude" : "127.5",
             "time_zone" : "Asia/Seoul"
@@ -791,6 +806,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "24",
             "longitude" : "121",
             "time_zone" : "Asia/Taipei"
@@ -842,6 +858,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "37",
             "longitude" : "127.5",
             "time_zone" : "Asia/Seoul"
@@ -893,6 +910,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -944,6 +962,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -995,6 +1014,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -1046,6 +1066,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "37",
             "longitude" : "127.5",
             "time_zone" : "Asia/Seoul"
@@ -1097,6 +1118,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "37",
             "longitude" : "127.5",
             "time_zone" : "Asia/Seoul"
@@ -1148,6 +1170,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -1199,6 +1222,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -1250,6 +1274,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "37",
             "longitude" : "127.5",
             "time_zone" : "Asia/Seoul"
@@ -1301,6 +1326,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "22.25",
             "longitude" : "114.16667",
             "time_zone" : "Asia/Hong_Kong"
@@ -1352,6 +1378,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -1403,6 +1430,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -1454,6 +1482,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "35.68536",
             "longitude" : "139.75309",
             "time_zone" : "Asia/Tokyo"
@@ -1505,6 +1534,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "10",
             "time_zone" : "Europe/Oslo"
@@ -1556,6 +1586,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "31.5",
             "longitude" : "34.75",
             "time_zone" : "Asia/Jerusalem"
@@ -1607,6 +1638,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -1658,6 +1690,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "47.00016",
             "longitude" : "8.01427",
             "time_zone" : "Europe/Zurich"
@@ -1709,6 +1742,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "15",
             "time_zone" : "Europe/Stockholm"
@@ -1760,6 +1794,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "26",
             "longitude" : "50.5",
             "time_zone" : "Asia/Bahrain"
@@ -1811,6 +1846,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -1861,6 +1897,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -1912,6 +1949,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "10",
             "time_zone" : "Europe/Oslo"
@@ -1963,6 +2001,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -2014,6 +2053,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "42.83333",
             "longitude" : "12.83333",
             "time_zone" : "Europe/Rome"
@@ -2065,6 +2105,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "64",
             "longitude" : "26",
             "time_zone" : "Europe/Helsinki"
@@ -2116,6 +2157,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "53",
             "longitude" : "28",
             "time_zone" : "Europe/Minsk"
@@ -2167,6 +2209,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "49.75",
             "longitude" : "15",
             "time_zone" : "Europe/Prague"
@@ -2218,6 +2261,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "32",
             "longitude" : "53",
             "time_zone" : "Asia/Tehran"
@@ -2269,6 +2313,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "49",
             "longitude" : "32"
          },
@@ -2319,6 +2364,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -2370,6 +2416,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "32",
             "longitude" : "53",
             "time_zone" : "Asia/Tehran"
@@ -2421,6 +2468,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -2472,6 +2520,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "47",
             "longitude" : "20",
             "time_zone" : "Europe/Budapest"
@@ -2523,6 +2572,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "15",
             "time_zone" : "Europe/Stockholm"
@@ -2574,6 +2624,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -2625,6 +2676,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "64",
             "longitude" : "26",
             "time_zone" : "Europe/Helsinki"
@@ -2676,6 +2728,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -2713,6 +2766,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "48.69096",
             "longitude" : "9.14062",
             "time_zone" : "Europe/Vaduz"
@@ -2750,6 +2804,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -2801,6 +2856,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -2852,6 +2908,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "40",
             "longitude" : "-4"
          },
@@ -2902,6 +2959,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -2953,6 +3011,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -3004,6 +3063,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -3055,6 +3115,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -3106,6 +3167,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "43",
             "longitude" : "25",
             "time_zone" : "Europe/Sofia"
@@ -3157,6 +3219,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -3208,6 +3271,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "47.00016",
             "longitude" : "8.01427",
             "time_zone" : "Europe/Zurich"
@@ -3259,6 +3323,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "32",
             "longitude" : "53",
             "time_zone" : "Asia/Tehran"
@@ -3310,6 +3375,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -3361,6 +3427,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "25",
             "time_zone" : "Europe/Bucharest"
@@ -3412,6 +3479,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -3462,6 +3530,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -3512,6 +3581,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "10",
             "time_zone" : "Europe/Oslo"
@@ -3563,6 +3633,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "15",
             "time_zone" : "Europe/Stockholm"
@@ -3614,6 +3685,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "50.83333",
             "longitude" : "4",
             "time_zone" : "Europe/Brussels"
@@ -3665,6 +3737,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "39.05901",
             "longitude" : "34.91155",
             "time_zone" : "Europe/Istanbul"
@@ -3716,6 +3789,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "39.05901",
             "longitude" : "34.91155",
             "time_zone" : "Europe/Istanbul"
@@ -3767,6 +3841,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -3818,6 +3893,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -3869,6 +3945,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "47.33333",
             "longitude" : "13.33333",
             "time_zone" : "Europe/Vienna"
@@ -3920,6 +3997,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -3970,6 +4048,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -4021,6 +4100,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "25",
             "time_zone" : "Europe/Bucharest"
@@ -4072,6 +4152,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -4122,6 +4203,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -4172,6 +4254,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -4222,6 +4305,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "39.05901",
             "longitude" : "34.91155",
             "time_zone" : "Europe/Istanbul"
@@ -4273,6 +4357,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -4323,6 +4408,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "49",
             "longitude" : "32"
          },
@@ -4373,6 +4459,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "41",
             "longitude" : "20",
             "time_zone" : "Europe/Tirane"
@@ -4424,6 +4511,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -4475,6 +4563,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "15",
             "time_zone" : "Europe/Stockholm"
@@ -4526,6 +4615,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -4576,6 +4666,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -4626,6 +4717,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "31.5",
             "longitude" : "34.75",
             "time_zone" : "Asia/Jerusalem"
@@ -4677,6 +4769,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -4727,6 +4820,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "33.83333",
             "longitude" : "35.83333",
             "time_zone" : "Asia/Beirut"
@@ -4778,6 +4872,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "32",
             "longitude" : "53",
             "time_zone" : "Asia/Tehran"
@@ -4829,6 +4924,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "39.05901",
             "longitude" : "34.91155",
             "time_zone" : "Europe/Istanbul"
@@ -4880,6 +4976,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -4931,6 +5028,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "32",
             "longitude" : "53",
             "time_zone" : "Asia/Tehran"
@@ -4982,6 +5080,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -5033,6 +5132,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52.5",
             "longitude" : "5.75",
             "time_zone" : "Europe/Amsterdam"
@@ -5084,6 +5184,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "29.5",
             "longitude" : "47.75",
             "time_zone" : "Asia/Kuwait"
@@ -5135,6 +5236,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "47.00016",
             "longitude" : "8.01427",
             "time_zone" : "Europe/Zurich"
@@ -5186,6 +5288,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -5237,6 +5340,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -5288,6 +5392,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -5339,6 +5444,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52.5",
             "longitude" : "5.75",
             "time_zone" : "Europe/Amsterdam"
@@ -5390,6 +5496,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "47.33333",
             "longitude" : "13.33333",
             "time_zone" : "Europe/Vienna"
@@ -5441,6 +5548,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "25",
             "longitude" : "45",
             "time_zone" : "Asia/Riyadh"
@@ -5492,6 +5600,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -5543,6 +5652,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -5594,6 +5704,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "42.83333",
             "longitude" : "12.83333",
             "time_zone" : "Europe/Rome"
@@ -5645,6 +5756,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "53",
             "longitude" : "28",
             "time_zone" : "Europe/Minsk"
@@ -5696,6 +5808,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "10",
             "time_zone" : "Europe/Oslo"
@@ -5747,6 +5860,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "42.83333",
             "longitude" : "12.83333",
             "time_zone" : "Europe/Rome"
@@ -5798,6 +5912,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -5849,6 +5964,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "15",
             "time_zone" : "Europe/Stockholm"
@@ -5900,6 +6016,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -5951,6 +6068,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -6001,6 +6119,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52.5",
             "longitude" : "5.75",
             "time_zone" : "Europe/Amsterdam"
@@ -6052,6 +6171,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -6103,6 +6223,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "44.81892",
             "longitude" : "20.45998",
             "time_zone" : "Europe/Belgrade"
@@ -6154,6 +6275,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "10",
             "time_zone" : "Europe/Oslo"
@@ -6205,6 +6327,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -6255,6 +6378,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -6306,6 +6430,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -6356,6 +6481,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -6407,6 +6533,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "31",
             "longitude" : "36",
             "time_zone" : "Asia/Amman"
@@ -6458,6 +6585,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -6508,6 +6636,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "28",
             "longitude" : "17",
             "time_zone" : "Africa/Tripoli"
@@ -6559,6 +6688,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -6610,6 +6740,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "39.05901",
             "longitude" : "34.91155",
             "time_zone" : "Europe/Istanbul"
@@ -6661,6 +6792,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -6712,6 +6844,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -6763,6 +6896,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -6813,6 +6947,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -6863,6 +6998,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "53",
             "longitude" : "-8",
             "time_zone" : "Europe/Dublin"
@@ -6914,6 +7050,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "25",
             "time_zone" : "Europe/Bucharest"
@@ -6965,6 +7102,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "31.5",
             "longitude" : "34.75",
             "time_zone" : "Asia/Jerusalem"
@@ -7016,6 +7154,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "15",
             "time_zone" : "Europe/Stockholm"
@@ -7067,6 +7206,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "47.00016",
             "longitude" : "8.01427",
             "time_zone" : "Europe/Zurich"
@@ -7118,6 +7258,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -7169,6 +7310,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -7220,6 +7362,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -7271,6 +7414,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -7321,6 +7465,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -7372,6 +7517,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -7422,6 +7568,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -7473,6 +7620,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -7524,6 +7672,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -7560,6 +7709,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "48.69096",
             "longitude" : "9.14062",
             "time_zone" : "Europe/Vaduz"
@@ -7597,6 +7747,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "40.5",
             "longitude" : "47.5",
             "time_zone" : "Asia/Baku"
@@ -7648,6 +7799,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "10",
             "time_zone" : "Europe/Oslo"
@@ -7699,6 +7851,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "39.05901",
             "longitude" : "34.91155",
             "time_zone" : "Europe/Istanbul"
@@ -7750,6 +7903,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -7801,6 +7955,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "25",
             "longitude" : "45",
             "time_zone" : "Asia/Riyadh"
@@ -7852,6 +8007,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "49",
             "longitude" : "32"
          },
@@ -7902,6 +8058,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -7952,6 +8109,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52.5",
             "longitude" : "5.75",
             "time_zone" : "Europe/Amsterdam"
@@ -8003,6 +8161,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "15",
             "time_zone" : "Europe/Stockholm"
@@ -8054,6 +8213,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -8104,6 +8264,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -8154,6 +8315,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "39.05901",
             "longitude" : "34.91155",
             "time_zone" : "Europe/Istanbul"
@@ -8205,6 +8367,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -8255,6 +8418,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "49.75",
             "longitude" : "15",
             "time_zone" : "Europe/Prague"
@@ -8306,6 +8470,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "26",
             "longitude" : "50.5",
             "time_zone" : "Asia/Bahrain"
@@ -8357,6 +8522,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "49",
             "longitude" : "32"
          },
@@ -8407,6 +8573,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -8458,6 +8625,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "31",
             "longitude" : "36",
             "time_zone" : "Asia/Amman"
@@ -8509,6 +8677,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -8560,6 +8729,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -8611,6 +8781,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -8662,6 +8833,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "49",
             "longitude" : "32"
          },
@@ -8712,6 +8884,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -8763,6 +8936,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "32",
             "longitude" : "53",
             "time_zone" : "Asia/Tehran"
@@ -8814,6 +8988,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "46",
             "longitude" : "2",
             "time_zone" : "Europe/Paris"
@@ -8865,6 +9040,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -8915,6 +9091,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "10",
             "time_zone" : "Europe/Oslo"
@@ -8966,6 +9143,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -9017,6 +9195,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -9068,6 +9247,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -9119,6 +9299,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "24",
             "longitude" : "54",
             "time_zone" : "Asia/Dubai"
@@ -9170,6 +9351,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -9221,6 +9403,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "10",
             "time_zone" : "Europe/Oslo"
@@ -9272,6 +9455,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "40",
             "longitude" : "-4"
          },
@@ -9322,6 +9506,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -9372,6 +9557,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -9423,6 +9609,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -9473,6 +9660,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "40",
             "longitude" : "45",
             "time_zone" : "Asia/Yerevan"
@@ -9524,6 +9712,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52.5",
             "longitude" : "5.75",
             "time_zone" : "Europe/Amsterdam"
@@ -9575,6 +9764,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52.5",
             "longitude" : "5.75",
             "time_zone" : "Europe/Amsterdam"
@@ -9626,6 +9816,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52.5",
             "longitude" : "5.75",
             "time_zone" : "Europe/Amsterdam"
@@ -9677,6 +9868,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -9727,6 +9919,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -9777,6 +9970,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "33.83333",
             "longitude" : "35.83333",
             "time_zone" : "Asia/Beirut"
@@ -9828,6 +10022,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -9879,6 +10074,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "15",
             "time_zone" : "Europe/Stockholm"
@@ -9930,6 +10126,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -9981,6 +10178,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "60",
             "longitude" : "100"
          },
@@ -10031,6 +10229,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52.5",
             "longitude" : "5.75",
             "time_zone" : "Europe/Amsterdam"
@@ -10082,6 +10281,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -10133,6 +10333,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -10184,6 +10385,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "32",
             "longitude" : "53",
             "time_zone" : "Asia/Tehran"
@@ -10235,6 +10437,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "47",
             "longitude" : "20",
             "time_zone" : "Europe/Budapest"
@@ -10286,6 +10489,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -10337,6 +10541,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -10388,6 +10593,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "25",
             "longitude" : "45",
             "time_zone" : "Asia/Riyadh"
@@ -10439,6 +10645,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "39.05901",
             "longitude" : "34.91155",
             "time_zone" : "Europe/Istanbul"
@@ -10490,6 +10697,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -10541,6 +10749,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -10592,6 +10801,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -10643,6 +10853,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -10694,6 +10905,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "42.83333",
             "longitude" : "12.83333",
             "time_zone" : "Europe/Rome"
@@ -10745,6 +10957,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52",
             "longitude" : "20",
             "time_zone" : "Europe/Warsaw"
@@ -10796,6 +11009,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "15",
             "time_zone" : "Europe/Stockholm"
@@ -10847,6 +11061,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "56",
             "longitude" : "10",
             "time_zone" : "Europe/Copenhagen"
@@ -10898,6 +11113,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "62",
             "longitude" : "10",
             "time_zone" : "Europe/Oslo"
@@ -10949,6 +11165,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -11000,6 +11217,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -11051,6 +11269,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "42.83333",
             "longitude" : "12.83333",
             "time_zone" : "Europe/Rome"
@@ -11102,6 +11321,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "56",
             "longitude" : "10",
             "time_zone" : "Europe/Copenhagen"
@@ -11153,6 +11373,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "47.33333",
             "longitude" : "13.33333",
             "time_zone" : "Europe/Vienna"
@@ -11204,6 +11425,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "52.5",
             "longitude" : "5.75",
             "time_zone" : "Europe/Amsterdam"
@@ -11255,6 +11477,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -11306,6 +11529,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "42.83333",
             "longitude" : "12.83333",
             "time_zone" : "Europe/Rome"
@@ -11357,6 +11581,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.75844",
             "longitude" : "-2.69531",
             "time_zone" : "Europe/London"
@@ -11408,6 +11633,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "42.83333",
             "longitude" : "12.83333",
             "time_zone" : "Europe/Rome"
@@ -11459,6 +11685,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "54.25",
             "longitude" : "-4.5",
             "time_zone" : "Europe/Isle_of_Man"
@@ -11510,6 +11737,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5",
             "longitude" : "10.5",
             "time_zone" : "Europe/Berlin"
@@ -11560,6 +11788,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "36.13333",
             "longitude" : "-5.35",
             "time_zone" : "Europe/Gibraltar"
@@ -11616,6 +11845,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.7500",
             "longitude" : "-1.2500",
             "time_zone" : "Europe/London"
@@ -11703,6 +11933,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 10,
             "latitude" : "51.5142",
             "longitude" : "-0.0931",
             "time_zone" : "Europe/London"
@@ -11778,6 +12009,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 3,
             "latitude" : "51.5142",
             "longitude" : "-0.0931",
             "time_zone" : "Europe/London"
@@ -11853,6 +12085,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5142",
             "longitude" : "-0.0931",
             "time_zone" : "Europe/London"
@@ -11928,6 +12161,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : "51.5142",
             "longitude" : "-0.0931",
             "time_zone" : "Europe/London"
@@ -11998,6 +12232,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 22,
             "latitude" : "47.2513",
             "longitude" : "-122.3149",
             "metro_code" : "819",
@@ -12077,6 +12312,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 76,
             "latitude" : "58.4167",
             "longitude" : "15.6167",
             "time_zone" : "Europe/Stockholm"
@@ -12148,6 +12384,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 76,
             "latitude" : "58.4167",
             "longitude" : "15.6167",
             "time_zone" : "Europe/Stockholm"
@@ -12209,6 +12446,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 534,
             "latitude" : "27.5000",
             "longitude" : "90.5000",
             "time_zone" : "Asia/Thimphu"
@@ -12263,6 +12501,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 121,
             "latitude" : "13",
             "longitude" : "122",
             "time_zone" : "Asia/Manila"
@@ -12343,6 +12582,7 @@
             }
          },
          "location" : {
+            "accuracy_radius" : 100,
             "latitude" : 43.88,
             "longitude" : 125.3228,
             "time_zone" : "Asia/Harbin"

@@ -1,11 +1,9 @@
 package geoip2
 
 import (
-	"fmt"
 	"math/rand"
 	"net"
 	"testing"
-	"time"
 
 	. "gopkg.in/check.v1"
 )
@@ -18,25 +16,20 @@ var _ = Suite(&MySuite{})
 
 func (s *MySuite) TestReader(c *C) {
 	reader, err := Open("test-data/test-data/GeoIP2-City-Test.mmdb")
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
+	c.Assert(err, IsNil)
+
 	defer reader.Close()
 
 	record, err := reader.City(net.ParseIP("81.2.69.160"))
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
+	c.Assert(err, IsNil)
 
 	m := reader.Metadata()
 	c.Assert(m.BinaryFormatMajorVersion, Equals, uint(2))
 	c.Assert(m.BinaryFormatMinorVersion, Equals, uint(0))
-	c.Assert(m.BuildEpoch, Equals, uint(1436981935))
+	c.Assert(m.BuildEpoch, Equals, uint(0x58f5327d))
 	c.Assert(m.DatabaseType, Equals, "GeoIP2-City")
 	c.Assert(m.Description, DeepEquals, map[string]string{
-		"en": "GeoIP2 City Test Database (a small sample of real GeoIP2 data)",
+		"en": "GeoIP2 City Test Database (fake GeoIP2 data, for example purposes only)",
 		"zh": "小型数据库",
 	})
 	c.Assert(m.IPVersion, Equals, uint(6))
@@ -80,6 +73,7 @@ func (s *MySuite) TestReader(c *C) {
 		"zh-CN": "英国",
 	})
 
+	c.Assert(record.Location.AccuracyRadius, Equals, uint16(100))
 	c.Assert(record.Location.Latitude, Equals, 51.5142)
 	c.Assert(record.Location.Longitude, Equals, -0.0931)
 	c.Assert(record.Location.TimeZone, Equals, "Europe/London")
@@ -109,90 +103,22 @@ func (s *MySuite) TestReader(c *C) {
 
 func (s *MySuite) TestMetroCode(c *C) {
 	reader, err := Open("test-data/test-data/GeoIP2-City-Test.mmdb")
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
+	c.Assert(err, IsNil)
 	defer reader.Close()
 
 	record, err := reader.City(net.ParseIP("216.160.83.56"))
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
+	c.Assert(err, IsNil)
 
 	c.Assert(record.Location.MetroCode, Equals, uint(819))
 }
 
-func (s *MySuite) TestConnectionType(c *C) {
-	reader, err := Open("test-data/test-data/GeoIP2-Connection-Type-Test.mmdb")
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
-	defer reader.Close()
-
-	record, err := reader.ConnectionType(net.ParseIP("1.0.1.0"))
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
-	c.Assert(record.ConnectionType, Equals, "Cable/DSL")
-
-}
-
-func (s *MySuite) TestDomain(c *C) {
-	reader, err := Open("test-data/test-data/GeoIP2-Domain-Test.mmdb")
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
-	defer reader.Close()
-
-	record, err := reader.Domain(net.ParseIP("1.2.0.0"))
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
-	c.Assert(record.Domain, Equals, "maxmind.com")
-
-}
-
-func (s *MySuite) TestISP(c *C) {
-	reader, err := Open("test-data/test-data/GeoIP2-ISP-Test.mmdb")
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
-	defer reader.Close()
-
-	record, err := reader.ISP(net.ParseIP("1.128.0.0"))
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
-
-	c.Assert(record.AutonomousSystemNumber, Equals, uint(1221))
-
-	c.Assert(record.AutonomousSystemOrganization, Equals, "Telstra Pty Ltd")
-	c.Assert(record.ISP, Equals, "Telstra Internet")
-	c.Assert(record.Organization, Equals, "Telstra Internet")
-
-}
-
 func (s *MySuite) TestAnonymousIP(c *C) {
 	reader, err := Open("test-data/test-data/GeoIP2-Anonymous-IP-Test.mmdb")
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
+	c.Assert(err, IsNil)
 	defer reader.Close()
 
 	record, err := reader.AnonymousIP(net.ParseIP("1.2.0.0"))
-	if err != nil {
-		c.Log(err)
-		c.Fail()
-	}
+	c.Assert(err, IsNil)
 
 	c.Assert(record.IsAnonymous, Equals, true)
 
@@ -200,8 +126,60 @@ func (s *MySuite) TestAnonymousIP(c *C) {
 	c.Assert(record.IsHostingProvider, Equals, false)
 	c.Assert(record.IsPublicProxy, Equals, false)
 	c.Assert(record.IsTorExitNode, Equals, false)
-
 }
+
+func (s *MySuite) TestASN(c *C) {
+	reader, err := Open("test-data/test-data/GeoLite2-ASN-Test.mmdb")
+	c.Assert(err, IsNil)
+	defer reader.Close()
+
+	record, err := reader.ASN(net.ParseIP("1.128.0.0"))
+	c.Assert(err, IsNil)
+
+	c.Assert(record.AutonomousSystemNumber, Equals, uint(1221))
+
+	c.Assert(record.AutonomousSystemOrganization, Equals, "Telstra Pty Ltd")
+}
+
+func (s *MySuite) TestConnectionType(c *C) {
+	reader, err := Open("test-data/test-data/GeoIP2-Connection-Type-Test.mmdb")
+	c.Assert(err, IsNil)
+
+	defer reader.Close()
+
+	record, err := reader.ConnectionType(net.ParseIP("1.0.1.0"))
+	c.Assert(err, IsNil)
+
+	c.Assert(record.ConnectionType, Equals, "Cable/DSL")
+}
+
+func (s *MySuite) TestDomain(c *C) {
+	reader, err := Open("test-data/test-data/GeoIP2-Domain-Test.mmdb")
+	c.Assert(err, IsNil)
+	defer reader.Close()
+
+	record, err := reader.Domain(net.ParseIP("1.2.0.0"))
+	c.Assert(err, IsNil)
+	c.Assert(record.Domain, Equals, "maxmind.com")
+}
+
+func (s *MySuite) TestISP(c *C) {
+	reader, err := Open("test-data/test-data/GeoIP2-ISP-Test.mmdb")
+	c.Assert(err, IsNil)
+	defer reader.Close()
+
+	record, err := reader.ISP(net.ParseIP("1.128.0.0"))
+	c.Assert(err, IsNil)
+
+	c.Assert(record.AutonomousSystemNumber, Equals, uint(1221))
+
+	c.Assert(record.AutonomousSystemOrganization, Equals, "Telstra Pty Ltd")
+	c.Assert(record.ISP, Equals, "Telstra Internet")
+	c.Assert(record.Organization, Equals, "Telstra Internet")
+}
+
+// This ensures the compiler does not optimize away the function call
+var cityResult *City
 
 func BenchmarkMaxMindDB(b *testing.B) {
 	db, err := Open("GeoLite2-City.mmdb")
@@ -210,15 +188,22 @@ func BenchmarkMaxMindDB(b *testing.B) {
 	}
 	defer db.Close()
 
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := rand.New(rand.NewSource(0))
+
+	var city *City
 
 	for i := 0; i < b.N; i++ {
-		num := r.Uint32()
-		ip := net.ParseIP(fmt.Sprintf("%d.%d.%d.%d", (0xFF000000&num)>>24,
-			(0x00FF0000&num)>>16, (0x0000FF00&num)>>8, 0x000000F&num))
-		_, err := db.City(ip)
+		ip := randomIPv4Address(b, r)
+		city, err = db.City(ip)
 		if err != nil {
 			b.Fatal(err)
 		}
 	}
+	cityResult = city
+}
+
+func randomIPv4Address(b *testing.B, r *rand.Rand) net.IP {
+	num := r.Uint32()
+	return []byte{byte(num >> 24), byte(num >> 16), byte(num >> 8),
+		byte(num)}
 }

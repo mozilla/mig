@@ -18,7 +18,7 @@ func TestConfirmOneResequences(t *testing.T) {
 
 	c.Listen(l)
 
-	for i, _ := range fixtures {
+	for i := range fixtures {
 		if want, got := uint64(i+1), c.Publish(); want != got {
 			t.Fatalf("expected publish to return the 1 based delivery tag published, want: %d, got: %d", want, got)
 		}
@@ -42,6 +42,40 @@ func TestConfirmOneResequences(t *testing.T) {
 	}
 }
 
+func TestConfirmMixedResequences(t *testing.T) {
+	var (
+		fixtures = []Confirmation{
+			{1, true},
+			{2, true},
+			{3, true},
+		}
+		c = newConfirms()
+		l = make(chan Confirmation, len(fixtures))
+	)
+	c.Listen(l)
+
+	for _ = range fixtures {
+		c.Publish()
+	}
+
+	c.One(fixtures[0])
+	c.One(fixtures[2])
+	c.Multiple(fixtures[1])
+
+	for i, fix := range fixtures {
+		want := fix
+		var got Confirmation
+		select {
+		case got = <-l:
+		case <-time.After(1 * time.Second):
+			t.Fatalf("timeout on reading confirmations")
+		}
+		if want != got {
+			t.Fatalf("expected to confirm in sequence for %d, want: %+v, got: %+v", i, want, got)
+		}
+	}
+}
+
 func TestConfirmMultipleResequences(t *testing.T) {
 	var (
 		fixtures = []Confirmation{
@@ -55,7 +89,7 @@ func TestConfirmMultipleResequences(t *testing.T) {
 	)
 	c.Listen(l)
 
-	for _, _ = range fixtures {
+	for _ = range fixtures {
 		c.Publish()
 	}
 

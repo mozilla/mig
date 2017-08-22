@@ -9,8 +9,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"github.com/mozilla/scribe"
+	"os"
 )
 
 var flagDebug bool

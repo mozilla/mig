@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var needle []byte = []byte("Find This!")
+var needle = []byte("Find This!")
 
 var buffersToFind = [][]byte{
 	[]byte{0xc, 0xa, 0xf, 0xe},
@@ -37,7 +37,7 @@ func TestSearchInOtherProcess(t *testing.T) {
 	defer cmd.Process.Kill()
 
 	pid := uint(cmd.Process.Pid)
-	proc, err, softerrors := process.OpenFromPid(pid)
+	proc, softerrors, err := process.OpenFromPid(pid)
 	test.PrintSoftErrors(softerrors)
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +45,7 @@ func TestSearchInOtherProcess(t *testing.T) {
 	defer proc.Close()
 
 	for i, buf := range buffersToFind {
-		found, _, err, softerrors := FindBytesSequence(proc, 0, buf)
+		found, _, softerrors, err := FindBytesSequence(proc, 0, buf)
 		test.PrintSoftErrors(softerrors)
 		if err != nil {
 			t.Fatal(err)
@@ -55,7 +55,7 @@ func TestSearchInOtherProcess(t *testing.T) {
 	}
 
 	// This must not be present
-	found, _, err, softerrors := FindBytesSequence(proc, 0, notPresent)
+	found, _, softerrors, err := FindBytesSequence(proc, 0, notPresent)
 	test.PrintSoftErrors(softerrors)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +72,7 @@ func TestRegexpSearchInOtherProcess(t *testing.T) {
 	defer cmd.Process.Kill()
 
 	pid := uint(cmd.Process.Pid)
-	proc, err, softerrors := process.OpenFromPid(pid)
+	proc, softerrors, err := process.OpenFromPid(pid)
 	test.PrintSoftErrors(softerrors)
 	if err != nil {
 		t.Fatal(err)
@@ -85,7 +85,7 @@ func TestRegexpSearchInOtherProcess(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		found, _, err, softerrors := FindRegexpMatch(proc, 0, r)
+		found, _, softerrors, err := FindRegexpMatch(proc, 0, r)
 		test.PrintSoftErrors(softerrors)
 		if err != nil {
 			t.Fatal(err)
@@ -101,7 +101,7 @@ func TestRegexpSearchInOtherProcess(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		found, _, err, softerrors := FindRegexpMatch(proc, 0, r)
+		found, _, softerrors, err := FindRegexpMatch(proc, 0, r)
 		test.PrintSoftErrors(softerrors)
 		if err != nil {
 			t.Fatal(err)

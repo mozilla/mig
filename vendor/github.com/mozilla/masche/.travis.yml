@@ -1,0 +1,8 @@
+language: go
+go:
+  - 1.8
+before_install:
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/golang/lint/golint
+script:
+  - make run_tests64 vet lint

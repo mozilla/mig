@@ -23,10 +23,10 @@ import (
 // EVR operation constants
 const (
 	_ = iota
-	EVROP_LESS_THAN
-	EVROP_GREATER_THAN
-	EVROP_EQUALS
-	EVROP_UNKNOWN
+	EvropLessThan
+	EvropGreaterThan
+	EvropEquals
+	EvropUnknown
 )
 
 type evr struct {
@@ -38,20 +38,20 @@ type evr struct {
 func evrLookupOperation(s string) int {
 	switch s {
 	case "<":
-		return EVROP_LESS_THAN
+		return EvropLessThan
 	case ">":
-		return EVROP_GREATER_THAN
+		return EvropGreaterThan
 	case "=":
-		return EVROP_EQUALS
+		return EvropEquals
 	}
-	return EVROP_UNKNOWN
+	return EvropUnknown
 }
 
 func evrOperationStr(val int) string {
 	switch val {
-	case EVROP_LESS_THAN:
+	case EvropLessThan:
 		return "<"
-	case EVROP_EQUALS:
+	case EvropEquals:
 		return "="
 	default:
 		return "?"
@@ -66,9 +66,8 @@ func evrIsNumber(s string) bool {
 	_, err := strconv.Atoi(s)
 	if err != nil {
 		return false
-	} else {
-		return true
 	}
+	return true
 }
 
 func evrExtract(s string) (evr, error) {
@@ -83,7 +82,12 @@ func evrExtract(s string) (evr, error) {
 	}
 
 	if idx >= len(s) {
-		return ret, fmt.Errorf("evrExtract: all digits")
+		// The entire version string is a digit; in this case just set the
+		// version value to s
+		ret.epoch = "0"
+		ret.version = s
+		ret.release = ""
+		return ret, nil
 	}
 
 	if s[idx] == ':' {
@@ -277,17 +281,17 @@ func evrCompare(op int, actual string, check string) (bool, error) {
 		return false, err
 	}
 	switch op {
-	case EVROP_EQUALS:
+	case EvropEquals:
 		if ret != 0 {
 			return false, nil
 		}
 		return true, nil
-	case EVROP_LESS_THAN:
+	case EvropLessThan:
 		if ret == 1 {
 			return true, nil
 		}
 		return false, nil
-	case EVROP_GREATER_THAN:
+	case EvropGreaterThan:
 		if ret == -1 {
 			return true, nil
 		}
@@ -296,9 +300,9 @@ func evrCompare(op int, actual string, check string) (bool, error) {
 	return false, fmt.Errorf("evrCompare: unknown operator")
 }
 
-// An exported version of the EVR comparison operation. op is used to specify
-// an EVR comparison operation (e.g., EVROP_LESS_THAN). actual and check are
-// the version strings to test. Returns status of test evaluation, or an error
+// TestEvrCompare is an exported version of the EVR comparison operation. op is
+// used to specify an EVR comparison operation (e.g., EvropLessThan). actual and
+// check are the version strings to test. Returns status of test evaluation, or an error
 // if an error occurs.
 func TestEvrCompare(op int, actual string, check string) (bool, error) {
 	return evrCompare(op, actual, check)

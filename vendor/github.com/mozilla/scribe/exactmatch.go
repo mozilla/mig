@@ -7,8 +7,10 @@
 
 package scribe
 
+// ExactMatch is used to indicate a test should match Value exactly against
+// the referenced object
 type ExactMatch struct {
-	Value string `json:"value,omitempty"`
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 func (e *ExactMatch) evaluate(c evaluationCriteria) (ret evaluationResult, err error) {

@@ -137,6 +137,22 @@ func TestWriter(t *testing.T) {
 	}
 }
 
+// in Go 1.8 this code does not work in go-yara 1.0.2
+// go 1.8/debian stretch panics
+// go 1.8/darwin produces stack overflow
+func TestWriterBuffer(t *testing.T) {
+	rulesBuf := bytes.NewBuffer(nil)
+	for i := 0; i < 10000; i++ {
+		fmt.Fprintf(rulesBuf, "rule test%d : tag%d { meta: author = \"Hilko Bengen\" strings: $a = \"abc\" fullword condition: $a }", i, i)
+	}
+	r, _ := Compile(string(rulesBuf.Bytes()), nil)
+	buf := new(bytes.Buffer)
+	if err := r.Write(buf); err != nil {
+		t.Errorf("write to bytes.Buffer: %s", err)
+		return
+	}
+}
+
 // compress/bzip2 seems to return short reads which apparently leads
 // to YARA complaining about corrupt files. Tested with Go 1.4, 1.5.
 func TestReaderBZIP2(t *testing.T) {

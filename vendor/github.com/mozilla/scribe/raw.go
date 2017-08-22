@@ -11,13 +11,19 @@ import (
 	"fmt"
 )
 
+// Raw can be used to create an object that has values already defined directly
+// in the policy file. For example, an object with a raw entry is not populated from
+// the system, but the raw values themselves are referencable from a test or from
+// another object using an import-chain.
 type Raw struct {
-	Identifiers []RawIdentifiers `json:"identifiers,omitempty"`
+	Identifiers []RawIdentifiers `json:"identifiers,omitempty" yaml:"identifiers,omitempty"`
 }
 
+// RawIdentifiers are the identifier/value pairs that make up raw entries in an
+// object.
 type RawIdentifiers struct {
-	Identifier string `json:"identifier,omitempty"`
-	Value      string `json:"value,omitempty"`
+	Identifier string `json:"identifier,omitempty" yaml:"identifier,omitempty"`
+	Value      string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 func (r *Raw) isChain() bool {

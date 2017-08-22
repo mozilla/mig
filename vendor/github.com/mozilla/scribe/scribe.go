@@ -4,6 +4,8 @@
 //
 // Contributor:
 // - Aaron Meihm ameihm@mozilla.com
+
+// Package scribe implements the Mozilla scribe host policy evaluator.
 package scribe
 
 import (
@@ -19,6 +21,7 @@ type runtime struct {
 	fileLocator func(string, bool, string, int) ([]string, error)
 }
 
+// Version is the scribe library version
 const Version = "0.5"
 
 var sRuntime runtime
@@ -40,14 +43,18 @@ func Bootstrap() (err error) {
 	return err
 }
 
-// Set an expected result callback. f should be a function that takes a Test
+// ExpectedCallback can be used to set a callback function for test results.
+//
+// Set an expected result callback. f should be a function that takes a TestResult
 // type as an argument. When this is set, if the result of a test does not
 // match the value set in "expectedresult" for the test, the function is
-// immediately called with the applicable test as an argument.
+// immediately called with the applicable TestResult as an argument.
 func ExpectedCallback(f func(TestResult)) {
 	sRuntime.excall = f
 }
 
+// InstallFileLocator installs alternate file walking functions.
+//
 // Install an alternate file location function. This overrides use of the
 // SimpleFileLocator locate() function, and allows specification of an
 // alternate function to use for locating candidate files on the filesystem.
@@ -58,6 +65,8 @@ func InstallFileLocator(f func(string, bool, string, int) ([]string, error)) {
 	sRuntime.fileLocator = f
 }
 
+// TestHooks enables or disables testing hooks in the library.
+//
 // Enable or disable test hooks. If test hooks are enabled, certain functions
 // such as requesting package data from the host system are bypassed in favor
 // of test tables.
@@ -73,7 +82,7 @@ func debugPrint(s string, args ...interface{}) {
 	fmt.Fprintf(sRuntime.debugWriter, "[scribe] %v", buf)
 }
 
-// Enable or disable debugging. If debugging is enabled, output is written
+// SetDebug enables or disables debugging. If debugging is enabled, output is written
 // to the io.Writer specified by w.
 func SetDebug(f bool, w io.Writer) {
 	sRuntime.debugging = f

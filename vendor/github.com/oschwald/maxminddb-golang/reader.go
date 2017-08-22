@@ -8,7 +8,13 @@ import (
 	"reflect"
 )
 
-const dataSectionSeparatorSize = 16
+const (
+	// NotFound is returned by LookupOffset when a matched root record offset
+	// cannot be found.
+	NotFound = ^uintptr(0)
+
+	dataSectionSeparatorSize = 16
+)
 
 var metadataStartMarker = []byte("\xAB\xCD\xEFMaxMind.com")
 
@@ -44,7 +50,7 @@ func FromBytes(buffer []byte) (*Reader, error) {
 	metadataStart := bytes.LastIndex(buffer, metadataStartMarker)
 
 	if metadataStart == -1 {
-		return nil, fmt.Errorf("error opening database file: invalid MaxMind DB file")
+		return nil, newInvalidDatabaseError("error opening database: invalid MaxMind DB file")
 	}
 
 	metadataStart += len(metadataStartMarker)
@@ -53,19 +59,24 @@ func FromBytes(buffer []byte) (*Reader, error) {
 	var metadata Metadata
 
 	rvMetdata := reflect.ValueOf(&metadata)
-	_, err := metadataDecoder.decode(0, rvMetdata)
+	_, err := metadataDecoder.decode(0, rvMetdata, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	searchTreeSize := metadata.NodeCount * metadata.RecordSize / 4
-	decoder := decoder{
+	dataSectionStart := searchTreeSize + dataSectionSeparatorSize
+	dataSectionEnd := uint(metadataStart - len(metadataStartMarker))
+	if dataSectionStart > dataSectionEnd {
+		return nil, newInvalidDatabaseError("the MaxMind DB contains invalid metadata")
+	}
+	d := decoder{
 		buffer[searchTreeSize+dataSectionSeparatorSize : metadataStart-len(metadataStartMarker)],
 	}
 
 	reader := &Reader{
 		buffer:    buffer,
-		decoder:   decoder,
+		decoder:   d,
 		Metadata:  metadata,
 		ipv4Start: 0,
 	}
@@ -94,22 +105,57 @@ func (r *Reader) startNode() (uint, error) {
 }
 
 // Lookup takes an IP address as a net.IP structure and a pointer to the
-// result value to decode into. The result value pointed to must be a data
-// value that corresponds to a record in the database. This may include a
-// struct representation of the data, a map capable of holding the data or an
-// empty interface{} value.
+// result value to Decode into.
+func (r *Reader) Lookup(ipAddress net.IP, result interface{}) error {
+	pointer, err := r.lookupPointer(ipAddress)
+	if pointer == 0 || err != nil {
+		return err
+	}
+	return r.retrieveData(pointer, result)
+}
+
+// LookupOffset maps an argument net.IP to a corresponding record offset in the
+// database. NotFound is returned if no such record is found, and a record may
+// otherwise be extracted by passing the returned offset to Decode. LookupOffset
+// is an advanced API, which exists to provide clients with a means to cache
+// previously-decoded records.
+func (r *Reader) LookupOffset(ipAddress net.IP) (uintptr, error) {
+	pointer, err := r.lookupPointer(ipAddress)
+	if pointer == 0 || err != nil {
+		return NotFound, err
+	}
+	return r.resolveDataPointer(pointer)
+}
+
+// Decode the record at |offset| into |result|. The result value pointed to
+// must be a data value that corresponds to a record in the database. This may
+// include a struct representation of the data, a map capable of holding the
+// data or an empty interface{} value.
 //
 // If result is a pointer to a struct, the struct need not include a field
 // for every value that may be in the database. If a field is not present in
 // the structure, the decoder will not decode that field, reducing the time
 // required to decode the record.
 //
-// Currently the decoder expect most data types to correspond exactly (e.g.,
-// a uint64 database type must be decoded into a uint64 Go type). In the
-// future, this may be made more flexible.
-func (r *Reader) Lookup(ipAddress net.IP, result interface{}) error {
+// As a special case, a struct field of type uintptr will be used to capture
+// the offset of the value. Decode may later be used to extract the stored
+// value from the offset. MaxMind DBs are highly normalized: for example in
+// the City database, all records of the same country will reference a
+// single representative record for that country. This uintptr behavior allows
+// clients to leverage this normalization in their own sub-record caching.
+func (r *Reader) Decode(offset uintptr, result interface{}) error {
+	rv := reflect.ValueOf(result)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return errors.New("result param must be a pointer")
+	}
+
+	_, err := r.decoder.decode(uint(offset), reflect.ValueOf(result), 0)
+	return err
+}
+
+func (r *Reader) lookupPointer(ipAddress net.IP) (uint, error) {
 	if ipAddress == nil {
-		return errors.New("ipAddress passed to Lookup cannot be nil")
+		return 0, errors.New("ipAddress passed to Lookup cannot be nil")
 	}
 
 	ipV4Address := ipAddress.To4()
@@ -117,16 +163,10 @@ func (r *Reader) Lookup(ipAddress net.IP, result interface{}) error {
 		ipAddress = ipV4Address
 	}
 	if len(ipAddress) == 16 && r.Metadata.IPVersion == 4 {
-		return fmt.Errorf("error looking up '%s': you attempted to look up an IPv6 address in an IPv4-only database", ipAddress.String())
+		return 0, fmt.Errorf("error looking up '%s': you attempted to look up an IPv6 address in an IPv4-only database", ipAddress.String())
 	}
 
-	pointer, err := r.findAddressInTree(ipAddress)
-
-	if pointer == 0 {
-		return err
-	}
-
-	return r.retrieveData(pointer, result)
+	return r.findAddressInTree(ipAddress)
 }
 
 func (r *Reader) findAddressInTree(ipAddress net.IP) (uint, error) {
@@ -156,7 +196,7 @@ func (r *Reader) findAddressInTree(ipAddress net.IP) (uint, error) {
 		return node, nil
 	}
 
-	return 0, errors.New("invalid node in search tree")
+	return 0, newInvalidDatabaseError("invalid node in search tree")
 }
 
 func (r *Reader) readNode(nodeNumber uint, index uint) (uint, error) {
@@ -165,13 +205,13 @@ func (r *Reader) readNode(nodeNumber uint, index uint) (uint, error) {
 	baseOffset := nodeNumber * RecordSize / 4
 
 	var nodeBytes []byte
-	var prefix uint64
+	var prefix uint
 	switch RecordSize {
 	case 24:
 		offset := baseOffset + index*3
 		nodeBytes = r.buffer[offset : offset+3]
 	case 28:
-		prefix = uint64(r.buffer[baseOffset+3])
+		prefix = uint(r.buffer[baseOffset+3])
 		if index != 0 {
 			prefix &= 0x0F
 		} else {
@@ -183,34 +223,24 @@ func (r *Reader) readNode(nodeNumber uint, index uint) (uint, error) {
 		offset := baseOffset + index*4
 		nodeBytes = r.buffer[offset : offset+4]
 	default:
-		return 0, fmt.Errorf("unknown record size: %d", RecordSize)
+		return 0, newInvalidDatabaseError("unknown record size: %d", RecordSize)
 	}
-	return uint(uintFromBytes(prefix, nodeBytes)), nil
+	return uintFromBytes(prefix, nodeBytes), nil
 }
 
 func (r *Reader) retrieveData(pointer uint, result interface{}) error {
-	rv := reflect.ValueOf(result)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
-		return errors.New("result param must be a pointer")
-	}
-
 	offset, err := r.resolveDataPointer(pointer)
 	if err != nil {
 		return err
 	}
-
-	_, err = r.decoder.decode(offset, rv)
-	return err
+	return r.Decode(offset, result)
 }
 
-func (r *Reader) resolveDataPointer(pointer uint) (uint, error) {
-	nodeCount := r.Metadata.NodeCount
+func (r *Reader) resolveDataPointer(pointer uint) (uintptr, error) {
+	var resolved = uintptr(pointer - r.Metadata.NodeCount - dataSectionSeparatorSize)
 
-	resolved := pointer - nodeCount - dataSectionSeparatorSize
-
-	if resolved > uint(len(r.buffer)) {
-		return 0, errors.New("the MaxMind DB file's search tree is corrupt")
+	if resolved > uintptr(len(r.buffer)) {
+		return 0, newInvalidDatabaseError("the MaxMind DB file's search tree is corrupt")
 	}
-
 	return resolved, nil
 }
