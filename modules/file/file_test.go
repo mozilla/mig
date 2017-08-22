@@ -502,6 +502,14 @@ var testData = []testParams{
 		searchpath:        []string{"/doesnotexist"},
 		errorre:           []string{"^ERROR: open /doesnotexist:"},
 	},
+	testParams{
+		description:       "search a root directory path which is a link",
+		name:              []string{".*testfile.*"},
+		expectedfilesroot: []string{},
+		expectedfilessub:  []string{},
+		searchpath:        []string{"SEARCHBASE+dirlink"},
+		errorre:           []string{"^warning:.*and was not followed$"},
+	},
 	// MACROAL tests
 	// Regex     | Inverse | MACROAL | Result
 	// -----------+---------+---------+--------
