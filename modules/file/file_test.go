@@ -483,14 +483,6 @@ var testData = []testParams{
 		matchlimit:   4,
 		wantexpected: 4,
 	},
-	// Various error conditions
-	testParams{
-		description:       "search a nonexistent root",
-		name:              []string{".*testfile.*"},
-		expectedfilesroot: []string{},
-		expectedfilessub:  []string{},
-		searchpath:        []string{"/doesnotexist"},
-	},
 	testParams{
 		description:       "search for testfile0 and testfile7 without matchall",
 		name:              []string{"^testfile0$"},
@@ -498,6 +490,14 @@ var testData = []testParams{
 		nomatchall:        true,
 		expectedfilesroot: []string{"testfile0", "testfile7"},
 		expectedfilessub:  []string{"testfile0", "testfile7"},
+	},
+	// Various error conditions
+	testParams{
+		description:       "search a nonexistent root",
+		name:              []string{".*testfile.*"},
+		expectedfilesroot: []string{},
+		expectedfilessub:  []string{},
+		searchpath:        []string{"/doesnotexist"},
 	},
 	// MACROAL tests
 	// Regex     | Inverse | MACROAL | Result
