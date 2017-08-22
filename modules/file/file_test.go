@@ -952,4 +952,9 @@ some other text`),
 		link:     true,
 		linkdest: "testfile0",
 	},
+	testFile{
+		filename: "dirlink",
+		link:     true,
+		linkdest: "a",
+	},
 }
