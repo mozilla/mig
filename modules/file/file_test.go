@@ -295,6 +295,7 @@ type testParams struct {
 	expectedfilessub  []string // The files we expect to find in the subdirectory path
 	wantexpected      int      // If non-zero, we don't care what file is returned but will check the number
 	errorre           []string // List of regex, all errors in result must match item in list, if unset use a default
+	enhanceprivacy    bool     // Run results through privacy interface and validate data set
 }
 
 func (tp *testParams) getExpectedFiles() (ret []string) {
@@ -614,6 +615,13 @@ var testData = []testParams{
 			"testfile4", "testfile5", "testfile6", "testfile7", "testfile8",
 			"testfile9"},
 	},
+	// Tests for enhanced privacy mode
+	testParams{
+		description:    "find all files by modification time in minutes, with privacy mode enabled",
+		mtime:          []string{"<1m"},
+		wantexpected:   20,
+		enhanceprivacy: true,
+	},
 }
 
 func (tp *testParams) runTest(t *testing.T) {
@@ -712,6 +720,12 @@ func (tp *testParams) runTest(t *testing.T) {
 	if !mr.Success {
 		t.Fatal("module result indicated it was not successful")
 	}
+	if tp.enhanceprivacy {
+		mr, err = r.EnhancePrivacy(mr)
+		if err != nil {
+			t.Fatalf("EnhancePrivacy: %v", err)
+		}
+	}
 	err = mr.GetElements(&sr)
 	if err != nil {
 		t.Fatalf("GetElements: %v", err)
@@ -774,6 +788,15 @@ func (tp *testParams) runTest(t *testing.T) {
 		}
 		if !match {
 			t.Fatalf("module result contained unexpected error %q", e)
+		}
+	}
+	// If enhanceprivacy is set, walk through the result set and validate each file result
+	// has the file name set to masked
+	if tp.enhanceprivacy {
+		for _, x := range gotfiles {
+			if x != "masked" {
+				t.Fatal("module result had file names after privacy filter was applied")
+			}
 		}
 	}
 }
