@@ -1899,6 +1899,12 @@ func (r *run) PrintResults(result modules.Result, foundOnly bool) (prints []stri
 func (r *run) EnhancePrivacy(in modules.Result) (out modules.Result, err error) {
 	var el SearchResults
 	out = in
+	// Mask errors; it's possible in some circumstances an error might contain file name or
+	// path information
+	for i := range out.Errors {
+		out.Errors[i] = "masked"
+	}
+	// Mask file name components in elements
 	err = out.GetElements(&el)
 	if err != nil {
 		return
