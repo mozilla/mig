@@ -455,6 +455,7 @@ test-modules:
 	$(GO) test mig.ninja/mig/modules/pkg
 	$(GO) test mig.ninja/mig/modules/scribe
 	$(GO) test mig.ninja/mig/modules/timedrift
+	$(GO) test mig.ninja/mig/modules/sshkey
 ifeq ($(WITHYARA),yes)
 	$(GO) test mig.ninja/mig/modules/yara
 endif
