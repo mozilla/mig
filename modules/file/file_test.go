@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -293,6 +294,7 @@ type testParams struct {
 	expectedfilesroot []string // The files we expect to find for this search in the root path
 	expectedfilessub  []string // The files we expect to find in the subdirectory path
 	wantexpected      int      // If non-zero, we don't care what file is returned but will check the number
+	errorre           []string // List of regex, all errors in result must match item in list, if unset use a default
 }
 
 func (tp *testParams) getExpectedFiles() (ret []string) {
@@ -498,6 +500,7 @@ var testData = []testParams{
 		expectedfilesroot: []string{},
 		expectedfilessub:  []string{},
 		searchpath:        []string{"/doesnotexist"},
+		errorre:           []string{"^ERROR: open /doesnotexist:"},
 	},
 	// MACROAL tests
 	// Regex     | Inverse | MACROAL | Result
@@ -741,6 +744,28 @@ func (tp *testParams) runTest(t *testing.T) {
 			if !found {
 				t.Fatalf("%v not found in results", x)
 			}
+		}
+	}
+	// Check module errors, if errorre is unset we just use a default which is to expect a single
+	// error related to the bad directory symlink in the test file system, unless a max depth option
+	// is present as we won't descend that far
+	if len(tp.errorre) == 0 && tp.maxdepth == 0 {
+		tp.errorre = append(tp.errorre, "^ERROR: followSymLink()")
+	}
+	for _, e := range mr.Errors {
+		match := false
+		for _, re := range tp.errorre {
+			rem, err := regexp.MatchString(re, e)
+			if err != nil {
+				t.Fatalf("regexp.MatchString: %v", err)
+			}
+			if rem {
+				match = true
+				break
+			}
+		}
+		if !match {
+			t.Fatalf("module result contained unexpected error %q", e)
 		}
 	}
 }
