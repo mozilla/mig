@@ -296,6 +296,7 @@ type testParams struct {
 	wantexpected      int      // If non-zero, we don't care what file is returned but will check the number
 	errorre           []string // List of regex, all errors in result must match item in list, if unset use a default
 	enhanceprivacy    bool     // Run results through privacy interface and validate data set
+	decompress        bool     // Request attempted file decompression from module
 }
 
 func (tp *testParams) getExpectedFiles() (ret []string) {
@@ -493,6 +494,50 @@ var testData = []testParams{
 		nomatchall:        true,
 		expectedfilesroot: []string{"testfile0", "testfile7"},
 		expectedfilessub:  []string{"testfile0", "testfile7"},
+	},
+	// Decompression tests
+	testParams{
+		description:       "search for testfile6 using decompressed content with name",
+		name:              []string{"^testfile6"},
+		content:           []string{"^--- header for zipped file ---$"},
+		expectedfilesroot: []string{"testfile6"},
+		expectedfilessub:  []string{"testfile6"},
+		decompress:        true,
+	},
+	testParams{
+		description:       "search for testfile6 using decompressed content",
+		content:           []string{"^--- header for zipped file ---$"},
+		expectedfilesroot: []string{"testfile6"},
+		expectedfilessub:  []string{"testfile6"},
+		decompress:        true,
+		// Expect additional error here, as this will scan testfile8 which is compressed but
+		// is corrupt
+		errorre: []string{"^checkContent.+flate: corrupt input",
+			"^ERROR: followSymLink"},
+	},
+	testParams{
+		description:       "search for testfile7 using decompressed md5",
+		md5:               []string{"7f82b4c1613fd10208ad1f71de17ebb5"},
+		expectedfilesroot: []string{"testfile7"},
+		expectedfilessub:  []string{"testfile7"},
+		decompress:        true,
+		// Expect additional error here, as this will scan testfile8 which is compressed but
+		// is corrupt
+		errorre: []string{"^checkHash.+flate: corrupt input",
+			"^ERROR: followSymLink"},
+	},
+	testParams{
+		description: "search for testfile0 and testfile6 with matchall disabled using decompression",
+		content:     []string{"--- header for first file ---", "^--- header for zipped file ---$"},
+		// We will also get testfile9 due to the symlink
+		expectedfilesroot: []string{"testfile0", "testfile6", "testfile9"},
+		expectedfilessub:  []string{"testfile0", "testfile6", "testfile9"},
+		nomatchall:        true,
+		decompress:        true,
+		// Expect additional error here, as this will scan testfile8 which is compressed but
+		// is corrupt
+		errorre: []string{"^checkContent.+flate: corrupt input",
+			"^ERROR: followSymLink"},
 	},
 	// Various error conditions
 	testParams{
@@ -702,6 +747,9 @@ func (tp *testParams) runTest(t *testing.T) {
 		s.Options.MatchAll = true
 	} else {
 		s.Options.MatchAll = false
+	}
+	if tp.decompress {
+		s.Options.Decompress = true
 	}
 	r.Parameters.Searches["s1"] = &s
 	msg, err := modules.MakeMessage(modules.MsgClassParameters, r.Parameters, false)
