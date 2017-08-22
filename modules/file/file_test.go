@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -293,6 +294,7 @@ type testParams struct {
 	expectedfilesroot []string // The files we expect to find for this search in the root path
 	expectedfilessub  []string // The files we expect to find in the subdirectory path
 	wantexpected      int      // If non-zero, we don't care what file is returned but will check the number
+	errorre           []string // List of regex, all errors in result must match item in list, if unset use a default
 }
 
 func (tp *testParams) getExpectedFiles() (ret []string) {
@@ -483,14 +485,6 @@ var testData = []testParams{
 		matchlimit:   4,
 		wantexpected: 4,
 	},
-	// Various error conditions
-	testParams{
-		description:       "search a nonexistent root",
-		name:              []string{".*testfile.*"},
-		expectedfilesroot: []string{},
-		expectedfilessub:  []string{},
-		searchpath:        []string{"/doesnotexist"},
-	},
 	testParams{
 		description:       "search for testfile0 and testfile7 without matchall",
 		name:              []string{"^testfile0$"},
@@ -498,6 +492,23 @@ var testData = []testParams{
 		nomatchall:        true,
 		expectedfilesroot: []string{"testfile0", "testfile7"},
 		expectedfilessub:  []string{"testfile0", "testfile7"},
+	},
+	// Various error conditions
+	testParams{
+		description:       "search a nonexistent root",
+		name:              []string{".*testfile.*"},
+		expectedfilesroot: []string{},
+		expectedfilessub:  []string{},
+		searchpath:        []string{"/doesnotexist"},
+		errorre:           []string{"^ERROR: open /doesnotexist:"},
+	},
+	testParams{
+		description:       "search a root directory path which is a link",
+		name:              []string{".*testfile.*"},
+		expectedfilesroot: []string{},
+		expectedfilessub:  []string{},
+		searchpath:        []string{"SEARCHBASE+dirlink"},
+		errorre:           []string{"^warning:.*and was not followed$"},
 	},
 	// MACROAL tests
 	// Regex     | Inverse | MACROAL | Result
@@ -743,6 +754,28 @@ func (tp *testParams) runTest(t *testing.T) {
 			}
 		}
 	}
+	// Check module errors, if errorre is unset we just use a default which is to expect a single
+	// error related to the bad directory symlink in the test file system, unless a max depth option
+	// is present as we won't descend that far
+	if len(tp.errorre) == 0 && tp.maxdepth == 0 {
+		tp.errorre = append(tp.errorre, "^ERROR: followSymLink()")
+	}
+	for _, e := range mr.Errors {
+		match := false
+		for _, re := range tp.errorre {
+			rem, err := regexp.MatchString(re, e)
+			if err != nil {
+				t.Fatalf("regexp.MatchString: %v", err)
+			}
+			if rem {
+				match = true
+				break
+			}
+		}
+		if !match {
+			t.Fatalf("module result contained unexpected error %q", e)
+		}
+	}
 }
 
 type testFile struct {
@@ -951,5 +984,10 @@ some other text`),
 		filename: "testfile9",
 		link:     true,
 		linkdest: "testfile0",
+	},
+	testFile{
+		filename: "dirlink",
+		link:     true,
+		linkdest: "a",
 	},
 }
