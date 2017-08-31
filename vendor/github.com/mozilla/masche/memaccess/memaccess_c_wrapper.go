@@ -26,7 +26,7 @@ func nextReadableMemoryRegion(p process.Process, address uintptr) (region Memory
 	C.response_free(response)
 
 	if harderror != nil || isAvailable == false {
-		return NoRegionAvailable, harderror, softerrors
+		return NoRegionAvailable, softerrors, harderror
 	}
 
 	return MemoryRegion{uintptr(cRegion.start_address), uint(cRegion.length)}, softerrors, harderror

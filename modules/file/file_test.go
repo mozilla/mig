@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -223,16 +224,30 @@ func TestBadRunParameters(t *testing.T) {
 
 // createFiles creates the file structure the tests will be executed against
 func createFiles() {
+	var err error
+
 	bdname := fmt.Sprintf("migfiletest%v", time.Now().Format("15-04-05.99999999"))
 	basedir = path.Join(os.TempDir(), bdname)
 
 	subdirEntries = append([]string{basedir}, subdirEntries...)
 	subdirs = path.Join(subdirEntries...)
 
-	err := os.MkdirAll(subdirs, 0700)
+	err = os.MkdirAll(subdirs, 0700)
 	if err != nil {
 		log.Fatalf("MkDirAll: %v", err)
 	}
+
+	// On some platforms, the temp directory returned by TempDir is a symlink,
+	// so resolve it here so we have the right path to compare results to.
+	basedir, err = filepath.EvalSymlinks(basedir)
+	if err != nil {
+		log.Fatalf("EvalSymlinks: %v", err)
+	}
+	subdirs, err = filepath.EvalSymlinks(subdirs)
+	if err != nil {
+		log.Fatalf("EvalSymlinks: %v", err)
+	}
+
 	for _, dir := range []string{basedir, subdirs} {
 		for _, tp := range testFiles {
 			tfpath := path.Join(dir, tp.filename)
