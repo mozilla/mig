@@ -33,7 +33,7 @@ func openFromPid(pid uint) (p Process, softerrors []error, harderror error) {
 	var result process
 
 	resp := C.open_process_handle(C.pid_tt(pid), &result.hndl)
-	harderror, softerrors = cresponse.GetResponsesErrors(unsafe.Pointer(resp))
+	softerrors, harderror = cresponse.GetResponsesErrors(unsafe.Pointer(resp))
 	C.response_free(resp)
 
 	if harderror == nil {

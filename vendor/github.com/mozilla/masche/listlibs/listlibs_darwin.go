@@ -35,7 +35,7 @@ func listLoadedLibraries(p process.Process) (libraries []string, softerrors []er
 			Len:  int(*count),
 			Cap:  int(*count)}))
 
-	processName, harderror, softs := p.Name()
+	processName, softs, harderror := p.Name()
 	if harderror != nil {
 		return
 	}
