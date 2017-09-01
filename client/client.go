@@ -1440,6 +1440,9 @@ func (cli Client) FetchActionResults(a mig.Action) (ret []mig.Command, err error
 		target = target + fmt.Sprintf("&actionid=%.0f", a.ID)
 
 		resource, err := cli.GetAPIResource(target)
+		if err != nil {
+			panic(err)
+		}
 		if resource.Collection.Error.Message == "no results found" {
 			err = nil
 			break
@@ -1501,6 +1504,9 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 	for {
 		target := fmt.Sprintf("search?type=command&limit=%d&offset=%d&actionid=%.0f%s%s", limit, offset, a.ID, foundQ, report)
 		resource, err := cli.GetAPIResource(target)
+		if err != nil {
+			panic(err)
+		}
 		// because we query using pagination, the last query will return a 404 with no result.
 		// When that happens, GetAPIResource returns an error which we do not report to the user
 		switch resource.Collection.Error.Message {
@@ -1574,6 +1580,9 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 				// print commands that have not returned successfully
 				target := fmt.Sprintf("search?type=command&limit=%d&offset=%d&actionid=%.0f&status=%s", limit, offset, a.ID, status)
 				resource, err := cli.GetAPIResource(target)
+				if err != nil {
+					panic(err)
+				}
 				// because we query using pagination, the last query will return a 404 with no result.
 				// When that happens, GetAPIResource returns an error which we do not report to the user
 				switch resource.Collection.Error.Message {
