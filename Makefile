@@ -329,6 +329,8 @@ test-modules:
 	$(GO) test mig.ninja/mig/modules/examplepersist
 	$(GO) test mig.ninja/mig/modules/file
 	$(GO) test mig.ninja/mig/modules/fswatch
+	$(GO) test mig.ninja/mig/modules/dispatch
+	$(GO) test mig.ninja/mig/modules/audit
 	$(GO) test mig.ninja/mig/modules/memory
 	$(GO) test mig.ninja/mig/modules/netstat
 	$(GO) test mig.ninja/mig/modules/ping
