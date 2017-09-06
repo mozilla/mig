@@ -57,6 +57,10 @@ func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 // message up to the agent, where it is logged in the agent's log.
 var logChan chan string
 
+// The alert channel can be used by functions in the persistent module to send alerts
+// to the agent.
+var alertChan chan string
+
 // The error channel can be used to indicate something went wrong in the module by
 // writing an error to it. This will result in the modules default handler function
 // returning and the module exiting.
@@ -175,6 +179,8 @@ func (r *run) RunPersist(in modules.ModuleReader, out modules.ModuleWriter) {
 	handlerErrChan = make(chan error, 64)
 	// Create a config channel we will read our configuration from.
 	configChan = make(chan []byte, 1)
+	// Initialize the alert channel
+	alertChan = make(chan string, 64)
 	// Start up an example background task we want our module to run
 	// continuously.
 	go runSomeTasks()
@@ -191,7 +197,8 @@ func (r *run) RunPersist(in modules.ModuleReader, out modules.ModuleWriter) {
 	go modules.HandlePersistRequest(l, requestHandler, handlerErrChan)
 	// Finally, enter the standard module management function. This will not return
 	// unless an error occurs.
-	modules.DefaultPersistHandlers(in, out, logChan, handlerErrChan, regChan, configChan)
+	modules.DefaultPersistHandlers(in, out, logChan, handlerErrChan, regChan,
+		alertChan, configChan)
 }
 
 // Module Run function, used to make queries using the module.

@@ -39,6 +39,7 @@ func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 }
 
 var logChan chan string
+var agentAlertChan chan string
 var handlerErrChan chan error
 var configChan chan []byte
 
@@ -138,6 +139,7 @@ func (r *run) PersistModConfig() interface{} {
 
 func (r *run) RunPersist(in modules.ModuleReader, out modules.ModuleWriter) {
 	logChan = make(chan string, 64)
+	agentAlertChan = make(chan string, 64)
 	regChan := make(chan string, 64)
 	handlerErrChan = make(chan error, 64)
 	configChan = make(chan []byte, 1)
@@ -150,7 +152,8 @@ func (r *run) RunPersist(in modules.ModuleReader, out modules.ModuleWriter) {
 		regChan <- spec
 	}
 	go modules.HandlePersistRequest(l, requestHandler, handlerErrChan)
-	modules.DefaultPersistHandlers(in, out, logChan, handlerErrChan, regChan, configChan)
+	modules.DefaultPersistHandlers(in, out, logChan, handlerErrChan, regChan,
+		agentAlertChan, configChan)
 }
 
 func (r *run) Run(in modules.ModuleReader) (resStr string) {
