@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"runtime"
 
+	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
 )
 
@@ -50,15 +51,50 @@ var alertChan chan string
 var handlerErrChan chan error
 var configChan chan modules.ConfigParams
 
+// We keep a copy of the agent environment, hostname, and tags here so we can
+// use them in the dispatched output
+var env mig.AgentEnv
+var tags map[string]string
+var agtHostname string
+
 // messageBuf is a queue used to store incoming messages, and is drained by
 // runDispatch
 var messageBuf chan string
+
+// Dispatch record describes the formatting of JSON data submitted from the dispatch
+// module.
+type DispatchRecord struct {
+	Hostname string            `json:"hostname"`
+	Env      mig.AgentEnv      `json:"environment"`
+	Tags     map[string]string `json:"tags"`
+	Details  interface{}       `json:"details"`
+}
+
+func (d *DispatchRecord) fromString(msg string) error {
+	d.Hostname = agtHostname
+	d.Env = env
+	d.Tags = tags
+	err := json.Unmarshal([]byte(msg), &d.Details)
+	return err
+}
 
 func moduleMain() {
 	var cfg config
 
 	incfg := <-configChan
-	buf, err := json.Marshal(incfg.Config)
+	agtHostname = incfg.Hostname
+	tags = incfg.Tags
+	buf, err := json.Marshal(incfg.Env)
+	if err != nil {
+		handlerErrChan <- err
+		return
+	}
+	err = json.Unmarshal(buf, &env)
+	if err != nil {
+		handlerErrChan <- err
+		return
+	}
+	buf, err = json.Marshal(incfg.Config)
 	if err != nil {
 		handlerErrChan <- err
 		return
@@ -93,12 +129,20 @@ func dispatchIn(msg string) {
 }
 
 func runDispatch(cfg config) error {
-	var httpClient http.Client
+	var (
+		httpClient http.Client
+		dr         DispatchRecord
+	)
 
 	for {
 		msg := <-messageBuf
-		b := bytes.NewBufferString(msg)
-		// We make an assumption the alert content is always a JSON blob here.
+		dr.fromString(msg)
+		buf, err := json.Marshal(dr)
+		if err != nil {
+			logChan <- fmt.Sprintf("create dispatch record: %v", err)
+			continue
+		}
+		b := bytes.NewBuffer(buf)
 		resp, err := httpClient.Post(cfg.Dispatch.HTTPURL, "application/json", b)
 		if err != nil {
 			logChan <- fmt.Sprintf("http post: %v", err)
