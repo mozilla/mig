@@ -41,7 +41,7 @@ func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 var logChan chan string
 var agentAlertChan chan string
 var handlerErrChan chan error
-var configChan chan []byte
+var configChan chan modules.ConfigParams
 
 var alertChan chan Alert
 
@@ -95,7 +95,12 @@ func moduleMain() {
 	alertChan = make(chan Alert, 16)
 
 	incfg := <-configChan
-	err := json.Unmarshal(incfg, &cfg)
+	buf, err := json.Marshal(incfg.Config)
+	if err != nil {
+		handlerErrChan <- err
+		return
+	}
+	err = json.Unmarshal(buf, &cfg)
 	if err != nil {
 		handlerErrChan <- err
 		return
@@ -143,7 +148,7 @@ func (r *run) RunPersist(in modules.ModuleReader, out modules.ModuleWriter) {
 	agentAlertChan = make(chan string, 64)
 	regChan := make(chan string, 64)
 	handlerErrChan = make(chan error, 64)
-	configChan = make(chan []byte, 1)
+	configChan = make(chan modules.ConfigParams, 1)
 
 	go moduleMain()
 	l, spec, err := modules.GetPersistListener("fswatch")

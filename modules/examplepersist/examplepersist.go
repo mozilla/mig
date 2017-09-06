@@ -67,8 +67,8 @@ var alertChan chan string
 var handlerErrChan chan error
 
 // When the agent sends the persistent module it's configuration, it will come in via
-// the config channel as a JSON byte slice so we can unmarshal it into our configuration
-var configChan chan []byte
+// the config channel as a ConfigParams type so we can load it into our configuration
+var configChan chan modules.ConfigParams
 
 // An example background task the module will execute while it is being supervised by
 // the agent. This example just logs the current time up to the agent every 30
@@ -81,7 +81,12 @@ func runSomeTasks() {
 	// which we can read immediately here. The configuration will come in via
 	// configChan as a JSON document, which we unmarshal into our config struct.
 	incfg := <-configChan
-	err := json.Unmarshal(incfg, &cfg)
+	buf, err := json.Marshal(incfg.Config)
+	if err != nil {
+		handlerErrChan <- err
+		return
+	}
+	err = json.Unmarshal(buf, &cfg)
 	if err != nil {
 		handlerErrChan <- err
 		return
@@ -178,7 +183,7 @@ func (r *run) RunPersist(in modules.ModuleReader, out modules.ModuleWriter) {
 	// and the module to exit.
 	handlerErrChan = make(chan error, 64)
 	// Create a config channel we will read our configuration from.
-	configChan = make(chan []byte, 1)
+	configChan = make(chan modules.ConfigParams, 1)
 	// Initialize the alert channel
 	alertChan = make(chan string, 64)
 	// Start up an example background task we want our module to run

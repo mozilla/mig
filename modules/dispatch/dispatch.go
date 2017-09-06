@@ -48,7 +48,7 @@ func buildResults(e elements, r *modules.Result) (buf []byte, err error) {
 var logChan chan string
 var alertChan chan string
 var handlerErrChan chan error
-var configChan chan []byte
+var configChan chan modules.ConfigParams
 
 // messageBuf is a queue used to store incoming messages, and is drained by
 // runDispatch
@@ -58,7 +58,12 @@ func moduleMain() {
 	var cfg config
 
 	incfg := <-configChan
-	err := json.Unmarshal(incfg, &cfg)
+	buf, err := json.Marshal(incfg.Config)
+	if err != nil {
+		handlerErrChan <- err
+		return
+	}
+	err = json.Unmarshal(buf, &cfg)
 	if err != nil {
 		handlerErrChan <- err
 		return
@@ -140,7 +145,7 @@ func (r *run) RunPersist(in modules.ModuleReader, out modules.ModuleWriter) {
 	logChan = make(chan string, 64)
 	regChan := make(chan string, 64)
 	handlerErrChan = make(chan error, 64)
-	configChan = make(chan []byte, 1)
+	configChan = make(chan modules.ConfigParams, 1)
 
 	go moduleMain()
 	l, spec, err := modules.GetPersistListener("dispatch")

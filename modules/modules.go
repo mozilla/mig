@@ -64,7 +64,10 @@ type RegParams struct {
 }
 
 type ConfigParams struct {
-	Config interface{} `json:"config"`
+	Config   interface{}       `json:"config"`
+	Hostname string            `json:"hostname"`
+	Env      interface{}       `json:"environment"`
+	Tags     map[string]string `json:"tags"`
 }
 
 // AlertParams describes the parameters used in an alert message
@@ -206,8 +209,14 @@ func MakeMessageRegister(spec string) (rawMsg []byte, err error) {
 }
 
 // Creates a new message of class config.
-func MakeMessageConfig(cfgdata interface{}) (rawMsg []byte, err error) {
-	param := ConfigParams{Config: cfgdata}
+func MakeMessageConfig(cfgdata interface{}, hostname string, env interface{},
+	tags map[string]string) (rawMsg []byte, err error) {
+	param := ConfigParams{
+		Config:   cfgdata,
+		Hostname: hostname,
+		Env:      env,
+		Tags:     tags,
+	}
 	msg := Message{Class: MsgClassConfig, Parameters: param}
 	rawMsg, err = json.Marshal(&msg)
 	if err != nil {
@@ -377,7 +386,7 @@ func RegisterDispatchFunction(f func(string)) {
 // RunPersist function. Looks after replying to ping messages, writing logs, and other
 // communication between the agent and the running persistent module.
 func DefaultPersistHandlers(in ModuleReader, out ModuleWriter, logch chan string,
-	errch chan error, regch chan string, alertch chan string, confch chan []byte) {
+	errch chan error, regch chan string, alertch chan string, confch chan ConfigParams) {
 	inChan := make(chan Message, 0)
 	go func() {
 		for {
@@ -470,12 +479,7 @@ func DefaultPersistHandlers(in ModuleReader, out ModuleWriter, logch chan string
 					failed = true
 					break
 				}
-				buf, err = json.Marshal(confparam.Config)
-				if err != nil {
-					failed = true
-					break
-				}
-				confch <- buf
+				confch <- confparam
 			case "alert":
 				if dispatchFunc != nil {
 					var alparam AlertParams

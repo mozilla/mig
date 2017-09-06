@@ -205,7 +205,8 @@ func managePersistModule(ctx *Context, name string) {
 
 			// The module is now running, send any configuration parameters we have
 			// to it.
-			cm, err := modules.MakeMessageConfig(cfg)
+			cm, err := modules.MakeMessageConfig(cfg, ctx.Agent.Hostname,
+				ctx.Agent.Env, ctx.Agent.Tags)
 			if err != nil {
 				// This should never happen, but if it does we will just
 				// kill the executing module as we are unable to send any
