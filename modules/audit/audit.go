@@ -49,10 +49,9 @@ var logChan chan string
 var alertChan chan string
 var handlerErrChan chan error
 var configChan chan modules.ConfigParams
+var cfg config
 
 func moduleMain() {
-	var cfg config
-
 	incfg := <-configChan
 	buf, err := json.Marshal(incfg.Config)
 	if err != nil {
@@ -102,6 +101,7 @@ type config struct {
 		RulesPath    string `json:"rulespath"`
 		RateLimit    int    `json:"ratelimit"`
 		BacklogLimit int    `json:"backloglimit"`
+		IncludeRaw   bool   `json:"includeraw"`
 	} `json:"audit"`
 }
 

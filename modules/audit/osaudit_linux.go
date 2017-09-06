@@ -86,6 +86,11 @@ func runAudit() error {
 func callback(msg *libaudit.AuditEvent, callerr error) {
 	// In our callback, we want to simply marshal the audit event and write it to the
 	// modules alert channel
+	//
+	// If includeraw is off, remove the raw data from the AuditEvent before we marshal it.
+	if !cfg.Audit.IncludeRaw {
+		msg.Raw = ""
+	}
 	buf, err := json.Marshal(msg)
 	if err != nil {
 		return

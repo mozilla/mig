@@ -37,6 +37,7 @@ The audit module is configured using ``audit.cfg`` in the agent configuration di
         rulespath = /etc/mig/audit.rules.json
         ratelimit = 500
         backloglimit = 16384
+        includeraw = no
 
 ``rulespath`` indicates the path to load audit rules into the kernel from. Note that this is not a
 standard audit configuration, but a JSON based rule set as is used in
@@ -44,3 +45,5 @@ standard audit configuration, but a JSON based rule set as is used in
 
 ``ratelimit`` and ``backloglimit`` can be used to configure the Linux auditing rate and back log
 limits. If respective defaults of 500 and 16384 will be used.
+
+``includeraw`` causes the raw audit message to be included with the parsed audit fields in the output.
