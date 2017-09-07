@@ -97,7 +97,6 @@ GCC		:= gcc
 CFLAGS		:=
 LDFLAGS		:=
 CGOLDFLAGS	:=
-GOOPTS		:=
 GO 		:= GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
 GOGETTER	:= GOPATH=$(shell pwd)/.tmpdeps go get -d
 MIGVERFLAGS	:= -X mig.ninja/mig.Version=$(BUILDREV)
@@ -110,9 +109,9 @@ CLIENTTARGETS   := mig-cmd mig-console mig-action-generator mig-action-verifier 
 		   mig-agent-search
 AGENTTARGETS	:= mig-agent mig-loader
 ALLTARGETS	:= $(AGENTTARGETS) $(SERVERTARGETS) $(CLIENTTARGETS)
-
 MODULETAGS	:=
 BUILDTAGS	:= $(MODULETAGS)
+GOOPTS		:= -tags "$(BUILDTAGS)"
 
 ifeq ($(WITHYARA),yes)
 ifeq ($(OS),linux)
@@ -136,8 +135,7 @@ create-bindir:
 
 mig-agent: create-bindir
 	echo building mig-agent for $(OS)/$(ARCH)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) \
-		-tags "$(BUILDTAGS)" mig.ninja/mig/mig-agent
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ] || (echo FAILED && false)
 # If our build target is darwin and OSXPROCSIGID is set, sign the binary
