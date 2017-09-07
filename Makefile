@@ -131,7 +131,7 @@ tag:
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
 
-mig-agent: create-bindir available-modules
+mig-agent: create-bindir
 	echo building mig-agent for $(OS)/$(ARCH)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
