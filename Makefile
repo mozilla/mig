@@ -111,7 +111,7 @@ CLIENTTARGETS   := mig-cmd mig-console mig-action-generator mig-action-verifier 
 AGENTTARGETS	:= mig-agent mig-loader
 ALLTARGETS	:= $(AGENTTARGETS) $(SERVERTARGETS) $(CLIENTTARGETS)
 
-MODULETAGS	:= moddefaults
+MODULETAGS	:=
 BUILDTAGS	:= $(MODULETAGS)
 
 ifeq ($(WITHYARA),yes)
