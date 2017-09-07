@@ -96,19 +96,17 @@ var STATSMAXACTIONS = 15
 // AGENTACL is a JSON document that describes the ACL used when executing actions from
 // investigators. See the Permission type in the mig package for information on the format
 // of this document.
-var AGENTACL = []string{
-	`{
-            "default": {
-            "minimumweight": 1,
-            "investigators": {}
-            }
-         }`,
-}
+var AGENTACL = `{
+                  "default": {
+                    "minimumweight": 1,
+                    "investigators": {}
+                  }
+                }`
 
 // PUBLICPGPKEYS is a slice of keys used to make up the agent keyring. The agents
 // keyring stores public key from investigators, used to verify signatures on actions
 // being sent to the agent.
-var PUBLICPGPKEYS = [...]string{}
+var PUBLICPGPKEYS = []string{}
 
 // CACERT is a byte slice containing the CA certificate used to validate the connection
 // to the RabbitMQ relay.
