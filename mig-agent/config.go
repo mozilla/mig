@@ -34,7 +34,6 @@ type config struct {
 		Api              string
 		RefreshEnv       string
 		NoPersistMods    bool
-		PersistConfigDir string
 		ExtraPrivacyMode bool
 		OnlyVerifyPubKey bool
 		Tags             []string
@@ -177,7 +176,6 @@ func newGlobals() *globals {
 		checkin:            CHECKIN,
 		extraPrivacyMode:   EXTRAPRIVACYMODE,
 		spawnPersistent:    SPAWNPERSISTENT,
-		persistConfigDir:   MODULECONFIGDIR,
 		refreshEnv:         REFRESHENV,
 		loggingConf:        LOGGINGCONF,
 		amqBroker:          AMQPBROKER,
@@ -238,9 +236,6 @@ func (g globals) parseConfig(config config) error {
 	g.extraPrivacyMode = config.Agent.ExtraPrivacyMode
 	if config.Agent.NoPersistMods {
 		g.spawnPersistent = false
-	}
-	if config.Agent.PersistConfigDir != "" {
-		g.persistConfigDir = config.Agent.PersistConfigDir
 	}
 	if config.Agent.RefreshEnv != "" {
 		g.refreshEnv, err = time.ParseDuration(config.Agent.RefreshEnv)
@@ -311,7 +306,6 @@ func (g globals) apply() {
 	CHECKIN = g.checkin
 	EXTRAPRIVACYMODE = g.extraPrivacyMode
 	SPAWNPERSISTENT = g.spawnPersistent
-	MODULECONFIGDIR = g.persistConfigDir
 	REFRESHENV = g.refreshEnv
 	LOGGINGCONF = g.loggingConf
 	AMQPBROKER = g.amqBroker

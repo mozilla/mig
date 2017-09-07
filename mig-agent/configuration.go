@@ -49,14 +49,6 @@ var EXTRAPRIVACYMODE = false
 // it has been built with.
 var SPAWNPERSISTENT = true
 
-// MODULECONFIGDIR is the configuration directory the agent will use to locate
-// persistent module configuration files.
-//
-// XXX This should be improved to take into account Windows paths, but at this
-// time persistent module support is not available on Windows. The agent will
-// attempt to locate a configuration using the module name, e.g., modulename.cfg.
-var MODULECONFIGDIR = "/etc/mig"
-
 // REFRESHENV controls how often the agent will refresh it's environment. If zero
 // the agent will only do this once on startup.
 var REFRESHENV = time.Minute * 5
