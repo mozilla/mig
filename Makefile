@@ -131,7 +131,7 @@ tag:
 create-bindir:
 	$(MKDIR) -p $(BINDIR)
 
-mig-agent: create-bindir available-modules mig-agent/configuration.go
+mig-agent: create-bindir available-modules
 	echo building mig-agent for $(OS)/$(ARCH)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
@@ -146,10 +146,6 @@ available-modules: $(AVAILMOD_PATHS)
 
 $(AVAILMOD_PATHS): .FORCE
 	cp $(AVAILMOD) $@
-
-mig-agent/configuration.go: .FORCE
-	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
-	cp $(AGTCONF) $@
 
 mig-scheduler: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig.ninja/mig/mig-scheduler
