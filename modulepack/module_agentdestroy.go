@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modsshkey moddefaults
+// +build modagentdestroy moddefaults
 
-package main
+package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/sshkey"
+	_ "mig.ninja/mig/modules/agentdestroy"
 )

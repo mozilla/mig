@@ -146,11 +146,6 @@ mig-agent: create-bindir
 	fi
 	@echo SUCCESS
 
-available-modules: $(AVAILMOD_PATHS)
-
-$(AVAILMOD_PATHS): .FORCE
-	cp $(AVAILMOD) $@
-
 mig-scheduler: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig.ninja/mig/mig-scheduler
 
@@ -176,10 +171,10 @@ mig-loader/configuration.go: .FORCE
 mig-action-verifier: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
 
-mig-console: create-bindir available-modules
+mig-console: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig.ninja/mig/client/mig-console
 
-mig-cmd: create-bindir available-modules
+mig-cmd: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig $(GOLDFLAGS) mig.ninja/mig/client/mig
 
 mig-agent-search: create-bindir

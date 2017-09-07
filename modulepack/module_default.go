@@ -6,7 +6,7 @@
 
 // +build !modnodefaults
 
-package main
+package modulepack
 
 import (
 	_ "mig.ninja/mig/modules/agentdestroy"

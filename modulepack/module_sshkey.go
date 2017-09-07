@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modfile moddefaults
+// +build modsshkey moddefaults
 
-package main
+package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/file"
+	_ "mig.ninja/mig/modules/sshkey"
 )

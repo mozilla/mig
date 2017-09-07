@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modping moddefaults
+// +build modscribe moddefaults
 
-package main
+package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/ping"
+	_ "mig.ninja/mig/modules/scribe"
 )

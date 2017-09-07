@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modyara,cgo
+// +build modexamplepersist
 
-package main
+package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/yara"
+	_ "mig.ninja/mig/modules/examplepersist"
 )

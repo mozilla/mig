@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modfswatch
+// +build modexample
 
-package main
+package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/fswatch"
+	_ "mig.ninja/mig/modules/example"
 )

@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modpkg moddefaults
+// +build modmemory,cgo
 
-package main
+package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/pkg"
+	_ "mig.ninja/mig/modules/memory"
 )

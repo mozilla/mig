@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modagentdestroy moddefaults
+// +build modfswatch
 
-package main
+package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/agentdestroy"
+	_ "mig.ninja/mig/modules/fswatch"
 )
