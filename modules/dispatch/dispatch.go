@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
+	"time"
 
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
@@ -60,6 +61,10 @@ var agtHostname string
 // messageBuf is a queue used to store incoming messages, and is drained by
 // runDispatch
 var messageBuf chan string
+
+// lastDrop stores the last time a message was dropped by the dispatch module
+var lastDrop time.Time
+var dropCounter int
 
 // Dispatch record describes the formatting of JSON data submitted from the dispatch
 // module.
@@ -128,7 +133,15 @@ func dispatchIn(msg string) {
 	select {
 	case messageBuf <- msg:
 	default:
+		dropCounter++
 		// If we can't queue the message it is just dropped
+		now := time.Now()
+		if now.After(lastDrop.Add(time.Duration(time.Minute * 5))) {
+			logChan <- fmt.Sprintf("warning, dispatch module dropping messages "+
+				"(buffer full, %v dropped since last warning)", dropCounter)
+			lastDrop = now
+			dropCounter = 0
+		}
 	}
 }
 
