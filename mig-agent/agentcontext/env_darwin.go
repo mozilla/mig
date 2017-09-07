@@ -94,6 +94,12 @@ exit:
 	return
 }
 
+// GetConfDir returns the configuration directory for the platform
+func GetConfDir() string {
+	return "/etc/mig/"
+}
+
+// GetRunDir returns the runtime directory for the platform
 func GetRunDir() string {
 	return "/Library/Preferences/mig/"
 }

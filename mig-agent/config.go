@@ -9,11 +9,12 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"runtime"
+	"path"
 	"strings"
 	"time"
 
 	"mig.ninja/mig"
+	"mig.ninja/mig/mig-agent/agentcontext"
 
 	"gopkg.in/gcfg.v1"
 )
@@ -47,15 +48,10 @@ type config struct {
 	Logging mig.Logging
 }
 
-// Return the default configuration path based on the platform
+// configDefault returns the default agent configuration file path for the
+// platform.
 func configDefault() string {
-	switch runtime.GOOS {
-	case "darwin", "linux":
-		return "/etc/mig/mig-agent.cfg"
-	case "windows":
-		return "C:\\mig\\mig-agent.cfg"
-	}
-	return ""
+	return path.Join(agentcontext.GetConfDir(), "mig-agent.cfg")
 }
 
 // configLoad reads a local configuration file and overwrite the global conf

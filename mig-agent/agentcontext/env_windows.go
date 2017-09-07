@@ -105,6 +105,12 @@ exit:
 	return
 }
 
-func GetRunDir() string {
+// GetConfDir returns the configuration directory for the platform
+func GetConfDir() string {
 	return `C:\mig\`
+}
+
+// GetRunDir returns the runtime directory for the platform
+func GetRunDir() string {
+	return GetConfDir()
 }
