@@ -105,8 +105,12 @@ func moduleMain() {
 		return
 	}
 	logChan <- "module received configuration"
+	if cfg.Dispatch.ChannelSize == 0 {
+		cfg.Dispatch.ChannelSize = 1024
+		logChan <- "channel size not specified, defaulting to 1024"
+	}
 
-	messageBuf = make(chan string, 1024)
+	messageBuf = make(chan string, cfg.Dispatch.ChannelSize)
 
 	// Register the dispatch function, which will be called when the module
 	// recieves an alert message from the agent.
@@ -174,7 +178,8 @@ func requestHandler(p interface{}) (ret string) {
 
 type config struct {
 	Dispatch struct {
-		HTTPURL string `json:"httpurl"`
+		HTTPURL     string `json:"httpurl"`
+		ChannelSize int    `json:"channelsize"`
 	} `json:"dispatch"`
 }
 
