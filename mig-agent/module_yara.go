@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modyara AND cgo
+// +build modyara,cgo
 
 package main
 

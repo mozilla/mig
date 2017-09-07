@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modsshkey OR moddefaults
+// +build modsshkey moddefaults
 
 package main
 

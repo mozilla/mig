@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modtimedrift OR moddefaults
+// +build modtimedrift moddefaults
 
 package main
 

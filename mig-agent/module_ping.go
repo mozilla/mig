@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modping OR moddefaults
+// +build modping moddefaults
 
 package main
 

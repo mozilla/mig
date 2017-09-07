@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modmemory AND cgo
+// +build modmemory,cgo
 
 package main
 

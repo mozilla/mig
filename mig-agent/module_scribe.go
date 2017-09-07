@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modscribe OR moddefaults
+// +build modscribe moddefaults
 
 package main
 

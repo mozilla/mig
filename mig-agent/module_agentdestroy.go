@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modagentdestroy OR moddefaults
+// +build modagentdestroy moddefaults
 
 package main
 

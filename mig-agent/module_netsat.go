@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-// +build modnetstat OR moddefaults
+// +build modnetstat moddefaults
 
 package main
 
