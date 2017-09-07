@@ -44,6 +44,11 @@ standard audit configuration, but a JSON based rule set as is used in
 `libaudit-go <https://github.com/mozilla/libaudit-go>`_.
 
 ``ratelimit`` and ``backloglimit`` can be used to configure the Linux auditing rate and back log
-limits. If respective defaults of 500 and 16384 will be used.
+limits. If not set respective defaults of 500 and 16384 will be used.
+
+The rate limit is the maximum number of messages that the kernel will send per second. This can be used
+to throttle the rate if systems become unresponsive. If the rate limit is hit messages will be dropped.
+
+The backlog limit is the queue length for audit events awaiting transfer to the agent.
 
 ``includeraw`` causes the raw audit message to be included with the parsed audit fields in the output.
