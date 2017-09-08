@@ -1,0 +1,30 @@
+; agent configuration used in standalone docker demo mode
+
+[agent]
+    relay            = "amqp://agent:AGENTPASS@localhost:5672/mig"
+    api              = "http://localhost:1664/api/v1/"
+    socket           = "127.0.0.1:51664"
+    heartbeatfreq    = "5s"
+    moduletimeout    = "300s"
+    isimmortal       = on
+    installservice   = on
+    discoverpublicip = on
+    checkin = off
+    refreshenv = "5m"
+    extraprivacymode = off
+    nopersistmods = off
+    onlyVerifyPubKey = false
+    tags = "environment:migdemo"
+    tags = "build:docker"
+
+[stats]
+    maxactions = 15
+
+[certs]
+    ca  = ""
+    cert= ""
+    key = ""
+
+[logging]
+    mode    = "stdout"
+    level   = "debug"
