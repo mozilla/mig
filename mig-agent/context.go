@@ -337,7 +337,7 @@ func initKeyring(orig_ctx Context) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initKeyring()"}.Debug()
 	}()
 
-	krdir := path.Join(agentcontext.GetConfDir(), "keys")
+	krdir := path.Join(agentcontext.GetConfDir(), "agentkeys")
 	files, err := ioutil.ReadDir(krdir)
 	if err != nil && os.IsNotExist(err) {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("key directory %v not found, continuing with "+

@@ -43,8 +43,8 @@ EOF
 	echo -e "create investigator\n$(whoami)\nyes\nyes\nyes\nyes\n$HOME/.mig/$(whoami)-pubkey.asc\ny\n" | \
 		/go/bin/mig-console -q
 	# Install the newly created pubkey in the agents keychain
-	sudo mkdir -p /etc/mig/keys
-	sudo cp ~/.mig/$(whoami)-pubkey.asc /etc/mig/keys/$(whoami)-pubkey.asc
+	sudo mkdir -p /etc/mig/agentkeys
+	sudo cp ~/.mig/$(whoami)-pubkey.asc /etc/mig/agentkeys/$(whoami)-pubkey.asc
 	sudo sh -c "cat > /etc/mig/acl.cfg << EOF
 {
   \"default\": {
