@@ -18,7 +18,6 @@ import (
 
 // TAGS are useful to differentiate agents. You can add whatever values
 // you want in this map, and they will be sent by the agent in each heartbeat.
-//
 var TAGS = map[string]string{}
 
 // ISIMMORTAL controls whether or not the agent will attempt to restart itself on failure.

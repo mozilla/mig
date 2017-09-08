@@ -3,55 +3,47 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
+
 package main
 
-// some tags that are useful to differentiate loaders. You can add whatever
-// you want in this struct, it will be sent by the loader as part of the
-// generated agent environment when it requests manifest information.
-var TAGS = map[string]string{
-	"operator": "MyFavoriteAdminTeam",
-}
+import (
+	"mig.ninja/mig"
+)
 
-// attempt to discover the public IP of the endpoint by querying the api
+// TAGS are useful to differentiate agents. You can add whatever values
+// you want in this map, and they will be sent by the agent in each heartbeat.
+var TAGS = map[string]string{}
+
+// DISCOVERPUBLICIP if set to true will cause the loader to attempt to discover it's
+// public IP address (e.g., if it is behind NAT) and include this with it's environment.
 var DISCOVERPUBLICIP = true
 
-// attempt to discover meta-data for instances running in AWS
+// DISCOVERAWSMETA if true will cause the agent to attempt to locate the AWS metadata
+// service and include instance details in it's environment.
 var DISCOVERAWSMETA = true
 
-// loader key
-var LOADERKEY = "secret"
+// LOADERKEY is the key used to authenticate the loader with the API when it requests
+// manifest information. This value is read from /etc/mig-loader.key.
+var LOADERKEY = ""
 
-// location of the MIG API, used for discovering the public IP
-var APIURL string = "http://localhost:1664/api/v1/"
+// LOGGINGCONF controls the loader logging output. By default, the loader just logs
+// to stdout.
+var LOGGINGCONF = mig.Logging{
+	Mode:  "stdout",
+	Level: "info",
+}
 
-// if the connection still fails after looking for a HTTP_PROXY, try to use the
-// proxies listed below
-var PROXIES = [...]string{`proxy.example.net:3128`, `proxy2.example.net:8080`}
+// APIURL controls the location of the API the loader will use for manifest requests.
+var APIURL = "http://localhost:1664/api/v1/"
 
-// Number of valid manifest signatures required to be acceptable
+// PROXIES can be used to configure proxies the loader should use. Note that proxies
+// can also be configured using the standard environment variables (e.g., HTTP_PROXY).
+var PROXIES = []string{}
+
+// REQUIREDSIGNATURES indicates the number of valid signatures a manifest must have for
+// it to be considered for installation.
 var REQUIREDSIGNATURES = 1
 
-// PGP keys we accept manifest signatures from
-var MANIFESTPGPKEYS = [...]string{
-	`
------BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v1; Name: User for MIG test (Another test user for Mozilla Investigator) <usertest+mig@example.org>
-
-mI0EUvJc0gEEAJuW77RlSYpAa777tI1foSVB6Vxp7XVE6fe7lmc6PokvMHjKZCB9
-.........
-lMVXz7c/B8T79KIH0EDAG8o6AbvZQdTMSZp+Ap562smLkV+xsPo1O1Zd/hDJKYuY
-936oKqajBV4Jh8vXGb3r
-=SWyb
------END PGP PUBLIC KEY BLOCK-----
-`,
-	`
------BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v1; Name: Test User (This is a test user for Mozilla Investigator) <testuser+mig@example.net>
-
-mI0EUvJcngEEAKH4MbzljzAha4MzUy4wnNHqNX65hlsWD3wPMAPL4R0F8h9VuyLw
-.........
-vld2mOto/1HZ7I3re0ItO/M+kpn1VgcsWFTmunohlmAZUKh9LK6gGZ4nXEqe3Lbx
-QnD9SDA9/d80
-=phhK
------END PGP PUBLIC KEY BLOCK-----
-`}
+// MANIFESTPGPKEYS is a slice of PGP public keys the loader will use to verify signatures
+// that are applied to a manifest.
+var MANIFESTPGPKEYS = []string{}

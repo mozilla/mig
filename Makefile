@@ -156,15 +156,11 @@ mig-runner: create-bindir
 mig-action-generator: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
 
-mig-loader: create-bindir mig-loader/configuration.go
+mig-loader: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-loader
 	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-loader; \
 	fi
-
-mig-loader/configuration.go: .FORCE
-	if [ ! -r $(LOADERCONF) ]; then echo "$(LOADERCONF) configuration file does not exist" ; exit 1; fi
-	cp $(LOADERCONF) $@
 
 mig-action-verifier: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
