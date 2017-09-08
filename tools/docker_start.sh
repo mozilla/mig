@@ -74,10 +74,21 @@ EOF
 	sudo service supervisor start
 }
 
+start_test() {
+	standalone_services
+	# Sleep for a few seconds to give the agent time to register
+	sleep 10
+	mig -i /go/src/mig.ninja/mig/actions/integration_tests.json || exit 1
+}
+
 start_demo() {
 	standalone_services
 	bash
 }
 
 PATH=/go/bin:$PATH; export PATH
-start_demo
+if [[ $MIGMODE = "test" ]]; then
+	start_test
+else
+	start_demo
+fi
