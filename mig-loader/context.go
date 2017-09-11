@@ -7,7 +7,13 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+
 	"mig.ninja/mig"
+	"mig.ninja/mig/mig-agent/agentcontext"
 	"mig.ninja/mig/service"
 	"runtime"
 )
@@ -54,4 +60,38 @@ func serviceDeploy() error {
 		return nil
 	}
 	return serviceDeployInterval()
+}
+
+// initKeyring loads public key material from the keys directory in the loader configuration
+// directory if present. Each file should contain a single PGP public key, and these keys override
+// any keys present in the MANIFESTKEYS configuration variable.
+func initKeyring(orig_ctx Context) (ctx Context, err error) {
+	ctx = orig_ctx
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("initKeyring() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving initKeyring()"}.Debug()
+	}()
+
+	krdir := path.Join(agentcontext.GetConfDir(), "loaderkeys")
+	files, err := ioutil.ReadDir(krdir)
+	if err != nil && os.IsNotExist(err) {
+		logInfo("key directory %v not found, continuing with built-in keyring", krdir)
+		return ctx, nil
+	} else if err != nil {
+		panic(err)
+	}
+	MANIFESTPGPKEYS = MANIFESTPGPKEYS[:0]
+	for _, x := range files {
+		keypath := path.Join(krdir, x.Name())
+		logInfo("loading key from %v", keypath)
+		buf, err := ioutil.ReadFile(keypath)
+		if err != nil {
+			panic(err)
+		}
+		MANIFESTPGPKEYS = append(MANIFESTPGPKEYS, string(buf))
+	}
+
+	return
 }

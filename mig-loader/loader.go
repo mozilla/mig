@@ -427,6 +427,11 @@ func initContext() (err error) {
 	ctx.AgentIdentifier = actx.ToAgent()
 	ctx.AgentIdentifier.Tags = TAGS
 
+	ctx, err = initKeyring(ctx)
+	if err != nil {
+		panic(err)
+	}
+
 	return
 }
 
