@@ -391,13 +391,7 @@ func initContext() (err error) {
 		}
 	}()
 
-	ctx.Channels.Log = make(chan mig.Log, 37)
-	ctx.Logging, err = getLoggingConf()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	ctx.Logging, err = mig.InitLogger(ctx.Logging, "mig-loader")
+	ctx.Logging, err = mig.InitLogger(LOGGINGCONF, "mig-loader")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
@@ -406,8 +400,6 @@ func initContext() (err error) {
 	go func() {
 		var stop bool
 		for event := range ctx.Channels.Log {
-			// Also write the message to stderr to ease debugging
-			fmt.Fprintf(os.Stderr, "%v\n", event.Desc)
 			stop, err = mig.ProcessLog(ctx.Logging, event)
 			if err != nil {
 				panic("unable to process log")
@@ -538,15 +530,26 @@ func main() {
 	var (
 		initialMode bool
 		runService  bool
+		confPath    string
 		checkOnly   bool
 		err         error
 	)
 	runtime.GOMAXPROCS(1)
 
 	flag.BoolVar(&checkOnly, "c", false, "only check if agent is running")
+	flag.StringVar(&confPath, "f", configDefault(), "Load configuration from file")
 	flag.BoolVar(&initialMode, "i", false, "initialization mode")
 	flag.BoolVar(&runService, "s", false, "persistent service mode")
 	flag.Parse()
+
+	ctx.Channels.Log = make(chan mig.Log, 37)
+
+	err = configLoad(confPath)
+	if err != nil {
+		logInfo("warning: unable to load configuration from %v, using built-in configuration", confPath)
+	} else {
+		logInfo("using external configuration from %v", confPath)
+	}
 
 	if runService {
 		err = serviceMode()
