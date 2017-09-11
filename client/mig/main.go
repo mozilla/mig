@@ -103,7 +103,8 @@ func main() {
 	)
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", e)
+			fmt.Fprintf(os.Stderr, "error: %v\n", e)
+			os.Exit(1)
 		}
 	}()
 	homedir := client.FindHomedir()
@@ -213,8 +214,8 @@ func main() {
 	}
 	run = modules.Available[op.Module].NewRun()
 	if _, ok := run.(modules.HasParamsParser); !ok {
-		fmt.Fprintf(os.Stderr, "[error] module '%s' does not support command line invocation\n", op.Module)
-		os.Exit(2)
+		fmt.Fprintf(os.Stderr, "error: module '%s' does not support command line invocation\n", op.Module)
+		os.Exit(1)
 	}
 	op.Parameters, err = run.(modules.HasParamsParser).ParamsParser(modargs)
 	if err != nil || op.Parameters == nil {
@@ -226,12 +227,12 @@ func main() {
 	}
 	// Make sure a target value was specified
 	if target == "" {
-		fmt.Fprintf(os.Stderr, "[error] No target was specified with -t after the module name\n\n"+
+		fmt.Fprintf(os.Stderr, "error: No target was specified with -t after the module name\n\n"+
 			"See MIG documentation on target strings and creating target macros\n"+
 			"for help. If you are sure you want to target everything online, you\n"+
 			"can use \"status='online'\" as the argument to -t. See the usage\n"+
 			"output for the mig command for more examples.\n")
-		os.Exit(2)
+		os.Exit(1)
 	}
 	// If running against the local target, don't post the action to the MIG API
 	// but run it locally instead.
