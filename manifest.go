@@ -356,6 +356,13 @@ type BundleDictionaryEntry struct {
 	Perm   os.FileMode
 }
 
+// The various bundle entry maps below map filenames in the manifest to the location
+// these files should be installed on the target platform.
+//
+// Note: take care when modifying these values; changing an existing manifest entry
+// could cause problems if fetched by an older version of the loader. The map keys
+// should be static and generally not be modified to retain compatibility.
+
 var bundleEntryLinux = []BundleDictionaryEntry{
 	{"mig-agent", "/sbin/mig-agent", "", 0700},
 	{"mig-loader", "/sbin/mig-loader", "", 0700},
@@ -363,6 +370,7 @@ var bundleEntryLinux = []BundleDictionaryEntry{
 	{"agentcert", "/etc/mig/agent.crt", "", 0644},
 	{"agentkey", "/etc/mig/agent.key", "", 0600},
 	{"cacert", "/etc/mig/ca.crt", "", 0644},
+	{"loaderconfig", "/etc/mig/mig-loader.cfg", "", 0600},
 }
 
 var bundleEntryDarwin = []BundleDictionaryEntry{
@@ -372,6 +380,7 @@ var bundleEntryDarwin = []BundleDictionaryEntry{
 	{"agentcert", "/etc/mig/agent.crt", "", 0644},
 	{"agentkey", "/etc/mig/agent.key", "", 0600},
 	{"cacert", "/etc/mig/ca.crt", "", 0644},
+	{"loaderconfig", "/etc/mig/mig-loader.cfg", "", 0600},
 }
 
 var bundleEntryWindows = []BundleDictionaryEntry{
@@ -381,6 +390,7 @@ var bundleEntryWindows = []BundleDictionaryEntry{
 	{"agentcert", "C:\\mig\\agent.crt", "", 0644},
 	{"agentkey", "C:\\mig\\agent.key", "", 0600},
 	{"cacert", "C:\\mig\\ca.crt", "", 0644},
+	{"loaderconfig", "C:\\mig\\mig-loader.cfg", "", 0600},
 }
 
 var BundleDictionary = map[string][]BundleDictionaryEntry{
