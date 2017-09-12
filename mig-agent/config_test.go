@@ -23,8 +23,9 @@ func TestConfigLoadDefault(t *testing.T) {
 	}
 }
 
+// TestConfigLoadCerts verifies that certificates are loaded into global variables
+// from the configuration file
 func TestConfigLoadCerts(t *testing.T) {
-	// test that configured cert files are loaded
 	path := `../conf/mig-agent.cfg.inc`
 	var config config
 	err := gcfg.ReadFileInto(&config, path)
@@ -32,6 +33,11 @@ func TestConfigLoadCerts(t *testing.T) {
 		t.Error("expected to read", path, "got", err)
 		t.FailNow()
 	}
+
+	// Reset the global agent variables we will check later
+	AGENTCERT = []byte("")
+	AGENTKEY = []byte("")
+	CACERT = []byte("")
 
 	globals := globals{}
 	globals.tags = make(map[string]string)
@@ -43,22 +49,27 @@ func TestConfigLoadCerts(t *testing.T) {
 	if err != nil {
 		t.Error("expected", expect, "got", err)
 	}
-	expect = `agentCert not empty`
+	expect = "AGENTCERT not empty"
 	if len(AGENTCERT) == 0 {
 		t.Error("expected", expect)
 	}
-	expect = `agentKey not empty`
+	expect = "AGENTKEY not empty"
 	if len(AGENTKEY) == 0 {
 		t.Error("expected", expect)
 	}
-	expect = `caCert not empty`
+	expect = "CACERT not empty"
 	if len(CACERT) == 0 {
 		t.Error("expected", expect)
 	}
 }
 
+// TestConfigLoadEmptyCerts verifies that if a configuration file contains an empty
+// path for certificate related config options, we keep the defaults in the built-in
+// configuration
 func TestConfigLoadEmptyCerts(t *testing.T) {
-	// test that empty certs are ok and the defaults are used
+	AGENTCERT = []byte("agent cert")
+	AGENTKEY = []byte("agent key")
+	CACERT = []byte("ca cert")
 	globals := newGlobals()
 
 	expect := "caCert not empty"
@@ -82,6 +93,7 @@ func TestConfigLoadEmptyCerts(t *testing.T) {
 		t.FailNow()
 	}
 
+	// Simulate empty paths for certificate values
 	config.Certs.Ca = ""
 	config.Certs.Cert = ""
 	config.Certs.Key = ""
@@ -92,23 +104,21 @@ func TestConfigLoadEmptyCerts(t *testing.T) {
 		t.Error("expected", expect, "got", err)
 	}
 
-	//verify defaults are intact
-	expect = "caCert not empty"
-	if len(CACERT) == 0 {
-		t.Error("expected", expect)
+	// Verify our original defaults are intact
+	if string(CACERT) != "ca cert" {
+		t.Error("expected original CACERT value")
 	}
-	expect = "agentCert not empty"
-	if len(AGENTCERT) == 0 {
-		t.Error("expected", expect)
+	if string(AGENTCERT) != "agent cert" {
+		t.Error("expected original AGENTCERT value")
 	}
-	expect = "agentKey not empty"
-	if len(AGENTKEY) == 0 {
-		t.Error("expected", expect)
+	if string(AGENTKEY) != "agent key" {
+		t.Error("expected original AGENTKEY value")
 	}
 }
 
+// TestConfigLoadCertErrors verifies configuration loading fails if an invalid certificate
+// path is present in the configuration file.
 func TestConfigLoadCertErrors(t *testing.T) {
-	// test that an informative error is returned for invalid cert paths
 	path := `../conf/mig-agent.cfg.inc`
 	var config config
 	expect := `no error`
@@ -150,8 +160,9 @@ func TestConfigLoadCertErrors(t *testing.T) {
 	}
 }
 
+// TestConfigParseDurationErrors verifies we get an error indicating an invalid
+// time specification for malformed duration related configuration arguments.
 func TestConfigParseDurationErrors(t *testing.T) {
-	// test that an informative error is returned for invalid durations
 	var config config
 
 	globals := &globals{}
