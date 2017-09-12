@@ -23,6 +23,28 @@ func TestConfigLoadDefault(t *testing.T) {
 	}
 }
 
+// TestConfigLoadNonExist verifies globals set in the agent build stay intact if we attempt to
+// load a nonexistent configuration file
+func TestConfigLoadNonExist(t *testing.T) {
+	origAmqpBroker := AMQPBROKER
+	origAgentCert := AGENTCERT
+	AMQPBROKER = "amqp broker"
+	AGENTCERT = []byte("agent cert")
+
+	err := configLoad("/non/existent")
+	if err == nil {
+		t.Fatalf("loading nonexistent configuration should have failed")
+	}
+	if AMQPBROKER != "amqp broker" {
+		t.Error("original AMQPBROKER value not intact")
+	}
+	if string(AGENTCERT) != "agent cert" {
+		t.Error("original AGENTCERT value not intact")
+	}
+	AMQPBROKER = origAmqpBroker
+	AGENTCERT = origAgentCert
+}
+
 // TestConfigLoadCerts verifies that certificates are loaded into global variables
 // from the configuration file
 func TestConfigLoadCerts(t *testing.T) {
