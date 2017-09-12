@@ -26,6 +26,7 @@ import (
 	"mig.ninja/mig"
 	"mig.ninja/mig/mig-agent/agentcontext"
 	"mig.ninja/mig/modules"
+	"mig.ninja/mig/pgp"
 	"mig.ninja/mig/service"
 )
 
@@ -353,6 +354,12 @@ func initKeyring(orig_ctx Context) (ctx Context, err error) {
 		buf, err := ioutil.ReadFile(keypath)
 		if err != nil {
 			panic(err)
+		}
+		// Verify the key before we add it to the keyring
+		_, err = pgp.LoadArmoredPubKey(buf)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("ignoring invalid key %v: %v", keypath, err)}.Warning()
+			continue
 		}
 		PUBLICPGPKEYS = append(PUBLICPGPKEYS, string(buf))
 	}
