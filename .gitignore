@@ -2,6 +2,7 @@ bin/*
 *.swp
 *.swo
 *.cfg
+!mig-agent/testdata/*/*.cfg
 conf/*
 !conf/*.inc
 conf/*custom.go.inc

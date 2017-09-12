@@ -49,3 +49,58 @@ func TestInitBadKeyring(t *testing.T) {
 		t.Errorf("expected 1 public key to be present in keyring")
 	}
 }
+
+func TestInitACL(t *testing.T) {
+	ctx := testContext
+
+	agentcontext.EnableTestHooks(path.Join("testdata", "agentacl"))
+
+	AGENTACL = ""
+
+	ctx, err := initACL(ctx)
+	if err != nil {
+		t.Errorf("initACL: %v", err)
+	}
+	if len(AGENTACL) == 0 {
+		t.Errorf("expected AGENTACL to contain data")
+	}
+}
+
+func TestInitBadACL(t *testing.T) {
+	ctx := testContext
+
+	agentcontext.EnableTestHooks(path.Join("testdata", "badagentacl"))
+
+	AGENTACL = ""
+
+	ctx, err := initACL(ctx)
+	if err == nil {
+		t.Errorf("initACL should have returned an error")
+	}
+}
+
+func TestInitNoACLOrKeyring(t *testing.T) {
+	ctx := testContext
+
+	agentcontext.EnableTestHooks(path.Join("testdata", "noaclorkeyring"))
+
+	AGENTACL = "AGENT ACL"
+	PUBLICPGPKEYS = []string{"PUBLIC PGP KEY"}
+
+	ctx, err := initACL(ctx)
+	if err == nil {
+		t.Errorf("initACL should have returned an error")
+	}
+	ctx, err = initKeyring(ctx)
+	if err != nil {
+		t.Errorf("initKeyring: %v", err)
+	}
+
+	// Our original AGENTACL and PUBLICPGPKEYS values should be intact
+	if AGENTACL != "AGENT ACL" {
+		t.Errorf("original AGENTACL value not intact")
+	}
+	if len(PUBLICPGPKEYS) != 1 || PUBLICPGPKEYS[0] != "PUBLIC PGP KEY" {
+		t.Errorf("original PUBLICPGPKEYS value not intact")
+	}
+}
