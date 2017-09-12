@@ -118,6 +118,45 @@ type AWSContext struct {
 
 var logChan chan mig.Log
 
+// testConfPath if set will be used as the agent configuration and runtime directory
+var testConfPath = ""
+
+// EnableTestHooks changes the behavior of the agentcontext package for testing
+//
+// confpath indicates the configuration path functions like GetConfDir should return
+// rather than the standard platform default.
+func EnableTestHooks(confpath string) {
+	testConfPath = confpath
+}
+
+// GetConfDir returns the configuration directory for the agent
+func GetConfDir() string {
+	if testConfPath != "" {
+		return testConfPath
+	}
+	switch runtime.GOOS {
+	case "windows":
+		return "C:\\mig\\"
+	default:
+		return "/etc/mig"
+	}
+}
+
+// GetRunDir returns the runtime directory for the agent
+func GetRunDir() string {
+	if testConfPath != "" {
+		return testConfPath
+	}
+	switch runtime.GOOS {
+	case "windows":
+		return GetConfDir()
+	case "darwin":
+		return "/Library/Preferences/mig"
+	default:
+		return "/var/lib/mig"
+	}
+}
+
 func NewAgentContext(lch chan mig.Log, hints AgentContextHints) (ret AgentContext, err error) {
 	defer func() {
 		if e := recover(); e != nil {
