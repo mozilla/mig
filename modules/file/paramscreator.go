@@ -418,7 +418,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		err error
 		paths, names, sizes, modes, mtimes, contents, md5s, sha1s, sha2s,
-		sha3s, mismatch flagParam
+		sha3s, mismatch, bytes flagParam
 		maxdepth, maxerrors, matchlimit                                float64
 		returnsha256, matchall, matchany, macroal, verbose, decompress bool
 		fs                                                             flag.FlagSet
