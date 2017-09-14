@@ -79,6 +79,7 @@ type Search struct {
 	Description      string   `json:"description,omitempty"`
 	Paths            []string `json:"paths"`
 	Contents         []string `json:"contents,omitempty"`
+	Bytes            []string `json:"bytes,omitempty"`
 	Names            []string `json:"names,omitempty"`
 	Sizes            []string `json:"sizes,omitempty"`
 	Modes            []string `json:"modes,omitempty"`
@@ -140,6 +141,7 @@ type check struct {
 	matchedfiles           []string
 	value                  string
 	bytes                  []byte
+	bytesLength            uint64
 	regex                  *regexp.Regexp
 	minsize, maxsize       uint64
 	minmtime, maxmtime     time.Time
@@ -387,6 +389,12 @@ func (s *Search) makeChecks() (err error) {
 		c.code = checkBytes
 		c.value = v
 		c.bytes, err = hex.DecodeString(v)
+		if err != nil {
+			fmt.Printf("Failure to decode hex string: '%s' \n", v)
+			return
+		}
+		// Get the length of bytestring so it isn't recalculated
+		c.bytesLength = len(c.bytes)
 		if err != nil {
 			return
 		}
@@ -1641,17 +1649,8 @@ func (r *run) checkBytes(f fileEntry) {
 		}
 
 		for _, c := range search.checks {
-
-			decodedByte := make([]byte, hex.DecodedLen(len(c.bytes)))
-			_, err := hex.Decode(decodedByte, c.bytes)
-			if err != nil {
-				e := fmt.Sprintf("unable to decode byte query: %v ", err)
-				panic(e)
-			}
-			scansize := len(decodedByte) // Get the actual byte slice length
-			blocksize := 4 * (2 << 10)   // 4096, 4k
-
-			var bigbuf = make([]byte, (blocksize + (2 * scansize)))
+			const blocksize int = 4 * (2 << 10) // 4096, 4k
+			var bigbuf = make([]byte, (blocksize + (2 * c.bytesLength)))
 			// Read slightly more than 4k so we have a full buffer to scan through
 			// as we move into the for loop
 			_, err = reader.Read(bigbuf)
@@ -1660,7 +1659,7 @@ func (r *run) checkBytes(f fileEntry) {
 			}
 
 			for err != io.EOF {
-				if bytes.Contains(bigbuf, decodedByte) {
+				if bytes.Contains(bigbuf, c.bytes) {
 					// We do find the intended hex values in our scan
 					// Break the loop and return
 					// Not certain exactly how to do that here
@@ -1673,11 +1672,11 @@ func (r *run) checkBytes(f fileEntry) {
 						panic(err)
 					}
 					// Take a small slice from bigbuf for sliding window
-					smallBuf := make([]byte, 2*scansize)
+					smallBuf := make([]byte, 2*c.bytesLength)
 					// Get the last two scan-lengths so as to permit the sliding window through End-of-Read
 					copy(smallBuf, bigbuf[blocksize:])
 					// Now make bigbuf out of two scan-lengths plus the 4k buffer read
-					var bigbuf = make([]byte, (2 * scansize))
+					var bigbuf = make([]byte, (2 * c.bytesLength))
 					copy(bigbuf, smallBuf)
 					bigbuf = append(bigbuf, tempBuf...)
 				}
