@@ -141,7 +141,7 @@ type check struct {
 	matchedfiles           []string
 	value                  string
 	bytes                  []byte
-	bytesLength            uint64
+	bytesLength            int
 	regex                  *regexp.Regexp
 	minsize, maxsize       uint64
 	minmtime, maxmtime     time.Time
