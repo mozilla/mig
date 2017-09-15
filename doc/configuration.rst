@@ -4,81 +4,84 @@ Mozilla InvestiGator Deployment and Configuration Documentation
 .. sectnum::
 .. contents:: Table of Contents
 
-This document describes the steps to build and configure a MIG platform.
-MIG has 6 major components. The Postgresql database and RabbitMQ relay are
-external dependencies, and while this document shows one way of deploying them,
-you are free to use your own method. All other components (scheduler, api,
-agents and clients) require specific compilation and configuration steps that
-are explained in this document.
+This document describes the steps to build and configure a MIG platform. Here we
+go into specific details on manual configuration of a simple environment. For another
+example, see the MIG `Docker image`_ which executes similar steps.
 
-Due to the fast changing pace of Go, MIG and its third party packages, we do
-not currently provide binary packages. You will have to compile the components
-yourself, which is explained below.
+.. _`Docker image`: ../Dockerfile
+
+MIG has 6 major components.
+
+* Scheduler
+* API
+* Postgres
+* RabbitMQ
+* Agents
+* Investigator tools (command line clients)
+
+The Postgres database and RabbitMQ relay are external dependencies, and while
+this document shows one way of deploying them, you are free to use your own method.
+
+No binary packages are provided for MIG, so to try it you will need to build the
+software yourself or make use of the docker image.
 
 A complete environment should be configured in the following order:
 
-1. retrieve the source and prepare your build environment
-2. deploy the postgresql database
-3. create a PKI
-4. deploy the rabbitmq relay
-5. build, configure and deploy the scheduler
-6. build, configure and deploy the api
-7. build the clients and create an investigator
-8. configure and deploy agents
+1. Retrieve the source and prepare your build environment
+2. Deploy the Postgres database
+3. Create a PKI
+4. Deploy the rabbitmq relay
+5. Build, configure and deploy the scheduler
+6. Build, configure and deploy the API
+7. Build the clients and create an investigator
+8. Configure and deploy agents
 
 Prepare a build environment
-------------------------------
+---------------------------
 
-Install **Go 1.5** or later from your package manager , via `gvm`_ or `from source`_.
-
-.. _`gvm`: https://github.com/moovweb/gvm
-
-.. _`from source`: http://golang.org/doc/install/source
-
-You **must** use Go 1.5 or later because MIG uses vendoring that isn't available in prior
-versions.
+Install the latest version of go. Usually you can do this using your operating system's
+package manager (e.g., ``apt-get install golang`` on Ubuntu), or you can also fetch and
+install it directly at https://golang.org/.
 
 .. code:: bash
 
-    $ go version
-    go version go1.5 linux/amd64
+        $ go version
+        go version go1.8 linux/amd64
 
-As with any Go setup, make sure your GOPATH is exported, for example by setting
-it to `$HOME/go`
+As with any go setup, make sure your GOPATH is exported, for example by setting
+it to ``$HOME/go``
 
 .. code:: bash
 
-    $ export GOPATH="$HOME/go"
-    $ mkdir $GOPATH
+        $ export GOPATH="$HOME/go"
+        $ mkdir $GOPATH
 
 Then retrieve MIG's source code using go get:
 
 .. code:: bash
 
-    $ go get mig.ninja/mig
+        $ go get mig.ninja/mig
 
-Go get will place MIG under `$GOPATH/src/mig.ninja/mig`. Change directory to
-this path and build the components. Note that, if you're on a Debian or Ubuntu
-box, you can run `make deb-server` directly which will build the scheduler, api
-and workers into a single DEB package. Otherwise, use the following make
-commands:
+``go get`` will place MIG under ``$GOPATH/src/mig.ninja/mig``. If you want you can run
+``make test`` under this directory to verify the tests execute and ensure your go environment
+is setup correctly.
 
 .. code:: bash
 
-    $ make mig-scheduler
-    $ make mig-api
-    $ make worker-agent-intel
-    $ make mig-runner
-
-Or just run `make` that will build everything and runs tests as well.
-
-Note: running `make` will build everything including the mig-console which
-requires **readline** to be installed (`readline-devel` on rhel/fedora or
-`libreadline-dev` on debian/ubuntu).
-
-.. code:: bash
-
-	$ make
+        $ make test
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/
+        ok      mig.ninja/mig/modules   0.103s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/agentdestroy
+        ok      mig.ninja/mig/modules/agentdestroy      0.003s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/example
+        ok      mig.ninja/mig/modules/example   0.003s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/examplepersist
+        ok      mig.ninja/mig/modules/examplepersist    0.002s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/file
+        ok      mig.ninja/mig/modules/file      0.081s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/fswatch
+        ok      mig.ninja/mig/modules/fswatch   0.003s
+        ...
 
 Deploy the Postgresql database
 ------------------------------
