@@ -986,7 +986,6 @@ func printConfigSettings() {
 	fmt.Println("CHECKIN           : ", CHECKIN)
 	fmt.Println("EXTRAPRIVACYMODE  : ", EXTRAPRIVACYMODE)
 	fmt.Println("SPAWNPERSISTENT   : ", SPAWNPERSISTENT)
-	fmt.Println("MODULECONFIGDIR   : ", MODULECONFIGDIR)
 	fmt.Println("REFRESHENV        : ", REFRESHENV)
 	fmt.Println("AMQPBROKER        : ", AMQPBROKER)
 	fmt.Println("APIURL            : ", APIURL)

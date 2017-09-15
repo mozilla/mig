@@ -13,10 +13,12 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"sync"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 	"mig.ninja/mig"
 	"mig.ninja/mig/mig-agent/agentcontext"
 	"mig.ninja/mig/modules"
+	"mig.ninja/mig/pgp"
 	"mig.ninja/mig/service"
 )
 
@@ -215,6 +218,12 @@ func Init(foreground, upgrade bool) (ctx Context, err error) {
 		panic(err)
 	}
 
+	// load the keyring from the file system
+	ctx, err = initKeyring(ctx)
+	if err != nil {
+		panic(err)
+	}
+
 	// parse the ACLs
 	ctx, err = initACL(ctx)
 	if err != nil {
@@ -286,7 +295,8 @@ func initChannels(orig_ctx Context) (ctx Context, err error) {
 	return
 }
 
-// parse the permissions from the configuration into an ACL structure
+// initACL parses the ACLs from the ACL configuration on the file system if present,
+// and if not uses the default value set in the agents built-in configuration.
 func initACL(orig_ctx Context) (ctx Context, err error) {
 	ctx = orig_ctx
 	defer func() {
@@ -295,18 +305,65 @@ func initACL(orig_ctx Context) (ctx Context, err error) {
 		}
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initACL()"}.Debug()
 	}()
-	for _, jsonPermission := range AGENTACL {
-		var parsedPermission mig.Permission
-		err = json.Unmarshal([]byte(jsonPermission), &parsedPermission)
+
+	aclpath := path.Join(agentcontext.GetConfDir(), "acl.cfg")
+	aclbuf, err := ioutil.ReadFile(aclpath)
+	if err != nil {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("unable to read acl configuration: %v", err)}.Info()
+		ctx.Channels.Log <- mig.Log{Desc: "agent built-in acl will be used"}.Info()
+	} else {
+		AGENTACL = string(aclbuf)
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("loading acls from %v", aclpath)}.Info()
+	}
+
+	var perms mig.Permission
+	err = json.Unmarshal([]byte(AGENTACL), &perms)
+	if err != nil {
+		panic(err)
+	}
+	ctx.ACL = append(ctx.ACL, perms)
+
+	return
+}
+
+// initKeyring loads public key material from the keys directory in the agent configuration
+// directory if present. Each file should contain a single PGP public key, and these keys override
+// any keys present in the PGPPUBLICKEYS configuration variable.
+func initKeyring(orig_ctx Context) (ctx Context, err error) {
+	ctx = orig_ctx
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("initKeyring() -> %v", e)
+		}
+		ctx.Channels.Log <- mig.Log{Desc: "leaving initKeyring()"}.Debug()
+	}()
+
+	krdir := path.Join(agentcontext.GetConfDir(), "agentkeys")
+	files, err := ioutil.ReadDir(krdir)
+	if err != nil && os.IsNotExist(err) {
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("key directory %v not found, continuing with "+
+			"built-in keyring", krdir)}.Info()
+		return ctx, nil
+	} else if err != nil {
+		panic(err)
+	}
+	PUBLICPGPKEYS = PUBLICPGPKEYS[:0]
+	for _, x := range files {
+		keypath := path.Join(krdir, x.Name())
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("loading key from %v", keypath)}.Info()
+		buf, err := ioutil.ReadFile(keypath)
 		if err != nil {
 			panic(err)
 		}
-		for permName, _ := range parsedPermission {
-			desc := fmt.Sprintf("Loading permission named '%s'", permName)
-			ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
+		// Verify the key before we add it to the keyring
+		_, err = pgp.LoadArmoredPubKey(buf)
+		if err != nil {
+			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("ignoring invalid key %v: %v", keypath, err)}.Warning()
+			continue
 		}
-		ctx.ACL = append(ctx.ACL, parsedPermission)
+		PUBLICPGPKEYS = append(PUBLICPGPKEYS, string(buf))
 	}
+
 	return
 }
 

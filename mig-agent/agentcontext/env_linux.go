@@ -154,7 +154,3 @@ func getInit() (initname string, err error) {
 		return "sysvinit-fallback", nil
 	}
 }
-
-func GetRunDir() string {
-	return "/var/lib/mig/"
-}

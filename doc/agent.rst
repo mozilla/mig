@@ -6,29 +6,27 @@ MIG Agent Architecture
 .. contents:: Table of Contents
 
 Initialization process
-----------------------------
-The agent tries to be as autonomous as possible. One of the goal is to ship
-agents without requiring external provisioning tools, such as Chef or Puppet.
-Therefore, the agent attempts to install itself as a service, and also supports
-optional automatic upgrades via the `mig-loader`_ companion program.
+----------------------
 
-.. _`mig-loader`: loader.rst
+The agent tries to be as autonomous as possible. One of the goals is to minimize any
+sort of reliance on configuration management tools to install a working agent. Therefore,
+the agent generally attempts to install itself as a service on the system when it is executed
+and also supports optional automatic upgrades via the `mig-loader`_ companion program.
+
+.. _mig-loader: loader.rst
 
 As a portable binary, the agent needs to detect the type of operating system
 and init method that is used by an endpoint. Depending on the endpoint,
-different initialization methods are used. The diagram below explains the
-decision process followed by the agent.
+different initialization methods are used.
 
-.. image:: .files/mig-agent-initialization-process.png
+If the agent ``installservice`` configuration flag is set in the configuration file, the
+agent will make the neccessary changes to the platform to install itself as a service. This
+is supported on Linux (systemd, upstart, SV init), Darwin (launchd), and Windows (SMC).
 
-Go does not provide support for running programs in the backgroud. On endpoints
-that run upstart, systemd (linux) or launchd (darwin), this is not an issue
-because the init daemon takes care of running the agent in the background,
-rerouting its file descriptors and restarting on crash. On Windows and System-V,
-however, the agent daemonizes by forking itself into `foreground` mode, and
-re-forking itself on error (such as loss of connectivity to the relay).
-On Windows and System-V, if the agent is killed, it will not be restarted
-automatically.
+As such, in this scenario executing the agent directly will cause the agent to detect if an
+existing mig-agent service is present, adding it if missing, starting the service, and then
+the process executed will exit leaving the daemonized mig-agent process running under the
+service manager.
 
 Registration process
 ~~~~~~~~~~~~~~~~~~~~
@@ -38,12 +36,12 @@ which are used to select the proper init method. Once started, the agent will
 send a heartbeat to the public relay, and also store that heartbeat in its
 `run` directory. The location of the `run` directory is platform specific.
 
-* windows: C:\Windows\
+* windows: C:\mig
 * darwin: /Library/Preferences/mig/
-* linux: /var/run/mig/
+* linux: /var/lib/mig/
 
 Below is a sample heartbeat message from a linux agent stored in
-`/var/run/mig/mig-agent.ok`.
+`/var/lib/mig/mig-agent.ok`.
 
 .. code:: json
 
@@ -76,11 +74,15 @@ file, or the ``REFRESHENV`` variable in the agent built-in configuration.
 
 Check-In mode
 ~~~~~~~~~~~~~
-In infrastructure where running the agent as a permanent process is not
+
+With infrastructure where running the agent as a permanent process is not
 acceptable, it is possible to run the agent as a cron job. By starting the
-agent with the flag **-m agent-checkin**, the agent will connect to the
+agent with the flag ``-m agent-checkin``, the agent will connect to the
 configured relay, retrieve and run outstanding commands, and exit after 10
 seconds of inactivity.
+
+Check-in mode can also be used by enabling the ``checkin`` configuration
+value in the agent configuration file.
 
 Communication with modules
 --------------------------
@@ -93,11 +95,14 @@ An agent receives a command from the scheduler on its personal AMQP queue (1).
 It parses the command (2) and extracts all of the operations to perform.
 Operations are passed to modules and executed in parallel (3). Rather than
 maintaining a state of the running command, the agent create a goroutine and a
-channel tasked with receiving the results from the modules. Each modules
-published its results inside that channel (4). The result parsing goroutine
+channel tasked with receiving the results from the modules. Each module
+publishes its results inside that channel (4). The result parsing goroutine
 receives them, and when it has received all of them, populates the `results` (5)
-array of the command with the results from each module, and send the command
+array of the command with the results from each module, and sends the command
 back to the scheduler(6).
+
+The modules while running are executed as a child process, communicating with the
+agent over a pipe.
 
 When the agent is done running the command, both the channel and the goroutine
 are destroyed.
@@ -125,9 +130,9 @@ are destroyed.
 
 The command received by the agent is composed of a copy of the action described
 previously, but signed with the private key of a trusted investigator. It also
-contains additional parameters that are specific to the targetted agent, such as
+contains additional parameters that are specific to the targeted agent, such as
 command processing timestamps, name of the agent queue on the message broker,
-action and command unique IDs and status and results of the command. Below is an
+action and command unique IDs and status and results of the command. Below is a
 command derived from the root password checking action, and ran on the host named
 'host1.example.net'.
 
@@ -190,56 +195,55 @@ The results of the command show that the file '/etc/shadow' has matched, and
 thus "FoundAnything" returned "True".
 
 The invocation of the file module has completed successfully, which is
-represented by **results->0->success=true**. In our example, there is only one
-operation in the **action->operations** array, so only one result is present.
+represented by ``results->0->success=true``. In our example, there is only one
+operation in the ``action->operations`` array, so only one result is present.
 When multiple operations are performed, each has its results listed in a
 corresponding entry of the results array (operations[0] is in results[0],
 operations[1] in results[1], etc...).
 
 Finally, the agent has performed all operations in the operations array
-successfully, and returned **status=success**. Had a failure happened on the
+successfully, and returned ``**status=success**``. Had a failure occurred in the
 agent, the returned status would be one of "failed", "timeout" or "cancelled".
 
 Command expiration & timeouts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To prevent abuse of resources, agents will kill long-running modules after a
-given period of time. That timeout is hardcoded in the agent configuration
-at compile time and defaults to 5 minutes.
+given period of time. That timeout is can be configured in the agent configuration
+file using the ``moduletimeout`` option.
 
-.. code:: go
-
-	// timeout after which a module run is killed
-	var MODULETIMEOUT time.Duration = 300 * time.Second
-
-That timeout represents the **maximum** execution time of a single operation. If
+The timeout represents the **maximum** execution time of a single operation. If
 an action contains 3 operations, each operation gets its own timeout. But because
 operations run in parallel in the agent, the maximum runtime of an action should
-be very close to the value of MODULETIMEOUT.
+be very close to the value of ``moduletimeout``.
 
-In a typical deployment, it is safe to increase MODULETIMEOUT to allow for
+In a typical deployment, it is safe to increase ``moduletimeout`` to allow for
 longer operations. A value of 20 minutes is usual. Make sure to fine tune this
 to your environment, and get the approval of your ops team because mig-agent
 may end up consuming resources (but never more than 50% of the cpu available on
 a system).
 
 Oftentimes, an investigator will want a timeout that is much shorter than the value
-of MODULETIMEOUT. In the MIG command line, the flag `-e` controls the
+of ``moduletimeout``. In the MIG command line, the flag ``-e`` controls the
 expiration. It defaults to 5 minutes but can be set to 30 seconds for simple
 investigations. When that happens, the agent will calculate an appropriate expiration
 for the operations being run. If the expiration set on the action is set to 30 seconds,
 the agent will kill operations that run for more than 30 seconds.
 
-If the expiration is larger than the value of MODULETIMEOUT (for example, 2
-hours), then MODULETIMEOUT is used. Setting a long expiration may be useful to
+If the expiration is larger than the value of ``moduletimeout`` (for example, 2
+hours), then ``moduletimeout`` is used. Setting a long expiration may be useful to
 allow agents that only check in periodically to pick up actions long after they
-are launched.
+are launched. This can be used to for example, create an action with a 24 hour
+validity time; when an agent comes online it will see receive the action and see that
+it is still valid, execute it using ``moduletimeout`` as the maximum timeout value,
+and return the results. This is useful to target an action at a group of agents that
+may not all be online at the same time.
 
 Agent/Modules message format
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The agent accepts different classes of inputs on stdin, as one-line JSON objects.
-The most common one is the ``parameters`` class, but it could also receive a
+The agent when running as a module accepts different classes of inputs on stdin,
+as one-line JSON objects.  The most common one is the ``parameters`` class, but it could also receive a
 ``stop`` input that indicates that the module should stop its execution immediately.
 The format of module input messages is defined by ``modules.Message``.
 
@@ -254,16 +258,21 @@ The format of module input messages is defined by ``modules.Message``.
 	const (
 		MsgClassParameters string = "parameters"
 		MsgClassStop       string = "stop"
+	        MsgClassPing       MessageClass = "ping"
+	        MsgClassLog        MessageClass = "log"
+	        MsgClassRegister   MessageClass = "register"
+	        MsgClassConfig     MessageClass = "config"
 	)
 
 When the agent receives a command to pass to a module for execution, it
 extracts the operation parameters from ``Command.Action.Operations[N].Parameters``
 and copies them into ``Message.Parameters``. It then sets ``Message.Class`` to
-``modules.MsgClassParameters``, marshals the struct into JSON, and pass the
+``modules.MsgClassParameters``, marshals the struct into JSON, and passes the
 resulting ``[]byte`` to the module as an IO stream.
 
 Agent upgrade process via mig-loader
 ------------------------------------
+
 MIG supports upgrading agents in the wild through the use of the companion
 program mig-loader. Using mig-loader is optional; you don't need to use
 mig-loader in your environment if you want to upgrade agents yourself.
@@ -318,6 +327,6 @@ anything will result in a respawn of any running agent by the loader.
         |                    |                     |
 
 For more information on how MIG loader can be used see the relevant
-documentation in `MIG LOADER`_.
+documentation in `MIG Loader`_.
 
-.. _`MIG LOADER`: loader.rst
+.. _`MIG Loader`: loader.rst

@@ -22,6 +22,7 @@ the query paths accordingly.
 
 GET /api/v1/heartbeat
 ~~~~~~~~~~~~~~~~~~~~~
+
 * Description: basic endpoint that returns a HTTP 200
 * Parameters: none
 * Authentication: none
@@ -52,6 +53,7 @@ GET /api/v1/heartbeat
 
 GET /api/v1/ip
 ~~~~~~~~~~~~~~
+
 * Description: basic endpoint that returns the public IP of the caller. The public
   IP is extracted based on the clientpublicip setting in the API configuration.
 * Parameters: none
@@ -66,6 +68,7 @@ GET /api/v1/ip
 
 GET /api/v1/publickey/<pgp_fingerprint>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: basic endpoint that returns the armored public key that
   corresponds to the pgp fingerprint
 * Parameters: pgp_fingerprint
@@ -101,6 +104,7 @@ GET /api/v1/publickey/<pgp_fingerprint>
 
 GET /api/v1/dashboard
 ~~~~~~~~~~~~~~~~~~~~~
+
 * Description: returns a status dashboard with counters of active and idle
   agents, and a list of the last 10 actions ran.
 * Parameters: none
@@ -186,7 +190,7 @@ GET /api/v1/dashboard
 			  "success": 1119
 			},
 			"description": {
-			  "author": "Spongebob SquarepantsJeff Bryner",
+			  "author": "Spongebob Squarepants",
 			  "email": "bob@example.net",
 			  "revision": 201412311300.0
 			},
@@ -286,6 +290,7 @@ GET /api/v1/dashboard
 
 GET /api/v1/action
 ~~~~~~~~~~~~~~~~~~
+
 * Description: retrieve an action by its ID. Include links to related commands.
 * Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters:
@@ -413,6 +418,7 @@ GET /api/v1/action
 
 POST /api/v1/action/create/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: send a signed action to the API for submission to the scheduler.
 * Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters: (POST body)
@@ -422,6 +428,7 @@ POST /api/v1/action/create/
 
 GET /api/v1/agent
 ~~~~~~~~~~~~~~~~~
+
 * Description: retrieve an agent by its ID
 * Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters:
@@ -477,6 +484,7 @@ GET /api/v1/agent
 
 GET /api/v1/command
 ~~~~~~~~~~~~~~~~~~~
+
 * Description: retrieve a command by its ID. Include link to related action.
 * Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters:
@@ -705,6 +713,7 @@ GET /api/v1/command
 
 GET /api/v1/investigator
 ~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: retrieve an investigator by its ID. Include link to the
   investigator's action history.
 * Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
@@ -752,6 +761,7 @@ GET /api/v1/investigator
 
 POST /api/v1/investigator/create/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: create a new investigator in the database
 * Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters: (POST body)
@@ -769,6 +779,7 @@ POST /api/v1/investigator/create/
 
 POST /api/v1/investigator/update/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: update an existing investigator in the database
 * Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Parameters: (POST body)
@@ -787,6 +798,7 @@ One of either ``status`` or ``permissions`` must be passed to this API endpoint.
 
 GET /api/v1/search
 ~~~~~~~~~~~~~~~~~~
+
 * Description: search for actions, commands, agents or investigators.
 * Authentication: X-PGPAUTHORIZATION or X-MIGAPIKEY
 * Response Code: 200 OK
@@ -903,6 +915,7 @@ Find the last 10 commands signed by an investigator identified by name.
 
 GET /api/v1/loader
 ~~~~~~~~~~~~~~~~~~
+
 * Description: Returns the details of a particular loader instance
 * Parameters:
 	- `loaderid`: ID of loader instance to return
@@ -941,6 +954,7 @@ GET /api/v1/loader
 
 POST /api/v1/loader/status/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: Change the status of a loader instance
 * Parameters: (POST body)
         - `loaderid`: ID of loader instance to modify
@@ -951,6 +965,7 @@ POST /api/v1/loader/status/
 
 POST /api/v1/loader/key/
 ~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: Change loader key for a loader instance
 * Parameters: (POST body)
         - `loaderid`: ID of loader instance to modify
@@ -960,6 +975,7 @@ POST /api/v1/loader/key/
 
 POST /api/v1/loader/new/
 ~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: Create a new loader instance
 * Parameters: (POST body)
 	- `loader`: JSON marshaled mig.LoaderEntry data
@@ -969,6 +985,7 @@ POST /api/v1/loader/new/
 
 GET /api/v1/manifest/
 ~~~~~~~~~~~~~~~~~~~~~
+
 * Description: Return details of a given manifest
 * Parameters:
 	- `manifestid`: ID of manifest to return
@@ -1008,6 +1025,7 @@ GET /api/v1/manifest/
 
 POST /api/v1/manifest/sign/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: Sign a given manifest
 * Parameters: (POST body)
         - `manifestid`: ID of manifest to sign
@@ -1018,6 +1036,7 @@ POST /api/v1/manifest/sign/
 
 POST /api/v1/manifest/status/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: Change the status of a manifest
 * Parameters: (POST body)
         - `manifestid`: ID of manifest to change
@@ -1028,6 +1047,7 @@ POST /api/v1/manifest/status/
 
 POST /api/v1/manifest/new/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: Create a new manifest
 * Parameters: (POST body)
 	- `manifest`: JSON marshaled mig.ManifestRecord data
@@ -1037,6 +1057,7 @@ POST /api/v1/manifest/new/
 
 GET /api/v1/manifest/loaders/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: Return known loader instances this manifest will match
 * Parameters:
 	- `manifestid`: ID of manifest to return loaders for
@@ -1091,6 +1112,7 @@ GET /api/v1/manifest/loaders/
 
 POST /api/v1/manifest/agent/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: Returns a manifest for consumption by mig-loader on an agent endpoint
 * Parameters: (POST body)
 	- `parameters`: JSON marshaled mig.ManifestParameters data
@@ -1153,6 +1175,7 @@ POST /api/v1/manifest/agent/
 
 POST /api/v1/manifest/fetch/
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 * Description: Fetches a file provided by a manifest
 * Parameters: (POST body)
 	- `parameters`: JSON marshaled mig.ManifestParameters data
@@ -1186,11 +1209,13 @@ POST /api/v1/manifest/fetch/
 
 Data transformation
 -------------------
+
 The API implements several data transformation functions between the base
 format of `action` and `command`, and reporting formats.
 
 Compliance Items
 ~~~~~~~~~~~~~~~~
+
 The compliance item format is used to measure the compliance of a target with
 particular requirement. A single compliance item represent the compliance of
 one target (host) with one check (test + value).
@@ -1238,6 +1263,7 @@ will generate a list of compliance items from the results of the search.
 
 Geolocations
 ~~~~~~~~~~~~
+
 The geolocations format transforms command results into an array of geolocated
 endpoints for consumption by a map, like Google Maps. The format discards
 results details, and only stores the value of FoundAnything.
@@ -1448,6 +1474,7 @@ Generating a token in Python
 
 Authentication with X-MIGAPIKEY
 -------------------------------
+
 X-PGPAUTHORIZATION is the preferred way clients authenticate with the MIG API. In addition
 to that method, clients can also authenticate using the X-MIGAPIKEY header. This is a standard
 API key header that simplifies API access in cases where using PGP to generate an X-PGPAUTHORIZATION
@@ -1463,6 +1490,7 @@ Investigators can be assigned an API key using mig-console.
 
 Authentication with X-LOADERKEY
 -------------------------------
+
 X-LOADERKEY is a simple authentication method used by loader instances to authenticate
 with the API. The X-LOADERKEY header is included with the request, and is set to the loader
 key value for the requesting loader instance.

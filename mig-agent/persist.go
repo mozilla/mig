@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"mig.ninja/mig"
+	"mig.ninja/mig/mig-agent/agentcontext"
 	"mig.ninja/mig/modules"
 
 	"gopkg.in/gcfg.v1"
@@ -72,7 +73,7 @@ var persistModRegister persistModuleRegister
 // config struct for the module uninitialized.
 func getPersistConfig(modname string) (ret interface{}) {
 	cfg := modules.Available[modname].NewRun().(modules.PersistRunner).PersistModConfig()
-	confpath := path.Join(MODULECONFIGDIR, modname+".cfg")
+	confpath := path.Join(agentcontext.GetConfDir(), modname+".cfg")
 	// An error here isn't fatal, we just continue with cfg as is
 	gcfg.ReadFileInto(cfg, confpath)
 	ret = cfg

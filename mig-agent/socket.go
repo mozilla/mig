@@ -80,7 +80,6 @@ table, td {
   <tr><td>Only verify pubkeys (no ACL verification)</td><td>{{.OnlyVerifyPubkey}}</td></tr>
   <tr><td>Extra privacy mode</td><td>{{.ExtraPrivacyMode}}</td></tr>
   <tr><td>Environment refresh period</td><td>{{.RefreshEnv}}</td></tr>
-  <tr><td>Module configuration directory</td><td>{{.ModuleConfigDir}}</td></tr>
   <tr><td>Spawn persistent modules</td><td>{{.SpawnPersistent}}</td></tr>
   <tr><td>Proxies</td><td>{{.Proxies}}</td></tr>
   <tr><td>Heartbeat frequency</td><td>{{.HeartBeatFreq}}</td></tr>
@@ -114,7 +113,6 @@ type templateData struct {
 	OnlyVerifyPubkey bool
 	ExtraPrivacyMode bool
 	RefreshEnv       time.Duration
-	ModuleConfigDir  string
 	SpawnPersistent  bool
 	Proxies          []string
 	HeartBeatFreq    time.Duration
@@ -133,7 +131,6 @@ func (t *templateData) importAgentConfig() {
 	t.OnlyVerifyPubkey = ONLYVERIFYPUBKEY
 	t.ExtraPrivacyMode = EXTRAPRIVACYMODE
 	t.RefreshEnv = REFRESHENV
-	t.ModuleConfigDir = MODULECONFIGDIR
 	t.SpawnPersistent = SPAWNPERSISTENT
 	t.Proxies = PROXIES
 	t.HeartBeatFreq = HEARTBEATFREQ
