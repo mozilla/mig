@@ -122,17 +122,22 @@ Next create the database and install the schema:
 Create a PKI
 ------------
 
+With a standard MIG installation, the agents connect to the relay (RabbitMQ) over
+a TLS protected connection. Certificate validation occurs against the RabbitMQ server
+certificate, and in addition client certificates are validated by RabbitMQ in order
+to add an extra layer to prevent unauthorized connections to the public AMQP endpoint.
+
 Skip this step if you want to reuse an existing PKI. MIG will need a server
-certificate for RabbitMQ, and client certificates for agents, schedulers and
-workers. The PKI is only used to protect connection to the public AMQP endpoint.
+certificate for RabbitMQ, and client certificates for agents and the scheduler.
 
-Use the script is `tools/create_mig_ca.sh` to generate a new CA and signed
-certificates for each component.
+You can either create the PKI yourself using something like the ``openssl`` command,
+or alternatively take a look at ``tools/create_mig_ca.sh`` which can run these
+commands for you. In this example we will use the script.
 
-Create a new directory that will hold the CA, copy the script in it, and run it.
+Create a new directory that will hold the CA, copy the script to it, and run it.
 The script will prompt for one piece of information: the public DNS of the
-rabbitmq relay. It's important that you set this to the correct value to allow
-AMQP clients to validate the rabbitmq certificate correctly.
+RabbitMQ relay. It's important that you set this to the correct value to allow
+AMQP clients to validate the RabbitMQ certificate correctly.
 
 .. code:: bash
 
@@ -157,11 +162,6 @@ AMQP clients to validate the rabbitmq certificate correctly.
 	-rw-r--r-- 1 julien julien 5183 Sep  9 00:06 scheduler.crt
 	-rw-r--r-- 1 julien julien 1045 Sep  9 00:06 scheduler.csr
 	-rw-r--r-- 1 julien julien 1704 Sep  9 00:06 scheduler.key
-	-rw-r--r-- 1 julien julien 5169 Sep  9 00:06 worker.crt
-	-rw-r--r-- 1 julien julien 1033 Sep  9 00:06 worker.csr
-	-rw-r--r-- 1 julien julien 1704 Sep  9 00:06 worker.key
-
-These certificates can now be used in each component.
 
 Deploy the Rabbitmq relay
 -------------------------
