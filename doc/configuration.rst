@@ -30,7 +30,7 @@ A complete environment should be configured in the following order:
 1. Retrieve the source and prepare your build environment
 2. Deploy the Postgres database
 3. Create a PKI
-4. Deploy the rabbitmq relay
+4. Deploy the RabbitMQ relay
 5. Build, configure and deploy the scheduler
 6. Build, configure and deploy the API
 7. Build the clients and create an investigator
@@ -163,51 +163,99 @@ AMQP clients to validate the RabbitMQ certificate correctly.
 	-rw-r--r-- 1 julien julien 1045 Sep  9 00:06 scheduler.csr
 	-rw-r--r-- 1 julien julien 1704 Sep  9 00:06 scheduler.key
 
-Deploy the Rabbitmq relay
+Deploy the RabbitMQ relay
 -------------------------
 
 Installation
 ~~~~~~~~~~~~
 
 Install the RabbitMQ server from your distribution's packaging system. If your
-distribution does not provide a RabbitMQ package, install `erlang` from yum or
-apt, and then install RabbitMQ using the packages from rabbitmq.com
+distribution does not provide a RabbitMQ package, install ``erlang`` from ``yum`` or
+``apt``, and then install RabbitMQ using the packages from http://www.rabbitmq.com/.
 
-Scripted RabbitMQ Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RabbitMQ Configuration
+~~~~~~~~~~~~~~~~~~~~~~
 
-The script in `tools/create_rabbitmq_config.sh` can be run against a local
-instance of rabbitmq to configure the necessary users and permissions.
+To configure RabbitMQ, we will need to add users to the relay and add permissions.
+
+We will need a user for the scheduler, as the scheduler talks to the relay to send
+actions to the agents and receive results. We will also want a user that the agents
+will use to connect to the relay. We will also add a general admin account that can
+be used for example with the RabbitMQ administration interface if desired.
+
+The following commands can be used to configure RabbitMQ, adjust the commands below
+as required to set the passwords you want for each account. Note the passwords as
+we will need them later.
 
 .. code:: bash
 
-	$ bash createrabbitmqconfig.sh 
+        $ sudo rabbitmqctl add_user admin adminpass
+        $ sudo rabbitmqctl set_user_tags admin administrator
+        $ sudo rabbitmqctl delete_user guest
+        $ sudo rabbitmqctl add_vhost mig
+        $ sudo rabbitmqctl add_user scheduler schedulerpass
+        $ sudo rabbitmqctl set_permissions -p mig scheduler \
+                '^(toagents|toschedulers|toworkers|mig\.agt\..*)$' \
+                '^(toagents|toworkers|mig\.agt\.(heartbeats|results))$' \
+                '^(toagents|toschedulers|toworkers|mig\.agt\.(heartbeats|results))$'
+        $ sudo rabbitmqctl add_user agent agentpass
+        $ sudo rabbitmqctl set_permissions -p mig agent \
+                '^mig\.agt\..*$' \
+                '^(toschedulers|mig\.agt\..*)$' \
+                '^(toagents|mig\.agt\..*)$'
+        $ sudo rabbitmqctl add_user worker workerpass
+        $ sudo rabbitmqctl set_permissions -p mig worker \
+                '^migevent\..*$' \
+                '^migevent(|\..*)$' \
+                '^(toworkers|migevent\..*)$'
+        $ sudo service rabbitmq-server restart
 
-	[ ... ]
+Now that we have added users, we will want to enable AMQPS for SSL/TLS connections
+to the relay.
 
-	[ ok ] Restarting message broker: rabbitmq-server.
-	rabbitmq configured with the following users:
-	  admin       5IRociqhefiehekjqqhfeq
-	  scheduler   MM8972olkjwqashrieygrh
-	  agent       p1938oanvdjknxcbveufif
-	  worker      80912lsdkjj718tdfxmlqx
+.. code:: bash
 
-	copy ca.crt and rabbitmq.{crt,key} into /etc/rabbitmq/
-	then run $ service rabbitmq-server restart
+        $ cd ~/migca
+        $ sudo cp rabbitmq.crt /etc/rabbitmq/rabbitmq.crt
+        $ sudo cp rabbitmq.key /etc/rabbitmq/rabbitmq.key
+        $ sudo cp ca/ca.crt /etc/rabbitmq/ca.crt
 
-Save the credentials in a safe location, we will need them later.
+Now edit the default RabbitMQ configuration to enable TLS, and you should have something
+like this:
 
-Copy the ca.crt, rabbitmq.key and rabbitmq.crt we generate in the PKI into
-/etc/rabbitmq and restart the service. You should see Beam listen on port
-5671.
+.. code::
+
+	[
+	  {rabbit, [
+	         {ssl_listeners, [5671]},
+                 {ssl_options, [{cacertfile,            "/etc/rabbitmq/ca.crt"},
+                                {certfile,              "/etc/rabbitmq/rabbitmq.crt"},
+                                {keyfile,               "/etc/rabbitmq/rabbitmq.key"},
+                                {verify,                verify_peer},
+                                {fail_if_no_peer_cert,  true},
+                                {versions, ['tlsv1.2', 'tlsv1.1']},
+                                {ciphers,  [{dhe_rsa,aes_256_cbc,sha256},
+                                            {dhe_rsa,aes_128_cbc,sha256},
+                                            {dhe_rsa,aes_256_cbc,sha},
+                                            {rsa,aes_256_cbc,sha256},
+                                            {rsa,aes_128_cbc,sha256},
+                                            {rsa,aes_256_cbc,sha}]}
+                 ]}
+	  ]}
+	].
+
+Now, restart RabbitMQ.
+
+.. code:: bash
+
+        $ sudo service rabbitmq-server restart
+
+You should have RabbitMQ listening on port ``5671`` now.
 
 .. code:: bash
 
 	$ netstat -taupen|grep 5671
 	tcp6	0	0	:::5671		:::*	LISTEN	110	658831	11467/beam.smp  
-
-If you care about the detail of Rabbitmq's configuration, read the manual
-configuration section in the appendix at the end of this document.
 
 Scheduler Configuration
 -----------------------
