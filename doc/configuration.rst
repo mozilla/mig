@@ -545,18 +545,18 @@ Build the clients and create an investigator
 --------------------------------------------
 
 MIG has multiple command line clients that can be used to interact with the API
-and run investigations or view results. The two main clients are `mig`, a
-command line tool that can run investigations quickly, and `mig-console`, a
-readline console that can also run investigations but browse through passed
-investigations as well and manage investigators. We will use `mig-console` to
+and run investigations or view results. The two main clients are ``mig``, a
+command line tool that can run investigations quickly, and ``mig-console``, a
+readline console that can run investigations but also browse through past
+investigations as well and manage investigators. We will use ``mig-console`` to
 create our first investigator.
 
 Here we will assume you already have GnuPG installed, and that you generate a
 keypair for yourself (see the `doc on gnupg.org
 <https://www.gnupg.org/gph/en/manual.html#AEN26>`_).
-You should be able to access your PGP Fingerprint using this command:
+You should be able to access your PGP fingerprint using this command:
 
-.. code::
+.. code:: bash
 
 	$ gpg --fingerprint myinvestigator@example.net
 
@@ -582,17 +582,20 @@ you can reuse with your own values.
 
 The targets section is optional and provides the ability to specify
 short forms of your own targeting strings. In the example above, 
-`allonline` or `idleandonline` could be used as target arguments.
+``allonline`` or ``idleandonline`` could be used as target arguments when
+running an investigation.
 
-Make sure have the dev library of readline installed (`readline-devel` on
-rhel/fedora or `libreadline-dev` on debian/ubuntu) and `go get` the binary from
-its source repository
+Make sure have the dev library of readline installed (``readline-devel`` on
+RHEL/Fedora or ``libreadline-dev`` on Debian/Ubuntu), and built the command
+line tools.
 
 .. code::
 
 	$ sudo apt-get install libreadline-dev
-	$ go get mig.ninja/mig/client/mig-console
-	$ $GOPATH/bin/mig-console
+        $ cd $GOPATH/src/mig.ninja/mig
+        $ make mig-cmd
+        $ make mig-console
+        $ bin/linux/amd64/mig-console
 
 	## ##                                     _.---._     .---.
 	# # # /-\ ---||  |    /\         __...---' .---. '---'-.   '.
@@ -624,9 +627,9 @@ its source repository
 	Connected to https://api.mig.example.net/api/v1/. Exit with ctrl+d. Type help for help.
 	mig>
 
-The console wait for input on the `mig>` prompt. Enter `help` is you want to
-explore all the available functions. For now, we will only create a new
-investigator in the database.
+The console will wait for input on the `mig>` prompt. Enter `help` if you want to
+explore all the available functions. For now, we will only create a new investigator
+in the database.
 
 The investigator will be defined with its public key, so the first thing we
 need to do is export our public key to a local file that can be given to the
@@ -638,15 +641,25 @@ console during the creation process.
 
 Then in the console prompt, enter the following commands:
 
-- `create investigator`
-- enter a name, such as `Bob The Investigator`
-- choose yes to make the investigator an administrator, which is usually the case if it is the first one added
+- ``create investigator``
+- enter a name, such as ``Bob The Investigator``
+- choose ``yes`` to make our first investigator an administrator
+- choose ``yes`` to allow our first investigator to manage loaders
+- choose ``yes`` to allow our first investigator to manage manifests
+- choose ``yes`` to add a public PGP key for this new investigator
 - enter the path to the public key `/tmp/myinvestigator_pubkey.asc`
 - enter `y` to confirm the creation
 
+Choosing to make the investigator an administrator permits user management and other 
+administrative functions. The loader and manifest options we set to yes, but these are
+only relevant if you are using ``mig-loader`` to automatically update agents. This is not
+discussed in this guide, for more information see the `MIG loader`_ documentation.
+
+.. _`MIG loader`: loader.rst
+
 The console should display "Investigator 'Bob The Investigator' successfully
 created with ID 2". We can view the details of this new investigator by entering
-`investigator 2` on the console prompt.
+``investigator 2`` on the console prompt.
 
 .. code::
 
@@ -656,30 +669,20 @@ created with ID 2". We can view the details of this new investigator by entering
         
         inv 2> details
         Investigator ID 2
-        name     Bob The Investigator
-        status   active
-        admin    true
-        key id   E60892BB9BD89A69F759A1A0A3D652173B763E8F
-        created  2015-09-09 09:53:28.989481 -0400 EDT
-        modified 2015-09-09 09:53:28.989481 -0400 EDT
-
-MIG supports two levels of access for users: normal investigators and administrators.
-Administrator have the ability to create and manage investigators, manage manifests
-and manipulate mig-loader related functionality, in addition to being able to run
-investigations like a standard user.
-
-To make a user an administrator, specify ``yes`` when asked to if the user should be an
-administrator while running ``create investigator``. You can make an existing user an
-administrator using the ``setadmin`` command while viewing the investigator in the
-console. Remember that to manipulate investigator privileges, the user you are using
-to access MIG must be an administrator.
+        name         Bob The Investigator
+        status       active
+        permissions  Default,PermAdmin,PermLoader,PermManifest
+        key id       E60892BB9BD89A69F759A1A0A3D652173B763E8F
+        created      2015-09-09 09:53:28.989481 -0400 EDT
+        modified     2015-09-09 09:53:28.989481 -0400 EDT
+        api key set  false
 
 Enable API Authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Now that we have an active investigator created, we can enable authentication
 in the API. Go back to the API server and modify the configuration in
-`/etc/mig/api.cfg`.
+``/etc/mig/api.cfg``.
 
 .. code::
 
@@ -691,17 +694,13 @@ in the API. Go back to the API server and modify the configuration in
 Since the user we create in the previous step was created as an administrator, we can now
 use this user to add other investigators to the system.
 
-Reopen the mig-console, and you will see the investigator name in the API logs:
+Reopen ``mig-console``, and you will see the investigator name in the API logs:
 
 .. code::
 
 	2015/09/09 13:56:09 4885615083520 - - [info] src=192.168.1.243,192.168.1.1 auth=[Bob The Investigator 2] GET HTTP/1.0 /api/v1/dashboard resp_code=200 resp_size=600 user-agent=MIG Client console-20150826+62ea662.dev
 
-The benefit of the PGP token approach is the API never needs access to private keys,
-and thus a compromise of the API doesn't leak credentials of investigators.
-
-This concludes the configuration of the server side of MIG. Next we need to
-build agents that can be deployed across our infrastructure.
+The server side of MIG has now been configured, and we can move on to configuring agents.
 
 MIG loader Configuration
 ------------------------
