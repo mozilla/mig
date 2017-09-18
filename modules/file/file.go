@@ -1641,6 +1641,18 @@ func (r *run) checkBytes(f fileEntry) {
 	reader := f.getReader()
 	defer f.Close()
 
+	// Set up large buffers for reuse
+	const blocksize int = 4 * (2 << 10) // 4096, 4k
+	// Larger buffer space to allow for large block-read
+	var bigbuf = make([]byte, (blocksize + 1024))
+	var tempbuf = make([]byte, blocksize)
+
+	// Read slightly more than 4k so we have a full buffer to scan through
+	// as we move into the for loop
+	_, err = reader.Read(bigbuf)
+	if err != nil && err != io.EOF {
+		panic(err)
+	}
 	// Must use the "label,search" for loop iteration because of
 	// map[string]search for parameters
 	for _, search := range r.Parameters.Searches {
@@ -1649,15 +1661,6 @@ func (r *run) checkBytes(f fileEntry) {
 		}
 
 		for _, c := range search.checks {
-			const blocksize int = 4 * (2 << 10) // 4096, 4k
-			var bigbuf = make([]byte, (blocksize + (2 * c.bytesLength)))
-			// Read slightly more than 4k so we have a full buffer to scan through
-			// as we move into the for loop
-			_, err = reader.Read(bigbuf)
-			if err != nil && err != io.EOF {
-				panic(err)
-			}
-
 			for err != io.EOF {
 				if bytes.Contains(bigbuf, c.bytes) {
 					// We do find the intended hex values in our scan
@@ -1666,19 +1669,16 @@ func (r *run) checkBytes(f fileEntry) {
 					c.storeMatch(f.filename)
 					break
 				} else { //Explicitly, we do not find the hex value, and have not encountered EOF
-					tempBuf := make([]byte, blocksize)
-					_, err = reader.Read(tempBuf)
+					_, err = reader.Read(tempbuf)
 					if err != nil && err != io.EOF {
 						panic(err)
 					}
-					// Take a small slice from bigbuf for sliding window
-					smallBuf := make([]byte, 2*c.bytesLength)
-					// Get the last two scan-lengths so as to permit the sliding window through End-of-Read
-					copy(smallBuf, bigbuf[blocksize:])
-					// Now make bigbuf out of two scan-lengths plus the 4k buffer read
-					var bigbuf = make([]byte, (2 * c.bytesLength))
-					copy(bigbuf, smallBuf)
-					bigbuf = append(bigbuf, tempBuf...)
+					// Take a 1k slice from the end of bigbuf for sliding window
+					bigbuf = bigbuf[4096:]
+					// append 4k buffer on top of 1k base, preserving 5k array behind slice
+					bigbuf = append(bigbuf, tempbuf...)
+					// Clear out temp buffer
+					tempbuf = tempbuf[:0]
 				}
 			}
 		}
