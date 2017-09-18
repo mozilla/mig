@@ -376,102 +376,57 @@ API configuration
 -----------------
 
 MIG's REST API is the interface between investigators and the rest of the
-infrastructure. It is also accessed by agents to discover their public IP.
+infrastructure. It is also accessed by agents to discover their public IP. Generally
+speaking, agents communicate using the relay, and investigators access the agents
+through the API.
 
 The API needs to be deployed like a normal web application, preferably behind a
-reverse proxy that handles TLS.
-
-.. code::
-
-	{investigators}-\
-	                 --> {reverse proxy} -> {api} -> {database} -> {scheduler} -> {rabbitmq} -> {agents}
-	{agents}--------/
+reverse proxy that handles TLS. The API does not handle TLS on it's own. You can use
+something like an Amazon ELB in front of the API, or you can also use something
+like Nginx.
 
 For this documentation, we will assume that the API listens on its local IP,
-which is 192.168.1.150, on port 51664. The public endpoint of the api is
-`api.mig.example.net`. A configuration could be defined as follow:
+which is 192.168.1.150, on port 51664, and the public endpoint of the API is
+``api.mig.example.net``. We start by building the API and installing the
+`default API configuration`_.
 
-.. code::
+.. _`default API configuration`: ../conf/api.cfg.inc
 
-	[authentication]
-		# turn this on after initial setup, once you have at least
-		# one investigator created
-		enabled = off
+.. code:: bash
 
-		# when validating token timestamps, accept a timestamp that is
-		# within this duration of the local clock
-		tokenduration = 10m
+        $ cd $GOPATH/src/mig.ninja/mig
+        $ make mig-api
+        $ sudo cp bin/linux/amd64/mig-api /opt/mig/bin/mig-api
+        $ sudo cp conf/api.cfg.inc /etc/mig/api.cfg
 
-	[server]
-		# local listening ip
-		ip = "192.168.1.150"
+Edit the configuration file and tweak it as desired. Most options can remain at
+the default setting,  however there are a few we will want to change.
 
-		# local listening port
-		port = 51664
+Edit the ``postgres`` section and configure this with the correct settings so
+the API can connect to the database using the API user we create in a previous step.
 
-		# public location of the API endpoint
-		host = "https://api.mig.example.net"
+You will also want to edit the local listening port, in our example we will set it
+to port ``51664``. Set the ``host`` parameter to the URL corresponding with the
+API, so in this example ``https://api.mig.example.net``.
 
-		# API base route, all endpoints are below this path
-		# ex: http://localhost:12345/api/v1/action/create/
-		#     |------<host>--------|<base>|--<endpoint>--|
-		baseroute = "/api/v1"
-                
-                # informs the api where it should obtain the clients public ip address
-                # from. the default if unset is "peer".
-                #
-                # use the X-Forwarded-For header, the trailing integer
-                # indicates an offset from the end of the list of addresses in
-                # x-forwarded-for to use as the client public ip:
-                #clientpublicip = x-forwarded-for:0
-                # use socket peer address:
-                #clientpublicip = peer
+You will also want to pay attention to the ``authentication`` section, specifically
+the ``enabled`` parameter. This is initially off, and we will leave it off so we
+can create our initial investigator in the system. Once we have setup our initial
+investigator we will enable API authentication.
 
-	[postgres]
-		host = "192.168.1.240"
-		port = 5432
-		dbname = "mig"
-		user = "migapi"
-		password = "p4QfcStzn8JIH4T4Tfr_kUzYHiPher1H"
-		sslmode = "disable"
-
-	[logging]
-		mode = "stdout" ; stdout | file | syslog
-		level = "debug"
-
-	; for file logging
-	;   file = "mig_api.log"
-
-	; for syslog, logs go into local3
-	;    host = "localhost"
-	;    port = 514
-	;    protocol = "udp"
-
-Note in the configuration above that authentication is disabled for now.
-
-The Postgres credentials are taken from the user/password we generated for
-user `migapi` during the database configuration.
-
-Under the `[server]` section:
-
-* `ip` and `port` define the socket the API will be listening on.
-* `host` is the public URL of the API, that clients will be connecting to
-* `baseroute` is the location of the base of the API, without the trailing slash.
-* `clientpublicip` tells where API where to get the clients public IP address.
-
-Ensure clientpublicip is set based on your environment. If clients are terminated
-directly on the API, peer can be used. If a load balancer or other device terminates
-connections from clients and adds the address to X-Forwarded-For, x-forwarded-for
-can be used. The integer trailing X-Forwarded-For specifies the offset from the end
+Ensure ``clientpublicip`` is set based on your environment. If clients are terminated
+directly on the API, ``peer`` can be used. If a load balancer or other device terminates
+connections from clients and adds the address to X-Forwarded-For, ``x-forwarded-for``
+can be used. The integer trailing ``x-forwarded-for`` specifies the offset from the end
 of the list of IPs in the header to use to extract the IP. For example,
 x-forwarded-for:0 would get the last IP in a list in that header, x-forwarded-for:1
 would get the second last, etc. Set this based on the number of forwarding devices
 you have between the client and the API.
 
-In this example, to reach the home of the API, we would point our browser to
-`https://api.mig.example.net/api/v1/`.
+At this point the API is ready to go, and if desired a reverse proxy can be configured
+in front of the API to enable TLS.
 
-A sample Nginx reverse proxy configuration is shown below:
+A sample Nginx reverse proxy configuration is shown below.
 
 .. code::
 
@@ -505,18 +460,31 @@ A sample Nginx reverse proxy configuration is shown below:
 	}
 
 If you're going to enable HTTPS in front of the API, make sure to use a trusted
-certificate. Agents don't connect to untrusted certificates. If you can't get
-one, or don't want to for a test environment, don't use HTTPS and configure the
-API and Nginx to use HTTP instead. Credentials are never passed to the API, only
-PGP tokens, so the worst you could expose is investigation results.
+certificate. Agents don't connect to untrusted certificates. If you are setting up a test
+environment and don't want to enable SSL/TLS, you can run Nginx in HTTP mode or just use
+the API alone, however this configuration is not recommended.
+
+We can now try running the API in the foreground to validate it is working correctly.
+
+.. code:: bash
+
+	# /opt/mig/bin/mig-api
+        Initializing API context...OK
+        2017/09/18 17:24:54 - - - [info] Database connection opened
+        2017/09/18 17:24:54 - - - [debug] leaving initDB()
+        2017/09/18 17:24:54 - - - [info] Context initialization done
+        2017/09/18 17:24:54 - - - [info] Logger routine started
+        2017/09/18 17:24:54 - - - [info] Starting HTTP handler
 
 You can test that the API works properly by performing a request to the
 dashboard endpoint. It should return a JSON document with all counters at zero,
-since we don't have any agent connected yet.
+since we don't have any agent connected yet. Note that we can do this, as authentication
+in the API has not yet been enabled, normally this request would be rejected without
+a valid signed token or API key.
 
 .. code:: json
 
-	$ curl https://jaffa.linuxwall.info/api/v1/dashboard | python -mjson.tool
+	$ curl https://api.mig.example.net/api/v1/dashboard | python -mjson.tool
 	{
 		"collection": {
 			"version": "1.0",
