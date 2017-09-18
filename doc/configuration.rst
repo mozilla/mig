@@ -260,112 +260,43 @@ You should have RabbitMQ listening on port ``5671`` now.
 Scheduler Configuration
 -----------------------
 
-If you deploy the scheduler using the package build by the `deb-server` target,
-a template configuration will be placed in /etc/mig/scheduler.cfg. Otherwise,
-you can find one in `conf/scheduler.cfg.inc`.
+Now that the relay and database are online, we can deploy the MIG scheduler. Start
+by building and installing it, we will run it from ``/opt/mig`` in this example.
 
-If you use `deb-server`, simply `dpkg -i` the package and the scheduler will be
-installed into /opt/mig/bin/mig-scheduler, its configuration kept in /etc/mig.
+.. code:: bash
 
-If you build your own binary, get one by running `make mig-scheduler`.
+        $ sudo mkdir -p /opt/mig/bin
+        $ cd $GOPATH/src/mig.ninja/mig
+        $ make mig-scheduler
+        $ sudo cp bin/linux/amd64/mig-scheduler /opt/mig/bin/mig-scheduler
 
-Start by copying the ca.crt, scheduler.key and scheduler.crt we generated in the
-PKI into the /etc/mig/ folder.
+The scheduler needs a configuration file, you can start with the
+`default scheduler configuration file`_.
 
-Then edit the configuration file to replace the DB and RabbitMQ parameters with
-the ones that we obtained in previous steps. The default configurations provided
-for both Postgres and RabbitMQ are purposedly wrong and need to be replaced,
-otherwise the scheduler will fail to connect. Below is an example configuration
-that would work with the setup we have prepared.
+.. _`default scheduler configuration file`: ../conf/scheduler.cfg.inc
 
-.. code::
+.. code:: bash
 
-	[agent]
-		; timeout controls the inactivity period after which
-		; agents are marked offline
-		timeout = "60m"
+        $ sudo mkdir -p /etc/mig
+        $ sudo cp conf/scheduler.cfg.inc /etc/mig/scheduler.cfg
 
-		; heartbeatfreq maps to the agent configuration and helps
-		; the scheduler detect duplicate agents, and some other things
-		heartbeatfreq = "5m"
+The scheduler has several options, which are not documented here. The primary sections
+you will want to modify are the ``mq`` section and the ``postgres`` section. These sections
+should be updated with information to connect to the database and relay using the users and
+passwords created for the scheduler in the previous steps.
 
-		; whitelist contains a list of agent queues that are allowed
-		; to send heartbeats and receive commands
-		whitelist = "/var/cache/mig/agents_whitelist.txt"
+In the ``mq`` section, you will also want to make sure ``usetls`` is enabled. Set the
+certificate and key paths to point to the scheduler certificate information under
+``/etc/mig``, and copy the files we created in the PKI step.
 
-		; detect endpoints that are running multiple agents
-		detectmultiagents = true
+.. code:: bash
 
-		; issue kill orders to duplicate agents running on the same endpoint
-		killdupagents = true
+        $ cd ~/migca
+        $ sudo cp scheduler.crt /etc/mig
+        $ sudo cp scheduler.key /etc/mig
+        $ sudo cp ca/ca.key /etc/mig
 
-	; the collector continuously pulls
-	; pending messages from the spool
-	[collector]
-		; frequency at which the collector runs,
-		; default is to run every second
-		freq = "1s"
-
-	; the periodic runs less often that
-	; the collector and does cleanup and DB updates
-	[periodic]
-		; frequency at which the periodic jobs run
-		freq = "87s"
-
-		; delete finished actions, commands and invalids after
-		; this period has passed
-		deleteafter = "360h"
-
-		; run a rabbitmq unused queues cleanup job at this frequency
-		; this is DB & amqp intensive so don't run it too often
-		queuescleanupfreq = "24h"
-
-	[directories]
-		spool = "/var/cache/mig/"
-		tmp = "/var/tmp/"
-
-	[postgres]
-		host = "192.168.1.240"
-		port = 5432
-		dbname = "mig"
-		user = "migscheduler"
-		password = "4NvQFdwdQ8UOU4ekEOgWDWi3gzG5cg2X"
-		sslmode = "disable"
-		maxconn = 10
-
-	[mq]
-		host  = "rabbitmq.mig.example.net"
-		port  = 5671
-		user  = "scheduler"
-		pass  = "MM8972olkjwqashrieygrh"
-		vhost = "mig"
-
-	; TLS options
-		usetls  = true
-		cacert  = "/etc/mig/ca.crt"
-		tlscert = "/etc/mig/scheduler.crt"
-		tlskey  = "/etc/mig/scheduler.key"
-
-	; AMQP options
-	; timeout defaults to 10 minutes
-	; keep this higher than the agent heartbeat value
-		timeout = "10m"
-
-	[logging]
-		mode = "stdout" ; stdout | file | syslog
-		level = "debug"
-
-	; for file logging
-	;   file = "mig_scheduler.log"
-
-	; for syslog, logs go into local3
-	;    host = "localhost"
-	;    port = 514
-	;    protocol = "udp"
-
-The sample above needs to be tweaked further to match your environment. This
-document explains each section in Appendix B. For now, let's test our setup
-with this basic conf by running mig-scheduler in foreground, as root.
+We can now try running the scheduler in the foreground to validate it is working correctly.
 
 .. code:: bash
 
@@ -427,13 +358,19 @@ with this basic conf by running mig-scheduler in foreground, as root.
 	2015/09/09 04:25:47 4883372310532 - - [debug] leaving periodic()
 	2015/09/09 04:25:47 4883372310532 - - [info] periodic run done in 110.647479ms
 
-Among the debug logs, we can see that the scheduler successfully connected
-to both PostgresSQL and RabbitMQ. It detected that no scheduler key was
-present in the database and created one with Key ID
-"A8E1ED58512FCD9876DBEA4FEA513B95032D9932". It then proceeded to wait for
-work to do, waking up regularly to perform maintenance tasks.
+Assuming the default logging parameters in the configuration file were not changed, the scheduler
+starts up and begins writing its log to stdout.  Among the debug logs, we can see that the scheduler
+successfully connected to both Postgres and RabbitMQ. It detected that no scheduler key was
+present in the database and created one with Key ID "A8E1ED58512FCD9876DBEA4FEA513B95032D9932".
+It then proceeded to wait for work to do, waking up regularly to perform maintenance tasks.
 
-This working scheduler allows us to move on to the next component: the API.
+The key the scheduler generated is used by the scheduler when it sends destruction orders to duplicate
+agents. When the scheduler detects more than one agent running on the same host, it will request the
+old agent stop. The scheduler signs this request with the key it created, so the agent will need to know
+to trust this key. This is discussed later when we configure an agent.
+
+In a production scenario, you will likely want to create a systemd unit to run the scheduler or some
+other form of supervisor.
 
 API configuration
 -----------------
