@@ -3,6 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
+
+// mig is the command line tool that investigators can use to launch actions
+// for execution by agents to retrieve/display the results of the actions.
 package main
 
 import (
