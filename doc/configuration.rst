@@ -1199,69 +1199,32 @@ Spool directories
 ~~~~~~~~~~~~~~~~~
 
 The scheduler keeps copies of work in progress in a set of spool directories.
-It will take of creating the spool if it doesn't exist. The spool shouldn't grow
+It will take care of creating the spool if it doesn't exist. The spool shouldn't grow
 in size beyond a few megabytes as the scheduler tries to do regular housekeeping,
 but it is still preferable to put it in a large enough location.
 
-.. code:: bash
-
-	sudo chown mig-user /var/cache/mig -R
-
-Whitelist
-~~~~~~~~~
-
-Agents's queuelocs must be listed in a whitelist file for the scheduler to accept
-their registrations. The location of the whitelist is configurable, but a good
-place for it is in `/var/cache/mig/agents_whitelist.txt`. The file contains one
-queueloc string on each line. The agent queueloc is taken from the hostname of the
-endpoint the agent runs on, plus a random value only known to the endpoint and
-the MIG platform.
-
-.. code::
-
-	linux.agent123.example.net.58b3mndjmbb00
-	windows.db4.sub.example.com.56b2andxmyb00
-
-If the scheduler receives a heartbeat from an agent that is not present in the
-whitelist, it will log an error message. An operator can process the logs and
-add agents to the whitelist manually.
-
-.. code::
-
-	Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized
-
-For environments that are particularly dynamic, it is possible to use regexes
-in the whitelist. This is done by prepending `re:` to the whitelist entry.
-
-.. code::
-
-	re:linux.server[0-9]{1,4}.example.net.[a-z0-9]{13}
-
-Keep the list of regexes short. Until MIG implements a better agent validation
-mechanisms, the whitelist is reread for every registration, and regexes are
-recompiled every time. On a busy platform, this can be done hundreds of times
-per second and induce heavy cpu usage.
+The standard location for this is ``/var/cache/mig``.
 
 Database tuning
 ~~~~~~~~~~~~~~~
 
 **sslmode**
 
-`sslmode` can take the values `disable`, `require` (no cert verification)
-and `verify-full` (requires cert verification). A proper installation should
-use `verify-full`.
+``sslmode`` can take the values ``disable`, ``require`` (no cert verification)
+and ``verify-full`` (requires cert verification). A proper installation should
+use ``verify-full``.
 
 .. code::
 
 	[postgres]
 		sslmode = "verify-full"
 
-**macconn**
+**maxconn**
 
 The scheduler has an extra parameter to control the max number of database
 connections it can use at once. It's important to keep that number relatively
 low, and increase it with the size of your infrastructure. The default value is
-set to `10`, and a good production value is `100`.
+set to ``10``.
 
 .. code::
 
@@ -1282,136 +1245,5 @@ When that happens, you will see the insertion lag increase in the query below:
 	(1 row)
 
 A healthy insertion lag should be below one second. If the lag increases, and
-your DB server still isn't stuck at 100% CPU, try increasing the value of
-`maxconn`. It will cause the scheduler to use more insertion threads.
-
-Logging
-~~~~~~~
-
-The scheduler can log to stdout, syslog, or a target file. It will run in
-foreground if the logging mode is set to 'stdout'.
-For the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.
-
- ::
-
-	[logging]
-	; select a mode between 'stdout', 'file' and 'syslog
-	; for syslog, logs go into local3
-	mode		= "syslog"
-	level		= "debug"
-	host		= "localhost"
-	port		= 514
-	protocol	= "udp"
-
-AMQPS configuration
-~~~~~~~~~~~~~~~~~~~
-
-TLS support between the scheduler and rabbitmq is optional but strongly
-recommended. To enable it, generate a client certificate and set the
-[mq] configuration section of the scheduler as follow:
-
- ::
-
-	[mq]
-		host = "relay1.mig.example.net"
-		port = 5671
-		user = "scheduler"
-		pass = "secretrabbitmqpassword"
-		vhost = "mig"
-
-	; TLS options
-		usetls  = true
-		cacert  = "/etc/mig/scheduler/cacert.pem"
-		tlscert = "/etc/mig/scheduler/scheduler-amqps.pem"
-		tlskey  = "/etc/mig/scheduler/scheduler-amqps-key.pem"
-
-Make sure to use **fully qualified paths** otherwise the scheduler will fail to
-load them after going in the background.
-
-Collector
-~~~~~~~~~
-
-The Collector is a routine ran periodically by the scheduler to inspect the
-content of its spool. It will load files that may have been missed by the file
-notification routine, and delete old files after a grace period.
-
- ::
-
-	[collector]
-		; frequency at which the collector runs
-		freq = "60s"
-
-Periodic
-~~~~~~~~
-
-Periodic routines are run at `freq` interval to do housekeeping and accounting,
-cleaning up the spool, marking agents that stopped sending hearbeats idle or
-offline, computing agents stats or detecting hosts running multiple agents.
-
-.. code::
-
-	; the periodic runs less often that
-	; the collector and does cleanup and DB updates
-	[periodic]
-		; frequency at which the periodic jobs run
-		freq = "87s"
-
-		; delete finished actions, commands and invalids after
-		; this period has passed
-		deleteafter = "360h"
-
-		; run a rabbitmq unused queues cleanup job at this frequency
-		; this is DB & amqp intensive so don't run it too often
-		queuescleanupfreq = "24h"
-
-PGP
-~~~
-
-The scheduler uses a PGP key to issue termination order on hosts that run
-multiple agents. Due to the limited scope of that key, it is stored in the
-database to facilitate deployment and provisioning of multiple schedulers.
-
-Upon startup, the scheduler will look for an investigator named `migscheduler`
-and retrieve its private key to use it in action signing. If no investigator is
-found, it generates one and inserts it into the database, such that other
-schedulers can use it as well.
-
-At the time, the scheduler public key must be manually added into the agent
-configuration. This will be changed in the future when ACLs and investigators
-can be dynamically distributed to agents.
-
-In the ACL of the agent configuration file `conf/mig-agent-conf.go`:
-
- ::
-
-	var AGENTACL = [...]string{
-	`{
-		"agentdestroy": {
-			"minimumweight": 1,
-			"investigators": {
-				"MIG Scheduler": {
-					"fingerprint": "1E644752FB76B77245B1694E556CDD7B07E9D5D6",
-					"weight": 1
-				}
-			}
-		}
-	}`,
-	}
-
-And add the public PGP key of the scheduler as well:
-
- ::
-
-	// PGP public keys that are authorized to sign actions
-	var PUBLICPGPKEYS = [...]string{
-	`
-	-----BEGIN PGP PUBLIC KEY BLOCK-----
-	Version: GnuPG v1. Name: MIG Scheduler
-
-	mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
-	QPFOPgu3O3iij6UOVh+LOkqccjJ8gZVLYMJzUQC+2RJ3jvXhti8xZ1hs2iEr65Rj
-	zUklHVZguf2Zv2X9Er8rnlW5xzplsVXNWnVvMDXyzx0ufC00dDbCwahLQnv6Vqq8
-	BdUCSrvo/r7oAims8SyWE+ZObC+rw7u01Sut0ctnYrvklaM10+zkwGNOTszrduUy
-	.....
-	`
-	}
+your database server still isn't stuck at 100% CPU, try increasing the value of
+``maxconn``. It will cause the scheduler to use more insertion threads.
