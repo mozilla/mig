@@ -586,8 +586,17 @@ short forms of your own targeting strings. In the example above,
 running an investigation.
 
 Make sure have the dev library of readline installed (``readline-devel`` on
-RHEL/Fedora or ``libreadline-dev`` on Debian/Ubuntu), and built the command
+RHEL/Fedora or ``libreadline-dev`` on Debian/Ubuntu), and build the command
 line tools.
+
+**Note**: most MIG components can be built simply using ``make`` or ``go install``
+without additional flags. The exception to this is if you want to use modules
+which are not in the default module set. In this case you need to make sure
+the correct flags are passed when building the command line tools or the agent to
+indicate the modules you want to use. See the section of building the agent
+for an overview of the ``-tags`` parameter for the go command line tools and the
+``MODULETAGS`` makefile variable. Here we just build the command line tools
+with the default support.
 
 .. code::
 
