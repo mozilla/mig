@@ -704,6 +704,7 @@ The server side of MIG has now been configured, and we can move on to configurin
 
 MIG loader Configuration
 ------------------------
+
 At this point you will want to decide if you wish to use ``mig-loader`` to keep
 your agents up to date on remote endpoints.
 
@@ -715,77 +716,110 @@ and will look after upgrading the agent automatically if you want to publish new
 agent updates. The upgrades can be controlled by a MIG administrator through the
 MIG API and console tools.
 
-For information on the loader, see `mig-loader`_ documentation. If you wish to
-use mig-loader, read the `mig-loader`_ documentation to understand how the rest
-of this guide fits into configuration with loader based deployment.
+For information on the loader, see the `mig-loader`_ documentation. If you wish to
+use mig-loader, read the documentation to understand how the rest of this guide fits
+into configuration with loader based deployment.
 
 .. _`mig-loader`: loader.rst
 
 Agent Configuration
 -------------------
 
-The MIG Agent configuration must be prepared before build. The configuration is
-hardwired into the agent, such that no external file is required to run it.
+There are a couple different ways to configure the agent for your environment.
+Historically, the agent had certain configuration values that were specified at
+compile time in the agents built-in configuration (`configuration.go`_). Setting
+values here is no longer required, so it is possible to deploy the agent using
+entirely external configuration.
 
-TLS Certificates, PGP public keys and configuration variables would normally
-be stored in external files, that would make installing an agent on an endpoint
-more complex. The approach of building all of the configuration parameters into
-the agent means that we can ship a single binary that is self-sufficient. Go's
-approach to statically built binary also helps greatly eliminate the need for
-external dependencies. Once the agent is built, ship it to an endpoint, run it,
-and you're done.
+.. _`configuration.go`: ../mig-agent/configuration.go
 
-A template of agent configuration is in 'conf/mig-agent-conf.go.inc'. Copy this
-to 'conf/mig-agent-conf.go' and edit the file. Make sure to respect Go syntax
-format.
+You can choose to either:
+
+* Edit the agent built-in configuration before you compile it
+* Use a configuration file
+
+The benefit of editing the configuration before compilation is you can deploy an
+agent to a remote host by solely installing the agent binary. The drawback to this
+method is, any changes to the configuration require recompiling the agent and
+installing the new binary.
+
+This guide will discuss the preferred method of using external configuration to
+deploy the agent.
+
+Compiling the agent with desired modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When the agent is built, certain tags can be specified to control which modules
+will be included with the agent. See the `documentation`_ included with the various
+modules to decide which modules you want; in a lot of circumstances the default
+module pack is sufficient.
+
+.. _`documentation`: ../modules
+
+To build with the default modules, no addition flags are required to ``make``.
 
 .. code:: bash
 
-	$ go get mig.ninja/mig
-	$ cd $GOPATH/src/mig.ninja/mig
-	$ cp conf/mig-agent-conf.go.inc example.net.agents-conf.go
-	$ vim conf/example.net.agents-conf.go
+        $ make mig-agent
 
-Later on, when you run 'make mig-agent', the Makefile will copy the agent
-configuration to the agent source code, and build the binary. If the
-configuration file is missing, Makefile will alert you. If you have an error in
-the format of the file, the Go compiler will return a list of compilation errors
-for you to fix.
+The ``MODULETAGS`` parameter can be specified to include additional modules, or to
+exclude the defaults. This example shows building the agent with the default modules,
+in addition to the memory module.
 
-AMQPS configuration
-~~~~~~~~~~~~~~~~~~~
+.. code:: bash
 
-TLS support between agents and rabbitmq is optional, but strongly recommended.
-If you want to use TLS, you need to import the PEM encoded client certificate,
-client key and CA certificate that we created in the PKI step further up into
-'mig-agent-conf.go'.
+        $ make MODULETAGS='modmemory' mig-agent
 
-1. **CACERT** must contain the PEM encoded certificate of the Root CA.
+This example shows building the agent without the default module set, and only including
+the file module and scribe module.
 
-2. **AGENTCERT** must contain the PEM encoded client certificate of the agent.
+.. code:: bash
 
-3. **AGENTKEY** must contain the PEM encoded client certificate of the agent.
+        $ make MODULETAGS='modnodefaults modfile modscribe' mig-agent
 
-You also need to edit the **AMQPBROKER** variable to invoke **amqps** instead of
-the regular amqp mode. You probably also want to change the port from 5672
-(default amqp) to 5671 (default amqps).
+The ``MODULETAGS`` parameter just sets certain tags with the ``go build`` command to
+control the inclusion of the modules. You can also do this with commands like ``go get``
+or ``go install``.
 
-In the AMQPBROKER parameter, we set the agent's RabbitMQ username and password
-we generated in previous steps.
+.. code:: bash
 
-.. code:: go
+        $ go install -tags 'modnodefaults modmemory' mig.ninja/mig/mig-agent
 
-	var AMQPBROKER string = "amqps://agent:p1938oanvdjknxcbveufif@rabbitmq.mig.example.net:5671/mig"
+Install the agent configuration file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-API Configuration
-~~~~~~~~~~~~~~~~~
+We can start with the default agent configuration template in `conf/mig-agent.cfg.inc`_.
 
-Agents need to know the location of the API as it is used to discover their
-public IP during startup.
+.. _`conf/mig-agent.cfg.inc`: ../conf/mig-agent.cfg.inc
 
-.. code:: go
+.. code:: bash
 
-	var APIURL string = "https://api.mig.example.net/api/v1/"
+        $ sudo cp conf/mig-agent.cfg.inc /etc/mig/mig-agent.cfg
+
+Update agent configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TLS support between agents and RabbitMQ is optional, but strongly recommended.
+To use TLS, we will use the certificates we created for the agent in the PKI step.
+Copy the certificates into place in ``/etc/mig``.
+
+.. code:: bash
+
+        $ cd ~/migca
+        $ sudo cp agent.crt /etc/mig/agent.crt
+        $ sudo cp agent.key /etc/mig/agent.key
+        $ sudo cp ca/ca.crt /etc/mig/ca.crt
+
+Now edit the agent configuration file we installed, and modify the ``certs`` section
+to reference our certificates and keys.
+
+Next edit the agent configuration, and modify the ``relay`` parameter in the ``agent``
+section to point to the URL of the RabbitMQ endpoint we setup. Note this parameter
+also requires you include the agents RabbitMQ username and password. You will also
+want to change the protocol from ``amqp`` to ``amqps``, and change the port to ``5671``.
+
+Next, modify the ``api`` parameter under ``agent`` to point to the URL of the API
+we configured earlier in this guide.
 
 Proxy support
 ~~~~~~~~~~~~~
@@ -793,10 +827,7 @@ Proxy support
 The agent supports connecting to the relay via a CONNECT proxy. If proxies are
 configured, it will attempt to use them before attemping a direct connection. The
 agent will also attempt to use any proxy noted in the environment via the
-`HTTP_PROXY` environment variable. A list of proxies can be manually
-added to the configuration of the agent in the `PROXIES` parameters. Proxies can
-also be specified in the agent configuration file, and will override any built-in
-configuration.
+``HTTP_PROXY`` environment variable.
 
 An agent using a proxy will reference the name of the proxy in the environment
 fields of the heartbeat sent to the scheduler.
@@ -805,24 +836,10 @@ Stat socket
 ~~~~~~~~~~~
 
 The agent can establish a listening TCP socket on localhost for management
-purpose. The list of supported operations can be obtained by sending the
-keyword `help` to this socket.
-
-.. code:: bash
-
-	$ nc localhost 51664 <<< help
-
-	Welcome to the MIG agent socket. The commands are:
-	pid	returns the PID of the running agent
-
-To obtain the PID of the running agent, use the following command:
-
-.. code:: bash
-
-	$ nc localhost 51664 <<< pid ; echo
-	9792
-
-Leave the `SOCKET` configuration variable empty to disable the stat socket.
+purpose. You can browse to this socket (e.g., http://127.0.0.1:51664) to get
+statistics from a running agent. The socket is also used internally by the agent
+for various control messages. You will typically want to leave this value at it's
+default setting.
 
 Extra privacy mode (EPM)
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -842,9 +859,7 @@ It is up to modules to honor the EPM setting; currently this value is used by
 the file module (mask filenames), the netstat module (mask addresses the system
 is communicating with), and the scribe module (mask test identifiers).
 
-EPM can be enabled in the agent configuration either via the `extraprivacymode`
-option in the configuration file, or setting `EXTRAPRIVACYMODE` to true in the
-built-in configuration.
+EPM can be enabled using the ``extraprivacymode`` setting in the configuration file.
 
 Logging
 ~~~~~~~
@@ -852,56 +867,58 @@ Logging
 The agent can log to stdout, to a file or to the system logging. On Windows,
 the system logging is the Event log. On POSIX systems, it's syslog.
 
-The `LOGGINGCONF` parameter is used to configure the proper logging level.
+Logging can be configured using the ``logging`` section in the configuration file,
+by default the agent logs to stdout, which is suitable when running under a
+supervisor process like systemd.
 
 Access Control Lists
 ~~~~~~~~~~~~~~~~~~~~
 
-The detail of how access control lists are created and managed is described in
+At this point the agent can be run, but will not reply to actions sent to it
+by an investigator as it does not have any knowledge of investigator public keys.
+We need to configure ACLs and add the investigators keys to the keyring.
+
+The details of how access control lists are created and managed is described in
 `concepts: Access Control Lists`_. In this documentation, we focus on a basic
 setup that grant access of all modules to all investigators, and restricts
 what the scheduler key can do.
 
 .. _`concepts: Access Control Lists`: concepts.rst
 
-ACL are declared in JSON hardcoded into the AGENTACL variable of the agent
-configuration. For now, we only create two ACLs: a `default` one that grants
-access to all modules to two investigators, and an `agentdestroy` one that
-grants access to the `agentdestroy` module to the scheduler.
+ACL are declared in JSON and are stored in ``/etc/mig/acl.cfg``. The agent
+reads this file on startup to load it's ACL configuration. For now, we will
+create two ACLs. A ``default`` ACL that grants access to all modules for two
+investigators, and an ``agentdestroy`` ACL that grants access to the ``agentdestroy``
+module to the scheduler.
 
-The ACLs only references the fingerprint of the public key of each investigator
+The ACLs reference the fingerprint of the public key of each investigator
 and a weight that describes how much permission each investigator is granted with.
 
-.. code:: go
+.. code::
 
-	// Control modules permissions by PGP keys
-	var AGENTACL = [...]string{
-		`{
-			"default": {
-				"minimumweight": 2,
-				"investigators": {
-					"Bob The Investigator": {
-						"fingerprint": "E60892BB9BD89A69F759A1A0A3D652173B763E8F",
-						"weight": 2
-					},
-					"Sam Axe": {
-						"fingerprint": "FA5D79F95F7AF7097C3E83DA26A86D5E5885AC11",
-						"weight": 2
-					}
+	{
+		"default": {
+			"minimumweight": 2,
+			"investigators": {
+				"Bob The Investigator": {
+					"fingerprint": "E60892BB9BD89A69F759A1A0A3D652173B763E8F",
+                                        "weight": 2
+				},
+				"Sam Axe": {
+					"fingerprint": "FA5D79F95F7AF7097C3E83DA26A86D5E5885AC11",
+					"weight": 2
 				}
 			}
-		}`,
-	    `{
-			"agentdestroy": {
-				"minimumweight": 1,
-				"investigators": {
-					"MIG Scheduler": {
-						"fingerprint": "A8E1ED58512FCD9876DBEA4FEA513B95032D9932",
-						"weight": 1
-					}
+		},
+		"agentdestroy": {
+			"minimumweight": 1,
+			"investigators": {
+				"MIG Scheduler": {
+					"fingerprint": "A8E1ED58512FCD9876DBEA4FEA513B95032D9932",
+					"weight": 1
 				}
 			}
-		}`,
+		}
 	}
 
 Note that the PGP key of the scheduler was created automatically when we
@@ -914,21 +931,34 @@ fingerprint via the mig-console, as follow:
 	mig> investigator 1
 	inv 1> details
 	Investigator ID 1
-	name     migscheduler
-	status   active
-	key id   A8E1ED58512FCD9876DBEA4FEA513B95032D9932
-	created  2015-09-09 00:25:47.225086 -0400 EDT
-	modified 2015-09-09 00:25:47.225086 -0400 EDT
+	name         migscheduler
+	status       active
+        permissions
+	key id       A8E1ED58512FCD9876DBEA4FEA513B95032D9932
+	created      2015-09-09 00:25:47.225086 -0400 EDT
+	modified     2015-09-09 00:25:47.225086 -0400 EDT
+        api key set  false
 
-You can also view its public key by entering `pubkey` in the prompt.
+You can also view its public key by entering ``pubkey`` in the prompt.
 
-Investigators's public keys
+Configure the agent keyring
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The public keys of all investigators must be listed in the `PUBLICPGPKEYS`
-array. Each key is its own entry in the array. Since all investigators must
-be created via the mig-console to have access to the API, the easiest way
-to export their public keys is also via the mig-console.
+The agent needs to be aware of the public keys associated with investigators
+so it can verify the signatures on signed investigation actions it receives.
+To add the keys to the agents keyring, create the directory to store them
+and copy each ascii armored public key into this directory. Each key should be
+in it's own file. The name of the files do not matter, so you can choose to
+name them anything.
+
+.. code:: bash
+
+        $ sudo mkdir /etc/mig/agentkeys
+        $ sudo cp mypubkey.txt /etc/mig/agentkeys/mypubkey
+        $ sudo cp schedulerkey.txt /etc/mig/agentkeys/scheduler
+
+Since all investigators must be created via the mig-console to have access
+to the API, the easiest way to export their public keys is also via the mig-console.
 
 .. code:: bash
 
@@ -943,29 +973,7 @@ to export their public keys is also via the mig-console.
 	mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
 	QPFOPgu3O3iij6UOVh+LOkqccjJ8gZVLYMJzUQC+2RJ3jvXhti8xZ1hs2iEr65Rj
 	zUklHVZguf2Zv2X9Er8rnlW5xzplsVXNWnVvMDXyzx0ufC00dDbCwahLQnv6Vqq8
-	etc...
-
-Then insert the whole armored pubkey, with header and footer, into the array.
-Each key must be present in the PUBLICPGPKEYS array, enclosed with backticks.
-The order is irrelevant.
-
-.. code:: go
-
-	// PGP public key that is authorized to sign actions
-	var PUBLICPGPKEYS = [...]string{
-	`-----BEGIN PGP PUBLIC KEY BLOCK-----
-	Version: GnuPG v1 - myinvestigator@example.net
-
-	mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
-	=3tGV
-	-----END PGP PUBLIC KEY BLOCK-----
-	`,
-	`
-	-----BEGIN PGP PUBLIC KEY BLOCK-----
-	Version: GnuPG v1. Name: sam.axe@example.net
-
-	mQINBE5bjGABEACnT9K6MEbeDFyCty7KalsNnMjXH73kY4B8aJXbE6SSnRA3gWpa
-	-----END PGP PUBLIC KEY BLOCK-----`}
+	...
 
 Customize the configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -974,45 +982,30 @@ The agent has many other configuration parameters that you may want to
 tweak before shipping it. Each of them is documented in the sample
 configuration file.
 
-Agent build instructions
-~~~~~~~~~~~~~~~~~~~~~~~~
+Install the agent
+~~~~~~~~~~~~~~~~~
 
-Once the agent properly configured, you can build it using `make`. The
-path to the customized configuration must be given in the `AGTCONF` make
-variable. You can also set `BUILDENV` to the environment you're building
-for, it is set to `dev` by default.
+With the agent configured, we will build an agent with the default modules
+here and install it.
 
 .. code:: bash
 
-	$ make mig-agent AGTCONF=conf/example.net.agents-conf.go
-	mkdir -p bin/linux/amd64
-	echo building mig-agent for linux/amd64
-	building mig-agent for linux/amd64
-	if [ ! -r conf/linuxwall-mig-agent-conf.go ]; then echo "conf/linuxwall-mig-agent-conf.go configuration file does not exist" ; exit 1; fi
-	# test if the agent configuration variable contains something different than the default value
-	# and if so, replace the link to the default configuration with the provided configuration
-	if [ conf/linuxwall-mig-agent-conf.go != "conf/mig-agent-conf.go.inc" ]; then rm mig-agent/configuration.go; cp conf/linuxwall-mig-agent-conf.go mig-agent/configuration.go; fi
-	GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go build  -o bin/linux/amd64/mig-agent-20150909+556e9c0.dev"" -ldflags "-X main.version=20150909+556e9c0.dev" mig.ninja/mig/mig-agent
-	ln -fs "$(pwd)/bin/linux/amd64/mig-agent-20150909+556e9c0.dev""" "$(pwd)/bin/linux/amd64/mig-agent-latest"
-	[ -x "bin/linux/amd64/mig-agent-20150909+556e9c0.dev""" ] && echo SUCCESS && exit 0
-	SUCCESS
+        $ make mig-agent
+        $ sudo cp bin/linux/amd64/mig-agent-latest /opt/mig/bin/mig-agent
 
-Built binaries will be placed in **bin/linux/amd64/** (or in a similar directory
-if you are building on a different platform).
-
-To cross-compile for a different platform, use the `ARCH` and `OS` make
+To cross-compile for a different platform, use the ``ARCH`` and ``OS`` make
 variables:
 
 .. code:: bash
 
-	$ make mig-agent AGTCONF=conf/example.net.agents-conf.go BUILDENV=prod OS=windows ARCH=amd64
+	$ make mig-agent BUILDENV=prod OS=windows ARCH=amd64
 
-You can test the agent on the command line using the debug flag `-d`. When run
-with `-d`, the agent will stay in foreground and print its activity to stdout.
+We can test the agent on the command line using the debug flag ``-d``. When run
+with ``-d``, the agent will stay in foreground and print its activity to stdout.
 
 .. code:: bash
 
-	$ sudo ./bin/linux/amd64/mig-agent-20150909+556e9c0.dev -d
+	$ sudo /opt/mig/bin/mig-agent -d
 	[info] using builtin conf
 	2015/09/09 10:43:30 - - - [debug] leaving initChannels()
 	2015/09/09 10:43:30 - - - [debug] Logging routine initialized.
@@ -1045,20 +1038,11 @@ with `-d`, the agent will stay in foreground and print its activity to stdout.
 
 The output above indicates that the agent successfully connected to Rabbitmq
 and sent a heartbeat message. The scheduler will receive this heartbeat and
-process it, but in order to mark the agent offline, the scheduler must whitelist
-its queueloc value.
-
-To do so, go back to the scheduler server and add the queueloc into
-`/var/cache/mig/agents_whitelist.txt`. No need to restart the scheduler, it
-is automatically taken into account.
-
-.. code::
-
-	$ echo 'linux.gator1.ft8dzivx8zxd1mu966li7fy4jx0v999cgfap4mxhdgj1v0zv' >> /var/cache/mig/agents_whitelist.txt
+process it, indicating to the scheduler the agent is online.
 
 At the next run of the scheduler periodic routine, the agent will be marked
-as `online` and show up in the dashboard counters. You can browse these counters
-using the `mig-console`.
+as ``online`` and show up in the dashboard counters. You can browse these counters
+using the ``mig-console``.
 
 .. code::
 
@@ -1069,7 +1053,7 @@ using the `mig-console`.
 	+------
 
 Run your first investigation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 
 Get the `mig` command line from the upstream repository and run a simple
 investigation that looks for a user in `/etc/passwd`.
