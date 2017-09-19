@@ -46,7 +46,8 @@ usage: %s <module> <global options> <module parameters>
 		* text (default):	results are printed to the console
 		* map:			results are geolocated and a google map is generated
 
--t <target>	target to launch the action on. A target must be specified.
+-t <target>	target to launch the action on. If no target is specified, the value will
+		default to all online agents (status='online')
 		examples:
 		* linux agents:          -t "queueloc LIKE 'linux.%%'"
 		* agents named *mysql*:  -t "name like '%%mysql%%'"
@@ -230,12 +231,8 @@ func main() {
 	}
 	// Make sure a target value was specified
 	if target == "" {
-		fmt.Fprintf(os.Stderr, "error: No target was specified with -t after the module name\n\n"+
-			"See MIG documentation on target strings and creating target macros\n"+
-			"for help. If you are sure you want to target everything online, you\n"+
-			"can use \"status='online'\" as the argument to -t. See the usage\n"+
-			"output for the mig command for more examples.\n")
-		os.Exit(1)
+		target = "status='online'"
+		fmt.Fprint(os.Stderr, "[notice] no target specified, defaulting to all online agents\n")
 	}
 	// If running against the local target, don't post the action to the MIG API
 	// but run it locally instead.
