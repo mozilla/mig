@@ -78,7 +78,7 @@ Results are sent to stdout, redirect them with "1>/path/to/file".
 Each module provides its own set of parameters. Module parameters must be set *after*
 global options. Help is available by calling "<module> help". Available modules are:
 `, os.Args[0], os.Args[0])
-	for module, _ := range modules.Available {
+	for module := range modules.Available {
 		fmt.Printf("* %s\n", module)
 	}
 	fmt.Printf("To access a module documentation, use: %s <module> help\n", os.Args[0])
