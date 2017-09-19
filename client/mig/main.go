@@ -238,7 +238,12 @@ func main() {
 	// Make sure a target value was specified
 	if target == "" {
 		target = "status='online'"
-		fmt.Fprint(os.Stderr, "[notice] no target specified, defaulting to all online agents\n")
+		// Quell this warning if targetfound or targetnotfound is in use, we will still default
+		// to status='online' as the base queried is AND'd with the results query later on in this
+		// function.
+		if targetfound == "" && targetnotfound == "" {
+			fmt.Fprint(os.Stderr, "[notice] no target specified, defaulting to all online agents\n")
+		}
 	}
 	// If running against the local target, don't post the action to the MIG API
 	// but run it locally instead.
