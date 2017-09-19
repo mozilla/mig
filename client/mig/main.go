@@ -24,55 +24,62 @@ import (
 
 func usage() {
 	fmt.Printf(`%s - Mozilla InvestiGator command line client
+
 usage: %s <module> <global options> <module parameters>
 
 --- Global options ---
 
--c <path>	path to an alternative config file. If not set, use ~/.migrc
+-c <path>	 Path to config file, defaults to ~/.migrc
 
--e <duration>	time after which the action expires. 60 seconds by default.
-		example: -e 300s (5 minutes)
+-e <duration>	 Time after which the action expires, defaults to 60 seconds.
 
--i <file>	load and run action from a file. supersedes other action flags.
+		 Example: -e 300s (5 minutes)
 
--p <bool>       display action json that would be used and exit
+-i <file>	 Load and run action from a file, supersedes other action flags.
 
--show <mode>	type of results to show. if not set, default is 'found'.
-		* found: 	only print positive results
-		* notfound: 	only print negative results
-		* all: 		print all results
+		 If using the -i flag, it should be the first argument specified
+		 (no module should be specified since it is indicated in the action
+		 file) and only global options should be used.
 
--render <mode>	defines how results should be rendered:
-		* text (default):	results are printed to the console
-		* map:			results are geolocated and a google map is generated
+-p <bool>        Display action JSON that would be used and exit, useful to write
+		 an action for later import with the -i flag.
 
--t <target>	target to launch the action on. If no target is specified, the value will
-		default to all online agents (status='online')
-		examples:
-		* linux agents:          -t "queueloc LIKE 'linux.%%'"
-		* agents named *mysql*:  -t "name like '%%mysql%%'"
-		* proxied linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
-		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
-		* run on local system:	 -t local
-		* use a migrc macro:     -t mymacroname
+-show <mode>	 Type of results to show, defaults to found.
 
--s <bool>       create and sign the action, and output the action to stdout
-                this is useful for dual-signing; the signed action can be provided
-                to another investigator for launch using the -i flag.
+		 * found: 	Only print positive results
+		 * notfound: 	Only print negative results
+		 * all:		Print all results
+
+-render <mode>	 Defines how results should be rendered.
+
+		 * text (default):	Results are printed to the console
+		 * map:			Results are geolocated and a google map is generated
+
+-t <target>	 Target to launch the action on. If no target is specified, the value will
+		 default to all online agents (status='online')
+
+		 Examples:
+		 * Linux agents:          -t "queueloc LIKE 'linux.%%'"
+		 * Agents named *mysql*:  -t "name like '%%mysql%%'"
+		 * Proxied Linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
+		 * Agents operated by IT: -t "tags#>>'{operator}'='IT'"
+		 * Run on local system:	 -t local
+		 * Use a migrc macro:     -t mymacroname
+
+-s <bool>        Create and sign the action, and output the action to stdout
+                 this is useful for dual-signing; the signed action can be provided
+                 to another investigator for launch using the -i flag.
 
 -target-found    <action ID>
 -target-notfound <action ID>
-		targets agents that have eiher found or not found results in a previous action.
-		example: -target-found 123456
+		 Targets agents that have either found or not found results in a previous action.
+		 example: -target-found 123456
 
--v		verbose output, includes debug information and raw queries
+-v		 Verbose output, includes debug information and raw queries
 
--V		print version
+-V		 Print version
 
--z <bool>       compress action before sending it to agents
-
-Progress information is sent to stderr, silence it with "2>/dev/null".
-Results are sent to stdout, redirect them with "1>/path/to/file".
+-z <bool>        Compress action before sending it to agents
 
 --- Modules documentation ---
 Each module provides its own set of parameters. Module parameters must be set *after*
@@ -81,7 +88,6 @@ global options. Help is available by calling "<module> help". Available modules 
 	for module := range modules.Available {
 		fmt.Printf("* %s\n", module)
 	}
-	fmt.Printf("To access a module documentation, use: %s <module> help\n", os.Args[0])
 	os.Exit(1)
 }
 
