@@ -399,7 +399,8 @@ readytolaunch:
 	}()
 	select {
 	case <-c:
-		fmt.Fprintf(os.Stderr, "stop following action. agents may still be running. printing available results:\n")
+		fmt.Fprintf(os.Stderr, "\n[notice] stopped following action, but agents may still be running.\n")
+		fmt.Fprintf(os.Stderr, "fetching available results:\n")
 		goto printresults
 	case <-done:
 		goto printresults
