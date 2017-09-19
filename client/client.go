@@ -1351,8 +1351,14 @@ func (cli Client) EvaluateAgentTarget(target string) (agents []mig.Agent, err er
 }
 
 // FollowAction continuously loops over an action and prints its completion status in os.Stderr.
-// when the action reaches its expiration date, FollowAction prints its final status and returns.
-func (cli Client) FollowAction(a mig.Action, total int) (err error) {
+// When the action reaches its expiration date, FollowAction prints its final status and returns.
+//
+// a represents the action being followed, and total indicates the total number of agents
+// the action was submitted to and is used to initialize the progress meter.
+//
+// stop is of type chan bool, and passing a value to this channel will cause the routine to return
+// immediately.
+func (cli Client) FollowAction(a mig.Action, total int, stop chan bool) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("followAction() -> %v", e)
@@ -1362,12 +1368,19 @@ func (cli Client) FollowAction(a mig.Action, total int) (err error) {
 	previousctr := 0
 	status := ""
 	attempts := 0
+	cancelfollow := false
 	var completion float64
 	bar := pb.New(total)
 	bar.ShowSpeed = true
 	bar.SetMaxWidth(80)
 	bar.Output = os.Stderr
 	bar.Start()
+	go func() {
+		_ = <-stop
+		bar.Postfix(" [cancelling]")
+		cancelfollow = true
+		bar.Finish()
+	}()
 	for {
 		a, _, err = cli.GetAction(a.ID)
 		if err != nil {
@@ -1389,6 +1402,10 @@ func (cli Client) FollowAction(a mig.Action, total int) (err error) {
 			(time.Now().After(a.ExpireAfter.Add(10 * time.Second))) {
 			goto finish
 			break
+		}
+		if cancelfollow {
+			// We have been asked to stop, just return
+			return nil
 		}
 		if a.Counters.Done > 0 && a.Counters.Done > previousctr {
 			completion = (float64(a.Counters.Done) / float64(a.Counters.Sent)) * 100

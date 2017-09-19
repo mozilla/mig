@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 
 	"mig.ninja/mig"
@@ -382,30 +383,45 @@ readytolaunch:
 	}
 	fmt.Fprintf(os.Stderr, "\x1b[33mGO\n\x1b[0m")
 
-	// launch and follow
+	// Launch the action
 	a, err = cli.PostAction(a)
 	if err != nil {
 		panic(err)
 	}
+
+	// Follow the action for completion, and handle an interrupt to abort waiting for
+	// completion, but still print out available results.
+	var wg sync.WaitGroup
 	c := make(chan os.Signal, 1)
-	done := make(chan bool, 1)
+	sigint := make(chan bool, 1)
+	complete := make(chan bool, 1)
 	signal.Notify(c, os.Interrupt)
+	cancelled := false
+
+	wg.Add(1)
 	go func() {
-		err = cli.FollowAction(a, len(agents))
+		defer wg.Done()
+		err = cli.FollowAction(a, len(agents), sigint)
 		if err != nil {
 			panic(err)
 		}
-		done <- true
+		complete <- true
 	}()
-	select {
-	case <-c:
-		fmt.Fprintf(os.Stderr, "\n[notice] stopped following action, but agents may still be running.\n")
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		select {
+		case _ = <-c:
+			cancelled = true
+			sigint <- true
+		case _ = <-complete:
+		}
+	}()
+	wg.Wait()
+	if cancelled {
+		fmt.Fprintf(os.Stderr, "[notice] stopped following action, but agents may still be running.\n")
 		fmt.Fprintf(os.Stderr, "fetching available results:\n")
-		goto printresults
-	case <-done:
-		goto printresults
 	}
-printresults:
 	err = cli.PrintActionResults(a, show, render)
 	if err != nil {
 		panic(err)
