@@ -1065,13 +1065,15 @@ and subsequently start itself up in daemon mode.
 Run your first investigation
 ----------------------------
 
-Get the `mig` command line from the upstream repository and run a simple
-investigation that looks for a user in `/etc/passwd`.
+We will run an investigation using the ``mig`` command, which is different from ``mig-console``
+in that it is more intended for quicker simplified investigations. We can install
+the ``mig`` command and run a simple investigation that looks for a user in ``/etc/passwd``.
 
 .. code:: bash
 
-	$ go get mig.ninja/mig/client/mig
-	$ $GOPATH/bin/mig file -path /etc -name "^passwd$" -content "^root"
+        $ make mig-cmd
+        $ sudo cp bin/linux/amd64/mig /opt/mig/bin/mig
+	$ /opt/mig/bin/mig file -t allonline -path /etc -name "^passwd$" -content "^root"
 	1 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
 	Following action ID 4885615083564.status=inflight.
 	- 100.0% done in -2m17.141481302s
