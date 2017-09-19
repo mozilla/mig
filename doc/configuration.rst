@@ -794,6 +794,11 @@ or ``go install``.
 
         $ go install -tags 'modnodefaults modmemory' mig.ninja/mig/mig-agent
 
+For details on the various tags that can be specified, see the source of the
+`modulepack package`_.
+
+.. _`modulepack package`: ../modulepack
+
 Install the agent configuration file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
