@@ -1036,7 +1036,7 @@ with ``-d``, the agent will stay in foreground and print its activity to stdout.
 	2015/09/09 10:43:40 - - - [info] closing parseCommands goroutine
 	2015/09/09 10:43:40 - - - [info] closing runModule goroutine
 
-The output above indicates that the agent successfully connected to Rabbitmq
+The output above indicates that the agent successfully connected to RabbitMQ
 and sent a heartbeat message. The scheduler will receive this heartbeat and
 process it, indicating to the scheduler the agent is online.
 
@@ -1051,6 +1051,16 @@ using the ``mig-console``.
 	| Agents & Endpoints summary:
 	| * 1 online agents on 1 endpoints
 	+------
+
+Now that we have confirmed the agent works as expected, run the agent normally without
+the debug flag.
+
+.. code:: bash
+
+        $ sudo /opt/mig/bin/mig-agent
+
+This will cause the agent to identify the init system in use, and install itself as a service
+and subsequently start itself up in daemon mode.
 
 Run your first investigation
 ----------------------------
