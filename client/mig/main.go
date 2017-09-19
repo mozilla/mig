@@ -370,7 +370,7 @@ readytolaunch:
 		}
 	}
 
-	// evaluate target before launch, give a change to cancel before going out to agents
+	// evaluate target before launch, give a chance to cancel before going out to agents
 	agents, err := cli.EvaluateAgentTarget(a.Target)
 	if err != nil {
 		panic(err)
