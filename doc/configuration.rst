@@ -1083,178 +1083,16 @@ the ``mig`` command and run a simple investigation that looks for a user in ``/e
 
 A single file is found, as expected.
 
-Appendix A: Manual RabbitMQ Configuration
------------------------------------------
+Appendix A: Advanced RabbitMQ Configuration
+-------------------------------------------
 
-All communications between schedulers and agents rely on RabbitMQ's AMQP
-protocol. While MIG does not rely on the security of RabbitMQ to pass orders to
-agents, an attacker that gains control to the message broker would be able to
-listen to all messages passed between the various components. To prevent this,
-RabbitMQ must provide a reasonable amount of protection, at several levels:
+RabbitMQ can be configured in a variety of ways, and this guide does not discuss
+RabbitMQ configuration in detail. For details on RabbitMQ consult the
+RabbitMQ documentation at https://www.rabbitmq.com/documentation.html. A couple
+points for consideration are noted in this section however.
 
-* All communications on the public internet are authenticated using client and
-  server certificates. Since all agents share a single client certificate, this
-  provides minimal security, and should only be used to make it harder for
-  attackers to establish an AMQP connection with rabbitmq.
-
-* Agents can only listen on their own queue. This is accomplished by randomizing
-  the name of the agent queue.
-
-* Agents can only publish to the `toschedulers` exchange. This is accomplished
-  using tight Access Control rules to RabbitMQ.
-
-Note that, even if a random agent manages to connect to the relay, the scheduler
-will accept its registration only if it is present in the scheduler's whitelist.
-
-
-1. On the rabbitmq server, create users:
-
-	* **admin**, with the tag 'administrator'
-	* **scheduler** , **agent** and **worker** with no tag
-
-All users should have strong passwords. The scheduler password goes into the
-configuration file `conf/mig-scheduler.cfg`, in `[mq] password`. The agent
-password goes into `conf/mig-agent-conf.go`, in the agent `AMQPBROKER` dial
-string. The admin password is, of course, for yourself.
-
-.. code:: bash
-
-   sudo rabbitmqctl add_user admin SomeRandomPassword
-   sudo rabbitmqctl set_user_tags admin administrator
-
-   sudo rabbitmqctl add_user scheduler SomeRandomPassword
-
-   sudo rabbitmqctl add_user agent SomeRandomPassword
-
-   sudo rabbitmqctl add_user worker SomeRandomPassword
-
-You can list the users with the following command:
-
-.. code:: bash
-
-   sudo rabbitmqctl list_users
-
-On fresh installation, rabbitmq comes with a `guest` user that as password
-`guest` and admin privileges. You may you to delete that account.
-
-.. code:: bash
-
-	sudo rabbitmqctl delete_user guest
-
-2. Create a 'mig' virtual host.
-
-.. code:: bash
-
-   sudo rabbitmqctl add_vhost mig
-   sudo rabbitmqctl list_vhosts
-
-3. Create permissions for the scheduler user. The scheduler is allowed to:
-	- CONFIGURE:
-		- declare the exchanges `toagents`, `toschedulers` and `toworkers`
-		- declare and delete queues under `mig.agt.*`
-	- WRITE:
-		- publish into the exchanges `toagents` and `toworkers`
-		- consume from queues `mig.agt.heartbeats` and `mig.agt.results`
-	- READ:
-		- declare the exchanges `toagents`, `toschedulers` and `toworkers`
-		- consume from queues `mig.agt.heartbeats` and `mig.agt.results` bound
-		  to the `toschedulers` exchange
-
-.. code:: bash
-
-	sudo rabbitmqctl set_permissions -p mig scheduler \
-		'^(toagents|toschedulers|toworkers|mig\.agt\..*)$' \
-		'^(toagents|toworkers|mig\.agt\.(heartbeats|results))$' \
-		'^(toagents|toschedulers|toworkers|mig\.agt\.(heartbeats|results))$'
-
-4. Create permissions for the agent use. The agent is allowed to:
-	- CONFIGURE:
-		- create any queue under `mig.agt.*`
-	- WRITE:
-		- publish to the `toschedulers` exchange
-		- consume from queues under `mig.agt.*`
-	- READ:
-		- consume from queues under `mig.agt.*` bound to the `toagents`
-		  exchange
-
-.. code:: bash
-
-	sudo rabbitmqctl set_permissions -p mig agent \
-		'^mig\.agt\..*$' \
-		'^(toschedulers|mig\.agt\..*)$' \
-		'^(toagents|mig\.agt\..*)$'
-
-5. Create permissions for the event workers. The workers are allowed to:
-	- CONFIGURE:
-		- declare queues under `migevent.*`
-	- WRITE:
-		- consume from queues under `migevent.*`
-	- READ:
-	    - consume from queues under `migevent.*` bound to the `toworkers`
-		  exchange
-
-.. code:: bash
-
-	sudo rabbitmqctl set_permissions -p mig worker \
-	'^migevent\..*$' \
-	'^migevent(|\..*)$' \
-	'^(toworkers|migevent\..*)$'
-
-6. Start the scheduler, it shouldn't return any ACCESS error. You can also list
-   the permissions with the command:
-
-.. code:: bash
-
-	$ sudo rabbitmqctl list_permissions -p mig | column -t
-	Listing permissions in vhost "mig" ...
-	agent      ^mig\\.agt\\..*$                                    ^(toschedulers|mig\\.agt\\..*)$                          ^(toagents|mig\\.agt\\..*)$
-	scheduler  ^(toagents|toschedulers|toworkers|mig\\.agt\\..*)$  ^(toagents|toworkers|mig\\.agt\\.(heartbeats|results))$  ^(toagents|toschedulers|toworkers|mig\\.agt\\.(heartbeats|results))$
-	worker     ^migevent\\..*$                                     ^migevent(|\\..*)$                                       ^(toworkers|migevent\\..*)$
-
-RabbitMQ TLS configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The documentation from rabbitmq has a thorough explanation of SSL support in
-rabbit at http://www.rabbitmq.com/ssl.html . Without going into too much
-details, we need three things:
-
-1. a PKI (and its public cert)
-
-2. a server certificate and private key for rabbitmq itself
-
-3. a client certificate and private key for the agents
-
-You can obtain these three things on you own, or follow the openssl tutorial
-from the rabbitmq documentation. Come back here when you have all three.
-
-On the rabbitmq server, place the certificates under **/etc/rabbitmq/certs/**.
-
- ::
-
-	/etc/rabbitmq/certs/
-	├── cacert.pem
-	├── migrelay1.example.net.key
-	└── migrelay1.example.net.pem
-
-Edit (or create) the configuration file of rabbitmq to reference the
-certificates.
-
- ::
-
-	[
-	  {rabbit, [
-		 {ssl_listeners, [5671]},
-		 {ssl_options, [{cacertfile,"/etc/rabbitmq/certs/cacert.pem"},
-						{certfile,"/etc/rabbitmq/certs/migrelay1.example.net.pem"},
-						{keyfile,"/etc/rabbitmq/certs/migrelay1.example.net.key"},
-						{verify,verify_peer},
-						{fail_if_no_peer_cert,true}
-		 ]}
-	  ]}
-	].
-
-Queues mirroring
-~~~~~~~~~~~~~~~~
+Queue mirroring
+~~~~~~~~~~~~~~~
 
 By default, queues within a RabbitMQ cluster are located on a single node (the
 node on which they were first declared). If that node goes down, the queue will
@@ -1270,8 +1108,8 @@ use the following policy:
 Cluster management
 ~~~~~~~~~~~~~~~~~~
 
-To create a cluster, all rabbitmq nodes must share a secret called erlang
-cookie. The erlang cookie is located in `/var/lib/rabbitmq/.erlang.cookie`.
+To create a cluster, all RabbitMQ nodes must share a secret called erlang
+cookie. The erlang cookie is located in ``/var/lib/rabbitmq/.erlang.cookie``.
 Make sure the value of the cookie is identical on all members of the cluster,
 then tell one node to join another one:
 
@@ -1316,38 +1154,43 @@ the scheduler. The agents will restart themselves.
 		-XDELETE http://localhost:15672/api/queues/mig/$queue;
 	done
 
-(remove the `echo` in the command above, it's there as a safety for copy/paste
+(remove the ``echo`` in the command above, it's there as a safety for copy/paste
 people).
 
 Supporting more than 1024 connections
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you want more than 1024 clients, you may have to increase the max number of
-file descriptors that rabbitmq is allowed to hold. On linux, increase `nofile`
-in `/etc/security/limits.conf` as follow:
+file descriptors that RabbitMQ is allowed to hold. On Linux, increase ``nofile``
+in ``/etc/security/limits.conf`` as follow:
 
 .. code:: bash
 
 	rabbitmq - nofile 102400
 
-Then, make sure than `pam_limits.so` is included in `/etc/pam.d/common-session`:
+Then, make sure that ``pam_limits.so`` is included in ``/etc/pam.d/common-session``:
 
 .. code:: bash
 
 	session    required     pam_limits.so
 
+This is an example, and configuration of this parameter may be different for your
+environment.
 
 Serving AMQPS on port 443
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To prevent yours agents from getting blocked by firewalls, it may be a good idea
-to use port 443 for connections between agents and rabbitmq. However, rabbitmq
+to use port 443 for connections between Agents and RabbitMQ. However, RabbitMQ
 is not designed to run on a privileged port. The solution, then, is to use
-iptables to redirect the port on the rabbitmq server.
+iptables to redirect the port on the RabbitMQ server.
 
 .. code:: bash
 
-	iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 5671 -m comment --comment "Serve RabbitMQ on HTTPS port"
+	# iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 5671 -m comment --comment "Serve RabbitMQ on HTTPS port"
+
+You can also use something like an AWS ELB in TCP mode to provide access to your relay
+on port 443.
 
 Appendix B: Scheduler configuration reference
 ---------------------------------------------
