@@ -151,6 +151,13 @@ func runDispatch(cfg config) error {
 		dr         DispatchRecord
 	)
 
+	if cfg.Dispatch.SNSTopic != "" {
+		err := initSNS(cfg)
+		if err != nil {
+			return err
+		}
+	}
+
 	for {
 		msg := <-messageBuf
 		dr.fromString(msg)
@@ -159,13 +166,22 @@ func runDispatch(cfg config) error {
 			logChan <- fmt.Sprintf("create dispatch record: %v", err)
 			continue
 		}
-		b := bytes.NewBuffer(buf)
-		resp, err := httpClient.Post(cfg.Dispatch.HTTPURL, "application/json", b)
-		if err != nil {
-			logChan <- fmt.Sprintf("http post: %v", err)
-			continue
+		if cfg.Dispatch.SNSTopic != "" {
+			err := dispatchSNS(buf)
+			if err != nil {
+				logChan <- fmt.Sprintf("sns dispatch: %v", err)
+				continue
+			}
+		} else {
+			// Default to HTTP POST
+			b := bytes.NewBuffer(buf)
+			resp, err := httpClient.Post(cfg.Dispatch.HTTPURL, "application/json", b)
+			if err != nil {
+				logChan <- fmt.Sprintf("http post: %v", err)
+				continue
+			}
+			resp.Body.Close()
 		}
-		resp.Body.Close()
 	}
 	return nil
 }
@@ -192,6 +208,8 @@ func requestHandler(p interface{}) (ret string) {
 type config struct {
 	Dispatch struct {
 		HTTPURL     string `json:"httpurl"`
+		SNSTopic    string `json:"snstopic"`
+		Region      string `json:"region"`
 		ChannelSize int    `json:"channelsize"`
 	} `json:"dispatch"`
 }
