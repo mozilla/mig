@@ -495,7 +495,7 @@ func (cli Client) GetManifestRecord(mid float64) (mr mig.ManifestRecord, err err
 	return
 }
 
-// Retrieve list of known loader entries that will match manifest mid
+// GetManifestLoaders retrieves list of known loader entries that will match manifest mid
 func (cli Client) GetManifestLoaders(mid float64) (ldrs []mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -523,7 +523,7 @@ func (cli Client) GetManifestLoaders(mid float64) (ldrs []mig.LoaderEntry, err e
 	return
 }
 
-// Change the status of an existing manifest record
+// ManifestRecordStatus changes the status of an existing manifest record
 func (cli Client) ManifestRecordStatus(mr mig.ManifestRecord, status string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -561,7 +561,7 @@ func (cli Client) ManifestRecordStatus(mr mig.ManifestRecord, status string) (er
 	return
 }
 
-// Post a new manifest record for storage through the API
+// PostNewManifest posts a new manifest record for storage through the API
 func (cli Client) PostNewManifest(mr mig.ManifestRecord) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -603,7 +603,7 @@ func (cli Client) PostNewManifest(mr mig.ManifestRecord) (err error) {
 	return
 }
 
-// Add a new signature to an existing manifest known to the API
+// PostManifestSignature adds a new signature to an existing manifest known to the API
 func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -663,7 +663,7 @@ func (cli Client) GetLoaderEntry(lid float64) (le mig.LoaderEntry, err error) {
 	return
 }
 
-// Change the expect fields of an existing loader entry
+// LoaderEntryExpect changes the expect fields of an existing loader entry
 func (cli Client) LoaderEntryExpect(le mig.LoaderEntry, eval string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -703,7 +703,7 @@ func (cli Client) LoaderEntryExpect(le mig.LoaderEntry, eval string) (err error)
 	return
 }
 
-// Change the status of an existing loader entry
+// LoaderEntryStatus changes the status of an existing loader entry
 func (cli Client) LoaderEntryStatus(le mig.LoaderEntry, status bool) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -745,7 +745,7 @@ func (cli Client) LoaderEntryStatus(le mig.LoaderEntry, status bool) (err error)
 	return
 }
 
-// Change the key on an existing loader entry
+// LoaderEntryKey changes the key on an existing loader entry
 func (cli Client) LoaderEntryKey(le mig.LoaderEntry) (newle mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -787,7 +787,7 @@ func (cli Client) LoaderEntryKey(le mig.LoaderEntry) (newle mig.LoaderEntry, err
 	return
 }
 
-// Post a new loader entry for storage through the API
+// PostNewLoader posts a new loader entry for storage through the API
 func (cli Client) PostNewLoader(le mig.LoaderEntry) (newle mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1341,9 +1341,9 @@ func (cli Client) SignManifest(m mig.ManifestRecord) (ret string, err error) {
 	return
 }
 
-// Resolves target macros; clients should pass the action target string here, and this
-// function will return the resolved target if it is a valid macro, otherwise it just
-// returns the passed target string
+// ResolveTargetMacro resolves macros specified by a client; clients should pass the
+// action target string here, and this function will return the resolved target if it
+// is a valid macro, otherwise it just returns the passed target string
 func (cli Client) ResolveTargetMacro(target string) string {
 	v, err := cli.Conf.Targets.getMacro(target)
 	if err != nil {
@@ -1712,13 +1712,13 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 	return
 }
 
-// EnableDebug() prints debug messages to stdout
+// EnableDebug enables debugging mode in the client
 func (cli *Client) EnableDebug() {
 	cli.debug = true
 	return
 }
 
-// DisableDebug() disables the printing of debug messages to stdout
+// DisableDebug disables debugging mode in the client
 func (cli *Client) DisableDebug() {
 	cli.debug = false
 	return
