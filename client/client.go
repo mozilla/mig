@@ -157,7 +157,11 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 	}()
 	_, err = os.Stat(file)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "no configuration file found at %s\n", file)
+		if !os.IsNotExist(err) {
+			panic(err)
+		}
+		// Otherwise, the file did not exist so we can create it if requested
+		fmt.Fprintf(os.Stderr, "no configuration found at %v\n", file)
 		err = MakeConfiguration(file)
 		if err != nil {
 			panic(err)
