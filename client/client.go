@@ -67,13 +67,13 @@ type GpgConf struct {
 }
 
 // TargetConf stores macros present in the configuration file that can be used
-// as short form targetting strings.
+// as short form targeting strings.
 type TargetConf struct {
 	Macro  []string
 	macros map[string]string
 }
 
-// Used by the macro parser to add processed target macros to the client
+// addMacro is used by the macro parser to add processed target macros to the client
 // configuration
 func (t *TargetConf) addMacro(name string, tgt string) {
 	if t.macros == nil {
@@ -82,6 +82,7 @@ func (t *TargetConf) addMacro(name string, tgt string) {
 	t.macros[name] = tgt
 }
 
+// getMacro returns a macro from the targeting configuration by name
 func (t *TargetConf) getMacro(name string) (string, error) {
 	if val, ok := t.macros[name]; ok {
 		return val, nil
