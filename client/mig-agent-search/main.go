@@ -123,9 +123,12 @@ Command line flags:`, os.Args[0], os.Args[0])
 }
 
 func main() {
-	homedir := client.FindHomedir()
+	homedir, err := client.FindHomedir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
 	var (
-		err          error
 		config       = flag.String("c", homedir+"/.migrc", "Load configuration from file")
 		showversion  = flag.Bool("V", false, "Show build version and exit")
 		paramSearch  = flag.String("p", "", "Search using mig-console search style query")

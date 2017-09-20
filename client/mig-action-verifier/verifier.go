@@ -28,7 +28,10 @@ func main() {
 
 	hasaction := false
 	hascommand := false
-	homedir := client.FindHomedir()
+	homedir, err := client.FindHomedir()
+	if err != nil {
+		panic(err)
+	}
 
 	// command line options
 	var actionfile = flag.String("a", "/path/to/action", "Load action from file")
