@@ -886,6 +886,7 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	return
 }
 
+// ValueToAction converts JSON data in interface v into a mig.Action
 func ValueToAction(v interface{}) (a mig.Action, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -903,6 +904,7 @@ func ValueToAction(v interface{}) (a mig.Action, err error) {
 	return
 }
 
+// ValueToLoaderEntry converts JSON data in interface v into a mig.LoaderEntry
 func ValueToLoaderEntry(v interface{}) (l mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -920,6 +922,7 @@ func ValueToLoaderEntry(v interface{}) (l mig.LoaderEntry, err error) {
 	return
 }
 
+// ValueToManifestRecord converts JSON data in interface v into a mig.ManifestRecord
 func ValueToManifestRecord(v interface{}) (m mig.ManifestRecord, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -937,6 +940,7 @@ func ValueToManifestRecord(v interface{}) (m mig.ManifestRecord, err error) {
 	return
 }
 
+// GetCommand fetches the specified command ID from the API and returns it
 func (cli Client) GetCommand(cmdid float64) (cmd mig.Command, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -958,6 +962,7 @@ func (cli Client) GetCommand(cmdid float64) (cmd mig.Command, err error) {
 	return
 }
 
+// ValueToCommand converts JSON data in interface v into a mig.Command
 func ValueToCommand(v interface{}) (cmd mig.Command, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -975,6 +980,7 @@ func ValueToCommand(v interface{}) (cmd mig.Command, err error) {
 	return
 }
 
+// GetAgent fetches the specified agent ID from the API and returns it
 func (cli Client) GetAgent(agtid float64) (agt mig.Agent, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -996,6 +1002,7 @@ func (cli Client) GetAgent(agtid float64) (agt mig.Agent, err error) {
 	return
 }
 
+// ValueToAgent converts JSON data in interface v into a mig.Agent
 func ValueToAgent(v interface{}) (agt mig.Agent, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1013,6 +1020,7 @@ func ValueToAgent(v interface{}) (agt mig.Agent, err error) {
 	return
 }
 
+// GetInvestigator fetches the specified investigator ID from the API and returns it
 func (cli Client) GetInvestigator(iid float64) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1232,6 +1240,7 @@ func (cli Client) PostInvestigatorAPIKeyStatus(iid float64, newstatus string) (i
 	return
 }
 
+// ValueToInvestigator converts JSON data in interface v into a mig.Investigator
 func ValueToInvestigator(v interface{}) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1277,21 +1286,21 @@ func (cli Client) MakeSignedToken() (token string, err error) {
 //
 // This function should be called on the action prior to signing it for submission
 // to the API.
-func (cli Client) CompressAction(a mig.Action) (comp_action mig.Action, err error) {
-	comp_action = a
+func (cli Client) CompressAction(a mig.Action) (compAction mig.Action, err error) {
+	compAction = a
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("CompressAction() -> %v", e)
 		}
 	}()
-	for i := range comp_action.Operations {
-		if !comp_action.Operations[i].WantCompressed {
+	for i := range compAction.Operations {
+		if !compAction.Operations[i].WantCompressed {
 			continue
 		}
-		if comp_action.Operations[i].IsCompressed {
+		if compAction.Operations[i].IsCompressed {
 			continue
 		}
-		err = comp_action.Operations[i].CompressOperationParam()
+		err = compAction.Operations[i].CompressOperationParam()
 		if err != nil {
 			panic(err)
 		}
@@ -1301,7 +1310,7 @@ func (cli Client) CompressAction(a mig.Action) (comp_action mig.Action, err erro
 
 // SignAction takes a MIG Action, signs it with the key identified in the configuration
 // and returns the signed action
-func (cli Client) SignAction(a mig.Action) (signed_action mig.Action, err error) {
+func (cli Client) SignAction(a mig.Action) (signedAction mig.Action, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("SignAction() -> %v", e)
@@ -1317,7 +1326,7 @@ func (cli Client) SignAction(a mig.Action) (signed_action mig.Action, err error)
 		panic(err)
 	}
 	a.PGPSignatures = append(a.PGPSignatures, sig)
-	signed_action = a
+	signedAction = a
 	return
 }
 
@@ -1515,6 +1524,15 @@ func (cli Client) FetchActionResults(a mig.Action) (ret []mig.Command, err error
 	return ret, nil
 }
 
+// PrintActionResults fetches the results of action a from the API and prints
+// the results on stdout.
+//
+// show can either be found, notfound, or all and can be used to control which results
+// are fetched and displayed for a given action.
+//
+// The render parameter can be used to indicate the results should be rendered in a
+// certain way (as opposed to just printing the agent results). If this value is set to
+// map, results will be rendered into a map (geo-located).
 func (cli Client) PrintActionResults(a mig.Action, show, render string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1659,6 +1677,7 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 	return
 }
 
+// PrintCommandResults prints the results of mig.Command cmd.
 func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
