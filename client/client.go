@@ -35,8 +35,7 @@ import (
 
 var version string
 
-// A Client provides all the needed functionalities to interact with the MIG API.
-// It should be initialized with a proper configuration file.
+// Client is a type used to interact with the MIG API.
 type Client struct {
 	API     *http.Client
 	Token   string
@@ -47,16 +46,19 @@ type Client struct {
 
 // Configuration stores the live configuration and global parameters of a client
 type Configuration struct {
-	API     ApiConf    // location of the MIG API
+	API     APIConf    // location of the MIG API
 	Homedir string     // location of the user's home directory
 	GPG     GpgConf    // location of the user's secring
 	Targets TargetConf // Target macro specification
 }
 
-type ApiConf struct {
+// APIConf stores configuration values related to the API connectivity.
+type APIConf struct {
 	URL            string
 	SkipVerifyCert bool
 }
+
+// GpgConf stores configuration values related to client keyring access.
 type GpgConf struct {
 	Home          string // Path to GPG keyrings
 	KeyID         string // GPG key ID to use for X-PGPAUTHORIZATION and action signing
@@ -64,6 +66,8 @@ type GpgConf struct {
 	UseAPIKeyAuth string // Prefer X-MIGAPIKEY authentication for API access, set to API key
 }
 
+// TargetConf stores macros present in the configuration file that can be used
+// as short form targetting strings.
 type TargetConf struct {
 	Macro  []string
 	macros map[string]string
