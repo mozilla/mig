@@ -97,7 +97,8 @@ func (t *TargetConf) getMacro(name string) (string, error) {
 // behavior is required for automated operation.
 var clientPassphrase string
 
-// Set the GPG passphrase to be used by the client for secret key operations.
+// ClientPassphrase sets the GPG passphrase to be used by the client for secret key operations,
+// this can be used to cache a passphrase to avoid being prompted.
 func ClientPassphrase(s string) {
 	clientPassphrase = s
 }
