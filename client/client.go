@@ -249,26 +249,29 @@ func MakeConfiguration(file string) (err error) {
 	}()
 	var cfg Configuration
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Printf("would you like to generate a new configuration file at %s? Y/n> ", file)
+	fmt.Printf("generate a new configuration file at %v? (Y/n)> ", file)
 	scanner.Scan()
 	if err := scanner.Err(); err != nil {
 		panic(err)
 	}
 	if scanner.Text() != "y" && scanner.Text() != "Y" && scanner.Text() != "" {
-		panic("abort")
+		panic("aborting creating configuration file")
 	}
 	cfg.Homedir, err = FindHomedir()
 	if err != nil {
 		panic(err)
 	}
-	cfg.GPG.Home = cfg.Homedir + "/.gnupg/"
-	_, err = os.Stat(cfg.GPG.Home + "secring.gpg")
+	cfg.GPG.Home = path.Join(cfg.Homedir, ".gnupg")
+	sr, err := os.Open(path.Join(cfg.GPG.Home, "secring.gpg"))
 	if err != nil {
-		panic("couldn't find secring at " + cfg.GPG.Home + "secring.gpg")
-	}
-	sr, err := os.Open(cfg.GPG.Home + "secring.gpg")
-	if err != nil {
-		panic(err)
+		// We were unable to open the secring to identify the private key for the MIG
+		// client tools to use. Display some additional info here and abort.
+		fmt.Printf("\nIt was not possible to open your secring.gpg. The configuration generator expects\n"+
+			"to find the keyring in the standard GPG location, and is looking in %v. If your keyring\n"+
+			"is located elsewhere, you may need to create the configuration file yourself. Consult the\n"+
+			"documentation for additional details.\n\n",
+			path.Join(cfg.GPG.Home))
+		panic(fmt.Sprintf("error opening secring: %v", err))
 	}
 	defer sr.Close()
 	keyring, err := openpgp.ReadKeyRing(sr)
@@ -283,13 +286,13 @@ func MakeConfiguration(file string) (err error) {
 			name = identity.Name
 			break
 		}
-		fmt.Printf("found key '%s' with fingerprint '%s'.\nuse this key? Y/n> ", name, fingerprint)
+		fmt.Printf("found key %q with fingerprint %q.\nuse this key? (Y/n)> ", name, fingerprint)
 		scanner.Scan()
 		if err := scanner.Err(); err != nil {
 			panic(err)
 		}
 		if scanner.Text() == "y" || scanner.Text() == "Y" || scanner.Text() == "" {
-			fmt.Printf("using key %s\n", fingerprint)
+			fmt.Printf("using key %q\n", fingerprint)
 			cfg.GPG.KeyID = fingerprint
 			break
 		}
@@ -298,7 +301,7 @@ func MakeConfiguration(file string) (err error) {
 		panic("no suitable key found in " + sr.Name())
 	}
 	for {
-		fmt.Printf("what is the location of the API? (ex: https://mig.example.net/api/v1/) > ")
+		fmt.Printf("URL of API? (e.g., https://mig.example.net/api/v1/)> ")
 		scanner.Scan()
 		if err := scanner.Err(); err != nil {
 			panic(err)
@@ -306,7 +309,7 @@ func MakeConfiguration(file string) (err error) {
 		cfg.API.URL = scanner.Text()
 		_, err := http.Get(cfg.API.URL)
 		if err != nil {
-			fmt.Println("API connection failed. Wrong address?")
+			fmt.Printf("API connection failed: %v\n", err)
 			continue
 		}
 		break
@@ -315,10 +318,12 @@ func MakeConfiguration(file string) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(fd, "[api]\n\turl = \"%s\"\n", cfg.API.URL)
-	fmt.Fprintf(fd, "[gpg]\n\thome = \"%s\"\n\tkeyid = \"%s\"\n", cfg.GPG.Home, cfg.GPG.KeyID)
+	fmt.Fprintf(fd, "[api]\n\turl = \"%v\"\n", cfg.API.URL)
+	fmt.Fprintf(fd, "[gpg]\n\thome = \"%v\"\n\tkeyid = \"%v\"\n", cfg.GPG.Home, cfg.GPG.KeyID)
+	// Add one initial target macro
+	fmt.Fprintf(fd, "[targets]\n\tmacro = allonline:status='online'\n")
 	fd.Close()
-	fmt.Println("MIG client configuration generated at", file)
+	fmt.Printf("\ncreated configuration file at %v\n\n", file)
 	return
 }
 
