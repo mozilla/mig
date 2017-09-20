@@ -25,7 +25,10 @@ func main() {
 			fmt.Printf("FATAL: %v\n", e)
 		}
 	}()
-	homedir := client.FindHomedir()
+	homedir, err := client.FindHomedir()
+	if err != nil {
+		panic(err)
+	}
 	var Usage = func() {
 		fmt.Fprintf(os.Stderr,
 			"Mozilla InvestiGator Action Generator\n"+

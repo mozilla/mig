@@ -29,7 +29,10 @@ func main() {
 			fmt.Fprintf(os.Stderr, "FATAL: %v\n", e)
 		}
 	}()
-	homedir := client.FindHomedir()
+	homedir, err := client.FindHomedir()
+	if err != nil {
+		panic(fmt.Sprintf("unable to locate home directory: %v", err))
+	}
 	// command line options
 	var config = flag.String("c", homedir+"/.migrc", "Load configuration from file")
 	var quiet = flag.Bool("q", false, "don't display banners and prompts")

@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"os/user"
+	"path"
 	"strings"
 	"time"
 
@@ -176,7 +177,11 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 			if gnupgdir == "" {
 				gnupgdir = "/.gnupg"
 			}
-			conf.GPG.Home = FindHomedir() + gnupgdir
+			hdir, err := FindHomedir()
+			if err != nil {
+				panic(err)
+			}
+			conf.GPG.Home = path.Join(hdir, gnupgdir)
 		}
 		_, err = os.Stat(conf.GPG.Home + "/secring.gpg")
 		if err != nil {
@@ -217,16 +222,22 @@ func ReadEnvConfiguration(inconf Configuration) (conf Configuration, err error) 
 	return
 }
 
-func FindHomedir() string {
-	if os.Getenv("HOME") != "" {
-		return os.Getenv("HOME")
+// FindHomedir attempts to locate the home directory for the current user
+func FindHomedir() (ret string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("FindHomedir() -> %v", e)
+		}
+	}()
+	ret = os.Getenv("HOME")
+	if ret != "" {
+		return
 	}
-	// find keyring in default location
 	u, err := user.Current()
 	if err != nil {
 		panic(err)
 	}
-	return u.HomeDir
+	return u.HomeDir, nil
 }
 
 // MakeConfiguration generates a new configuration file for the current user
@@ -246,7 +257,10 @@ func MakeConfiguration(file string) (err error) {
 	if scanner.Text() != "y" && scanner.Text() != "Y" && scanner.Text() != "" {
 		panic("abort")
 	}
-	cfg.Homedir = FindHomedir()
+	cfg.Homedir, err = FindHomedir()
+	if err != nil {
+		panic(err)
+	}
 	cfg.GPG.Home = cfg.Homedir + "/.gnupg/"
 	_, err = os.Stat(cfg.GPG.Home + "secring.gpg")
 	if err != nil {

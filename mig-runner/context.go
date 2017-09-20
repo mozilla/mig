@@ -57,7 +57,10 @@ func initContext(config string) (ctx Context, err error) {
 	ctx.Runner.PluginDirectory = path.Join(ctx.Runner.Directory, "plugins")
 
 	if ctx.Client.ClientConfPath == "default" {
-		hdir := client.FindHomedir()
+		hdir, err := client.FindHomedir()
+		if err != nil {
+			panic(err)
+		}
 		ctx.Client.ClientConfPath = path.Join(hdir, ".migrc")
 	}
 	ctx.ClientConf, err = client.ReadConfiguration(ctx.Client.ClientConfPath)

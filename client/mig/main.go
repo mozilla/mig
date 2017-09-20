@@ -118,7 +118,10 @@ func main() {
 			os.Exit(1)
 		}
 	}()
-	homedir := client.FindHomedir()
+	homedir, err := client.FindHomedir()
+	if err != nil {
+		panic(fmt.Sprintf("unable to locate home directory: %v", err))
+	}
 	fs := flag.NewFlagSet("mig flag", flag.ContinueOnError)
 	fs.Usage = continueOnFlagError
 	fs.BoolVar(&printAndExit, "p", false, "display action json that would be used and exit")
