@@ -147,7 +147,7 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 	// try to make a signed token, just to check that we can access the private key
 	_, err = cli.MakeSignedToken()
 	if err != nil {
-		err = fmt.Errorf("failed to generate a security token using key %v from %v: %v\n",
+		err = fmt.Errorf("failed to generate a security token using key %v from %v: %v",
 			conf.GPG.KeyID, conf.GPG.Home+"/secring.gpg", err)
 		return
 	}
@@ -442,7 +442,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 			err = fmt.Errorf("error: HTTP %d. API call failed with error '%v' (code %s)",
 				resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		} else {
-			err = fmt.Errorf("error: HTTP %d %s. No response body.", resp.StatusCode, http.StatusText(resp.StatusCode))
+			err = fmt.Errorf("error: HTTP %d %s. No response body", resp.StatusCode, http.StatusText(resp.StatusCode))
 		}
 		panic(err)
 	}
@@ -554,7 +554,7 @@ func (cli Client) ManifestRecordStatus(mr mig.ManifestRecord, status string) (er
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -596,7 +596,7 @@ func (cli Client) PostNewManifest(mr mig.ManifestRecord) (err error) {
 		}
 	}
 	if resp.StatusCode != http.StatusCreated {
-		err = fmt.Errorf("error: HTTP %d. Manifest create failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Manifest create failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -634,7 +634,7 @@ func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err 
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. Signature update failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Signature update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -696,7 +696,7 @@ func (cli Client) LoaderEntryExpect(le mig.LoaderEntry, eval string) (err error)
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. Expect update failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Expect update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -738,7 +738,7 @@ func (cli Client) LoaderEntryStatus(le mig.LoaderEntry, status bool) (err error)
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -776,7 +776,7 @@ func (cli Client) LoaderEntryKey(le mig.LoaderEntry) (newle mig.LoaderEntry, err
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. Key update failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Key update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -827,7 +827,7 @@ func (cli Client) PostNewLoader(le mig.LoaderEntry) (newle mig.LoaderEntry, err 
 		}
 	}
 	if resp.StatusCode != http.StatusCreated {
-		err = fmt.Errorf("error: HTTP %d. Loader create failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Loader create failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -871,7 +871,7 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 		panic(err)
 	}
 	if resp.StatusCode != http.StatusAccepted {
-		err = fmt.Errorf("error: HTTP %d. action creation failed.", resp.StatusCode)
+		err = fmt.Errorf("error: HTTP %d. action creation failed", resp.StatusCode)
 		panic(err)
 	}
 	var resource *cljs.Resource
