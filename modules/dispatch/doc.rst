@@ -32,8 +32,19 @@ The dispatch module is configured using ``dispatch.cfg`` in the agent configurat
 
         [dispatch]
         httpurl = "https://api.to.post.to/event
+        snstopic = ""
+        outputmozdef = ""
+        channelsize = 1024
 
-Currently the dispatch module only supports HTTP POST of alert messages from modules to a
-configured HTTP endpoint.
+The dispatch module supports HTTP POST of records it generates to a specified endpoint, or
+publishing to an SNS topic.
 
-``httpurl`` can be used to configure a URL all alerts will be posted to.
+If HTTP POST is desired, set the ``httpurl`` parameter in the module configuration file.
+
+To use SNS, set ``snstopic`` to the **name** of the topic (not the ARN). This topic must
+exist in the region the instance is executing in.
+
+The ``channelsize`` parameter sets the size of the dispatch module input buffer. If the
+input buffer is full (meaning the module cannot drain messages fast enough) messages will
+be dropped and the agent log file will indicate the number of messages dropped in a given
+time period. This value can be increased as desired, and defaults to 1024.
