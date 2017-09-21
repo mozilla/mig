@@ -73,14 +73,14 @@ type DispatchRecord struct {
 	Hostname string            `json:"hostname"`
 	Env      mig.AgentEnv      `json:"environment"`
 	Tags     map[string]string `json:"tags"`
-	Details  interface{}       `json:"details"`
+	Event    interface{}       `json:"event"`
 }
 
 func (d *DispatchRecord) fromString(msg string) error {
 	d.Hostname = agtHostname
 	d.Env = env
 	d.Tags = tags
-	err := json.Unmarshal([]byte(msg), &d.Details)
+	err := json.Unmarshal([]byte(msg), &d.Event)
 	return err
 }
 
