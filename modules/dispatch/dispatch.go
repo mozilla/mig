@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/jvehent/gozdef"
 	"net/http"
 	"runtime"
 	"time"
@@ -161,10 +162,32 @@ func runDispatch(cfg config) error {
 	for {
 		msg := <-messageBuf
 		dr.fromString(msg)
-		buf, err := json.Marshal(dr)
-		if err != nil {
-			logChan <- fmt.Sprintf("create dispatch record: %v", err)
-			continue
+		var buf []byte
+		var err error
+		if cfg.Dispatch.OutputMozdef {
+			// If we are set to output records to MozDef, convert the
+			// dispatch record into a gozdef event
+			ge, err := gozdef.NewEvent()
+			if err != nil {
+				logChan <- fmt.Sprintf("create gozdef event: %v", err)
+				continue
+			}
+			ge.Info()
+			ge.Summary = "mig dispatch event"
+			ge.Category = "mig"
+			ge.Details = dr
+			ge.Tags = append(ge.Tags, "mig-dispatch")
+			buf, err = json.Marshal(ge)
+			if err != nil {
+				logChan <- fmt.Sprintf("populate gozdef event: %v", err)
+				continue
+			}
+		} else {
+			buf, err = json.Marshal(dr)
+			if err != nil {
+				logChan <- fmt.Sprintf("create dispatch record: %v", err)
+				continue
+			}
 		}
 		if cfg.Dispatch.SNSTopic != "" {
 			err := dispatchSNS(buf)
@@ -207,10 +230,11 @@ func requestHandler(p interface{}) (ret string) {
 
 type config struct {
 	Dispatch struct {
-		HTTPURL     string `json:"httpurl"`
-		SNSTopic    string `json:"snstopic"`
-		Region      string `json:"region"`
-		ChannelSize int    `json:"channelsize"`
+		OutputMozdef bool   `json:"outputmozdef"`
+		HTTPURL      string `json:"httpurl"`
+		SNSTopic     string `json:"snstopic"`
+		Region       string `json:"region"`
+		ChannelSize  int    `json:"channelsize"`
 	} `json:"dispatch"`
 }
 
