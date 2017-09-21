@@ -22,6 +22,17 @@ import (
 	"gopkg.in/gcfg.v1"
 )
 
+// dispatchChan is a special channel used to route messages to the dispatch module.
+//
+// If non-nil, the alert processor will write messages to this channel, which will then
+// be sent to the dispatch module. The dispatch channel will only be non-nil if the
+// dispatch module is active.
+//
+// The channel is protected by a mutex, to ensure deallocation of the channel if the
+// dispatch module fails is exclusive and writes cannot occur while this happens.
+var dispatchChan chan string
+var dispatchChanLock sync.Mutex
+
 // persistModuleRegister maintains a map of the running persistent modules, and
 // any socket specification registered for that module.
 //
@@ -113,21 +124,34 @@ func startPersistModule(ctx *Context, name string) (err error) {
 // the agent is running, this function will execute in a go-routine.
 func managePersistModule(ctx *Context, name string) {
 	var (
-		cmd        *exec.Cmd
-		isRunning  bool
-		pipeout    modules.ModuleWriter
-		pipein     modules.ModuleReader
-		err        error
-		failDelay  bool
-		killModule bool
-		inChan     chan modules.Message
-		lastPing   time.Time
+		cmd           *exec.Cmd
+		isRunning     bool
+		pipeout       modules.ModuleWriter
+		pipein        modules.ModuleReader
+		err           error
+		failDelay     bool
+		killModule    bool
+		inChan        chan modules.Message
+		lastPing      time.Time
+		localDispatch chan string
 	)
 
 	logfunc := func(f string, a ...interface{}) {
 		buf := fmt.Sprintf(f, a...)
 		buf = fmt.Sprintf("[%v] %v", name, buf)
 		ctx.Channels.Log <- mig.Log{Desc: buf}.Info()
+	}
+
+	// dispatchDealloc is used to deallocate the dispatch channel, if this module
+	// isn't the dispatch module, localDispatch will always be nil
+	dispatchDealloc := func() {
+		if localDispatch != nil {
+			dispatchChanLock.Lock()
+			close(dispatchChan)
+			dispatchChan = nil
+			localDispatch = nil
+			dispatchChanLock.Unlock()
+		}
 	}
 
 	pingtick := time.Tick(time.Second * 10)
@@ -181,7 +205,8 @@ func managePersistModule(ctx *Context, name string) {
 
 			// The module is now running, send any configuration parameters we have
 			// to it.
-			cm, err := modules.MakeMessageConfig(cfg)
+			cm, err := modules.MakeMessageConfig(cfg, ctx.Agent.Hostname,
+				ctx.Agent.Env, ctx.Agent.Tags)
 			if err != nil {
 				// This should never happen, but if it does we will just
 				// kill the executing module as we are unable to send any
@@ -201,11 +226,24 @@ func managePersistModule(ctx *Context, name string) {
 				continue
 			}
 		}
+
+		// If we are the dispatch module, initialize the dispatch channel
+		if name == "dispatch" {
+			if dispatchChan == nil {
+				logfunc("initializing dispatch channel")
+				dispatchChanLock.Lock()
+				dispatchChan = make(chan string, 128)
+				localDispatch = dispatchChan
+				dispatchChanLock.Unlock()
+			}
+		}
+
 		select {
 		case msg, ok := <-inChan:
 			if !ok {
 				err = cmd.Wait()
 				logfunc("module is down, %v", err)
+				dispatchDealloc()
 				isRunning = false
 				persistModRegister.remove(name)
 				failDelay = true
@@ -227,6 +265,19 @@ func managePersistModule(ctx *Context, name string) {
 					break
 				}
 				logfunc("(module log) %v", lp.Message)
+			case modules.MsgClassAlert:
+				var ap modules.AlertParams
+				buf, err := json.Marshal(msg.Parameters)
+				if err != nil {
+					logfunc("%v", err)
+					break
+				}
+				err = json.Unmarshal(buf, &ap)
+				if err != nil {
+					logfunc("%v", err)
+					break
+				}
+				alertHandler(ctx, ap.Message)
 			case modules.MsgClassRegister:
 				var rp modules.RegParams
 				buf, err := json.Marshal(msg.Parameters)
@@ -244,6 +295,21 @@ func managePersistModule(ctx *Context, name string) {
 			default:
 				logfunc("unknown message class")
 				killModule = true
+				break
+			}
+		case alertmsg := <-localDispatch:
+			am, err := modules.MakeMessageAlert(alertmsg)
+			if err != nil {
+				logfunc("failed to create alert, %v", err)
+				break
+			}
+			err = modules.WriteOutput(am, pipeout)
+			if err != nil {
+				logfunc("dispatch alert failed, %v", err)
+				dispatchDealloc()
+				isRunning = false
+				persistModRegister.remove(name)
+				failDelay = true
 				break
 			}
 		case _ = <-pingtick:
@@ -265,6 +331,7 @@ func managePersistModule(ctx *Context, name string) {
 			err = modules.WriteOutput(pm, pipeout)
 			if err != nil {
 				logfunc("ping failed, %v", err)
+				dispatchDealloc()
 				isRunning = false
 				persistModRegister.remove(name)
 				failDelay = true
@@ -282,6 +349,7 @@ func managePersistModule(ctx *Context, name string) {
 				return
 			}
 			_ = cmd.Wait()
+			dispatchDealloc()
 			isRunning = false
 			persistModRegister.remove(name)
 			failDelay = true

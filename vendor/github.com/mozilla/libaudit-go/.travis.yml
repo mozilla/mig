@@ -1,0 +1,13 @@
+language: go
+dist: trusty
+sudo: required
+notifications:
+    email: false
+go:
+    - 1.8
+before_install:
+    - sudo apt-get -qq update
+    - sudo apt-get install -y auditd
+script:
+    - sudo service auditd stop
+    - make test

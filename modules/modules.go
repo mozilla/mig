@@ -50,6 +50,7 @@ const (
 	MsgClassLog        MessageClass = "log"
 	MsgClassRegister   MessageClass = "register"
 	MsgClassConfig     MessageClass = "config"
+	MsgClassAlert      MessageClass = "alert"
 )
 
 // Parameter format expected for a log message
@@ -63,7 +64,15 @@ type RegParams struct {
 }
 
 type ConfigParams struct {
-	Config interface{} `json:"config"`
+	Config   interface{}       `json:"config"`
+	Hostname string            `json:"hostname"`
+	Env      interface{}       `json:"environment"`
+	Tags     map[string]string `json:"tags"`
+}
+
+// AlertParams describes the parameters used in an alert message
+type AlertParams struct {
+	Message string `json:"message"`
 }
 
 // Result implement the base type for results returned by modules.
@@ -200,12 +209,30 @@ func MakeMessageRegister(spec string) (rawMsg []byte, err error) {
 }
 
 // Creates a new message of class config.
-func MakeMessageConfig(cfgdata interface{}) (rawMsg []byte, err error) {
-	param := ConfigParams{Config: cfgdata}
+func MakeMessageConfig(cfgdata interface{}, hostname string, env interface{},
+	tags map[string]string) (rawMsg []byte, err error) {
+	param := ConfigParams{
+		Config:   cfgdata,
+		Hostname: hostname,
+		Env:      env,
+		Tags:     tags,
+	}
 	msg := Message{Class: MsgClassConfig, Parameters: param}
 	rawMsg, err = json.Marshal(&msg)
 	if err != nil {
 		err = fmt.Errorf("Failed to make module config message: %v", err)
+		return
+	}
+	return
+}
+
+// MakeMessageAlert creates a new message of class alert
+func MakeMessageAlert(f string, args ...interface{}) (rawMsg []byte, err error) {
+	param := AlertParams{Message: fmt.Sprintf(f, args...)}
+	msg := Message{Class: MsgClassAlert, Parameters: param}
+	rawMsg, err = json.Marshal(&msg)
+	if err != nil {
+		err = fmt.Errorf("Failed to make module alert message: %v", err)
 		return
 	}
 	return
@@ -343,11 +370,23 @@ func WatchForStop(r ModuleReader, stopChan *chan bool) error {
 	}
 }
 
+// dispatchFunc can be set by a module using RegisterDispatchFunction, and is called
+// inside DefaultPersistHandlers if the module recieves an alert message from the master
+// agent process.
+var dispatchFunc func(string)
+
+// RegisterDispatchFunction can be called by a module to register a function that will be
+// used to process incoming alert messages from the master agent process. It is primarily
+// used by the dispatch module.
+func RegisterDispatchFunction(f func(string)) {
+	dispatchFunc = f
+}
+
 // A general management function that can be called by persistent modules from the
 // RunPersist function. Looks after replying to ping messages, writing logs, and other
 // communication between the agent and the running persistent module.
 func DefaultPersistHandlers(in ModuleReader, out ModuleWriter, logch chan string,
-	errch chan error, regch chan string, confch chan []byte) {
+	errch chan error, regch chan string, alertch chan string, confch chan ConfigParams) {
 	inChan := make(chan Message, 0)
 	go func() {
 		for {
@@ -378,6 +417,17 @@ func DefaultPersistHandlers(in ModuleReader, out ModuleWriter, logch chan string
 				WriteOutput(logmsg, out)
 			}
 			os.Exit(1)
+		case s := <-alertch:
+			almsg, err := MakeMessageAlert("%v", s)
+			if err != nil {
+				failed = true
+				break
+			}
+			err = WriteOutput(almsg, out)
+			if err != nil {
+				failed = true
+				break
+			}
 		case s := <-logch:
 			logmsg, err := MakeMessageLog("%v", s)
 			if err != nil {
@@ -429,12 +479,22 @@ func DefaultPersistHandlers(in ModuleReader, out ModuleWriter, logch chan string
 					failed = true
 					break
 				}
-				buf, err = json.Marshal(confparam.Config)
-				if err != nil {
-					failed = true
-					break
+				confch <- confparam
+			case "alert":
+				if dispatchFunc != nil {
+					var alparam AlertParams
+					buf, err := json.Marshal(msg.Parameters)
+					if err != nil {
+						failed = true
+						break
+					}
+					err = json.Unmarshal(buf, &alparam)
+					if err != nil {
+						failed = true
+						break
+					}
+					dispatchFunc(alparam.Message)
 				}
-				confch <- buf
 			}
 		}
 

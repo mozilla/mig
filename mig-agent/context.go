@@ -65,6 +65,7 @@ type Context struct {
 		NewCommand                          chan []byte
 		RunAgentCommand, RunExternalCommand chan moduleOp
 		Results                             chan mig.Command
+		Alert                               chan string
 	}
 	MQ struct {
 		// configuration
@@ -290,6 +291,7 @@ func initChannels(orig_ctx Context) (ctx Context, err error) {
 	ctx.Channels.RunAgentCommand = make(chan moduleOp, 5)
 	ctx.Channels.RunExternalCommand = make(chan moduleOp, 5)
 	ctx.Channels.Results = make(chan mig.Command, 5)
+	ctx.Channels.Alert = make(chan string, 128)
 	ctx.Channels.Log = make(chan mig.Log, 97)
 	ctx.Channels.Log <- mig.Log{Desc: "leaving initChannels()"}.Debug()
 	return
