@@ -233,7 +233,6 @@ type config struct {
 		OutputMozdef bool   `json:"outputmozdef"`
 		HTTPURL      string `json:"httpurl"`
 		SNSTopic     string `json:"snstopic"`
-		Region       string `json:"region"`
 		ChannelSize  int    `json:"channelsize"`
 	} `json:"dispatch"`
 }
