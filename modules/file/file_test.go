@@ -292,6 +292,7 @@ type testParams struct {
 	size                []string
 	mode                []string
 	mtime               []string
+	bytes               []string
 	content             []string
 	md5                 []string
 	sha1                []string
