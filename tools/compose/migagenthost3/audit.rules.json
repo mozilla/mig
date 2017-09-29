@@ -1,0 +1,30 @@
+{
+    "delete": true,
+    "enable": "1",
+    "buffer": "16348",
+    "rate": "500",
+    "audit_rules": [
+        {
+	"strict_path_check": false,
+            "path": "/etc/passwd",
+            "key": "user",
+            "permission": "wa"
+        },
+        {
+	"strict_path_check": false,
+            "path": "/etc/shadow",
+            "key": "user",
+            "permission": "wa"
+        },
+        {
+            "syscalls": [
+                "execve"
+            ],
+            "key": "exec",
+            "actions": [
+                "exit",
+                "always"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,82 @@
+---
+
+version: '2.2'
+
+services:
+  migdb:
+    build: migdb/
+    env_file: compose.env
+    networks:
+      - default
+  migrelay:
+    build: migrelay/
+    env_file: compose.env
+    depends_on:
+      - migdb
+    networks:
+      - default
+  migscheduler:
+    build: migscheduler/
+    env_file: compose.env
+    depends_on:
+      - migrelay
+    networks:
+      - default
+  migapi:
+    build: migapi/
+    env_file: compose.env
+    depends_on:
+      - migrelay
+    networks:
+      - default
+    volumes:
+      - miginvestigator:/miginvestigator
+  migworkstation:
+    build: migworkstation/
+    environment:
+      CLIENTMODULES: modmemory
+    env_file: compose.env
+    depends_on:
+      - migapi
+    networks:
+      - default
+    volumes:
+      - miginvestigator:/miginvestigator
+  migagenthost1:
+    build: migagenthost1/
+    env_file: compose.env
+    depends_on:
+      - migapi
+    networks:
+      - default
+    volumes:
+      - miginvestigator:/miginvestigator
+  migagenthost2:
+    build: migagenthost2/
+    env_file: compose.env
+    depends_on:
+      - migapi
+    networks:
+      - default
+    volumes:
+      - miginvestigator:/miginvestigator
+  migagenthost3:
+    build: migagenthost3/
+    environment:
+      AGENTMODULES: modaudit moddispatch modmemory
+    env_file: compose.env
+    privileged: true
+    pid: "host"
+    depends_on:
+      - migapi
+    networks:
+      - default
+    volumes:
+      - miginvestigator:/miginvestigator
+
+
+networks:
+  default:
+
+volumes:
+ miginvestigator:
