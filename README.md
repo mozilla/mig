@@ -6,6 +6,16 @@ MIG: Mozilla InvestiGator
 
 MIG is Mozilla's platform for investigative surgery of remote endpoints.
 
+Table of Contents (ToC)
+========================
+
+* [Quick Start w/ Docker](#quick-start-with-docker)
+* [What is This?](#what-is-this)
+* [Technology](#technology)
+* [Discussion](#discussion)
+* [Documentation](#documentation)
+* [Testing](#testing)
+
 Quick Start w/ Docker
 ---------------------
 
