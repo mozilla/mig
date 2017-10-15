@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"runtime"
 	"strings"
 	"sync"
@@ -931,11 +932,11 @@ func heartbeat(ctx *Context) (err error) {
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
 		publish(ctx, mig.Mq_Ex_ToSchedulers, mig.Mq_Q_Heartbeat, body)
 		// update the local heartbeat file
-		err = ioutil.WriteFile(ctx.Agent.RunDir+"mig-agent.ok", []byte(time.Now().String()), 0644)
+		err = ioutil.WriteFile(path.Join(ctx.Agent.RunDir, "mig-agent.ok"), []byte(time.Now().String()), 0644)
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{Desc: "Failed to write mig-agent.ok to disk"}.Err()
 		}
-		os.Chmod(ctx.Agent.RunDir+"mig-agent.ok", 0644)
+		os.Chmod(path.Join(ctx.Agent.RunDir, "mig-agent.ok"), 0644)
 		time.Sleep(ctx.Sleeper)
 	}
 	return

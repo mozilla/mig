@@ -18,6 +18,7 @@ import (
 	mrand "math/rand"
 	"mig.ninja/mig"
 	"os"
+	"path"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -222,7 +223,7 @@ func initAgentID(orig_ctx AgentContext) (ctx AgentContext, err error) {
 		logChan <- mig.Log{Desc: "leaving initAgentID()"}.Debug()
 	}()
 	os.Chmod(ctx.RunDir, 0755)
-	idFile := ctx.RunDir + ".migagtid"
+	idFile := path.Join(ctx.RunDir, ".migagtid")
 	id, err := ioutil.ReadFile(idFile)
 	if err != nil {
 		logChan <- mig.Log{Desc: fmt.Sprintf("unable to read agent id from '%s': %v", idFile, err)}.Debug()
@@ -295,7 +296,7 @@ func createIDFile(ctx AgentContext) (id []byte, err error) {
 		}
 	}
 
-	idFile := ctx.RunDir + ".migagtid"
+	idFile := path.Join(ctx.RunDir, ".migagtid")
 
 	// something exists at the location of the id file, just plain remove it
 	_ = os.Remove(idFile)
