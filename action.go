@@ -380,28 +380,13 @@ func (a Action) VerifyACL(acl ACL, keyring io.Reader, onlyVerifyPubKey bool) (er
 		return
 	}
 
-	// Then, for each operation contained in the action, look for
-	// a permission that apply to it, by comparing the operation name
-	// with permission name. If none is found, use the default permission.
+	// Authorize access to the operation by verifying the fingerprints present against our
+	// ACLs
 	for _, operation := range a.Operations {
-		for _, permission := range acl {
-			for permName, _ := range permission {
-				if permName == operation.Module {
-					return verifyPermission(operation, permName, permission, fingerprints)
-				}
-			}
+		err = verifyPermission(operation.Module, acl, fingerprints)
+		if err != nil {
+			return err
 		}
-		// no specific permission found, apply the default permission
-		var defaultPerm Permission
-		for _, permission := range acl {
-			for permName, _ := range permission {
-				if permName == "default" {
-					defaultPerm = permission
-					break
-				}
-			}
-		}
-		return verifyPermission(operation, "default", defaultPerm, fingerprints)
 	}
 	return
 }
