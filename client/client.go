@@ -175,6 +175,9 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 		}
 	}
 	err = gcfg.ReadFileInto(&conf, file)
+	if err != nil {
+		panic(err)
+	}
 	// If standard PGP based authentication is being used, validate these settings
 	// from the configuration file
 	if conf.GPG.UseAPIKeyAuth == "" {
