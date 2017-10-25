@@ -4,5 +4,7 @@
 
 package yara
 
-// #cgo LDFLAGS: -lyara
+// #cgo !windows,!no_pkg_config  pkg-config: --libs yara
+// #cgo !windows,!no_pkg_config  pkg-config: --cflags yara
+// #cgo windows no_pkg_config    LDFLAGS: -lyara
 import "C"

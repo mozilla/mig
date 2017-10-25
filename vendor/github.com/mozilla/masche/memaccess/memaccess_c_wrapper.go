@@ -13,9 +13,7 @@ import (
 	"unsafe"
 )
 
-func nextReadableMemoryRegion(p process.Process, address uintptr) (region MemoryRegion, harderror error,
-	softerrors []error) {
-
+func nextReadableMemoryRegion(p process.Process, address uintptr) (region MemoryRegion, softerrors []error, harderror error) {
 	var isAvailable C.bool
 	var cRegion C.memory_region_t
 
@@ -24,17 +22,17 @@ func nextReadableMemoryRegion(p process.Process, address uintptr) (region Memory
 		C.memory_address_t(address),
 		&isAvailable,
 		&cRegion)
-	harderror, softerrors = cresponse.GetResponsesErrors(unsafe.Pointer(response))
+	softerrors, harderror = cresponse.GetResponsesErrors(unsafe.Pointer(response))
 	C.response_free(response)
 
 	if harderror != nil || isAvailable == false {
-		return NoRegionAvailable, harderror, softerrors
+		return NoRegionAvailable, softerrors, harderror
 	}
 
-	return MemoryRegion{uintptr(cRegion.start_address), uint(cRegion.length)}, harderror, softerrors
+	return MemoryRegion{uintptr(cRegion.start_address), uint(cRegion.length)}, softerrors, harderror
 }
 
-func copyMemory(p process.Process, address uintptr, buffer []byte) (harderror error, softerrors []error) {
+func copyMemory(p process.Process, address uintptr, buffer []byte) (softerrors []error, harderror error) {
 	buf := unsafe.Pointer(&buffer[0])
 
 	n := len(buffer)
@@ -47,7 +45,7 @@ func copyMemory(p process.Process, address uintptr, buffer []byte) (harderror er
 		&bytesRead,
 	)
 
-	harderror, softerrors = cresponse.GetResponsesErrors(unsafe.Pointer(resp))
+	softerrors, harderror = cresponse.GetResponsesErrors(unsafe.Pointer(resp))
 	C.response_free(resp)
 
 	if harderror != nil {

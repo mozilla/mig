@@ -15,13 +15,13 @@ import (
 )
 
 type ComplianceItem struct {
-	Utctimestamp string           `json:"utctimestamp"`
-	Target       string           `json:"target"`
-	Policy       CompliancePolicy `json:"policy"`
-	Check        ComplianceCheck  `json:"check"`
-	Compliance   bool             `json:"compliance"`
-	Link         string           `json:"link"`
-	Tags         interface{}      `json:"tags"`
+	Utctimestamp string            `json:"utctimestamp"`
+	Target       string            `json:"target"`
+	Policy       CompliancePolicy  `json:"policy"`
+	Check        ComplianceCheck   `json:"check"`
+	Compliance   bool              `json:"compliance"`
+	Link         string            `json:"link"`
+	Tags         map[string]string `json:"tags"`
 }
 
 type CompliancePolicy struct {
@@ -43,10 +43,6 @@ type ComplianceTest struct {
 	Value string `json:"value"`
 }
 
-type ComplianceTags struct {
-	Operator string `json:"operator"`
-}
-
 func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, err error) {
 	for _, cmd := range commands {
 		var bitem ComplianceItem
@@ -58,10 +54,8 @@ func commandsToComplianceItems(commands []mig.Command) (items []ComplianceItem, 
 		bitem.Check.Ref = cmd.Action.Threat.Ref
 		bitem.Check.Description = cmd.Action.Name
 		bitem.Link = fmt.Sprintf("%s/command?commandid=%.0f", ctx.Server.BaseURL, cmd.ID)
-		if _, ok := cmd.Agent.Tags.(map[string]interface{})["operator"]; ok {
-			var t ComplianceTags
-			t.Operator = cmd.Agent.Tags.(map[string]interface{})["operator"].(string)
-			bitem.Tags = t
+		if _, ok := cmd.Agent.Tags["operator"]; ok {
+			bitem.Tags["operator"] = cmd.Agent.Tags["operator"]
 		}
 		for i, result := range cmd.Results {
 			buf, err := json.Marshal(result)

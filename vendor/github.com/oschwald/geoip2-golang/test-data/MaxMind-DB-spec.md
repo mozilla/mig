@@ -118,7 +118,7 @@ The codes may include additional information such as script or country
 identifiers, like "zh-TW" or "mn-Cyrl-MN". The additional identifiers will be
 separated by a dash character ("-").
 
-This is key is optional. However, creators of databases are strongly
+This key is optional. However, creators of databases are strongly
 encouraged to include a description in at least one language.
 
 ### Calculating the Search Tree Section Size
@@ -138,7 +138,7 @@ database. For example, the city database needs many more small netblocks than
 the country database.
 
 The top most node is always located at the beginning of the search tree
-section's address space.
+section's address space. The top node is node 0.
 
 Each node consists of two records, each of which is a pointer to an address in
 the file.

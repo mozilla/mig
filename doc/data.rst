@@ -8,23 +8,6 @@ MIG Data
 Postgresql
 ----------
 
-Database creation script
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Two scripts can be used to create a database for MIG.
-
-* `createlocaldb.sh`_ will create a database on an instance of postgresql
-  running locally. This is used by the standalone installation script.
-
-.. _`createlocaldb.sh`: https://github.com/mozilla/mig/blob/master/src/mig/database/createlocaldb.sh
-
-* `createremotedb.sh`_ will connect to an existing MIG database on a remote
-  postgresql server. This is a standard production setup. It assumes that you
-  have created a database beforehand. You can pass the DB credentials by
-  editing the bash variables at the top of the script before running it.
-
-.. _`createremotedb.sh`: https://github.com/mozilla/mig/blob/master/src/mig/database/createremotedb.sh
-
 Structure & Tables
 ~~~~~~~~~~~~~~~~~~
 

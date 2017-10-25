@@ -93,7 +93,3 @@ func getSysProf() (sysv, kerv string, err error) {
 exit:
 	return
 }
-
-func GetRunDir() string {
-	return "/Library/Preferences/mig/"
-}

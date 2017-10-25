@@ -15,36 +15,45 @@ to build with YARA 3.3.0, please build with the `yara3.3` build tag.
 
 ### Unix
 
-On a Unix system with libyara properly installed, this should work,
-provided that `GOPATH` is set:
+On a Unix system with _libyara_, its header files, and _pkg-config_
+installed, the following should simply work, provided that `GOPATH` is
+set:
 
 ```
 go get github.com/hillu/go-yara
 go install github.com/hillu/go-yara
 ```
 
-Depending on what location libyara and its headers have been
-installed, proper `CFLAGS` and `LDFLAGS` may have to be added to
-`cgo.go` or be specified via environment variables (`CGO_CFLAGS` and
-`CGO_LDFLAGS`).
+The _pkg-config_ program should be able to output the correct compiler
+and linker flags from the `yara.pc` file that has been generated and
+installed by _YARA_'s build system. If this is not the case, the build
+tag `no_pkg_config` can be used to override _pkg-config_'s output and
+the flags have to be set via the `CGO_CFLAGS` and `CGO_LDFLAGS`
+environment variables, e.g.:
 
-Linker errors buried in the CGO output such as
+```
+export CGO_CFLAGS="-I${YARA_SRC}/libyara/include"
+export CGO_LDFLAGS="-L${YARA_SRC}/libyara/.libs -lyara"
+go install github.com/hillu/go-yara -tags no_pkg_config
+```
+
+Linker errors in the compiler output such as
 
     undefined reference to `yr_compiler_add_file'
 
-probably mean that the linker is looking at an old version of the YARA
-library.
+indicate that the linker is probably looking at an old version of
+_libyara_.
 
 ### Cross-building for Windows
 
-YARA and go-yara can be cross-built on a Debian system as long as the
+_YARA_ and _go-yara_ can be cross-built on a Debian system as long as the
 Go compiler contains Windows runtime libraries with CGO support
 ([cf.](https://github.com/hillu/golang-go-cross)).
 
-The YARA library is built from the source tree with the MinGW compiler
-using the usual `./configure && make && make install`. Then go-yara is
-built and installed to `GOPATH` using `go install`. Some environment
-variables need to be passed to the `go` tool:
+After _libyara_ has been built from the source tree with the MinGW
+compiler using the usual `./configure && make && make install`,
+_go-yara_ can be built and installed. Some environment variables need
+to be passed to the `go` tool:
 
 - `GOOS`, `GOARCH` indicate the cross compilation
   target.

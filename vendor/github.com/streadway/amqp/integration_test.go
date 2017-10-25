@@ -39,8 +39,24 @@ func TestIntegrationOpenCloseChannel(t *testing.T) {
 	if c := integrationConnection(t, "channel"); c != nil {
 		defer c.Close()
 
-		if _, err := c.Channel(); err != nil {
-			t.Errorf("Channel could not be opened: %s", err)
+		ch, err := c.Channel()
+		if err != nil {
+			t.Fatalf("create channel 1: %s", err)
+		}
+		ch.Close()
+	}
+}
+
+func TestIntegrationHighChannelChurnInTightLoop(t *testing.T) {
+	if c := integrationConnection(t, "channel churn"); c != nil {
+		defer c.Close()
+
+		for i := 0; i < 1000; i++ {
+			ch, err := c.Channel()
+			if err != nil {
+				t.Fatalf("create channel 1: %s", err)
+			}
+			ch.Close()
 		}
 	}
 }
@@ -1694,6 +1710,72 @@ func TestRabbitMQQueueNackMultipleRequeue(t *testing.T) {
 	}
 }
 
+func TestConsumerCancelNotification(t *testing.T) {
+	c := integrationConnection(t, "consumer cancel notification")
+	if c != nil {
+		defer c.Close()
+		ch, err := c.Channel()
+		if err != nil {
+			t.Fatalf("got error on channel.open: %v", err)
+		}
+
+		queue := "test-consumer-cancel-notification"
+
+		if _, err := ch.QueueDeclare(queue, false, true, false, false, nil); err != nil {
+			t.Fatalf("expected to declare a queue: %v", err)
+		}
+
+		if _, err := ch.Consume(queue, "", false, false, false, false, nil); err != nil {
+			t.Fatalf("basic.consume failed")
+		}
+		// consumer cancel notification channel
+		ccnChan := make(chan string, 1)
+		ch.NotifyCancel(ccnChan)
+
+		if _, err := ch.QueueDelete(queue, false, false, true); err != nil {
+			t.Fatalf("queue.delete failed: %s", err)
+		}
+
+		select {
+		case <-ccnChan:
+			// do nothing
+		case <-time.After(time.Second * 10):
+			t.Errorf("basic.cancel wasn't received")
+			t.Fail()
+		}
+		// we don't close ccnChan because channel shutdown
+		// does it
+	}
+}
+
+func TestConcurrentChannelAndConnectionClose(t *testing.T) {
+	c := integrationConnection(t, "concurrent channel and connection test")
+	if c != nil {
+		ch, err := c.Channel()
+		if err != nil {
+			t.Fatalf("got error on channel.open: %v", err)
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		starter := make(chan struct{})
+		go func() {
+			defer wg.Done()
+			<-starter
+			c.Close()
+		}()
+
+		go func() {
+			defer wg.Done()
+			<-starter
+			ch.Close()
+		}()
+		close(starter)
+		wg.Wait()
+	}
+}
+
 /*
  * Support for integration tests
  */
@@ -1713,8 +1795,8 @@ func loggedConnection(t *testing.T, conn *Connection, name string) *Connection {
 	return conn
 }
 
-// Returns a conneciton to the AMQP if the AMQP_URL environment
-// variable is set and a connnection can be established.
+// Returns a connection to the AMQP if the AMQP_URL environment
+// variable is set and a connection can be established.
 func integrationConnection(t *testing.T, name string) *Connection {
 	conn, err := Dial(integrationURLFromEnv())
 	if err != nil {

@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func listLoadedLibraries(p process.Process) (libraries []string, harderror error, softerrors []error) {
+func listLoadedLibraries(p process.Process) (libraries []string, softerrors []error, harderror error) {
 
 	mapsFile, harderror := os.Open(common.MapsFilePathFromPid(p.Pid()))
 	if harderror != nil {
@@ -17,7 +17,7 @@ func listLoadedLibraries(p process.Process) (libraries []string, harderror error
 	defer mapsFile.Close()
 
 	scanner := bufio.NewScanner(mapsFile)
-	processName, harderror, softerrors := p.Name()
+	processName, softerrors, harderror := p.Name()
 	if harderror != nil {
 		return
 	}
@@ -28,7 +28,7 @@ func listLoadedLibraries(p process.Process) (libraries []string, harderror error
 		items := common.SplitMapsFileEntry(line)
 
 		if len(items) != 6 {
-			return libs, fmt.Errorf("Unrecognised maps line: %s", line), softerrors
+			return libs, softerrors, fmt.Errorf("Unrecognised maps line: %s", line)
 		}
 
 		path := items[5]

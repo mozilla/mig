@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"os/user"
+	"path"
 	"strings"
 	"time"
 
@@ -34,8 +35,7 @@ import (
 
 var version string
 
-// A Client provides all the needed functionalities to interact with the MIG API.
-// It should be initialized with a proper configuration file.
+// Client is a type used to interact with the MIG API.
 type Client struct {
 	API     *http.Client
 	Token   string
@@ -46,16 +46,19 @@ type Client struct {
 
 // Configuration stores the live configuration and global parameters of a client
 type Configuration struct {
-	API     ApiConf    // location of the MIG API
+	API     APIConf    // location of the MIG API
 	Homedir string     // location of the user's home directory
 	GPG     GpgConf    // location of the user's secring
 	Targets TargetConf // Target macro specification
 }
 
-type ApiConf struct {
+// APIConf stores configuration values related to the API connectivity.
+type APIConf struct {
 	URL            string
 	SkipVerifyCert bool
 }
+
+// GpgConf stores configuration values related to client keyring access.
 type GpgConf struct {
 	Home          string // Path to GPG keyrings
 	KeyID         string // GPG key ID to use for X-PGPAUTHORIZATION and action signing
@@ -63,12 +66,14 @@ type GpgConf struct {
 	UseAPIKeyAuth string // Prefer X-MIGAPIKEY authentication for API access, set to API key
 }
 
+// TargetConf stores macros present in the configuration file that can be used
+// as short form targeting strings.
 type TargetConf struct {
 	Macro  []string
 	macros map[string]string
 }
 
-// Used by the macro parser to add processed target macros to the client
+// addMacro is used by the macro parser to add processed target macros to the client
 // configuration
 func (t *TargetConf) addMacro(name string, tgt string) {
 	if t.macros == nil {
@@ -77,6 +82,7 @@ func (t *TargetConf) addMacro(name string, tgt string) {
 	t.macros[name] = tgt
 }
 
+// getMacro returns a macro from the targeting configuration by name
 func (t *TargetConf) getMacro(name string) (string, error) {
 	if val, ok := t.macros[name]; ok {
 		return val, nil
@@ -91,7 +97,8 @@ func (t *TargetConf) getMacro(name string) (string, error) {
 // behavior is required for automated operation.
 var clientPassphrase string
 
-// Set the GPG passphrase to be used by the client for secret key operations.
+// ClientPassphrase sets the GPG passphrase to be used by the client for secret key operations,
+// this can be used to cache a passphrase to avoid being prompted.
 func ClientPassphrase(s string) {
 	clientPassphrase = s
 }
@@ -140,7 +147,7 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 	// try to make a signed token, just to check that we can access the private key
 	_, err = cli.MakeSignedToken()
 	if err != nil {
-		err = fmt.Errorf("failed to generate a security token using key %v from %v: %v\n",
+		err = fmt.Errorf("failed to generate a security token using key %v from %v: %v",
 			conf.GPG.KeyID, conf.GPG.Home+"/secring.gpg", err)
 		return
 	}
@@ -157,7 +164,11 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 	}()
 	_, err = os.Stat(file)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "no configuration file found at %s\n", file)
+		if !os.IsNotExist(err) {
+			panic(err)
+		}
+		// Otherwise, the file did not exist so we can create it if requested
+		fmt.Fprintf(os.Stderr, "no configuration found at %v\n", file)
 		err = MakeConfiguration(file)
 		if err != nil {
 			panic(err)
@@ -175,7 +186,11 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 			if gnupgdir == "" {
 				gnupgdir = "/.gnupg"
 			}
-			conf.GPG.Home = FindHomedir() + gnupgdir
+			hdir, err := FindHomedir()
+			if err != nil {
+				panic(err)
+			}
+			conf.GPG.Home = path.Join(hdir, gnupgdir)
 		}
 		_, err = os.Stat(conf.GPG.Home + "/secring.gpg")
 		if err != nil {
@@ -199,9 +214,9 @@ func ReadConfiguration(file string) (conf Configuration, err error) {
 	return
 }
 
-// Read any possible configuration values from the environment; currently we only
-// load a passphrase here if provided, but conf is passed/returned for any future
-// requirements to override file based configuration using environment options.
+// ReadEnvConfiguration reads any possible configuration values from the environment;
+// currently we only load a passphrase here if provided, but conf is passed/returned
+// for any future requirements to override file based configuration using environment options.
 func ReadEnvConfiguration(inconf Configuration) (conf Configuration, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -216,16 +231,22 @@ func ReadEnvConfiguration(inconf Configuration) (conf Configuration, err error) 
 	return
 }
 
-func FindHomedir() string {
-	if os.Getenv("HOME") != "" {
-		return os.Getenv("HOME")
+// FindHomedir attempts to locate the home directory for the current user
+func FindHomedir() (ret string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("FindHomedir() -> %v", e)
+		}
+	}()
+	ret = os.Getenv("HOME")
+	if ret != "" {
+		return
 	}
-	// find keyring in default location
 	u, err := user.Current()
 	if err != nil {
 		panic(err)
 	}
-	return u.HomeDir
+	return u.HomeDir, nil
 }
 
 // MakeConfiguration generates a new configuration file for the current user
@@ -237,23 +258,29 @@ func MakeConfiguration(file string) (err error) {
 	}()
 	var cfg Configuration
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Printf("would you like to generate a new configuration file at %s? Y/n> ", file)
+	fmt.Printf("generate a new configuration file at %v? (Y/n)> ", file)
 	scanner.Scan()
 	if err := scanner.Err(); err != nil {
 		panic(err)
 	}
 	if scanner.Text() != "y" && scanner.Text() != "Y" && scanner.Text() != "" {
-		panic("abort")
+		panic("aborting creating configuration file")
 	}
-	cfg.Homedir = FindHomedir()
-	cfg.GPG.Home = cfg.Homedir + "/.gnupg/"
-	_, err = os.Stat(cfg.GPG.Home + "secring.gpg")
-	if err != nil {
-		panic("couldn't find secring at " + cfg.GPG.Home + "secring.gpg")
-	}
-	sr, err := os.Open(cfg.GPG.Home + "secring.gpg")
+	cfg.Homedir, err = FindHomedir()
 	if err != nil {
 		panic(err)
+	}
+	cfg.GPG.Home = path.Join(cfg.Homedir, ".gnupg")
+	sr, err := os.Open(path.Join(cfg.GPG.Home, "secring.gpg"))
+	if err != nil {
+		// We were unable to open the secring to identify the private key for the MIG
+		// client tools to use. Display some additional info here and abort.
+		fmt.Printf("\nIt was not possible to open your secring.gpg. The configuration generator expects\n"+
+			"to find the keyring in the standard GPG location, and is looking in %v. If your keyring\n"+
+			"is located elsewhere, you may need to create the configuration file yourself. Consult the\n"+
+			"documentation for additional details.\n\n",
+			path.Join(cfg.GPG.Home))
+		panic(fmt.Sprintf("error opening secring: %v", err))
 	}
 	defer sr.Close()
 	keyring, err := openpgp.ReadKeyRing(sr)
@@ -268,13 +295,13 @@ func MakeConfiguration(file string) (err error) {
 			name = identity.Name
 			break
 		}
-		fmt.Printf("found key '%s' with fingerprint '%s'.\nuse this key? Y/n> ", name, fingerprint)
+		fmt.Printf("found key %q with fingerprint %q.\nuse this key? (Y/n)> ", name, fingerprint)
 		scanner.Scan()
 		if err := scanner.Err(); err != nil {
 			panic(err)
 		}
 		if scanner.Text() == "y" || scanner.Text() == "Y" || scanner.Text() == "" {
-			fmt.Printf("using key %s\n", fingerprint)
+			fmt.Printf("using key %q\n", fingerprint)
 			cfg.GPG.KeyID = fingerprint
 			break
 		}
@@ -283,7 +310,7 @@ func MakeConfiguration(file string) (err error) {
 		panic("no suitable key found in " + sr.Name())
 	}
 	for {
-		fmt.Printf("what is the location of the API? (ex: https://mig.example.net/api/v1/) > ")
+		fmt.Printf("URL of API? (e.g., https://mig.example.net/api/v1/)> ")
 		scanner.Scan()
 		if err := scanner.Err(); err != nil {
 			panic(err)
@@ -291,7 +318,7 @@ func MakeConfiguration(file string) (err error) {
 		cfg.API.URL = scanner.Text()
 		_, err := http.Get(cfg.API.URL)
 		if err != nil {
-			fmt.Println("API connection failed. Wrong address?")
+			fmt.Printf("API connection failed: %v\n", err)
 			continue
 		}
 		break
@@ -300,10 +327,12 @@ func MakeConfiguration(file string) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(fd, "[api]\n\turl = \"%s\"\n", cfg.API.URL)
-	fmt.Fprintf(fd, "[gpg]\n\thome = \"%s\"\n\tkeyid = \"%s\"\n", cfg.GPG.Home, cfg.GPG.KeyID)
+	fmt.Fprintf(fd, "[api]\n\turl = \"%v\"\n", cfg.API.URL)
+	fmt.Fprintf(fd, "[gpg]\n\thome = \"%v\"\n\tkeyid = \"%v\"\n", cfg.GPG.Home, cfg.GPG.KeyID)
+	// Add one initial target macro
+	fmt.Fprintf(fd, "[targets]\n\tmacro = allonline:status='online'\n")
 	fd.Close()
-	fmt.Println("MIG client configuration generated at", file)
+	fmt.Printf("\ncreated configuration file at %v\n\n", file)
 	return
 }
 
@@ -416,7 +445,7 @@ func (cli Client) GetAPIResource(target string) (resource *cljs.Resource, err er
 			err = fmt.Errorf("error: HTTP %d. API call failed with error '%v' (code %s)",
 				resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		} else {
-			err = fmt.Errorf("error: HTTP %d %s. No response body.", resp.StatusCode, http.StatusText(resp.StatusCode))
+			err = fmt.Errorf("error: HTTP %d %s. No response body", resp.StatusCode, http.StatusText(resp.StatusCode))
 		}
 		panic(err)
 	}
@@ -469,7 +498,7 @@ func (cli Client) GetManifestRecord(mid float64) (mr mig.ManifestRecord, err err
 	return
 }
 
-// Retrieve list of known loader entries that will match manifest mid
+// GetManifestLoaders retrieves list of known loader entries that will match manifest mid
 func (cli Client) GetManifestLoaders(mid float64) (ldrs []mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -497,7 +526,7 @@ func (cli Client) GetManifestLoaders(mid float64) (ldrs []mig.LoaderEntry, err e
 	return
 }
 
-// Change the status of an existing manifest record
+// ManifestRecordStatus changes the status of an existing manifest record
 func (cli Client) ManifestRecordStatus(mr mig.ManifestRecord, status string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -528,14 +557,14 @@ func (cli Client) ManifestRecordStatus(mr mig.ManifestRecord, status string) (er
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
 	return
 }
 
-// Post a new manifest record for storage through the API
+// PostNewManifest posts a new manifest record for storage through the API
 func (cli Client) PostNewManifest(mr mig.ManifestRecord) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -570,14 +599,14 @@ func (cli Client) PostNewManifest(mr mig.ManifestRecord) (err error) {
 		}
 	}
 	if resp.StatusCode != http.StatusCreated {
-		err = fmt.Errorf("error: HTTP %d. Manifest create failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Manifest create failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
 	return
 }
 
-// Add a new signature to an existing manifest known to the API
+// PostManifestSignature adds a new signature to an existing manifest known to the API
 func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -608,7 +637,7 @@ func (cli Client) PostManifestSignature(mr mig.ManifestRecord, sig string) (err 
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. Signature update failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Signature update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -637,7 +666,7 @@ func (cli Client) GetLoaderEntry(lid float64) (le mig.LoaderEntry, err error) {
 	return
 }
 
-// Change the expect fields of an existing loader entry
+// LoaderEntryExpect changes the expect fields of an existing loader entry
 func (cli Client) LoaderEntryExpect(le mig.LoaderEntry, eval string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -670,14 +699,14 @@ func (cli Client) LoaderEntryExpect(le mig.LoaderEntry, eval string) (err error)
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. Expect update failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Expect update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
 	return
 }
 
-// Change the status of an existing loader entry
+// LoaderEntryStatus changes the status of an existing loader entry
 func (cli Client) LoaderEntryStatus(le mig.LoaderEntry, status bool) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -712,14 +741,14 @@ func (cli Client) LoaderEntryStatus(le mig.LoaderEntry, status bool) (err error)
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Status update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
 	return
 }
 
-// Change the key on an existing loader entry
+// LoaderEntryKey changes the key on an existing loader entry
 func (cli Client) LoaderEntryKey(le mig.LoaderEntry) (newle mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -750,7 +779,7 @@ func (cli Client) LoaderEntryKey(le mig.LoaderEntry) (newle mig.LoaderEntry, err
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error: HTTP %d. Key update failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Key update failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -761,7 +790,7 @@ func (cli Client) LoaderEntryKey(le mig.LoaderEntry) (newle mig.LoaderEntry, err
 	return
 }
 
-// Post a new loader entry for storage through the API
+// PostNewLoader posts a new loader entry for storage through the API
 func (cli Client) PostNewLoader(le mig.LoaderEntry) (newle mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -801,7 +830,7 @@ func (cli Client) PostNewLoader(le mig.LoaderEntry) (newle mig.LoaderEntry, err 
 		}
 	}
 	if resp.StatusCode != http.StatusCreated {
-		err = fmt.Errorf("error: HTTP %d. Loader create failed with error '%v' (code %s).",
+		err = fmt.Errorf("error: HTTP %d. Loader create failed with error '%v' (code %s)",
 			resp.StatusCode, resource.Collection.Error.Message, resource.Collection.Error.Code)
 		panic(err)
 	}
@@ -845,7 +874,7 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 		panic(err)
 	}
 	if resp.StatusCode != http.StatusAccepted {
-		err = fmt.Errorf("error: HTTP %d. action creation failed.", resp.StatusCode)
+		err = fmt.Errorf("error: HTTP %d. action creation failed", resp.StatusCode)
 		panic(err)
 	}
 	var resource *cljs.Resource
@@ -860,6 +889,7 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	return
 }
 
+// ValueToAction converts JSON data in interface v into a mig.Action
 func ValueToAction(v interface{}) (a mig.Action, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -877,6 +907,7 @@ func ValueToAction(v interface{}) (a mig.Action, err error) {
 	return
 }
 
+// ValueToLoaderEntry converts JSON data in interface v into a mig.LoaderEntry
 func ValueToLoaderEntry(v interface{}) (l mig.LoaderEntry, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -894,6 +925,7 @@ func ValueToLoaderEntry(v interface{}) (l mig.LoaderEntry, err error) {
 	return
 }
 
+// ValueToManifestRecord converts JSON data in interface v into a mig.ManifestRecord
 func ValueToManifestRecord(v interface{}) (m mig.ManifestRecord, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -911,6 +943,7 @@ func ValueToManifestRecord(v interface{}) (m mig.ManifestRecord, err error) {
 	return
 }
 
+// GetCommand fetches the specified command ID from the API and returns it
 func (cli Client) GetCommand(cmdid float64) (cmd mig.Command, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -932,6 +965,7 @@ func (cli Client) GetCommand(cmdid float64) (cmd mig.Command, err error) {
 	return
 }
 
+// ValueToCommand converts JSON data in interface v into a mig.Command
 func ValueToCommand(v interface{}) (cmd mig.Command, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -949,6 +983,7 @@ func ValueToCommand(v interface{}) (cmd mig.Command, err error) {
 	return
 }
 
+// GetAgent fetches the specified agent ID from the API and returns it
 func (cli Client) GetAgent(agtid float64) (agt mig.Agent, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -970,6 +1005,7 @@ func (cli Client) GetAgent(agtid float64) (agt mig.Agent, err error) {
 	return
 }
 
+// ValueToAgent converts JSON data in interface v into a mig.Agent
 func ValueToAgent(v interface{}) (agt mig.Agent, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -987,6 +1023,7 @@ func ValueToAgent(v interface{}) (agt mig.Agent, err error) {
 	return
 }
 
+// GetInvestigator fetches the specified investigator ID from the API and returns it
 func (cli Client) GetInvestigator(iid float64) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1206,6 +1243,7 @@ func (cli Client) PostInvestigatorAPIKeyStatus(iid float64, newstatus string) (i
 	return
 }
 
+// ValueToInvestigator converts JSON data in interface v into a mig.Investigator
 func ValueToInvestigator(v interface{}) (inv mig.Investigator, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1251,21 +1289,21 @@ func (cli Client) MakeSignedToken() (token string, err error) {
 //
 // This function should be called on the action prior to signing it for submission
 // to the API.
-func (cli Client) CompressAction(a mig.Action) (comp_action mig.Action, err error) {
-	comp_action = a
+func (cli Client) CompressAction(a mig.Action) (compAction mig.Action, err error) {
+	compAction = a
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("CompressAction() -> %v", e)
 		}
 	}()
-	for i := range comp_action.Operations {
-		if !comp_action.Operations[i].WantCompressed {
+	for i := range compAction.Operations {
+		if !compAction.Operations[i].WantCompressed {
 			continue
 		}
-		if comp_action.Operations[i].IsCompressed {
+		if compAction.Operations[i].IsCompressed {
 			continue
 		}
-		err = comp_action.Operations[i].CompressOperationParam()
+		err = compAction.Operations[i].CompressOperationParam()
 		if err != nil {
 			panic(err)
 		}
@@ -1275,7 +1313,7 @@ func (cli Client) CompressAction(a mig.Action) (comp_action mig.Action, err erro
 
 // SignAction takes a MIG Action, signs it with the key identified in the configuration
 // and returns the signed action
-func (cli Client) SignAction(a mig.Action) (signed_action mig.Action, err error) {
+func (cli Client) SignAction(a mig.Action) (signedAction mig.Action, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("SignAction() -> %v", e)
@@ -1291,7 +1329,7 @@ func (cli Client) SignAction(a mig.Action) (signed_action mig.Action, err error)
 		panic(err)
 	}
 	a.PGPSignatures = append(a.PGPSignatures, sig)
-	signed_action = a
+	signedAction = a
 	return
 }
 
@@ -1315,9 +1353,9 @@ func (cli Client) SignManifest(m mig.ManifestRecord) (ret string, err error) {
 	return
 }
 
-// Resolves target macros; clients should pass the action target string here, and this
-// function will return the resolved target if it is a valid macro, otherwise it just
-// returns the passed target string
+// ResolveTargetMacro resolves macros specified by a client; clients should pass the
+// action target string here, and this function will return the resolved target if it
+// is a valid macro, otherwise it just returns the passed target string
 func (cli Client) ResolveTargetMacro(target string) string {
 	v, err := cli.Conf.Targets.getMacro(target)
 	if err != nil {
@@ -1354,8 +1392,14 @@ func (cli Client) EvaluateAgentTarget(target string) (agents []mig.Agent, err er
 }
 
 // FollowAction continuously loops over an action and prints its completion status in os.Stderr.
-// when the action reaches its expiration date, FollowAction prints its final status and returns.
-func (cli Client) FollowAction(a mig.Action, total int) (err error) {
+// When the action reaches its expiration date, FollowAction prints its final status and returns.
+//
+// a represents the action being followed, and total indicates the total number of agents
+// the action was submitted to and is used to initialize the progress meter.
+//
+// stop is of type chan bool, and passing a value to this channel will cause the routine to return
+// immediately.
+func (cli Client) FollowAction(a mig.Action, total int, stop chan bool) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("followAction() -> %v", e)
@@ -1365,12 +1409,19 @@ func (cli Client) FollowAction(a mig.Action, total int) (err error) {
 	previousctr := 0
 	status := ""
 	attempts := 0
+	cancelfollow := false
 	var completion float64
 	bar := pb.New(total)
 	bar.ShowSpeed = true
 	bar.SetMaxWidth(80)
 	bar.Output = os.Stderr
 	bar.Start()
+	go func() {
+		_ = <-stop
+		bar.Postfix(" [cancelling]")
+		cancelfollow = true
+		bar.Finish()
+	}()
 	for {
 		a, _, err = cli.GetAction(a.ID)
 		if err != nil {
@@ -1392,6 +1443,10 @@ func (cli Client) FollowAction(a mig.Action, total int) (err error) {
 			(time.Now().After(a.ExpireAfter.Add(10 * time.Second))) {
 			goto finish
 			break
+		}
+		if cancelfollow {
+			// We have been asked to stop, just return
+			return nil
 		}
 		if a.Counters.Done > 0 && a.Counters.Done > previousctr {
 			completion = (float64(a.Counters.Done) / float64(a.Counters.Sent)) * 100
@@ -1472,6 +1527,15 @@ func (cli Client) FetchActionResults(a mig.Action) (ret []mig.Command, err error
 	return ret, nil
 }
 
+// PrintActionResults fetches the results of action a from the API and prints
+// the results on stdout.
+//
+// show can either be found, notfound, or all and can be used to control which results
+// are fetched and displayed for a given action.
+//
+// The render parameter can be used to indicate the results should be rendered in a
+// certain way (as opposed to just printing the agent results). If this value is set to
+// map, results will be rendered into a map (geo-located).
 func (cli Client) PrintActionResults(a mig.Action, show, render string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1616,6 +1680,7 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 	return
 }
 
+// PrintCommandResults prints the results of mig.Command cmd.
 func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -1669,13 +1734,13 @@ func PrintCommandResults(cmd mig.Command, onlyFound, showAgent bool) (err error)
 	return
 }
 
-// EnableDebug() prints debug messages to stdout
+// EnableDebug enables debugging mode in the client
 func (cli *Client) EnableDebug() {
 	cli.debug = true
 	return
 }
 
-// DisableDebug() disables the printing of debug messages to stdout
+// DisableDebug disables debugging mode in the client
 func (cli *Client) DisableDebug() {
 	cli.debug = false
 	return

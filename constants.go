@@ -10,7 +10,6 @@ const (
 	// rabbitmq exchanges and common queues
 	Mq_Ex_ToAgents     = "toagents"
 	Mq_Ex_ToSchedulers = "toschedulers"
-	Mq_Ex_ToWorkers    = "toworkers"
 	Mq_Q_Heartbeat     = "mig.agt.heartbeats"
 	Mq_Q_Results       = "mig.agt.results"
 

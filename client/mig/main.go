@@ -3,6 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
+
+// mig is the command line tool that investigators can use to launch actions
+// for execution by agents to retrieve/display the results of the actions.
 package main
 
 import (
@@ -12,6 +15,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 
 	"mig.ninja/mig"
@@ -21,63 +25,70 @@ import (
 
 func usage() {
 	fmt.Printf(`%s - Mozilla InvestiGator command line client
+
 usage: %s <module> <global options> <module parameters>
 
 --- Global options ---
 
--c <path>	path to an alternative config file. If not set, use ~/.migrc
+-c <path>	 Path to config file, defaults to ~/.migrc
 
--e <duration>	time after which the action expires. 60 seconds by default.
-		example: -e 300s (5 minutes)
+-e <duration>	 Time after which the action expires, defaults to 60 seconds.
 
--i <file>	load and run action from a file. supersedes other action flags.
+		 Example: -e 300s (5 minutes)
 
--p <bool>       display action json that would be used and exit
+-i <file>	 Load and run action from a file, supersedes other action flags.
 
--show <mode>	type of results to show. if not set, default is 'found'.
-		* found: 	only print positive results
-		* notfound: 	only print negative results
-		* all: 		print all results
+		 If using the -i flag, it should be the first argument specified
+		 (no module should be specified since it is indicated in the action
+		 file) and only global options should be used.
 
--render <mode>	defines how results should be rendered:
-		* text (default):	results are printed to the console
-		* map:			results are geolocated and a google map is generated
+-p <bool>        Display action JSON that would be used and exit, useful to write
+		 an action for later import with the -i flag.
 
--t <target>	target to launch the action on. A target must be specified.
-		examples:
-		* linux agents:          -t "queueloc LIKE 'linux.%%'"
-		* agents named *mysql*:  -t "name like '%%mysql%%'"
-		* proxied linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
-		* agents operated by IT: -t "tags#>>'{operator}'='IT'"
-		* run on local system:	 -t local
-		* use a migrc macro:     -t mymacroname
+-show <mode>	 Type of results to show, defaults to found.
 
--s <bool>       create and sign the action, and output the action to stdout
-                this is useful for dual-signing; the signed action can be provided
-                to another investigator for launch using the -i flag.
+		 * found: 	Only print positive results
+		 * notfound: 	Only print negative results
+		 * all:		Print all results
+
+-render <mode>	 Defines how results should be rendered.
+
+		 * text (default):	Results are printed to the console
+		 * map:			Results are geolocated and a google map is generated
+
+-t <target>	 Target to launch the action on. If no target is specified, the value will
+		 default to all online agents (status='online')
+
+		 Examples:
+		 * Linux agents:          -t "queueloc LIKE 'linux.%%'"
+		 * Agents named *mysql*:  -t "name like '%%mysql%%'"
+		 * Proxied Linux agents:  -t "queueloc LIKE 'linux.%%' AND environment->>'isproxied' = 'true'"
+		 * Agents operated by IT: -t "tags#>>'{operator}'='IT'"
+		 * Run on local system:	 -t local
+		 * Use a migrc macro:     -t mymacroname
+
+-s <bool>        Create and sign the action, and output the action to stdout
+                 this is useful for dual-signing; the signed action can be provided
+                 to another investigator for launch using the -i flag.
 
 -target-found    <action ID>
 -target-notfound <action ID>
-		targets agents that have eiher found or not found results in a previous action.
-		example: -target-found 123456
+		 Targets agents that have either found or not found results in a previous action.
+		 example: -target-found 123456
 
--v		verbose output, includes debug information and raw queries
+-v		 Verbose output, includes debug information and raw queries
 
--V		print version
+-V		 Print version
 
--z <bool>       compress action before sending it to agents
-
-Progress information is sent to stderr, silence it with "2>/dev/null".
-Results are sent to stdout, redirect them with "1>/path/to/file".
+-z <bool>        Compress action before sending it to agents
 
 --- Modules documentation ---
 Each module provides its own set of parameters. Module parameters must be set *after*
 global options. Help is available by calling "<module> help". Available modules are:
 `, os.Args[0], os.Args[0])
-	for module, _ := range modules.Available {
+	for module := range modules.Available {
 		fmt.Printf("* %s\n", module)
 	}
-	fmt.Printf("To access a module documentation, use: %s <module> help\n", os.Args[0])
 	os.Exit(1)
 }
 
@@ -103,10 +114,14 @@ func main() {
 	)
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", e)
+			fmt.Fprintf(os.Stderr, "error: %v\n", e)
+			os.Exit(1)
 		}
 	}()
-	homedir := client.FindHomedir()
+	homedir, err := client.FindHomedir()
+	if err != nil {
+		panic(fmt.Sprintf("unable to locate home directory: %v", err))
+	}
 	fs := flag.NewFlagSet("mig flag", flag.ContinueOnError)
 	fs.Usage = continueOnFlagError
 	fs.BoolVar(&printAndExit, "p", false, "display action json that would be used and exit")
@@ -213,8 +228,8 @@ func main() {
 	}
 	run = modules.Available[op.Module].NewRun()
 	if _, ok := run.(modules.HasParamsParser); !ok {
-		fmt.Fprintf(os.Stderr, "[error] module '%s' does not support command line invocation\n", op.Module)
-		os.Exit(2)
+		fmt.Fprintf(os.Stderr, "error: module '%s' does not support command line invocation\n", op.Module)
+		os.Exit(1)
 	}
 	op.Parameters, err = run.(modules.HasParamsParser).ParamsParser(modargs)
 	if err != nil || op.Parameters == nil {
@@ -226,12 +241,13 @@ func main() {
 	}
 	// Make sure a target value was specified
 	if target == "" {
-		fmt.Fprintf(os.Stderr, "[error] No target was specified with -t after the module name\n\n"+
-			"See MIG documentation on target strings and creating target macros\n"+
-			"for help. If you are sure you want to target everything online, you\n"+
-			"can use \"status='online'\" as the argument to -t. See the usage\n"+
-			"output for the mig command for more examples.\n")
-		os.Exit(2)
+		target = "status='online'"
+		// Quell this warning if targetfound or targetnotfound is in use, we will still default
+		// to status='online' as the base queried is AND'd with the results query later on in this
+		// function.
+		if targetfound == "" && targetnotfound == "" {
+			fmt.Fprint(os.Stderr, "[notice] no target specified, defaulting to all online agents\n")
+		}
 	}
 	// If running against the local target, don't post the action to the MIG API
 	// but run it locally instead.
@@ -288,7 +304,10 @@ func main() {
 		panic(err)
 	}
 	cli, err = client.NewClient(conf, "cmd-"+mig.Version)
-	if err != nil {
+	// We only treat this error as fatal if we are not in printAndExit mode; an error
+	// being returned from NewClient indicates the private key may not have been accessible,
+	// but it is not required to print the action.
+	if err != nil && !printAndExit {
 		panic(err)
 	}
 	if verbose {
@@ -355,7 +374,7 @@ readytolaunch:
 		}
 	}
 
-	// evaluate target before launch, give a change to cancel before going out to agents
+	// evaluate target before launch, give a chance to cancel before going out to agents
 	agents, err := cli.EvaluateAgentTarget(a.Target)
 	if err != nil {
 		panic(err)
@@ -367,29 +386,45 @@ readytolaunch:
 	}
 	fmt.Fprintf(os.Stderr, "\x1b[33mGO\n\x1b[0m")
 
-	// launch and follow
+	// Launch the action
 	a, err = cli.PostAction(a)
 	if err != nil {
 		panic(err)
 	}
+
+	// Follow the action for completion, and handle an interrupt to abort waiting for
+	// completion, but still print out available results.
+	var wg sync.WaitGroup
 	c := make(chan os.Signal, 1)
-	done := make(chan bool, 1)
+	sigint := make(chan bool, 1)
+	complete := make(chan bool, 1)
 	signal.Notify(c, os.Interrupt)
+	cancelled := false
+
+	wg.Add(1)
 	go func() {
-		err = cli.FollowAction(a, len(agents))
+		defer wg.Done()
+		err = cli.FollowAction(a, len(agents), sigint)
 		if err != nil {
 			panic(err)
 		}
-		done <- true
+		complete <- true
 	}()
-	select {
-	case <-c:
-		fmt.Fprintf(os.Stderr, "stop following action. agents may still be running. printing available results:\n")
-		goto printresults
-	case <-done:
-		goto printresults
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		select {
+		case _ = <-c:
+			cancelled = true
+			sigint <- true
+		case _ = <-complete:
+		}
+	}()
+	wg.Wait()
+	if cancelled {
+		fmt.Fprintf(os.Stderr, "[notice] stopped following action, but agents may still be running.\n")
+		fmt.Fprintf(os.Stderr, "fetching available results:\n")
 	}
-printresults:
 	err = cli.PrintActionResults(a, show, render)
 	if err != nil {
 		panic(err)

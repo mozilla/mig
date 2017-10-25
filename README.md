@@ -45,7 +45,7 @@ or configuration of endpoints.
 | memory inspection | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) |
 | vuln management   | ![check](doc/.files/check_mark_green.png) | (planned) | (planned) |
 | log analysis      | (planned) | (planned) | (planned) |
-| system auditing   | (planned) | (planned) | (planned) |
+| system auditing   | ![check](doc/.files/check_mark_green.png) | (planned) | (planned) |
 
 Imagine it is 7am on a saturday morning, and someone just released a
 critical vulnerability for your favorite PHP application. The vuln is already

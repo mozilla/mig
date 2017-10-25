@@ -1,7 +1,6 @@
 bin/*
 *.swp
 *.swo
-*.cfg
 conf/*
 !conf/*.inc
 conf/*custom.go.inc

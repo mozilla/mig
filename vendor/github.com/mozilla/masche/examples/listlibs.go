@@ -23,7 +23,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ps, hard, softs := process.OpenAll()
+	ps, softs, hard := process.OpenAll()
 	if hard != nil {
 		log.Fatal(hard)
 	}
@@ -32,7 +32,7 @@ func main() {
 		log.Println(e)
 	}
 
-	matches, hard, softs := findProcWithLib(r, ps)
+	matches, softs, hard := findProcWithLib(r, ps)
 	if hard != nil {
 		log.Fatal(hard)
 	}
@@ -54,18 +54,18 @@ func main() {
 
 }
 
-func findProcWithLib(r *regexp.Regexp, ps []process.Process) (matches map[process.Process][]string, harderror error, softerrors []error) {
+func findProcWithLib(r *regexp.Regexp, ps []process.Process) (matches map[process.Process][]string, softerrors []error, harderror error) {
 	matches = make(map[process.Process][]string)
 	softerrors = make([]error, 0)
 	for _, p := range ps {
-		libs, hard, softs := listlibs.GetMatchingLoadedLibraries(p, r)
+		libs, softs, hard := listlibs.GetMatchingLoadedLibraries(p, r)
 		if hard != nil {
-			return nil, hard, softerrors
+			return nil, softerrors, hard
 		}
 		softerrors = append(softerrors, softs...)
 		if len(libs) != 0 {
 			matches[p] = libs
 		}
 	}
-	return matches, nil, softerrors
+	return matches, softerrors, nil
 }

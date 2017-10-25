@@ -4,182 +4,140 @@ Mozilla InvestiGator Deployment and Configuration Documentation
 .. sectnum::
 .. contents:: Table of Contents
 
-This document describes the steps to build and configure a MIG platform.
-MIG has 6 major components. The Postgresql database and RabbitMQ relay are
-external dependencies, and while this document shows one way of deploying them,
-you are free to use your own method. All other components (scheduler, api,
-agents and clients) require specific compilation and configuration steps that
-are explained in this document.
+This document describes the steps to build and configure a MIG platform. Here we
+go into specific details on manual configuration of a simple environment. For another
+example, see the MIG `Docker image`_ which executes similar steps.
 
-Due to the fast changing pace of Go, MIG and its third party packages, we do
-not currently provide binary packages. You will have to compile the components
-yourself, which is explained below.
+.. _`Docker image`: ../Dockerfile
+
+MIG has 6 major components.
+
+* Scheduler
+* API
+* Postgres
+* RabbitMQ
+* Agents
+* Investigator tools (command line clients)
+
+The Postgres database and RabbitMQ relay are external dependencies, and while
+this document shows one way of deploying them, you are free to use your own method.
+
+No binary packages are provided for MIG, so to try it you will need to build the
+software yourself or make use of the docker image.
 
 A complete environment should be configured in the following order:
 
-1. retrieve the source and prepare your build environment
-2. deploy the postgresql database
-3. create a PKI
-4. deploy the rabbitmq relay
-5. build, configure and deploy the scheduler
-6. build, configure and deploy the api
-7. build the clients and create an investigator
-8. configure and deploy agents
+1. Retrieve the source and prepare your build environment
+2. Deploy the Postgres database
+3. Create a PKI
+4. Deploy the RabbitMQ relay
+5. Build, configure and deploy the scheduler
+6. Build, configure and deploy the API
+7. Build the clients and create an investigator
+8. Configure and deploy agents
 
 Prepare a build environment
-------------------------------
+---------------------------
 
-Install **Go 1.5** or later from your package manager , via `gvm`_ or `from source`_.
-
-.. _`gvm`: https://github.com/moovweb/gvm
-
-.. _`from source`: http://golang.org/doc/install/source
-
-You **must** use Go 1.5 or later because MIG uses vendoring that isn't available in prior
-versions.
+Install the latest version of go. Usually you can do this using your operating system's
+package manager (e.g., ``apt-get install golang`` on Ubuntu), or you can also fetch and
+install it directly at https://golang.org/.
 
 .. code:: bash
 
-    $ go version
-    go version go1.5 linux/amd64
+        $ go version
+        go version go1.8 linux/amd64
 
-As with any Go setup, make sure your GOPATH is exported, for example by setting
-it to `$HOME/go`
+As with any go setup, make sure your GOPATH is exported, for example by setting
+it to ``$HOME/go``
 
 .. code:: bash
 
-    $ export GOPATH="$HOME/go"
-    $ mkdir $GOPATH
+        $ export GOPATH="$HOME/go"
+        $ mkdir $GOPATH
 
 Then retrieve MIG's source code using go get:
 
 .. code:: bash
 
-    $ go get mig.ninja/mig
+        $ go get mig.ninja/mig
 
-Go get will place MIG under `$GOPATH/src/mig.ninja/mig`. Change directory to
-this path and build the components. Note that, if you're on a Debian or Ubuntu
-box, you can run `make deb-server` directly which will build the scheduler, api
-and workers into a single DEB package. Otherwise, use the following make
-commands:
+``go get`` will place MIG under ``$GOPATH/src/mig.ninja/mig``. If you want you can run
+``make test`` under this directory to verify the tests execute and ensure your go environment
+is setup correctly.
 
 .. code:: bash
 
-    $ make mig-scheduler
-    $ make mig-api
-    $ make worker-agent-intel
-    $ make mig-runner
+        $ make test
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/
+        ok      mig.ninja/mig/modules   0.103s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/agentdestroy
+        ok      mig.ninja/mig/modules/agentdestroy      0.003s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/example
+        ok      mig.ninja/mig/modules/example   0.003s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/examplepersist
+        ok      mig.ninja/mig/modules/examplepersist    0.002s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/file
+        ok      mig.ninja/mig/modules/file      0.081s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/fswatch
+        ok      mig.ninja/mig/modules/fswatch   0.003s
+        ...
 
-Or just run `make` that will build everything and runs tests as well.
+Deploy the Postgres database
+----------------------------
 
-Note: running `make` will build everything including the mig-console which
-requires **readline** to be installed (`readline-devel` on rhel/fedora or
-`libreadline-dev` on debian/ubuntu).
+Install Postgres 9.5+ on a server, or you can also use something like Amazon RDS. To get the
+Postgres database ready to use with MIG, we will need to create a few roles and install the
+database schema. Note this guide shows examples assuming Postgres running on the local server,
+for a different configuration adjust your commands accordingly.
 
-.. code:: bash
+The API and scheduler need to connect to the database over the TCP socket; you might need to
+adjust the default ``pg_hba.conf`` to permit these connections, for example by adding a line
+as follows:
 
-	$ make
+.. code::
 
-Deploy the Postgresql database
-------------------------------
+        host all all 127.0.0.1/32 password
 
-Install postgres 9.3+ on a server and copy the scripts
-`database/createlocaldb.sh` and `database/schema.sql`. Make sure you have sudo
-access to the server and run the script (or run the commands from createlocaldb.sh
-manually).
-
-.. code:: bash
-
-	$ ./createlocaldb.sh 
-	Created user migadmin with password 'l1bZowe8fy1'
-	Created user migapi with password 'p4oid18'
-	Created user migscheduler with password '48Cm12Taodf928wqojdlsa1981'
-	MIG Database created successfully.
-
-This creates a local database called `mig` with the relevant admin, api and
-scheduler users. Make sure you save the passwords generated by the script in a
-safe location, you'll need them later.
-
-To verify the DB, use the psql command line:
+Once the database is ready to be configured, start by adding a few roles. Adjust the commands
+below to set the database user passwords you want, and note them for later.
 
 .. code:: bash
 
-	$ sudo su - postgres
-	postgres@jaffatower:~$ psql
-	psql (9.4.4)
-	Type "help" for help.
+        $ sudo -u postgres psql -c 'CREATE ROLE migadmin;'
+        $ sudo -u postgres psql -c "ALTER ROLE migadmin WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'userpass';"
+        $ sudo -u postgres psql -c 'CREATE ROLE migapi;'
+        $ sudo -u postgres psql -c "ALTER ROLE migapi WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'userpass';"
+        $ sudo -u postgres psql -c 'CREATE ROLE migscheduler;'
+        $ sudo -u postgres psql -c "ALTER ROLE migscheduler WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'userpass';"
 
-	postgres=# \c mig
-	You are now connected to database "mig" as user "postgres".
-	mig=# \d
-					  List of relations
-	 Schema |         Name         |   Type   |  Owner   
-	--------+----------------------+----------+----------
-	 public | actions              | table    | migadmin
-	 public | agents               | table    | migadmin
-	 public | agents_stats         | table    | postgres
-	 public | agtmodreq            | table    | migadmin
-	 public | commands             | table    | migadmin
-	 public | invagtmodperm        | table    | migadmin
-	 public | investigators        | table    | migadmin
-	 public | investigators_id_seq | sequence | postgres
-	 public | modules              | table    | migadmin
-	 public | signatures           | table    | migadmin
-	(10 rows)
-
-Deploying on a remote database, like AWS RDS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you are using a remote database, create a database and an admin user, then
-modify the variables at the top of `src/mig/database/createremotedb.sh`_ and
-run it. The script will create the DB schema and output the credentials for
-users `migscheduler` and `migapi`. These credentials need to be references in
-the MIG Scheduler and API configuration files.
-
-.. _`src/mig/database/createremotedb.sh`: https://github.com/mozilla/mig/blob/master/src/mig/database/createremotedb.sh
-
-Edit the variables in the script `createremotedb.sh`:
+Next create the database and install the schema:
 
 .. code:: bash
 
-	$ vim createremotedb.sh
-
-	PGDATABASE='mig'
-	PGUSER='migadmin'
-	PGPASS='MYDATABASEPASSWORD'
-	PGHOST='192.168.0.1'
-	PGPORT=5432
-
-Then run it against your database server. Make sure that the Postgresql client
-command line `psql` is installed locally.
-
-.. code:: bash
-
-	$ which psql
-	/usr/bin/psql
-
-	$ bash createremotedb.sh
-
-	[... bunch of sql queries ...]
-
-	created users:
-		migscheduler	4NvQFdwdQ8UOU4ekEOgWDWi3gzG5cg2X
-		migapi			xcJyJhLg1cldIp7eXcxv0U-UqV80tMb-
+        $ sudo -u postgres psql -c 'CREATE DATABASE mig;'
+        $ cd $GOPATH/src/mig.ninja/mig
+        $ sudo -u postgres psql -f database/schema.sql mig
 
 Create a PKI
 ------------
 
+With a standard MIG installation, the agents connect to the relay (RabbitMQ) over
+a TLS protected connection. Certificate validation occurs against the RabbitMQ server
+certificate, and in addition client certificates are validated by RabbitMQ in order
+to add an extra layer to prevent unauthorized connections to the public AMQP endpoint.
+
 Skip this step if you want to reuse an existing PKI. MIG will need a server
-certificate for RabbitMQ, and client certificates for agents, schedulers and
-workers. The PKI is only used to protect connection to the public AMQP endpoint.
+certificate for RabbitMQ, and client certificates for agents and the scheduler.
 
-Use the script is `tools/create_mig_ca.sh` to generate a new CA and signed
-certificates for each component.
+You can either create the PKI yourself using something like the ``openssl`` command,
+or alternatively take a look at ``tools/create_mig_ca.sh`` which can run these
+commands for you. In this example we will use the script.
 
-Create a new directory that will hold the CA, copy the script in it, and run it.
+Create a new directory that will hold the CA, copy the script to it, and run it.
 The script will prompt for one piece of information: the public DNS of the
-rabbitmq relay. It's important that you set this to the correct value to allow
-AMQP clients to validate the rabbitmq certificate correctly.
+RabbitMQ relay. It's important that you set this to the correct value to allow
+AMQP clients to validate the RabbitMQ certificate correctly.
 
 .. code:: bash
 
@@ -204,167 +162,141 @@ AMQP clients to validate the rabbitmq certificate correctly.
 	-rw-r--r-- 1 julien julien 5183 Sep  9 00:06 scheduler.crt
 	-rw-r--r-- 1 julien julien 1045 Sep  9 00:06 scheduler.csr
 	-rw-r--r-- 1 julien julien 1704 Sep  9 00:06 scheduler.key
-	-rw-r--r-- 1 julien julien 5169 Sep  9 00:06 worker.crt
-	-rw-r--r-- 1 julien julien 1033 Sep  9 00:06 worker.csr
-	-rw-r--r-- 1 julien julien 1704 Sep  9 00:06 worker.key
 
-These certificates can now be used in each component.
-
-Deploy the Rabbitmq relay
+Deploy the RabbitMQ relay
 -------------------------
 
 Installation
 ~~~~~~~~~~~~
 
 Install the RabbitMQ server from your distribution's packaging system. If your
-distribution does not provide a RabbitMQ package, install `erlang` from yum or
-apt, and then install RabbitMQ using the packages from rabbitmq.com
+distribution does not provide a RabbitMQ package, install ``erlang`` from ``yum`` or
+``apt``, and then install RabbitMQ using the packages from http://www.rabbitmq.com/.
 
-Scripted RabbitMQ Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RabbitMQ Configuration
+~~~~~~~~~~~~~~~~~~~~~~
 
-The script in `tools/create_rabbitmq_config.sh` can be run against a local
-instance of rabbitmq to configure the necessary users and permissions.
+To configure RabbitMQ, we will need to add users to the relay and add permissions.
+
+We will need a user for the scheduler, as the scheduler talks to the relay to send
+actions to the agents and receive results. We will also want a user that the agents
+will use to connect to the relay. We will also add a general admin account that can
+be used for example with the RabbitMQ administration interface if desired.
+
+The following commands can be used to configure RabbitMQ, adjust the commands below
+as required to set the passwords you want for each account. Note the passwords as
+we will need them later.
 
 .. code:: bash
 
-	$ bash createrabbitmqconfig.sh 
+        $ sudo rabbitmqctl add_user admin adminpass
+        $ sudo rabbitmqctl set_user_tags admin administrator
+        $ sudo rabbitmqctl delete_user guest
+        $ sudo rabbitmqctl add_vhost mig
+        $ sudo rabbitmqctl add_user scheduler schedulerpass
+        $ sudo rabbitmqctl set_permissions -p mig scheduler \
+                '^(toagents|toschedulers|toworkers|mig\.agt\..*)$' \
+                '^(toagents|toworkers|mig\.agt\.(heartbeats|results))$' \
+                '^(toagents|toschedulers|toworkers|mig\.agt\.(heartbeats|results))$'
+        $ sudo rabbitmqctl add_user agent agentpass
+        $ sudo rabbitmqctl set_permissions -p mig agent \
+                '^mig\.agt\..*$' \
+                '^(toschedulers|mig\.agt\..*)$' \
+                '^(toagents|mig\.agt\..*)$'
+        $ sudo rabbitmqctl add_user worker workerpass
+        $ sudo rabbitmqctl set_permissions -p mig worker \
+                '^migevent\..*$' \
+                '^migevent(|\..*)$' \
+                '^(toworkers|migevent\..*)$'
+        $ sudo service rabbitmq-server restart
 
-	[ ... ]
+Now that we have added users, we will want to enable AMQPS for SSL/TLS connections
+to the relay.
 
-	[ ok ] Restarting message broker: rabbitmq-server.
-	rabbitmq configured with the following users:
-	  admin       5IRociqhefiehekjqqhfeq
-	  scheduler   MM8972olkjwqashrieygrh
-	  agent       p1938oanvdjknxcbveufif
-	  worker      80912lsdkjj718tdfxmlqx
+.. code:: bash
 
-	copy ca.crt and rabbitmq.{crt,key} into /etc/rabbitmq/
-	then run $ service rabbitmq-server restart
+        $ cd ~/migca
+        $ sudo cp rabbitmq.crt /etc/rabbitmq/rabbitmq.crt
+        $ sudo cp rabbitmq.key /etc/rabbitmq/rabbitmq.key
+        $ sudo cp ca/ca.crt /etc/rabbitmq/ca.crt
 
-Save the credentials in a safe location, we will need them later.
+Now edit the default RabbitMQ configuration to enable TLS, and you should have something
+like this:
 
-Copy the ca.crt, rabbitmq.key and rabbitmq.crt we generate in the PKI into
-/etc/rabbitmq and restart the service. You should see Beam listen on port
-5671.
+.. code::
+
+	[
+	  {rabbit, [
+	         {ssl_listeners, [5671]},
+                 {ssl_options, [{cacertfile,            "/etc/rabbitmq/ca.crt"},
+                                {certfile,              "/etc/rabbitmq/rabbitmq.crt"},
+                                {keyfile,               "/etc/rabbitmq/rabbitmq.key"},
+                                {verify,                verify_peer},
+                                {fail_if_no_peer_cert,  true},
+                                {versions, ['tlsv1.2', 'tlsv1.1']},
+                                {ciphers,  [{dhe_rsa,aes_256_cbc,sha256},
+                                            {dhe_rsa,aes_128_cbc,sha256},
+                                            {dhe_rsa,aes_256_cbc,sha},
+                                            {rsa,aes_256_cbc,sha256},
+                                            {rsa,aes_128_cbc,sha256},
+                                            {rsa,aes_256_cbc,sha}]}
+                 ]}
+	  ]}
+	].
+
+Now, restart RabbitMQ.
+
+.. code:: bash
+
+        $ sudo service rabbitmq-server restart
+
+You should have RabbitMQ listening on port ``5671`` now.
 
 .. code:: bash
 
 	$ netstat -taupen|grep 5671
 	tcp6	0	0	:::5671		:::*	LISTEN	110	658831	11467/beam.smp  
 
-If you care about the detail of Rabbitmq's configuration, read the manual
-configuration section in the appendix at the end of this document.
-
 Scheduler Configuration
 -----------------------
 
-If you deploy the scheduler using the package build by the `deb-server` target,
-a template configuration will be placed in /etc/mig/scheduler.cfg. Otherwise,
-you can find one in `conf/scheduler.cfg.inc`.
+Now that the relay and database are online, we can deploy the MIG scheduler. Start
+by building and installing it, we will run it from ``/opt/mig`` in this example.
 
-If you use `deb-server`, simply `dpkg -i` the package and the scheduler will be
-installed into /opt/mig/bin/mig-scheduler, its configuration kept in /etc/mig.
+.. code:: bash
 
-If you build your own binary, get one by running `make mig-scheduler`.
+        $ sudo mkdir -p /opt/mig/bin
+        $ cd $GOPATH/src/mig.ninja/mig
+        $ make mig-scheduler
+        $ sudo cp bin/linux/amd64/mig-scheduler /opt/mig/bin/mig-scheduler
 
-Start by copying the ca.crt, scheduler.key and scheduler.crt we generated in the
-PKI into the /etc/mig/ folder.
+The scheduler needs a configuration file, you can start with the
+`default scheduler configuration file`_.
 
-Then edit the configuration file to replace the DB and RabbitMQ parameters with
-the ones that we obtained in previous steps. The default configurations provided
-for both Postgres and RabbitMQ are purposedly wrong and need to be replaced,
-otherwise the scheduler will fail to connect. Below is an example configuration
-that would work with the setup we have prepared.
+.. _`default scheduler configuration file`: ../conf/scheduler.cfg.inc
 
-.. code::
+.. code:: bash
 
-	[agent]
-		; timeout controls the inactivity period after which
-		; agents are marked offline
-		timeout = "60m"
+        $ sudo mkdir -p /etc/mig
+        $ sudo cp conf/scheduler.cfg.inc /etc/mig/scheduler.cfg
 
-		; heartbeatfreq maps to the agent configuration and helps
-		; the scheduler detect duplicate agents, and some other things
-		heartbeatfreq = "5m"
+The scheduler has several options, which are not documented here. The primary sections
+you will want to modify are the ``mq`` section and the ``postgres`` section. These sections
+should be updated with information to connect to the database and relay using the users and
+passwords created for the scheduler in the previous steps.
 
-		; whitelist contains a list of agent queues that are allowed
-		; to send heartbeats and receive commands
-		whitelist = "/var/cache/mig/agents_whitelist.txt"
+In the ``mq`` section, you will also want to make sure ``usetls`` is enabled. Set the
+certificate and key paths to point to the scheduler certificate information under
+``/etc/mig``, and copy the files we created in the PKI step.
 
-		; detect endpoints that are running multiple agents
-		detectmultiagents = true
+.. code:: bash
 
-		; issue kill orders to duplicate agents running on the same endpoint
-		killdupagents = true
+        $ cd ~/migca
+        $ sudo cp scheduler.crt /etc/mig
+        $ sudo cp scheduler.key /etc/mig
+        $ sudo cp ca/ca.key /etc/mig
 
-	; the collector continuously pulls
-	; pending messages from the spool
-	[collector]
-		; frequency at which the collector runs,
-		; default is to run every second
-		freq = "1s"
-
-	; the periodic runs less often that
-	; the collector and does cleanup and DB updates
-	[periodic]
-		; frequency at which the periodic jobs run
-		freq = "87s"
-
-		; delete finished actions, commands and invalids after
-		; this period has passed
-		deleteafter = "360h"
-
-		; run a rabbitmq unused queues cleanup job at this frequency
-		; this is DB & amqp intensive so don't run it too often
-		queuescleanupfreq = "24h"
-
-	[directories]
-		spool = "/var/cache/mig/"
-		tmp = "/var/tmp/"
-
-	[postgres]
-		host = "192.168.1.240"
-		port = 5432
-		dbname = "mig"
-		user = "migscheduler"
-		password = "4NvQFdwdQ8UOU4ekEOgWDWi3gzG5cg2X"
-		sslmode = "disable"
-		maxconn = 10
-
-	[mq]
-		host  = "rabbitmq.mig.example.net"
-		port  = 5671
-		user  = "scheduler"
-		pass  = "MM8972olkjwqashrieygrh"
-		vhost = "mig"
-
-	; TLS options
-		usetls  = true
-		cacert  = "/etc/mig/ca.crt"
-		tlscert = "/etc/mig/scheduler.crt"
-		tlskey  = "/etc/mig/scheduler.key"
-
-	; AMQP options
-	; timeout defaults to 10 minutes
-	; keep this higher than the agent heartbeat value
-		timeout = "10m"
-
-	[logging]
-		mode = "stdout" ; stdout | file | syslog
-		level = "debug"
-
-	; for file logging
-	;   file = "mig_scheduler.log"
-
-	; for syslog, logs go into local3
-	;    host = "localhost"
-	;    port = 514
-	;    protocol = "udp"
-
-The sample above needs to be tweaked further to match your environment. This
-document explains each section in Appendix B. For now, let's test our setup
-with this basic conf by running mig-scheduler in foreground, as root.
+We can now try running the scheduler in the foreground to validate it is working correctly.
 
 .. code:: bash
 
@@ -426,114 +358,75 @@ with this basic conf by running mig-scheduler in foreground, as root.
 	2015/09/09 04:25:47 4883372310532 - - [debug] leaving periodic()
 	2015/09/09 04:25:47 4883372310532 - - [info] periodic run done in 110.647479ms
 
-Among the debug logs, we can see that the scheduler successfully connected
-to both PostgresSQL and RabbitMQ. It detected that no scheduler key was
-present in the database and created one with Key ID
-"A8E1ED58512FCD9876DBEA4FEA513B95032D9932". It then proceeded to wait for
-work to do, waking up regularly to perform maintenance tasks.
+Assuming the default logging parameters in the configuration file were not changed, the scheduler
+starts up and begins writing its log to stdout.  Among the debug logs, we can see that the scheduler
+successfully connected to both Postgres and RabbitMQ. It detected that no scheduler key was
+present in the database and created one with Key ID "A8E1ED58512FCD9876DBEA4FEA513B95032D9932".
+It then proceeded to wait for work to do, waking up regularly to perform maintenance tasks.
 
-This working scheduler allows us to move on to the next component: the API.
+The key the scheduler generated is used by the scheduler when it sends destruction orders to duplicate
+agents. When the scheduler detects more than one agent running on the same host, it will request the
+old agent stop. The scheduler signs this request with the key it created, so the agent will need to know
+to trust this key. This is discussed later when we configure an agent.
+
+In a production scenario, you will likely want to create a systemd unit to run the scheduler or some
+other form of supervisor.
 
 API configuration
 -----------------
 
 MIG's REST API is the interface between investigators and the rest of the
-infrastructure. It is also accessed by agents to discover their public IP.
+infrastructure. It is also accessed by agents to discover their public IP. Generally
+speaking, agents communicate using the relay, and investigators access the agents
+through the API.
 
 The API needs to be deployed like a normal web application, preferably behind a
-reverse proxy that handles TLS.
-
-.. code::
-
-	{investigators}-\
-	                 --> {reverse proxy} -> {api} -> {database} -> {scheduler} -> {rabbitmq} -> {agents}
-	{agents}--------/
+reverse proxy that handles TLS. The API does not handle TLS on it's own. You can use
+something like an Amazon ELB in front of the API, or you can also use something
+like Nginx.
 
 For this documentation, we will assume that the API listens on its local IP,
-which is 192.168.1.150, on port 51664. The public endpoint of the api is
-`api.mig.example.net`. A configuration could be defined as follow:
+which is 192.168.1.150, on port 51664, and the public endpoint of the API is
+``api.mig.example.net``. We start by building the API and installing the
+`default API configuration`_.
 
-.. code::
+.. _`default API configuration`: ../conf/api.cfg.inc
 
-	[authentication]
-		# turn this on after initial setup, once you have at least
-		# one investigator created
-		enabled = off
+.. code:: bash
 
-		# when validating token timestamps, accept a timestamp that is
-		# within this duration of the local clock
-		tokenduration = 10m
+        $ cd $GOPATH/src/mig.ninja/mig
+        $ make mig-api
+        $ sudo cp bin/linux/amd64/mig-api /opt/mig/bin/mig-api
+        $ sudo cp conf/api.cfg.inc /etc/mig/api.cfg
 
-	[server]
-		# local listening ip
-		ip = "192.168.1.150"
+Edit the configuration file and tweak it as desired. Most options can remain at
+the default setting,  however there are a few we will want to change.
 
-		# local listening port
-		port = 51664
+Edit the ``postgres`` section and configure this with the correct settings so
+the API can connect to the database using the API user we create in a previous step.
 
-		# public location of the API endpoint
-		host = "https://api.mig.example.net"
+You will also want to edit the local listening port, in our example we will set it
+to port ``51664``. Set the ``host`` parameter to the URL corresponding with the
+API, so in this example ``https://api.mig.example.net``.
 
-		# API base route, all endpoints are below this path
-		# ex: http://localhost:12345/api/v1/action/create/
-		#     |------<host>--------|<base>|--<endpoint>--|
-		baseroute = "/api/v1"
-                
-                # informs the api where it should obtain the clients public ip address
-                # from. the default if unset is "peer".
-                #
-                # use the X-Forwarded-For header, the trailing integer
-                # indicates an offset from the end of the list of addresses in
-                # x-forwarded-for to use as the client public ip:
-                #clientpublicip = x-forwarded-for:0
-                # use socket peer address:
-                #clientpublicip = peer
+You will also want to pay attention to the ``authentication`` section, specifically
+the ``enabled`` parameter. This is initially off, and we will leave it off so we
+can create our initial investigator in the system. Once we have setup our initial
+investigator we will enable API authentication.
 
-	[postgres]
-		host = "192.168.1.240"
-		port = 5432
-		dbname = "mig"
-		user = "migapi"
-		password = "p4QfcStzn8JIH4T4Tfr_kUzYHiPher1H"
-		sslmode = "disable"
-
-	[logging]
-		mode = "stdout" ; stdout | file | syslog
-		level = "debug"
-
-	; for file logging
-	;   file = "mig_api.log"
-
-	; for syslog, logs go into local3
-	;    host = "localhost"
-	;    port = 514
-	;    protocol = "udp"
-
-Note in the configuration above that authentication is disabled for now.
-
-The Postgres credentials are taken from the user/password we generated for
-user `migapi` during the database configuration.
-
-Under the `[server]` section:
-
-* `ip` and `port` define the socket the API will be listening on.
-* `host` is the public URL of the API, that clients will be connecting to
-* `baseroute` is the location of the base of the API, without the trailing slash.
-* `clientpublicip` tells where API where to get the clients public IP address.
-
-Ensure clientpublicip is set based on your environment. If clients are terminated
-directly on the API, peer can be used. If a load balancer or other device terminates
-connections from clients and adds the address to X-Forwarded-For, x-forwarded-for
-can be used. The integer trailing X-Forwarded-For specifies the offset from the end
+Ensure ``clientpublicip`` is set based on your environment. If clients are terminated
+directly on the API, ``peer`` can be used. If a load balancer or other device terminates
+connections from clients and adds the address to X-Forwarded-For, ``x-forwarded-for``
+can be used. The integer trailing ``x-forwarded-for`` specifies the offset from the end
 of the list of IPs in the header to use to extract the IP. For example,
 x-forwarded-for:0 would get the last IP in a list in that header, x-forwarded-for:1
 would get the second last, etc. Set this based on the number of forwarding devices
 you have between the client and the API.
 
-In this example, to reach the home of the API, we would point our browser to
-`https://api.mig.example.net/api/v1/`.
+At this point the API is ready to go, and if desired a reverse proxy can be configured
+in front of the API to enable TLS.
 
-A sample Nginx reverse proxy configuration is shown below:
+A sample Nginx reverse proxy configuration is shown below.
 
 .. code::
 
@@ -567,18 +460,31 @@ A sample Nginx reverse proxy configuration is shown below:
 	}
 
 If you're going to enable HTTPS in front of the API, make sure to use a trusted
-certificate. Agents don't connect to untrusted certificates. If you can't get
-one, or don't want to for a test environment, don't use HTTPS and configure the
-API and Nginx to use HTTP instead. Credentials are never passed to the API, only
-PGP tokens, so the worst you could expose is investigation results.
+certificate. Agents don't connect to untrusted certificates. If you are setting up a test
+environment and don't want to enable SSL/TLS, you can run Nginx in HTTP mode or just use
+the API alone, however this configuration is not recommended.
+
+We can now try running the API in the foreground to validate it is working correctly.
+
+.. code:: bash
+
+	# /opt/mig/bin/mig-api
+        Initializing API context...OK
+        2017/09/18 17:24:54 - - - [info] Database connection opened
+        2017/09/18 17:24:54 - - - [debug] leaving initDB()
+        2017/09/18 17:24:54 - - - [info] Context initialization done
+        2017/09/18 17:24:54 - - - [info] Logger routine started
+        2017/09/18 17:24:54 - - - [info] Starting HTTP handler
 
 You can test that the API works properly by performing a request to the
 dashboard endpoint. It should return a JSON document with all counters at zero,
-since we don't have any agent connected yet.
+since we don't have any agent connected yet. Note that we can do this, as authentication
+in the API has not yet been enabled, normally this request would be rejected without
+a valid signed token or API key.
 
 .. code:: json
 
-	$ curl https://jaffa.linuxwall.info/api/v1/dashboard | python -mjson.tool
+	$ curl https://api.mig.example.net/api/v1/dashboard | python -mjson.tool
 	{
 		"collection": {
 			"version": "1.0",
@@ -639,18 +545,18 @@ Build the clients and create an investigator
 --------------------------------------------
 
 MIG has multiple command line clients that can be used to interact with the API
-and run investigations or view results. The two main clients are `mig`, a
-command line tool that can run investigations quickly, and `mig-console`, a
-readline console that can also run investigations but browse through passed
-investigations as well and manage investigators. We will use `mig-console` to
+and run investigations or view results. The two main clients are ``mig``, a
+command line tool that can run investigations quickly, and ``mig-console``, a
+readline console that can run investigations but also browse through past
+investigations as well and manage investigators. We will use ``mig-console`` to
 create our first investigator.
 
 Here we will assume you already have GnuPG installed, and that you generate a
 keypair for yourself (see the `doc on gnupg.org
 <https://www.gnupg.org/gph/en/manual.html#AEN26>`_).
-You should be able to access your PGP Fingerprint using this command:
+You should be able to access your PGP fingerprint using this command:
 
-.. code::
+.. code:: bash
 
 	$ gpg --fingerprint myinvestigator@example.net
 
@@ -676,17 +582,29 @@ you can reuse with your own values.
 
 The targets section is optional and provides the ability to specify
 short forms of your own targeting strings. In the example above, 
-`allonline` or `idleandonline` could be used as target arguments.
+``allonline`` or ``idleandonline`` could be used as target arguments when
+running an investigation.
 
-Make sure have the dev library of readline installed (`readline-devel` on
-rhel/fedora or `libreadline-dev` on debian/ubuntu) and `go get` the binary from
-its source repository
+Make sure have the dev library of readline installed (``readline-devel`` on
+RHEL/Fedora or ``libreadline-dev`` on Debian/Ubuntu), and build the command
+line tools.
+
+**Note**: most MIG components can be built simply using ``make`` or ``go install``
+without additional flags. The exception to this is if you want to use modules
+which are not in the default module set. In this case you need to make sure
+the correct flags are passed when building the command line tools or the agent to
+indicate the modules you want to use. See the section of building the agent
+for an overview of the ``-tags`` parameter for the go command line tools and the
+``MODULETAGS`` makefile variable. Here we just build the command line tools
+with the default support.
 
 .. code::
 
 	$ sudo apt-get install libreadline-dev
-	$ go get mig.ninja/mig/client/mig-console
-	$ $GOPATH/bin/mig-console
+        $ cd $GOPATH/src/mig.ninja/mig
+        $ make mig-cmd
+        $ make mig-console
+        $ bin/linux/amd64/mig-console
 
 	## ##                                     _.---._     .---.
 	# # # /-\ ---||  |    /\         __...---' .---. '---'-.   '.
@@ -718,9 +636,9 @@ its source repository
 	Connected to https://api.mig.example.net/api/v1/. Exit with ctrl+d. Type help for help.
 	mig>
 
-The console wait for input on the `mig>` prompt. Enter `help` is you want to
-explore all the available functions. For now, we will only create a new
-investigator in the database.
+The console will wait for input on the `mig>` prompt. Enter `help` if you want to
+explore all the available functions. For now, we will only create a new investigator
+in the database.
 
 The investigator will be defined with its public key, so the first thing we
 need to do is export our public key to a local file that can be given to the
@@ -732,15 +650,25 @@ console during the creation process.
 
 Then in the console prompt, enter the following commands:
 
-- `create investigator`
-- enter a name, such as `Bob The Investigator`
-- choose yes to make the investigator an administrator, which is usually the case if it is the first one added
+- ``create investigator``
+- enter a name, such as ``Bob The Investigator``
+- choose ``yes`` to make our first investigator an administrator
+- choose ``yes`` to allow our first investigator to manage loaders
+- choose ``yes`` to allow our first investigator to manage manifests
+- choose ``yes`` to add a public PGP key for this new investigator
 - enter the path to the public key `/tmp/myinvestigator_pubkey.asc`
 - enter `y` to confirm the creation
 
+Choosing to make the investigator an administrator permits user management and other 
+administrative functions. The loader and manifest options we set to yes, but these are
+only relevant if you are using ``mig-loader`` to automatically update agents. This is not
+discussed in this guide, for more information see the `MIG loader`_ documentation.
+
+.. _`MIG loader`: loader.rst
+
 The console should display "Investigator 'Bob The Investigator' successfully
 created with ID 2". We can view the details of this new investigator by entering
-`investigator 2` on the console prompt.
+``investigator 2`` on the console prompt.
 
 .. code::
 
@@ -750,30 +678,20 @@ created with ID 2". We can view the details of this new investigator by entering
         
         inv 2> details
         Investigator ID 2
-        name     Bob The Investigator
-        status   active
-        admin    true
-        key id   E60892BB9BD89A69F759A1A0A3D652173B763E8F
-        created  2015-09-09 09:53:28.989481 -0400 EDT
-        modified 2015-09-09 09:53:28.989481 -0400 EDT
-
-MIG supports two levels of access for users: normal investigators and administrators.
-Administrator have the ability to create and manage investigators, manage manifests
-and manipulate mig-loader related functionality, in addition to being able to run
-investigations like a standard user.
-
-To make a user an administrator, specify ``yes`` when asked to if the user should be an
-administrator while running ``create investigator``. You can make an existing user an
-administrator using the ``setadmin`` command while viewing the investigator in the
-console. Remember that to manipulate investigator privileges, the user you are using
-to access MIG must be an administrator.
+        name         Bob The Investigator
+        status       active
+        permissions  Default,PermAdmin,PermLoader,PermManifest
+        key id       E60892BB9BD89A69F759A1A0A3D652173B763E8F
+        created      2015-09-09 09:53:28.989481 -0400 EDT
+        modified     2015-09-09 09:53:28.989481 -0400 EDT
+        api key set  false
 
 Enable API Authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Now that we have an active investigator created, we can enable authentication
 in the API. Go back to the API server and modify the configuration in
-`/etc/mig/api.cfg`.
+``/etc/mig/api.cfg``.
 
 .. code::
 
@@ -785,20 +703,17 @@ in the API. Go back to the API server and modify the configuration in
 Since the user we create in the previous step was created as an administrator, we can now
 use this user to add other investigators to the system.
 
-Reopen the mig-console, and you will see the investigator name in the API logs:
+Reopen ``mig-console``, and you will see the investigator name in the API logs:
 
 .. code::
 
 	2015/09/09 13:56:09 4885615083520 - - [info] src=192.168.1.243,192.168.1.1 auth=[Bob The Investigator 2] GET HTTP/1.0 /api/v1/dashboard resp_code=200 resp_size=600 user-agent=MIG Client console-20150826+62ea662.dev
 
-The benefit of the PGP token approach is the API never needs access to private keys,
-and thus a compromise of the API doesn't leak credentials of investigators.
-
-This concludes the configuration of the server side of MIG. Next we need to
-build agents that can be deployed across our infrastructure.
+The server side of MIG has now been configured, and we can move on to configuring agents.
 
 MIG loader Configuration
 ------------------------
+
 At this point you will want to decide if you wish to use ``mig-loader`` to keep
 your agents up to date on remote endpoints.
 
@@ -810,75 +725,115 @@ and will look after upgrading the agent automatically if you want to publish new
 agent updates. The upgrades can be controlled by a MIG administrator through the
 MIG API and console tools.
 
-For information on the loader, see `MIG LOADER`_ documentation. If you wish to
-use mig-loader, read the `MIG LOADER`_ documentation to understand how the rest
-of this guide fits into configuration with loader based deployment.
+For information on the loader, see the `mig-loader`_ documentation. If you wish to
+use mig-loader, read the documentation to understand how the rest of this guide fits
+into configuration with loader based deployment.
+
+.. _`mig-loader`: loader.rst
 
 Agent Configuration
 -------------------
 
-The MIG Agent configuration must be prepared before build. The configuration is
-hardwired into the agent, such that no external file is required to run it.
+There are a couple different ways to configure the agent for your environment.
+Historically, the agent had certain configuration values that were specified at
+compile time in the agents built-in configuration (`configuration.go`_). Setting
+values here is no longer required, so it is possible to deploy the agent using
+entirely external configuration.
 
-TLS Certificates, PGP public keys and configuration variables would normally
-be stored in external files, that would make installing an agent on an endpoint
-more complex. The approach of building all of the configuration parameters into
-the agent means that we can ship a single binary that is self-sufficient. Go's
-approach to statically built binary also helps greatly eliminate the need for
-external dependencies. Once the agent is built, ship it to an endpoint, run it,
-and you're done.
+.. _`configuration.go`: ../mig-agent/configuration.go
 
-A template of agent configuration is in 'conf/mig-agent-conf.go.inc'. Copy this
-to 'conf/mig-agent-conf.go' and edit the file. Make sure to respect Go syntax
-format.
+You can choose to either:
+
+* Edit the agent built-in configuration before you compile it
+* Use a configuration file
+
+The benefit of editing the configuration before compilation is you can deploy an
+agent to a remote host by solely installing the agent binary. The drawback to this
+method is, any changes to the configuration require recompiling the agent and
+installing the new binary.
+
+This guide will discuss the preferred method of using external configuration to
+deploy the agent.
+
+Compiling the agent with desired modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When the agent is built, certain tags can be specified to control which modules
+will be included with the agent. See the `documentation`_ included with the various
+modules to decide which modules you want; in a lot of circumstances the default
+module pack is sufficient.
+
+.. _`documentation`: ../modules
+
+To build with the default modules, no addition flags are required to ``make``.
 
 .. code:: bash
 
-	$ go get mig.ninja/mig
-	$ cd $GOPATH/src/mig.ninja/mig
-	$ cp conf/mig-agent-conf.go.inc example.net.agents-conf.go
-	$ vim conf/example.net.agents-conf.go
+        $ make mig-agent
 
-Later on, when you run 'make mig-agent', the Makefile will copy the agent
-configuration to the agent source code, and build the binary. If the
-configuration file is missing, Makefile will alert you. If you have an error in
-the format of the file, the Go compiler will return a list of compilation errors
-for you to fix.
+The ``MODULETAGS`` parameter can be specified to include additional modules, or to
+exclude the defaults. This example shows building the agent with the default modules,
+in addition to the memory module.
 
-AMQPS configuration
-~~~~~~~~~~~~~~~~~~~
+.. code:: bash
 
-TLS support between agents and rabbitmq is optional, but strongly recommended.
-If you want to use TLS, you need to import the PEM encoded client certificate,
-client key and CA certificate that we created in the PKI step further up into
-'mig-agent-conf.go'.
+        $ make MODULETAGS='modmemory' mig-agent
 
-1. **CACERT** must contain the PEM encoded certificate of the Root CA.
+This example shows building the agent without the default module set, and only including
+the file module and scribe module.
 
-2. **AGENTCERT** must contain the PEM encoded client certificate of the agent.
+.. code:: bash
 
-3. **AGENTKEY** must contain the PEM encoded client certificate of the agent.
+        $ make MODULETAGS='modnodefaults modfile modscribe' mig-agent
 
-You also need to edit the **AMQPBROKER** variable to invoke **amqps** instead of
-the regular amqp mode. You probably also want to change the port from 5672
-(default amqp) to 5671 (default amqps).
+The ``MODULETAGS`` parameter just sets certain tags with the ``go build`` command to
+control the inclusion of the modules. You can also do this with commands like ``go get``
+or ``go install``.
 
-In the AMQPBROKER parameter, we set the agent's RabbitMQ username and password
-we generated in previous steps.
+.. code:: bash
 
-.. code:: go
+        $ go install -tags 'modnodefaults modmemory' mig.ninja/mig/mig-agent
 
-	var AMQPBROKER string = "amqps://agent:p1938oanvdjknxcbveufif@rabbitmq.mig.example.net:5671/mig"
+For details on the various tags that can be specified, see the source of the
+`modulepack package`_.
 
-API Configuration
-~~~~~~~~~~~~~~~~~
+.. _`modulepack package`: ../modulepack
 
-Agents need to know the location of the API as it is used to discover their
-public IP during startup.
+Install the agent configuration file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code:: go
+We can start with the default agent configuration template in `conf/mig-agent.cfg.inc`_.
 
-	var APIURL string = "https://api.mig.example.net/api/v1/"
+.. _`conf/mig-agent.cfg.inc`: ../conf/mig-agent.cfg.inc
+
+.. code:: bash
+
+        $ sudo cp conf/mig-agent.cfg.inc /etc/mig/mig-agent.cfg
+
+Update agent configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TLS support between agents and RabbitMQ is optional, but strongly recommended.
+To use TLS, we will use the certificates we created for the agent in the PKI step.
+Copy the certificates into place in ``/etc/mig``.
+
+.. code:: bash
+
+        $ cd ~/migca
+        $ sudo cp agent.crt /etc/mig/agent.crt
+        $ sudo cp agent.key /etc/mig/agent.key
+        $ sudo cp ca/ca.crt /etc/mig/ca.crt
+
+Now edit the agent configuration file we installed, and modify the ``certs`` section
+to reference our certificates and keys.
+
+Next edit the agent configuration, and modify the ``relay`` parameter in the ``agent``
+section to point to the URL of the RabbitMQ endpoint we setup. Note this parameter
+also requires you include the agents RabbitMQ username and password. You will also
+want to change the protocol from ``amqp`` to ``amqps``, and change the port to ``5671``.
+
+Next, modify the ``api`` parameter under ``agent`` to point to the URL of the API
+we configured earlier in this guide.
 
 Proxy support
 ~~~~~~~~~~~~~
@@ -886,10 +841,7 @@ Proxy support
 The agent supports connecting to the relay via a CONNECT proxy. If proxies are
 configured, it will attempt to use them before attemping a direct connection. The
 agent will also attempt to use any proxy noted in the environment via the
-`HTTP_PROXY` environment variable. A list of proxies can be manually
-added to the configuration of the agent in the `PROXIES` parameters. Proxies can
-also be specified in the agent configuration file, and will override any built-in
-configuration.
+``HTTP_PROXY`` environment variable.
 
 An agent using a proxy will reference the name of the proxy in the environment
 fields of the heartbeat sent to the scheduler.
@@ -898,24 +850,10 @@ Stat socket
 ~~~~~~~~~~~
 
 The agent can establish a listening TCP socket on localhost for management
-purpose. The list of supported operations can be obtained by sending the
-keyword `help` to this socket.
-
-.. code:: bash
-
-	$ nc localhost 51664 <<< help
-
-	Welcome to the MIG agent socket. The commands are:
-	pid	returns the PID of the running agent
-
-To obtain the PID of the running agent, use the following command:
-
-.. code:: bash
-
-	$ nc localhost 51664 <<< pid ; echo
-	9792
-
-Leave the `SOCKET` configuration variable empty to disable the stat socket.
+purpose. You can browse to this socket (e.g., http://127.0.0.1:51664) to get
+statistics from a running agent. The socket is also used internally by the agent
+for various control messages. You will typically want to leave this value at it's
+default setting.
 
 Extra privacy mode (EPM)
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -935,9 +873,7 @@ It is up to modules to honor the EPM setting; currently this value is used by
 the file module (mask filenames), the netstat module (mask addresses the system
 is communicating with), and the scribe module (mask test identifiers).
 
-EPM can be enabled in the agent configuration either via the `extraprivacymode`
-option in the configuration file, or setting `EXTRAPRIVACYMODE` to true in the
-built-in configuration.
+EPM can be enabled using the ``extraprivacymode`` setting in the configuration file.
 
 Logging
 ~~~~~~~
@@ -945,56 +881,58 @@ Logging
 The agent can log to stdout, to a file or to the system logging. On Windows,
 the system logging is the Event log. On POSIX systems, it's syslog.
 
-The `LOGGINGCONF` parameter is used to configure the proper logging level.
+Logging can be configured using the ``logging`` section in the configuration file,
+by default the agent logs to stdout, which is suitable when running under a
+supervisor process like systemd.
 
 Access Control Lists
 ~~~~~~~~~~~~~~~~~~~~
 
-The detail of how access control lists are created and managed is described in
+At this point the agent can be run, but will not reply to actions sent to it
+by an investigator as it does not have any knowledge of investigator public keys.
+We need to configure ACLs and add the investigators keys to the keyring.
+
+The details of how access control lists are created and managed is described in
 `concepts: Access Control Lists`_. In this documentation, we focus on a basic
 setup that grant access of all modules to all investigators, and restricts
 what the scheduler key can do.
 
 .. _`concepts: Access Control Lists`: concepts.rst
 
-ACL are declared in JSON hardcoded into the AGENTACL variable of the agent
-configuration. For now, we only create two ACLs: a `default` one that grants
-access to all modules to two investigators, and an `agentdestroy` one that
-grants access to the `agentdestroy` module to the scheduler.
+ACL are declared in JSON and are stored in ``/etc/mig/acl.cfg``. The agent
+reads this file on startup to load it's ACL configuration. For now, we will
+create two ACLs. A ``default`` ACL that grants access to all modules for two
+investigators, and an ``agentdestroy`` ACL that grants access to the ``agentdestroy``
+module to the scheduler.
 
-The ACLs only references the fingerprint of the public key of each investigator
+The ACLs reference the fingerprint of the public key of each investigator
 and a weight that describes how much permission each investigator is granted with.
 
-.. code:: go
+.. code::
 
-	// Control modules permissions by PGP keys
-	var AGENTACL = [...]string{
-		`{
-			"default": {
-				"minimumweight": 2,
-				"investigators": {
-					"Bob The Investigator": {
-						"fingerprint": "E60892BB9BD89A69F759A1A0A3D652173B763E8F",
-						"weight": 2
-					},
-					"Sam Axe": {
-						"fingerprint": "FA5D79F95F7AF7097C3E83DA26A86D5E5885AC11",
-						"weight": 2
-					}
+	{
+		"default": {
+			"minimumweight": 2,
+			"investigators": {
+				"Bob The Investigator": {
+					"fingerprint": "E60892BB9BD89A69F759A1A0A3D652173B763E8F",
+                                        "weight": 2
+				},
+				"Sam Axe": {
+					"fingerprint": "FA5D79F95F7AF7097C3E83DA26A86D5E5885AC11",
+					"weight": 2
 				}
 			}
-		}`,
-	    `{
-			"agentdestroy": {
-				"minimumweight": 1,
-				"investigators": {
-					"MIG Scheduler": {
-						"fingerprint": "A8E1ED58512FCD9876DBEA4FEA513B95032D9932",
-						"weight": 1
-					}
+		},
+		"agentdestroy": {
+			"minimumweight": 1,
+			"investigators": {
+				"MIG Scheduler": {
+					"fingerprint": "A8E1ED58512FCD9876DBEA4FEA513B95032D9932",
+					"weight": 1
 				}
 			}
-		}`,
+		}
 	}
 
 Note that the PGP key of the scheduler was created automatically when we
@@ -1007,21 +945,34 @@ fingerprint via the mig-console, as follow:
 	mig> investigator 1
 	inv 1> details
 	Investigator ID 1
-	name     migscheduler
-	status   active
-	key id   A8E1ED58512FCD9876DBEA4FEA513B95032D9932
-	created  2015-09-09 00:25:47.225086 -0400 EDT
-	modified 2015-09-09 00:25:47.225086 -0400 EDT
+	name         migscheduler
+	status       active
+        permissions
+	key id       A8E1ED58512FCD9876DBEA4FEA513B95032D9932
+	created      2015-09-09 00:25:47.225086 -0400 EDT
+	modified     2015-09-09 00:25:47.225086 -0400 EDT
+        api key set  false
 
-You can also view its public key by entering `pubkey` in the prompt.
+You can also view its public key by entering ``pubkey`` in the prompt.
 
-Investigators's public keys
+Configure the agent keyring
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The public keys of all investigators must be listed in the `PUBLICPGPKEYS`
-array. Each key is its own entry in the array. Since all investigators must
-be created via the mig-console to have access to the API, the easiest way
-to export their public keys is also via the mig-console.
+The agent needs to be aware of the public keys associated with investigators
+so it can verify the signatures on signed investigation actions it receives.
+To add the keys to the agents keyring, create the directory to store them
+and copy each ascii armored public key into this directory. Each key should be
+in it's own file. The name of the files do not matter, so you can choose to
+name them anything.
+
+.. code:: bash
+
+        $ sudo mkdir /etc/mig/agentkeys
+        $ sudo cp mypubkey.txt /etc/mig/agentkeys/mypubkey
+        $ sudo cp schedulerkey.txt /etc/mig/agentkeys/scheduler
+
+Since all investigators must be created via the mig-console to have access
+to the API, the easiest way to export their public keys is also via the mig-console.
 
 .. code:: bash
 
@@ -1036,29 +987,7 @@ to export their public keys is also via the mig-console.
 	mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
 	QPFOPgu3O3iij6UOVh+LOkqccjJ8gZVLYMJzUQC+2RJ3jvXhti8xZ1hs2iEr65Rj
 	zUklHVZguf2Zv2X9Er8rnlW5xzplsVXNWnVvMDXyzx0ufC00dDbCwahLQnv6Vqq8
-	etc...
-
-Then insert the whole armored pubkey, with header and footer, into the array.
-Each key must be present in the PUBLICPGPKEYS array, enclosed with backticks.
-The order is irrelevant.
-
-.. code:: go
-
-	// PGP public key that is authorized to sign actions
-	var PUBLICPGPKEYS = [...]string{
-	`-----BEGIN PGP PUBLIC KEY BLOCK-----
-	Version: GnuPG v1 - myinvestigator@example.net
-
-	mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
-	=3tGV
-	-----END PGP PUBLIC KEY BLOCK-----
-	`,
-	`
-	-----BEGIN PGP PUBLIC KEY BLOCK-----
-	Version: GnuPG v1. Name: sam.axe@example.net
-
-	mQINBE5bjGABEACnT9K6MEbeDFyCty7KalsNnMjXH73kY4B8aJXbE6SSnRA3gWpa
-	-----END PGP PUBLIC KEY BLOCK-----`}
+	...
 
 Customize the configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1067,45 +996,30 @@ The agent has many other configuration parameters that you may want to
 tweak before shipping it. Each of them is documented in the sample
 configuration file.
 
-Agent build instructions
-~~~~~~~~~~~~~~~~~~~~~~~~
+Install the agent
+~~~~~~~~~~~~~~~~~
 
-Once the agent properly configured, you can build it using `make`. The
-path to the customized configuration must be given in the `AGTCONF` make
-variable. You can also set `BUILDENV` to the environment you're building
-for, it is set to `dev` by default.
+With the agent configured, we will build an agent with the default modules
+here and install it.
 
 .. code:: bash
 
-	$ make mig-agent AGTCONF=conf/example.net.agents-conf.go
-	mkdir -p bin/linux/amd64
-	echo building mig-agent for linux/amd64
-	building mig-agent for linux/amd64
-	if [ ! -r conf/linuxwall-mig-agent-conf.go ]; then echo "conf/linuxwall-mig-agent-conf.go configuration file does not exist" ; exit 1; fi
-	# test if the agent configuration variable contains something different than the default value
-	# and if so, replace the link to the default configuration with the provided configuration
-	if [ conf/linuxwall-mig-agent-conf.go != "conf/mig-agent-conf.go.inc" ]; then rm mig-agent/configuration.go; cp conf/linuxwall-mig-agent-conf.go mig-agent/configuration.go; fi
-	GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go build  -o bin/linux/amd64/mig-agent-20150909+556e9c0.dev"" -ldflags "-X main.version=20150909+556e9c0.dev" mig.ninja/mig/mig-agent
-	ln -fs "$(pwd)/bin/linux/amd64/mig-agent-20150909+556e9c0.dev""" "$(pwd)/bin/linux/amd64/mig-agent-latest"
-	[ -x "bin/linux/amd64/mig-agent-20150909+556e9c0.dev""" ] && echo SUCCESS && exit 0
-	SUCCESS
+        $ make mig-agent
+        $ sudo cp bin/linux/amd64/mig-agent-latest /opt/mig/bin/mig-agent
 
-Built binaries will be placed in **bin/linux/amd64/** (or in a similar directory
-if you are building on a different platform).
-
-To cross-compile for a different platform, use the `ARCH` and `OS` make
+To cross-compile for a different platform, use the ``ARCH`` and ``OS`` make
 variables:
 
 .. code:: bash
 
-	$ make mig-agent AGTCONF=conf/example.net.agents-conf.go BUILDENV=prod OS=windows ARCH=amd64
+	$ make mig-agent BUILDENV=prod OS=windows ARCH=amd64
 
-You can test the agent on the command line using the debug flag `-d`. When run
-with `-d`, the agent will stay in foreground and print its activity to stdout.
+We can test the agent on the command line using the debug flag ``-d``. When run
+with ``-d``, the agent will stay in foreground and print its activity to stdout.
 
 .. code:: bash
 
-	$ sudo ./bin/linux/amd64/mig-agent-20150909+556e9c0.dev -d
+	$ sudo /opt/mig/bin/mig-agent -d
 	[info] using builtin conf
 	2015/09/09 10:43:30 - - - [debug] leaving initChannels()
 	2015/09/09 10:43:30 - - - [debug] Logging routine initialized.
@@ -1136,22 +1050,13 @@ with `-d`, the agent will stay in foreground and print its activity to stdout.
 	2015/09/09 10:43:40 - - - [info] closing parseCommands goroutine
 	2015/09/09 10:43:40 - - - [info] closing runModule goroutine
 
-The output above indicates that the agent successfully connected to Rabbitmq
+The output above indicates that the agent successfully connected to RabbitMQ
 and sent a heartbeat message. The scheduler will receive this heartbeat and
-process it, but in order to mark the agent offline, the scheduler must whitelist
-its queueloc value.
-
-To do so, go back to the scheduler server and add the queueloc into
-`/var/cache/mig/agents_whitelist.txt`. No need to restart the scheduler, it
-is automatically taken into account.
-
-.. code::
-
-	$ echo 'linux.gator1.ft8dzivx8zxd1mu966li7fy4jx0v999cgfap4mxhdgj1v0zv' >> /var/cache/mig/agents_whitelist.txt
+process it, indicating to the scheduler the agent is online.
 
 At the next run of the scheduler periodic routine, the agent will be marked
-as `online` and show up in the dashboard counters. You can browse these counters
-using the `mig-console`.
+as ``online`` and show up in the dashboard counters. You can browse these counters
+using the ``mig-console``.
 
 .. code::
 
@@ -1161,16 +1066,28 @@ using the `mig-console`.
 	| * 1 online agents on 1 endpoints
 	+------
 
-Run your first investigation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Get the `mig` command line from the upstream repository and run a simple
-investigation that looks for a user in `/etc/passwd`.
+Now that we have confirmed the agent works as expected, run the agent normally without
+the debug flag.
 
 .. code:: bash
 
-	$ go get mig.ninja/mig/client/mig
-	$ $GOPATH/bin/mig file -path /etc -name "^passwd$" -content "^root"
+        $ sudo /opt/mig/bin/mig-agent
+
+This will cause the agent to identify the init system in use, and install itself as a service
+and subsequently start itself up in daemon mode.
+
+Run your first investigation
+----------------------------
+
+We will run an investigation using the ``mig`` command, which is different from ``mig-console``
+in that it is more intended for quicker simplified investigations. We can install
+the ``mig`` command and run a simple investigation that looks for a user in ``/etc/passwd``.
+
+.. code:: bash
+
+        $ make mig-cmd
+        $ sudo cp bin/linux/amd64/mig /opt/mig/bin/mig
+	$ /opt/mig/bin/mig file -t allonline -path /etc -name "^passwd$" -content "^root"
 	1 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
 	Following action ID 4885615083564.status=inflight.
 	- 100.0% done in -2m17.141481302s
@@ -1180,178 +1097,16 @@ investigation that looks for a user in `/etc/passwd`.
 
 A single file is found, as expected.
 
-Appendix A: Manual RabbitMQ Configuration
------------------------------------------
+Appendix A: Advanced RabbitMQ Configuration
+-------------------------------------------
 
-All communications between schedulers and agents rely on RabbitMQ's AMQP
-protocol. While MIG does not rely on the security of RabbitMQ to pass orders to
-agents, an attacker that gains control to the message broker would be able to
-listen to all messages passed between the various components. To prevent this,
-RabbitMQ must provide a reasonable amount of protection, at several levels:
+RabbitMQ can be configured in a variety of ways, and this guide does not discuss
+RabbitMQ configuration in detail. For details on RabbitMQ consult the
+RabbitMQ documentation at https://www.rabbitmq.com/documentation.html. A couple
+points for consideration are noted in this section however.
 
-* All communications on the public internet are authenticated using client and
-  server certificates. Since all agents share a single client certificate, this
-  provides minimal security, and should only be used to make it harder for
-  attackers to establish an AMQP connection with rabbitmq.
-
-* Agents can only listen on their own queue. This is accomplished by randomizing
-  the name of the agent queue.
-
-* Agents can only publish to the `toschedulers` exchange. This is accomplished
-  using tight Access Control rules to RabbitMQ.
-
-Note that, even if a random agent manages to connect to the relay, the scheduler
-will accept its registration only if it is present in the scheduler's whitelist.
-
-
-1. On the rabbitmq server, create users:
-
-	* **admin**, with the tag 'administrator'
-	* **scheduler** , **agent** and **worker** with no tag
-
-All users should have strong passwords. The scheduler password goes into the
-configuration file `conf/mig-scheduler.cfg`, in `[mq] password`. The agent
-password goes into `conf/mig-agent-conf.go`, in the agent `AMQPBROKER` dial
-string. The admin password is, of course, for yourself.
-
-.. code:: bash
-
-   sudo rabbitmqctl add_user admin SomeRandomPassword
-   sudo rabbitmqctl set_user_tags admin administrator
-
-   sudo rabbitmqctl add_user scheduler SomeRandomPassword
-
-   sudo rabbitmqctl add_user agent SomeRandomPassword
-
-   sudo rabbitmqctl add_user worker SomeRandomPassword
-
-You can list the users with the following command:
-
-.. code:: bash
-
-   sudo rabbitmqctl list_users
-
-On fresh installation, rabbitmq comes with a `guest` user that as password
-`guest` and admin privileges. You may you to delete that account.
-
-.. code:: bash
-
-	sudo rabbitmqctl delete_user guest
-
-2. Create a 'mig' virtual host.
-
-.. code:: bash
-
-   sudo rabbitmqctl add_vhost mig
-   sudo rabbitmqctl list_vhosts
-
-3. Create permissions for the scheduler user. The scheduler is allowed to:
-	- CONFIGURE:
-		- declare the exchanges `toagents`, `toschedulers` and `toworkers`
-		- declare and delete queues under `mig.agt.*`
-	- WRITE:
-		- publish into the exchanges `toagents` and `toworkers`
-		- consume from queues `mig.agt.heartbeats` and `mig.agt.results`
-	- READ:
-		- declare the exchanges `toagents`, `toschedulers` and `toworkers`
-		- consume from queues `mig.agt.heartbeats` and `mig.agt.results` bound
-		  to the `toschedulers` exchange
-
-.. code:: bash
-
-	sudo rabbitmqctl set_permissions -p mig scheduler \
-		'^(toagents|toschedulers|toworkers|mig\.agt\..*)$' \
-		'^(toagents|toworkers|mig\.agt\.(heartbeats|results))$' \
-		'^(toagents|toschedulers|toworkers|mig\.agt\.(heartbeats|results))$'
-
-4. Create permissions for the agent use. The agent is allowed to:
-	- CONFIGURE:
-		- create any queue under `mig.agt.*`
-	- WRITE:
-		- publish to the `toschedulers` exchange
-		- consume from queues under `mig.agt.*`
-	- READ:
-		- consume from queues under `mig.agt.*` bound to the `toagents`
-		  exchange
-
-.. code:: bash
-
-	sudo rabbitmqctl set_permissions -p mig agent \
-		'^mig\.agt\..*$' \
-		'^(toschedulers|mig\.agt\..*)$' \
-		'^(toagents|mig\.agt\..*)$'
-
-5. Create permissions for the event workers. The workers are allowed to:
-	- CONFIGURE:
-		- declare queues under `migevent.*`
-	- WRITE:
-		- consume from queues under `migevent.*`
-	- READ:
-	    - consume from queues under `migevent.*` bound to the `toworkers`
-		  exchange
-
-.. code:: bash
-
-	sudo rabbitmqctl set_permissions -p mig worker \
-	'^migevent\..*$' \
-	'^migevent(|\..*)$' \
-	'^(toworkers|migevent\..*)$'
-
-6. Start the scheduler, it shouldn't return any ACCESS error. You can also list
-   the permissions with the command:
-
-.. code:: bash
-
-	$ sudo rabbitmqctl list_permissions -p mig | column -t
-	Listing permissions in vhost "mig" ...
-	agent      ^mig\\.agt\\..*$                                    ^(toschedulers|mig\\.agt\\..*)$                          ^(toagents|mig\\.agt\\..*)$
-	scheduler  ^(toagents|toschedulers|toworkers|mig\\.agt\\..*)$  ^(toagents|toworkers|mig\\.agt\\.(heartbeats|results))$  ^(toagents|toschedulers|toworkers|mig\\.agt\\.(heartbeats|results))$
-	worker     ^migevent\\..*$                                     ^migevent(|\\..*)$                                       ^(toworkers|migevent\\..*)$
-
-RabbitMQ TLS configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The documentation from rabbitmq has a thorough explanation of SSL support in
-rabbit at http://www.rabbitmq.com/ssl.html . Without going into too much
-details, we need three things:
-
-1. a PKI (and its public cert)
-
-2. a server certificate and private key for rabbitmq itself
-
-3. a client certificate and private key for the agents
-
-You can obtain these three things on you own, or follow the openssl tutorial
-from the rabbitmq documentation. Come back here when you have all three.
-
-On the rabbitmq server, place the certificates under **/etc/rabbitmq/certs/**.
-
- ::
-
-	/etc/rabbitmq/certs/
-	├── cacert.pem
-	├── migrelay1.example.net.key
-	└── migrelay1.example.net.pem
-
-Edit (or create) the configuration file of rabbitmq to reference the
-certificates.
-
- ::
-
-	[
-	  {rabbit, [
-		 {ssl_listeners, [5671]},
-		 {ssl_options, [{cacertfile,"/etc/rabbitmq/certs/cacert.pem"},
-						{certfile,"/etc/rabbitmq/certs/migrelay1.example.net.pem"},
-						{keyfile,"/etc/rabbitmq/certs/migrelay1.example.net.key"},
-						{verify,verify_peer},
-						{fail_if_no_peer_cert,true}
-		 ]}
-	  ]}
-	].
-
-Queues mirroring
-~~~~~~~~~~~~~~~~
+Queue mirroring
+~~~~~~~~~~~~~~~
 
 By default, queues within a RabbitMQ cluster are located on a single node (the
 node on which they were first declared). If that node goes down, the queue will
@@ -1367,8 +1122,8 @@ use the following policy:
 Cluster management
 ~~~~~~~~~~~~~~~~~~
 
-To create a cluster, all rabbitmq nodes must share a secret called erlang
-cookie. The erlang cookie is located in `/var/lib/rabbitmq/.erlang.cookie`.
+To create a cluster, all RabbitMQ nodes must share a secret called erlang
+cookie. The erlang cookie is located in ``/var/lib/rabbitmq/.erlang.cookie``.
 Make sure the value of the cookie is identical on all members of the cluster,
 then tell one node to join another one:
 
@@ -1413,38 +1168,43 @@ the scheduler. The agents will restart themselves.
 		-XDELETE http://localhost:15672/api/queues/mig/$queue;
 	done
 
-(remove the `echo` in the command above, it's there as a safety for copy/paste
+(remove the ``echo`` in the command above, it's there as a safety for copy/paste
 people).
 
 Supporting more than 1024 connections
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you want more than 1024 clients, you may have to increase the max number of
-file descriptors that rabbitmq is allowed to hold. On linux, increase `nofile`
-in `/etc/security/limits.conf` as follow:
+file descriptors that RabbitMQ is allowed to hold. On Linux, increase ``nofile``
+in ``/etc/security/limits.conf`` as follow:
 
 .. code:: bash
 
 	rabbitmq - nofile 102400
 
-Then, make sure than `pam_limits.so` is included in `/etc/pam.d/common-session`:
+Then, make sure that ``pam_limits.so`` is included in ``/etc/pam.d/common-session``:
 
 .. code:: bash
 
 	session    required     pam_limits.so
 
+This is an example, and configuration of this parameter may be different for your
+environment.
 
 Serving AMQPS on port 443
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To prevent yours agents from getting blocked by firewalls, it may be a good idea
-to use port 443 for connections between agents and rabbitmq. However, rabbitmq
+to use port 443 for connections between Agents and RabbitMQ. However, RabbitMQ
 is not designed to run on a privileged port. The solution, then, is to use
-iptables to redirect the port on the rabbitmq server.
+iptables to redirect the port on the RabbitMQ server.
 
 .. code:: bash
 
-	iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 5671 -m comment --comment "Serve RabbitMQ on HTTPS port"
+	# iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 5671 -m comment --comment "Serve RabbitMQ on HTTPS port"
+
+You can also use something like an AWS ELB in TCP mode to provide access to your relay
+on port 443.
 
 Appendix B: Scheduler configuration reference
 ---------------------------------------------
@@ -1453,69 +1213,32 @@ Spool directories
 ~~~~~~~~~~~~~~~~~
 
 The scheduler keeps copies of work in progress in a set of spool directories.
-It will take of creating the spool if it doesn't exist. The spool shouldn't grow
+It will take care of creating the spool if it doesn't exist. The spool shouldn't grow
 in size beyond a few megabytes as the scheduler tries to do regular housekeeping,
 but it is still preferable to put it in a large enough location.
 
-.. code:: bash
-
-	sudo chown mig-user /var/cache/mig -R
-
-Whitelist
-~~~~~~~~~
-
-Agents's queuelocs must be listed in a whitelist file for the scheduler to accept
-their registrations. The location of the whitelist is configurable, but a good
-place for it is in `/var/cache/mig/agents_whitelist.txt`. The file contains one
-queueloc string on each line. The agent queueloc is taken from the hostname of the
-endpoint the agent runs on, plus a random value only known to the endpoint and
-the MIG platform.
-
-.. code::
-
-	linux.agent123.example.net.58b3mndjmbb00
-	windows.db4.sub.example.com.56b2andxmyb00
-
-If the scheduler receives a heartbeat from an agent that is not present in the
-whitelist, it will log an error message. An operator can process the logs and
-add agents to the whitelist manually.
-
-.. code::
-
-	Dec 17 23:39:10 ip-172-30-200-53 mig-scheduler[9181]: - - - [warning] getHeartbeats(): Agent 'linux.somehost.example.net.4vjs8ubqo0100' is not authorized
-
-For environments that are particularly dynamic, it is possible to use regexes
-in the whitelist. This is done by prepending `re:` to the whitelist entry.
-
-.. code::
-
-	re:linux.server[0-9]{1,4}.example.net.[a-z0-9]{13}
-
-Keep the list of regexes short. Until MIG implements a better agent validation
-mechanisms, the whitelist is reread for every registration, and regexes are
-recompiled every time. On a busy platform, this can be done hundreds of times
-per second and induce heavy cpu usage.
+The standard location for this is ``/var/cache/mig``.
 
 Database tuning
 ~~~~~~~~~~~~~~~
 
 **sslmode**
 
-`sslmode` can take the values `disable`, `require` (no cert verification)
-and `verify-full` (requires cert verification). A proper installation should
-use `verify-full`.
+``sslmode`` can take the values ``disable`, ``require`` (no cert verification)
+and ``verify-full`` (requires cert verification). A proper installation should
+use ``verify-full``.
 
 .. code::
 
 	[postgres]
 		sslmode = "verify-full"
 
-**macconn**
+**maxconn**
 
 The scheduler has an extra parameter to control the max number of database
 connections it can use at once. It's important to keep that number relatively
 low, and increase it with the size of your infrastructure. The default value is
-set to `10`, and a good production value is `100`.
+set to ``10``.
 
 .. code::
 
@@ -1536,190 +1259,5 @@ When that happens, you will see the insertion lag increase in the query below:
 	(1 row)
 
 A healthy insertion lag should be below one second. If the lag increases, and
-your DB server still isn't stuck at 100% CPU, try increasing the value of
-`maxconn`. It will cause the scheduler to use more insertion threads.
-
-Logging
-~~~~~~~
-
-The scheduler can log to stdout, syslog, or a target file. It will run in
-foreground if the logging mode is set to 'stdout'.
-For the scheduler to run as a daemon, set the mode to 'file' or 'syslog'.
-
- ::
-
-	[logging]
-	; select a mode between 'stdout', 'file' and 'syslog
-	; for syslog, logs go into local3
-	mode		= "syslog"
-	level		= "debug"
-	host		= "localhost"
-	port		= 514
-	protocol	= "udp"
-
-AMQPS configuration
-~~~~~~~~~~~~~~~~~~~
-
-TLS support between the scheduler and rabbitmq is optional but strongly
-recommended. To enable it, generate a client certificate and set the
-[mq] configuration section of the scheduler as follow:
-
- ::
-
-	[mq]
-		host = "relay1.mig.example.net"
-		port = 5671
-		user = "scheduler"
-		pass = "secretrabbitmqpassword"
-		vhost = "mig"
-
-	; TLS options
-		usetls  = true
-		cacert  = "/etc/mig/scheduler/cacert.pem"
-		tlscert = "/etc/mig/scheduler/scheduler-amqps.pem"
-		tlskey  = "/etc/mig/scheduler/scheduler-amqps-key.pem"
-
-Make sure to use **fully qualified paths** otherwise the scheduler will fail to
-load them after going in the background.
-
-Collector
-~~~~~~~~~
-
-The Collector is a routine ran periodically by the scheduler to inspect the
-content of its spool. It will load files that may have been missed by the file
-notification routine, and delete old files after a grace period.
-
- ::
-
-	[collector]
-		; frequency at which the collector runs
-		freq = "60s"
-
-Periodic
-~~~~~~~~
-
-Periodic routines are run at `freq` interval to do housekeeping and accounting,
-cleaning up the spool, marking agents that stopped sending hearbeats idle or
-offline, computing agents stats or detecting hosts running multiple agents.
-
-.. code::
-
-	; the periodic runs less often that
-	; the collector and does cleanup and DB updates
-	[periodic]
-		; frequency at which the periodic jobs run
-		freq = "87s"
-
-		; delete finished actions, commands and invalids after
-		; this period has passed
-		deleteafter = "360h"
-
-		; run a rabbitmq unused queues cleanup job at this frequency
-		; this is DB & amqp intensive so don't run it too often
-		queuescleanupfreq = "24h"
-
-PGP
-~~~
-
-The scheduler uses a PGP key to issue termination order on hosts that run
-multiple agents. Due to the limited scope of that key, it is stored in the
-database to facilitate deployment and provisioning of multiple schedulers.
-
-Upon startup, the scheduler will look for an investigator named `migscheduler`
-and retrieve its private key to use it in action signing. If no investigator is
-found, it generates one and inserts it into the database, such that other
-schedulers can use it as well.
-
-At the time, the scheduler public key must be manually added into the agent
-configuration. This will be changed in the future when ACLs and investigators
-can be dynamically distributed to agents.
-
-In the ACL of the agent configuration file `conf/mig-agent-conf.go`:
-
- ::
-
-	var AGENTACL = [...]string{
-	`{
-		"agentdestroy": {
-			"minimumweight": 1,
-			"investigators": {
-				"MIG Scheduler": {
-					"fingerprint": "1E644752FB76B77245B1694E556CDD7B07E9D5D6",
-					"weight": 1
-				}
-			}
-		}
-	}`,
-	}
-
-And add the public PGP key of the scheduler as well:
-
- ::
-
-	// PGP public keys that are authorized to sign actions
-	var PUBLICPGPKEYS = [...]string{
-	`
-	-----BEGIN PGP PUBLIC KEY BLOCK-----
-	Version: GnuPG v1. Name: MIG Scheduler
-
-	mQENBFF/69EBCADe79sqUKJHXTMW3tahbXPdQAnpFWXChjI9tOGbgxmse1eEGjPZ
-	QPFOPgu3O3iij6UOVh+LOkqccjJ8gZVLYMJzUQC+2RJ3jvXhti8xZ1hs2iEr65Rj
-	zUklHVZguf2Zv2X9Er8rnlW5xzplsVXNWnVvMDXyzx0ufC00dDbCwahLQnv6Vqq8
-	BdUCSrvo/r7oAims8SyWE+ZObC+rw7u01Sut0ctnYrvklaM10+zkwGNOTszrduUy
-	.....
-	`
-	}
-
-Appendix C: Advanced agent configuration
-----------------------------------------
-
-Agent external configuration file
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-It is possible to use a configuration file with the agent. The location of the
-file can be specified using the `-c` flag of the agent's binary. If no flag is
-specific, the agent will look for a configuration file at
-`/etc/mig/mig-agent.cfg`. If no file is found at this location, the builtin
-parameters are used.
-
-The following parameters are **not** controlable by the configuration file:
-
-* list of investigators public keys in `PUBLICPGPKEYS`
-* list of access control lists in `AGENTACL`
-
-All other parameters can be overriden in the configuration file. Check out the
-sample file `mig-agent.cfg.inc` in the **conf** folder.
-
-Building agents packages
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-The Makefile in the MIG repository contains targets that build RPM, DEB, DMG
-and MSI files to facilitate the distribution of MIG Agents. These targets rely
-on FPM to build packages, so make sure you have ruby and fpm installed before
-proceeding.
-
-Note that due to various packaging requirements, it is easier to build a package
-on the environment it is targeted for: rhel for RPMs, debian for DEBs, macos
-for DMGs and windows for MSIs.
-
-The make targets are:
-
-* `deb-agent` to build debian packages
-* `rpm-agent` to build rpm packages
-* `dmg-agent` to build dmg packages
-* `msi-agent` to build msi packages (experimental)
-
-.. code:: bash
-
-	$ make deb-agent AGTCONF=conf/linuxwall-mig-agent-conf.go
-	mkdir -p bin/linux/amd64
-	echo building mig-agent for linux/amd64
-	[...]
-	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-			-m "Mozilla OpSec" --url http://mig.mozilla.org --architecture x86_64 -v 20150909+556e9c0.dev \
-			--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
-			-s dir -t deb .
-	Created package {:path=>"mig-agent_20150909+556e9c0.dev_amd64.deb"}
-
-	$ ls -al mig-agent_20150909+556e9c0.dev_amd64.deb
-	-rw-r--r-- 1 ulfr ulfr 3454772 Sep  9 10:55 mig-agent_20150909+556e9c0.dev_amd64.deb
+your database server still isn't stuck at 100% CPU, try increasing the value of
+``maxconn``. It will cause the scheduler to use more insertion threads.

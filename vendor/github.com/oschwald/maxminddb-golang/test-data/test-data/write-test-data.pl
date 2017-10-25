@@ -76,12 +76,15 @@ sub main {
 
     write_geoip2_dbs();
     write_broken_geoip2_city_db();
+    write_invalid_node_count();
 
     write_no_ipv4_tree_db();
 
     write_no_map_db( \@ipv4_subnets );
 
     write_test_serialization_data();
+
+    write_db_with_metadata_pointers();
 }
 
 sub write_broken_pointers_test_db {
@@ -333,6 +336,7 @@ sub write_geoip2_dbs {
         [ 'Connection-Type', 0 ],
         [ 'Country',         0 ],
         [ 'Domain',          0 ],
+        [ 'Enterprise',      0 ],
         [ 'ISP',             0 ],
         [ 'Precision-City',  0 ],
         [ 'Precision-ISP',   0 ]
@@ -356,12 +360,21 @@ sub write_broken_geoip2_city_db {
     _write_geoip2_db( 'City', 0, 'Test Broken Double Format' );
 }
 
+sub write_invalid_node_count {
+    no warnings 'redefine';
+    local *MaxMind::DB::Writer::Tree::node_count = sub { 100000 };
+
+    _write_geoip2_db( 'City', 0, 'Test Invalid Node Count' );
+}
+
 {
     my %type_map = (
+        accuracy_radius                => 'uint16',
         autonomous_system_number       => 'uint32',
         autonomous_system_organization => 'utf8_string',
         cellular                       => 'uint16',
         city                           => 'map',
+        confidence                     => 'uint16',
         continent                      => 'map',
         country                        => 'map',
         geoname_id                     => 'uint32',
@@ -397,7 +410,7 @@ sub write_broken_geoip2_city_db {
             languages     => [ 'en', $type eq 'City' ? ('zh') : () ],
             description   => {
                 en =>
-                    "GeoIP2 $type $description Database (a small sample of real GeoIP2 data)",
+                    "GeoIP2 $type $description Database (fake GeoIP2 data, for example purposes only)",
                 $type eq 'City' ? ( zh => '小型数据库' ) : (),
             },
             alias_ipv6_to_ipv4    => 1,
@@ -526,6 +539,31 @@ sub write_test_serialization_data {
     close $fh;
 
     return;
+}
+
+sub write_db_with_metadata_pointers {
+    my $repeated_string = 'Lots of pointers in metadata';
+    my $writer          = MaxMind::DB::Writer::Tree->new(
+        ip_version            => 6,
+        record_size           => 24,
+        map_key_type_callback => sub { 'utf8_string' },
+        database_type         => $repeated_string,
+        languages             => [ 'en', 'es', 'zh' ],
+        description           => {
+            en => $repeated_string,
+            es => $repeated_string,
+            zh => $repeated_string,
+        },
+
+    );
+
+    _populate_all_networks($writer);
+
+    open my $fh, '>', 'MaxMind-DB-test-metadata-pointers.mmdb';
+
+    $writer->write_tree($fh);
+
+    close $fh;
 }
 
 main();

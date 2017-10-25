@@ -11,7 +11,7 @@ import (
 	"unsafe"
 )
 
-func listLoadedLibraries(p process.Process) (libraries []string, harderror error, softerrors []error) {
+func listLoadedLibraries(p process.Process) (libraries []string, softerrors []error, harderror error) {
 	var ptr uintptr
 	var sizeT C.size_t
 	clibs := (***C.char)(C.malloc(C.size_t(unsafe.Sizeof(ptr))))
@@ -21,7 +21,7 @@ func listLoadedLibraries(p process.Process) (libraries []string, harderror error
 
 	response := C.list_loaded_libraries((C.process_handle_t)(p.Handle()), clibs, count)
 	defer C.free_loaded_libraries_list(*clibs, *count)
-	harderror, softerrors = cresponse.GetResponsesErrors(unsafe.Pointer(response))
+	softerrors, harderror = cresponse.GetResponsesErrors(unsafe.Pointer(response))
 	C.response_free(response)
 
 	if harderror != nil {
@@ -35,13 +35,13 @@ func listLoadedLibraries(p process.Process) (libraries []string, harderror error
 			Len:  int(*count),
 			Cap:  int(*count)}))
 
-	processName, harderror, softs := p.Name()
+	processName, softs, harderror := p.Name()
 	if harderror != nil {
 		return
 	}
 	softerrors = append(softerrors, softs...)
 
-	for i, _ := range clibsSlice {
+	for i := range clibsSlice {
 		if clibsSlice[i] == nil {
 			continue
 		}

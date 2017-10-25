@@ -276,7 +276,12 @@ times			show the various timestamps of the action
 			fmt.Printf("Action '%s' successfully launched with ID '%.0f' on target '%s'\n",
 				a.Name, a.ID, a.Target)
 			if follow {
-				err = cli.FollowAction(a, tcount)
+				// XXX the sigint channel, which is used to indicate the follow
+				// operation should be cancelled is not actually used right now. This
+				// should likely be handled in a similar manner to how mig-cmd handles
+				// interrupts.
+				sigint := make(chan bool, 1)
+				err = cli.FollowAction(a, tcount, sigint)
 				if err != nil {
 					panic(err)
 				}
@@ -285,6 +290,10 @@ times			show the various timestamps of the action
 			_ = actionReader(fmt.Sprintf("action %.0f", a.ID), cli)
 			goto exit
 		case "listagents":
+			if a.Target == "" {
+				fmt.Println("A target string has not been set, use settarget first")
+				break
+			}
 			agents, err := cli.EvaluateAgentTarget(a.Target)
 			if err != nil {
 				fmt.Println(err)

@@ -340,7 +340,7 @@ func (r *run) Run(in modules.ModuleReader) (out string) {
 		r.Parameters.Searches[label] = search
 	}
 	// evaluate each process one by one
-	pids, err, serr := process.GetAllPids()
+	pids, serr, err := process.GetAllPids()
 	if err != nil {
 		panic(err)
 	}
@@ -356,7 +356,7 @@ func (r *run) Run(in modules.ModuleReader) (out string) {
 			search.activate()
 			r.Parameters.Searches[label] = search
 		}
-		proc, err, serr := process.OpenFromPid(pid)
+		proc, serr, err := process.OpenFromPid(pid)
 		if err != nil {
 			// if we encounter a hard failure, skip this process
 			stats.Failures = append(stats.Failures, err.Error())
@@ -404,7 +404,7 @@ func (r *run) evaluateProcess(proc process.Process) (err error) {
 			}
 		}()
 	}
-	procname, err, serr := proc.Name()
+	procname, serr, err := proc.Name()
 	if err != nil {
 		return
 	}
@@ -489,7 +489,7 @@ func (s search) checkLibraries(proc process.Process, procname string) (matchedal
 		if c.code&checkLib == 0 {
 			continue
 		}
-		libs, err, serr := listlibs.GetMatchingLoadedLibraries(proc, c.regex)
+		libs, serr, err := listlibs.GetMatchingLoadedLibraries(proc, c.regex)
 		if err != nil {
 			stats.Failures = append(stats.Failures, err.Error())
 		}
@@ -617,7 +617,7 @@ func (r *run) walkProcMemory(proc process.Process, procname string) (err error) 
 	if debug {
 		fmt.Println("walkProcMemory: reading memory of", proc.Pid(), procname)
 	}
-	err, serr := memaccess.SlidingWalkMemory(proc, offset, bufsize, walkfn)
+	serr, err := memaccess.SlidingWalkMemory(proc, offset, bufsize, walkfn)
 	if err != nil {
 		return err
 	}

@@ -104,11 +104,6 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 	if !ok {
 		desc := fmt.Sprintf("getHeartbeats(): Agent '%s' is not authorized", agt.QueueLoc)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Warning()
-		// send an event to notify workers of the failed agent auth
-		err = sendEvent(mig.Ev_Q_Agt_Auth_Fail, msg.Body, ctx)
-		if err != nil {
-			panic(err)
-		}
 		// agent authorization failed so we drop this heartbeat and return
 		return
 	}
@@ -125,11 +120,6 @@ func getHeartbeats(msg amqp.Delivery, ctx Context) (err error) {
 			err = ctx.DB.InsertAgent(agt, nil)
 			if err != nil {
 				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Heartbeat DB insertion failed with error '%v' for agent '%s'", err, agt.Name)}.Err()
-			}
-			// notify the agt.new event queue
-			err = sendEvent(mig.Ev_Q_Agt_New, msg.Body, ctx)
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Failed to send migevent to %s: %v", err, mig.Ev_Q_Agt_New)}.Err()
 			}
 		} else {
 			// the agent exists in database. reuse the existing ID, and keep the status if it was

@@ -1,0 +1,41 @@
+; scheduler configuration file used in standalone docker demo mode
+
+[agent]
+    timeout = "60m"
+    heartbeatfreq = "30s"
+    whitelist = ""
+    detectmultiagents = true
+    killdupagents = true
+    logactions = true
+
+[collector]
+    freq = "1s"
+
+[periodic]
+    freq = "3s"
+    deleteafter = "72h"
+    queuescleanupfreq = "24h"
+
+[directories]
+    spool = "/var/cache/mig/"
+    tmp = "/var/tmp/"
+
+[postgres]
+    host = "127.0.0.1"
+    port = 5432
+    dbname = "mig"
+    user = "migscheduler"
+    password = "SCHEDULERDBPASS"
+    sslmode = "disable"
+    maxconn = 10
+
+[mq]
+    host  = "127.0.0.1"
+    port  = 5672
+    user  = "scheduler"
+    pass  = "SCHEDULERMQPASS"
+    vhost = "mig"
+
+[logging]
+    mode = "stdout"
+    level = "debug"

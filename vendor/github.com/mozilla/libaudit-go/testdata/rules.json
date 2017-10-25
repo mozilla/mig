@@ -1,0 +1,111 @@
+{
+    "audit_rules": [
+        {
+            "key": "audit",
+            "path": "/etc/libaudit.conf",
+            "permission": "wa"
+        },
+        {
+            "key": "syslog",
+            "path": "/etc/rsyslog.conf",
+            "permission": "wa"
+        },
+        {
+            "actions": [
+                "always",
+                "exit"
+            ],
+            "fields": [
+                {
+                    "name": "arch",
+                    "op": "eq",
+                    "value": 64
+                }
+            ],
+            "key": "bypass",
+            "syscalls": [
+                "personality"
+            ]
+        },
+        {
+            "actions": [
+                "exit",
+                "never"
+            ],
+            "fields": [
+                {
+                    "name": "path",
+                    "op": "eq",
+                    "value": "/bin/ls"
+                },
+                {
+                    "name": "perm",
+                    "op": "eq",
+                    "value": "x"
+                }
+            ]
+        },
+        {
+            "actions": [
+                "exit",
+                "always"
+            ],
+            "fields": [
+                {
+                    "name": "arch",
+                    "op": "eq",
+                    "value": 64
+                }
+            ],
+            "key": "exec",
+            "syscalls": [
+                "execve"
+            ]
+        },
+        {
+            "actions": [
+                "entry",
+                "always"
+            ],
+            "syscalls": [
+                "clone",
+                "fork",
+                "vfork"
+            ]
+        },
+        {
+            "actions": [
+                "always",
+		"exit"
+            ],
+            "syscalls": [
+                "settimeofday",
+                "adjtimex"
+            ],
+            "key": "time-change"    
+        },
+        {
+            "actions": [
+                "always",
+                "exit"
+            ],
+            "fields": [
+                {
+                    "name": "arch",
+                    "op": "eq",
+                    "value": 64
+                },
+                {
+                    "name": "auid",
+                    "op": "gt_or_eq",
+                    "value": 1000
+                }
+            ],
+            "key": "rename",
+            "syscalls": [
+                "rename",
+                "renameat"
+            ]
+        }
+    ]
+}

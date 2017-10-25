@@ -1,8 +1,9 @@
 language: go
 go:
     - 1.8
+go_import_path: mig.ninja/mig
 addons:
-    postgresql: "9.4"
+    postgresql: "9.5"
 notifications:
     irc:
         channels:
@@ -18,31 +19,9 @@ before_install:
     - echo HRNGDEVICE=/dev/urandom | sudo tee /etc/default/rng-tools
     - sudo /etc/init.d/rng-tools restart
 script:
-    - export OLDPATH=$(pwd)
-    - cd
-    - curl -OL https://github.com/VirusTotal/yara/archive/v3.5.0.tar.gz
-    - tar -zxf v3.5.0.tar.gz
-    - cd yara-3.5.0
-    - ./bootstrap.sh
-    - ./configure --disable-shared --disable-magic --disable-cuckoo --without-crypto
-    - make
-    - sudo make install
-    - cd ..
-    - mkdir -p "$GOPATH/src/mig.ninja/"
-    - mv "$OLDPATH" "$GOPATH/src/mig.ninja/"
-    - cd "$GOPATH/src/mig.ninja/mig"
-    # the files in conf/ are our default files but we need them to also
-    # exist in the package directory so go get works. make sure the package
-    # specific files match our defaults in conf/ here.
-    - diff mig-agent/configuration.go conf/mig-agent-conf.go.inc
-    - diff mig-agent/available_modules.go conf/available_modules.go
-    - diff mig-loader/configuration.go conf/mig-loader-conf.go.inc
-    - diff client/mig-console/available_modules.go conf/available_modules.go
-    - diff client/mig/available_modules.go conf/available_modules.go
-    # enable all the modules we have for the test
-    - sed -i 's,//_,_,' conf/available_modules.go
-    - make WITHYARA=yes
+    - make test
     - docker build -t mozilla/mig .
+    - docker run -e MIGMODE=test mozilla/mig
     - |
         if [ ! -z "$TRAVIS_TAG" ]; then
             # If a TRAVIS_TAG is set, this build follows a git tag --push and should trigger

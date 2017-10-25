@@ -299,11 +299,6 @@ func initRelay(orig_ctx Context) (ctx Context, err error) {
 	if err != nil {
 		panic(err)
 	}
-	// declare the "migevent" exchange used for communication between the platform components
-	err = ctx.MQ.Chan.ExchangeDeclare(mig.Mq_Ex_ToWorkers, "topic", true, false, false, false, nil)
-	if err != nil {
-		panic(err)
-	}
 	ctx.Channels.Log <- mig.Log{Desc: "AMQP connection opened"}
 	return
 }

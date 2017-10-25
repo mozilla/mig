@@ -206,11 +206,6 @@ func startRoutines(ctx Context) {
 				}.Err()
 				continue
 			}
-			// publish an event in the command results queue
-			err = sendEvent(mig.Ev_Q_Cmd_Res, delivery.Body, ctx)
-			if err != nil {
-				panic(err)
-			}
 		}
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "agents results listener routine started"}
@@ -277,22 +272,6 @@ func startRoutines(ctx Context) {
 		}
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "killDupAgents() routine started"}
-
-	// launch the routine that heartbeats the relays and terminates if connection is lost
-	go func() {
-		hostname, _ := os.Hostname()
-		hbmsg := fmt.Sprintf("host='%s' pid='%d'", hostname, os.Getpid())
-		for {
-			ctx.OpID = mig.GenID()
-			err = sendEvent(mig.Ev_Q_Sched_Hb, []byte(hbmsg+time.Now().UTC().String()), ctx)
-			if err != nil {
-				err = fmt.Errorf("relay heartbeating failed with error '%v'", err)
-				ctx.Channels.Terminate <- err
-			}
-			time.Sleep(60 * time.Second)
-		}
-	}()
-	ctx.Channels.Log <- mig.Log{Desc: "relay heartbeating routine started"}
 
 	// block here until a terminate message is received
 	exitReason := <-ctx.Channels.Terminate

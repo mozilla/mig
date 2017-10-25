@@ -11,9 +11,11 @@ import (
 	"regexp"
 )
 
+// Variable defines variables that can be included in the policy document.
+// Variables are expanded in objects at runtime.
 type Variable struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Key   string `json:"key" yaml:"key"`
+	Value string `json:"value" yaml:"value"`
 }
 
 func variableExpansion(v []Variable, in string) string {

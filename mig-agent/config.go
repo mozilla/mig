@@ -9,11 +9,12 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"runtime"
+	"path"
 	"strings"
 	"time"
 
 	"mig.ninja/mig"
+	"mig.ninja/mig/mig-agent/agentcontext"
 
 	"gopkg.in/gcfg.v1"
 )
@@ -33,7 +34,6 @@ type config struct {
 		Api              string
 		RefreshEnv       string
 		NoPersistMods    bool
-		PersistConfigDir string
 		ExtraPrivacyMode bool
 		OnlyVerifyPubKey bool
 		Tags             []string
@@ -47,15 +47,10 @@ type config struct {
 	Logging mig.Logging
 }
 
-// Return the default configuration path based on the platform
+// configDefault returns the default agent configuration file path for the
+// platform.
 func configDefault() string {
-	switch runtime.GOOS {
-	case "darwin", "linux":
-		return "/etc/mig/mig-agent.cfg"
-	case "windows":
-		return "C:\\mig\\mig-agent.cfg"
-	}
-	return ""
+	return path.Join(agentcontext.GetConfDir(), "mig-agent.cfg")
 }
 
 // configLoad reads a local configuration file and overwrite the global conf
@@ -181,7 +176,6 @@ func newGlobals() *globals {
 		checkin:            CHECKIN,
 		extraPrivacyMode:   EXTRAPRIVACYMODE,
 		spawnPersistent:    SPAWNPERSISTENT,
-		persistConfigDir:   MODULECONFIGDIR,
 		refreshEnv:         REFRESHENV,
 		loggingConf:        LOGGINGCONF,
 		amqBroker:          AMQPBROKER,
@@ -242,9 +236,6 @@ func (g globals) parseConfig(config config) error {
 	g.extraPrivacyMode = config.Agent.ExtraPrivacyMode
 	if config.Agent.NoPersistMods {
 		g.spawnPersistent = false
-	}
-	if config.Agent.PersistConfigDir != "" {
-		g.persistConfigDir = config.Agent.PersistConfigDir
 	}
 	if config.Agent.RefreshEnv != "" {
 		g.refreshEnv, err = time.ParseDuration(config.Agent.RefreshEnv)
@@ -315,7 +306,6 @@ func (g globals) apply() {
 	CHECKIN = g.checkin
 	EXTRAPRIVACYMODE = g.extraPrivacyMode
 	SPAWNPERSISTENT = g.spawnPersistent
-	MODULECONFIGDIR = g.persistConfigDir
 	REFRESHENV = g.refreshEnv
 	LOGGINGCONF = g.loggingConf
 	AMQPBROKER = g.amqBroker

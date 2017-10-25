@@ -7,15 +7,17 @@ import (
 	"strings"
 )
 
+// MapsFilePathFromPid returns the memory maps file path for a given process id. 
 func MapsFilePathFromPid(pid uint) string {
 	return filepath.Join("/proc", fmt.Sprintf("%d", pid), "maps")
 }
 
+// MemFilePathFromPid method returns the path of the process' memory file.
 func MemFilePathFromPid(pid uint) string {
 	return filepath.Join("/proc", fmt.Sprintf("%d", pid), "mem")
 }
 
-//Parses the memory limits of a mapping as found in /proc/PID/maps
+//ParseMapsFileMemoryLimits parses the memory limits of a mapping as found in /proc/PID/maps
 func ParseMapsFileMemoryLimits(limits string) (start uintptr, end uintptr, err error) {
 	fields := strings.Split(limits, "-")
 	if len(fields) != 2 {
@@ -37,7 +39,7 @@ func ParseMapsFileMemoryLimits(limits string) (start uintptr, end uintptr, err e
 	return
 }
 
-// splitMapsEntry splits a line of the maps files returning a slice with an element for each of its parts.
+// SplitMapsFileEntry method splits a line of the maps files returning a slice with an element for each of its parts.
 func SplitMapsFileEntry(entry string) []string {
 	res := make([]string, 0, 6)
 	for i := 0; i < 5; i++ {

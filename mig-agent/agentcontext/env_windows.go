@@ -60,7 +60,7 @@ func getSysInfo() (hostname, domain, osname, osversion string, err error) {
 		}
 	}()
 	// get data from the systeminfo
-	out, err := exec.Command("cmd","/C", "wmic.exe os get Caption, Version /format:list & wmic.exe computersystem get Name, domain /format:list").Output()
+	out, err := exec.Command("cmd", "/C", "wmic.exe os get Caption, Version /format:list & wmic.exe computersystem get Name, domain /format:list").Output()
 	if err != nil {
 		panic(err)
 	}
@@ -103,8 +103,4 @@ func getSysInfo() (hostname, domain, osname, osversion string, err error) {
 	}
 exit:
 	return
-}
-
-func GetRunDir() string {
-	return `C:\mig\`
 }

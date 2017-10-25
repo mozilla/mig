@@ -12,6 +12,9 @@ import (
 	"regexp"
 )
 
+// Pkg is used to perform tests against packages that are installed on the
+// system, for example package version tests.
+//
 // Normally when a Pkg object is prepared, the pkgInfo list will be filled with
 // information related to any package installed which exactly matches Name. If
 // the optional CollectMatch parameter is set, this regular expression will be
@@ -30,9 +33,9 @@ import (
 // instance of a given package if there are multiple versions of the same
 // package installed.
 type Pkg struct {
-	Name         string `json:"name,omitempty"`
-	CollectMatch string `json:"collectmatch,omitempty"`
-	OnlyNewest   bool   `json:"onlynewest,omitempty"`
+	Name         string `json:"name,omitempty" yaml:"name,omitempty"`
+	CollectMatch string `json:"collectmatch,omitempty" yaml:"collectmatch,omitempty"`
+	OnlyNewest   bool   `json:"onlynewest,omitempty" yaml:"onlynewest,omitempty"`
 	pkgInfo      []packageInfo
 }
 
@@ -82,7 +85,7 @@ func newestPackage(r pkgmgrResult) (ret packageInfo, err error) {
 			pinfo = &r.results[i]
 			continue
 		}
-		f, err := evrCompare(EVROP_LESS_THAN, pinfo.version, r.results[i].version)
+		f, err := evrCompare(EvropLessThan, pinfo.version, r.results[i].version)
 		if err != nil {
 			return ret, err
 		}

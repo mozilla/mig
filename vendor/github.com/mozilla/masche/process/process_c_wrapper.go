@@ -23,17 +23,17 @@ func (p process) Handle() uintptr {
 	return uintptr(p.hndl)
 }
 
-func (p process) Close() (harderror error, softerrors []error) {
+func (p process) Close() (softerrors []error, harderror error) {
 	resp := C.close_process_handle(p.hndl)
 	defer C.response_free(resp)
 	return cresponse.GetResponsesErrors(unsafe.Pointer(resp))
 }
 
-func openFromPid(pid uint) (p Process, harderror error, softerrors []error) {
+func openFromPid(pid uint) (p Process, softerrors []error, harderror error) {
 	var result process
 
 	resp := C.open_process_handle(C.pid_tt(pid), &result.hndl)
-	harderror, softerrors = cresponse.GetResponsesErrors(unsafe.Pointer(resp))
+	softerrors, harderror = cresponse.GetResponsesErrors(unsafe.Pointer(resp))
 	C.response_free(resp)
 
 	if harderror == nil {
@@ -43,5 +43,5 @@ func openFromPid(pid uint) (p Process, harderror error, softerrors []error) {
 		C.response_free(resp)
 	}
 
-	return result, harderror, softerrors
+	return result, softerrors, harderror
 }
