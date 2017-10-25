@@ -345,12 +345,9 @@ func (a Action) String() (str string, err error) {
 	return
 }
 
-// VerifyACL controls that an action has been issued by investigators
-// that have the right permissions. This function looks at each operation
-// listed in the action, and find the corresponding permission. If no
-// permission is found, the default one `default` is used.
-// The first permission that is found to apply to an operation, but
-// doesn't allow the operation to run, will fail the verification globally
+// VerifyACL validates that an action has been issued by investigators that have adequate
+// permissions to execute the action. It takes a look at each operation included in the
+// action and verifies the signatures in the action against the agents ACL.
 func (a Action) VerifyACL(acl ACL, keyring io.Reader, onlyVerifyPubKey bool) (err error) {
 	// first, verify all signatures and get a list of PGP
 	// fingerprints of the signers
