@@ -9,17 +9,29 @@ MIG is Mozilla's platform for investigative surgery of remote endpoints.
 Quick Start w/ Docker
 ---------------------
 
-You can spin up a local-only MIG setup using docker. The container is not suitable for production use but lets you experiment with MIG quickly.
+You can spin up a local-only MIG setup using docker. The container is not suitable for production use but
+lets you experiment with MIG quickly, providing a single container environment that has most of the MIG components
+available.
+
+To pull from Docker Hub:
 
 ```bash
 $ docker pull mozilla/mig
 $ docker run -it mozilla/mig
 ```
 
+Or, if you have the source checked out in your GOPATH you can build your own image:
+
+```bash
+$ cd $GOPATH/src/mig.ninja/mig
+$ docker build -t mozilla/mig:latest .
+$ docker run -it mozilla/mig
+```
+
 Once inside the container, you can use the MIG tools to query a local agent, as such:
 
 ```bash
-mig@5345268590c8:~$ mig file -t all -path /usr/bin -sha2 5c1956eba492b2c3fffd8d3e43324b5c477c22727385be226119f7ffc24aad3f
+mig@5345268590c8:~$ /go/bin/mig file -t all -path /usr/bin -sha2 5c1956eba492b2c3fffd8d3e43324b5c477c22727385be226119f7ffc24aad3f
 1 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
 Following action ID 7978299359234.
  1 / 1 [=========================================================] 100.00% 0/s4s
@@ -118,28 +130,3 @@ Documentation
 All documentation is available in the 'doc' directory and on http://mig.mozilla.org .
 * [Concepts & Internal Components](doc/concepts.rst)
 * [Installation & Configuration](doc/configuration.rst)
-
-Testing
--------
-Assuming you have a dedicated Ubuntu system (like a VM), you can use the
-standalone installation script to deploy a test environment rapidly.
-```bash
-$ sudo apt-get install golang git
-
-# must be >= 1.5
-$ go version
-go version go1.6.1 linux/amd64
-
-$ export GOPATH=$HOME/go
-
-$ mkdir $GOPATH
-
-$ go get mig.ninja/mig
-
-$ cd $GOPATH/src/mig.ninja/mig
-
-$ bash tools/standalone_install.sh
-```
-This script will install all of the components MIG needs for a localhost only
-installation. Follow instructions at the end of the script to convert it to a
-real infrastructure, or read [Installation & Configuration](doc/configuration.rst).
