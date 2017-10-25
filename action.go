@@ -309,6 +309,10 @@ func (a Action) VerifySignatures(keyring io.Reader) (err error) {
 	if err != nil {
 		return errors.New("Failed to stringify action")
 	}
+	// If the action does not contain any signatures, treat this as an error condition
+	if a.PGPSignatures == nil || len(a.PGPSignatures) == 0 {
+		return errors.New("Action contained no valid signatures")
+	}
 	// Create a copy of the keyring we can use during validation of each
 	// signature. We don't want to use the keyring reader directly as it is
 	// backed by a buffer and will be drained after verification of the first
