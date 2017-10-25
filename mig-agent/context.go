@@ -318,12 +318,10 @@ func initACL(orig_ctx Context) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("loading acls from %v", aclpath)}.Info()
 	}
 
-	var perms mig.Permission
-	err = json.Unmarshal([]byte(AGENTACL), &perms)
+	err = json.Unmarshal([]byte(AGENTACL), &ctx.ACL)
 	if err != nil {
 		panic(err)
 	}
-	ctx.ACL = append(ctx.ACL, perms)
 
 	return
 }

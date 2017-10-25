@@ -309,6 +309,10 @@ func (a Action) VerifySignatures(keyring io.Reader) (err error) {
 	if err != nil {
 		return errors.New("Failed to stringify action")
 	}
+	// If the action does not contain any signatures, treat this as an error condition
+	if a.PGPSignatures == nil || len(a.PGPSignatures) == 0 {
+		return errors.New("Action contained no valid signatures")
+	}
 	// Create a copy of the keyring we can use during validation of each
 	// signature. We don't want to use the keyring reader directly as it is
 	// backed by a buffer and will be drained after verification of the first
@@ -341,12 +345,9 @@ func (a Action) String() (str string, err error) {
 	return
 }
 
-// VerifyACL controls that an action has been issued by investigators
-// that have the right permissions. This function looks at each operation
-// listed in the action, and find the corresponding permission. If no
-// permission is found, the default one `default` is used.
-// The first permission that is found to apply to an operation, but
-// doesn't allow the operation to run, will fail the verification globally
+// VerifyACL validates that an action has been issued by investigators that have adequate
+// permissions to execute the action. It takes a look at each operation included in the
+// action and verifies the signatures in the action against the agents ACL.
 func (a Action) VerifyACL(acl ACL, keyring io.Reader, onlyVerifyPubKey bool) (err error) {
 	// first, verify all signatures and get a list of PGP
 	// fingerprints of the signers
@@ -380,28 +381,13 @@ func (a Action) VerifyACL(acl ACL, keyring io.Reader, onlyVerifyPubKey bool) (er
 		return
 	}
 
-	// Then, for each operation contained in the action, look for
-	// a permission that apply to it, by comparing the operation name
-	// with permission name. If none is found, use the default permission.
+	// Authorize access to the operation by verifying the fingerprints present against our
+	// ACLs
 	for _, operation := range a.Operations {
-		for _, permission := range acl {
-			for permName, _ := range permission {
-				if permName == operation.Module {
-					return verifyPermission(operation, permName, permission, fingerprints)
-				}
-			}
+		err = verifyPermission(operation.Module, acl, fingerprints)
+		if err != nil {
+			return err
 		}
-		// no specific permission found, apply the default permission
-		var defaultPerm Permission
-		for _, permission := range acl {
-			for permName, _ := range permission {
-				if permName == "default" {
-					defaultPerm = permission
-					break
-				}
-			}
-		}
-		return verifyPermission(operation, "default", defaultPerm, fingerprints)
 	}
 	return
 }

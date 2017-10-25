@@ -11,9 +11,14 @@ import (
 	"strings"
 )
 
-type ACL []Permission
-
-type Permission map[string]struct {
+// ACL defines an access control list used by the agent to determine what investigators
+// can call a given module. The key in this map is the module name, and can be "default" in
+// which case this element will be used if no key for a given module exists.
+//
+// The value includes a minimum weight to authorize the request, and a map of investigators
+// with the key of the map being the name of the investigator, and the value storing the PGP
+// fingerprint of the investigators key and the weight that investigator has.
+type ACL map[string]struct {
 	MinimumWeight int
 	Investigators map[string]struct {
 		Fingerprint string
@@ -21,12 +26,21 @@ type Permission map[string]struct {
 	}
 }
 
-// verifyPermission controls that the PGP keys, identified by their fingerprints, that
-// signed an operation are sufficient to allow this operation to run
-func verifyPermission(operation Operation, permName string, perm Permission, fingerprints []string) (err error) {
-	if perm[permName].MinimumWeight < 1 {
-		return fmt.Errorf("Invalid permission '%s'. Must require at least 1 signature, has %d",
-			permName, perm[permName].MinimumWeight)
+// verifyPermission validates that the fingerprints are permitted to execute an operation by
+// comparing the fingerprints to the fingerprints and weight specifications in ACL acl.
+func verifyPermission(moduleName string, acl ACL, fingerprints []string) error {
+	aclname := moduleName
+	aclent, ok := acl[moduleName]
+	if !ok {
+		// No ACL entry found for this module name, see if we can find a default
+		aclent, ok = acl["default"]
+		if !ok {
+			return fmt.Errorf("No ACL entry found for %v, and no default present", moduleName)
+		}
+		aclname = "default"
+	}
+	if aclent.MinimumWeight < 1 {
+		return fmt.Errorf("Invalid ACL %v, weight must be > 0", aclname)
 	}
 	var seenFp []string
 	signaturesWeight := 0
@@ -34,19 +48,19 @@ func verifyPermission(operation Operation, permName string, perm Permission, fin
 		// if the same key is used to sign multiple times, return an error
 		for _, seen := range seenFp {
 			if seen == fp {
-				return fmt.Errorf("Permission violation: key id '%s' used to sign multiple times.", fp)
+				return fmt.Errorf("Permission violation: key %v used to sign multiple times", fp)
 			}
 		}
-		for _, signer := range perm[permName].Investigators {
+		for _, signer := range aclent.Investigators {
 			if strings.ToUpper(fp) == strings.ToUpper(signer.Fingerprint) {
 				signaturesWeight += signer.Weight
 			}
 		}
 		seenFp = append(seenFp, fp)
 	}
-	if signaturesWeight < perm[permName].MinimumWeight {
-		return fmt.Errorf("Permission denied for operation '%s'. Insufficient signatures weight. Need %d, got %d",
-			operation.Module, perm[permName].MinimumWeight, signaturesWeight)
+	if signaturesWeight < aclent.MinimumWeight {
+		return fmt.Errorf("Permission denied for operation %v, insufficient signatures weight"+
+			" (need %v, got %v)", moduleName, aclent.MinimumWeight, signaturesWeight)
 	}
-	return
+	return nil
 }
