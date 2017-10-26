@@ -163,16 +163,7 @@ times		show the various timestamps of the action
 					panic("invalid show '" + orders[2] + "'")
 				}
 			}
-			render := "text"
-			if len(orders) > 2 {
-				switch orders[2] {
-				case "map", "text":
-					render = orders[2]
-				default:
-					panic("invalid rendering '" + orders[2] + "'")
-				}
-			}
-			err = cli.PrintActionResults(a, show, render)
+			err = cli.PrintActionResults(a, show)
 			if err != nil {
 				panic(err)
 			}

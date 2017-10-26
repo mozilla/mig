@@ -1532,11 +1532,7 @@ func (cli Client) FetchActionResults(a mig.Action) (ret []mig.Command, err error
 //
 // show can either be found, notfound, or all and can be used to control which results
 // are fetched and displayed for a given action.
-//
-// The render parameter can be used to indicate the results should be rendered in a
-// certain way (as opposed to just printing the agent results). If this value is set to
-// map, results will be rendered into a map (geo-located).
-func (cli Client) PrintActionResults(a mig.Action, show, render string) (err error) {
+func (cli Client) PrintActionResults(a mig.Action, show string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("PrintActionResults() -> %v", e)
@@ -1545,12 +1541,8 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 	var (
 		found                   bool
 		report, foundQ          string
-		locs                    []CommandLocation
 		limit, offset, agtCount int = 37, 0, 0
 	)
-	if render == "map" {
-		report = "&report=geolocations"
-	}
 	switch show {
 	case "found":
 		found = true
@@ -1573,38 +1565,24 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 		switch resource.Collection.Error.Message {
 		case "", "no results found":
 			err = nil
-		case "maxmind database not initialized":
-			panic("Maxmind database not configured in the API, geolocations cannot be displayed")
 		default:
 			panic(err)
 		}
 		count := 0
 		for _, item := range resource.Collection.Items {
 			for _, data := range item.Data {
-				switch render {
-				case "map":
-					if data.Name != "geolocation" {
-						continue
-					}
-					loc, err := ValueToLocation(data.Value)
-					if err != nil {
-						panic(err)
-					}
-					locs = append(locs, loc)
-				default:
-					if data.Name != "command" {
-						continue
-					}
-					cmd, err := ValueToCommand(data.Value)
-					if err != nil {
-						panic(err)
-					}
-					err = PrintCommandResults(cmd, found, true)
-					if err != nil {
-						panic(err)
-					}
-					count++
+				if data.Name != "command" {
+					continue
 				}
+				cmd, err := ValueToCommand(data.Value)
+				if err != nil {
+					panic(err)
+				}
+				err = PrintCommandResults(cmd, found, true)
+				if err != nil {
+					panic(err)
+				}
+				count++
 			}
 		}
 		// if count is still at zero, we didn't get any results from the query and exit the loop
@@ -1615,23 +1593,11 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 		offset += limit
 		agtCount += count
 	}
-	switch render {
-	case "map":
-		if len(locs) < 1 {
-			break
-		}
-		title := fmt.Sprintf("Geolocation of %s results for action ID %.0f %s", show, a.ID, a.Name)
-		err = PrintMap(locs, title)
-		if err != nil {
-			panic(err)
-		}
-	default:
-		s := "agent has"
-		if agtCount > 1 {
-			s = "agents have"
-		}
-		fmt.Fprintf(os.Stderr, "\x1b[31m%d %s %s results\x1b[0m\n", agtCount, s, show)
+	s := "agent has"
+	if agtCount > 1 {
+		s = "agents have"
 	}
+	fmt.Fprintf(os.Stderr, "\x1b[31m%d %s %s results\x1b[0m\n", agtCount, s, show)
 	if show != "all" {
 		var unsuccessful map[string][]string
 		unsuccessful = make(map[string][]string)
@@ -1650,9 +1616,6 @@ func (cli Client) PrintActionResults(a mig.Action, show, render string) (err err
 					// 404, move one
 					err = nil
 					goto nextunsuccessful
-				case "maxmind database not initialized":
-					// can't make the map, exit with error
-					panic("Maxmind database not configured in the API, geolocations cannot be displayed")
 				default:
 					// something else happened, exit with error
 					panic(err)

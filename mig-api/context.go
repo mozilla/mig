@@ -7,7 +7,6 @@ package main
 
 import (
 	"fmt"
-	geo "github.com/oschwald/geoip2-golang"
 	"gopkg.in/gcfg.v1"
 	"io"
 	"mig.ninja/mig"
@@ -49,10 +48,6 @@ type Context struct {
 		Host, BaseRoute, BaseURL string
 		ClientPublicIP           string
 		ClientPublicIPOffset     int
-	}
-	MaxMind struct {
-		Path string
-		r    *geo.Reader
 	}
 	Logging mig.Logging
 }
@@ -106,12 +101,6 @@ func Init(path string, debug bool) (ctx Context, err error) {
 		panic(err)
 	}
 
-	if ctx.MaxMind.Path != "" {
-		ctx.MaxMind.r, err = geo.Open(ctx.MaxMind.Path)
-		if err != nil {
-			panic(err)
-		}
-	}
 	return
 }
 
