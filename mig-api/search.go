@@ -84,21 +84,17 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
-	// prepare the output in the requested format
-	switch p.Report {
-	case "complianceitems":
-		if p.Type != "command" {
-			panic("compliance items reporting is only available for the 'command' type")
+	switch p.Type {
+	case "action":
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d actions", len(results.([]mig.Action)))}
+		if len(results.([]mig.Action)) == 0 {
+			panic("no results found")
 		}
-		items, err := commandsToComplianceItems(results.([]mig.Command))
-		if err != nil {
-			panic(err)
-		}
-		for i, item := range items {
+		for i, r := range results.([]mig.Action) {
 			err = resource.AddItem(cljs.Item{
-				Href: fmt.Sprintf("%s%s/search?type=command?agentname=%s&commandid=%s&actionid=%s&threatfamily=compliance&report=complianceitems",
-					ctx.Server.Host, ctx.Server.BaseRoute, item.Target, p.CommandID, p.ActionID),
-				Data: []cljs.Data{{Name: "compliance item", Value: item}},
+				Href: fmt.Sprintf("%s%s/action?actionid=%.0f",
+					ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
+				Data: []cljs.Data{{Name: p.Type, Value: r}},
 			})
 			if err != nil {
 				panic(err)
@@ -107,19 +103,16 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				break
 			}
 		}
-	case "geolocations":
-		if p.Type != "command" {
-			panic("geolocations reporting is only available for the 'command' type")
+	case "agent":
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d agents", len(results.([]mig.Agent)))}
+		if len(results.([]mig.Agent)) == 0 {
+			panic("no results found")
 		}
-		items, err := commandsToGeolocations(results.([]mig.Command))
-		if err != nil {
-			panic(err)
-		}
-		for i, item := range items {
+		for i, r := range results.([]mig.Agent) {
 			err = resource.AddItem(cljs.Item{
-				Href: fmt.Sprintf("%s%s/search?type=command?agentname=%s&commandid=%s&actionid=%s&report=geolocations",
-					ctx.Server.Host, ctx.Server.BaseRoute, item.Endpoint, p.CommandID, p.ActionID),
-				Data: []cljs.Data{{Name: "geolocation", Value: item}},
+				Href: fmt.Sprintf("%s%s/agent?agentid=%.0f",
+					ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
+				Data: []cljs.Data{{Name: p.Type, Value: r}},
 			})
 			if err != nil {
 				panic(err)
@@ -128,116 +121,77 @@ func search(respWriter http.ResponseWriter, request *http.Request) {
 				break
 			}
 		}
-	default:
-		switch p.Type {
-		case "action":
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d actions", len(results.([]mig.Action)))}
-			if len(results.([]mig.Action)) == 0 {
-				panic("no results found")
+	case "command":
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Command)))}
+		if len(results.([]mig.Command)) == 0 {
+			panic("no results found")
+		}
+		for i, r := range results.([]mig.Command) {
+			err = resource.AddItem(cljs.Item{
+				Href: fmt.Sprintf("%s%s/command?commandid=%.0f",
+					ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
+				Data: []cljs.Data{{Name: p.Type, Value: r}},
+			})
+			if err != nil {
+				panic(err)
 			}
-			for i, r := range results.([]mig.Action) {
-				err = resource.AddItem(cljs.Item{
-					Href: fmt.Sprintf("%s%s/action?actionid=%.0f",
-						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
-					Data: []cljs.Data{{Name: p.Type, Value: r}},
-				})
-				if err != nil {
-					panic(err)
-				}
-				if float64(i) > p.Limit {
-					break
-				}
+			if float64(i) > p.Limit {
+				break
 			}
-		case "agent":
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d agents", len(results.([]mig.Agent)))}
-			if len(results.([]mig.Agent)) == 0 {
-				panic("no results found")
+		}
+	case "investigator":
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d investigators", len(results.([]mig.Investigator)))}
+		if len(results.([]mig.Investigator)) == 0 {
+			panic("no results found")
+		}
+		for i, r := range results.([]mig.Investigator) {
+			err = resource.AddItem(cljs.Item{
+				Href: fmt.Sprintf("%s%s/investigator?investigatorid=%.0f",
+					ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
+				Data: []cljs.Data{{Name: p.Type, Value: r}},
+			})
+			if err != nil {
+				panic(err)
 			}
-			for i, r := range results.([]mig.Agent) {
-				err = resource.AddItem(cljs.Item{
-					Href: fmt.Sprintf("%s%s/agent?agentid=%.0f",
-						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
-					Data: []cljs.Data{{Name: p.Type, Value: r}},
-				})
-				if err != nil {
-					panic(err)
-				}
-				if float64(i) > p.Limit {
-					break
-				}
+			if float64(i) > p.Limit {
+				break
 			}
-		case "command":
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d commands", len(results.([]mig.Command)))}
-			if len(results.([]mig.Command)) == 0 {
-				panic("no results found")
+		}
+	case "manifest":
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d manifests", len(results.([]mig.ManifestRecord)))}
+		if len(results.([]mig.ManifestRecord)) == 0 {
+			panic("no results found")
+		}
+		for i, r := range results.([]mig.ManifestRecord) {
+			err = resource.AddItem(cljs.Item{
+				Href: fmt.Sprintf("%s%s/manifest?manifestid=%.0f",
+					ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
+				Data: []cljs.Data{{Name: p.Type, Value: r}},
+			})
+			if err != nil {
+				panic(err)
 			}
-			for i, r := range results.([]mig.Command) {
-				err = resource.AddItem(cljs.Item{
-					Href: fmt.Sprintf("%s%s/command?commandid=%.0f",
-						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
-					Data: []cljs.Data{{Name: p.Type, Value: r}},
-				})
-				if err != nil {
-					panic(err)
-				}
-				if float64(i) > p.Limit {
-					break
-				}
+			if float64(i) > p.Limit {
+				break
 			}
-		case "investigator":
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d investigators", len(results.([]mig.Investigator)))}
-			if len(results.([]mig.Investigator)) == 0 {
-				panic("no results found")
+		}
+	case "loader":
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d loaders", len(results.([]mig.LoaderEntry)))}
+		if len(results.([]mig.LoaderEntry)) == 0 {
+			panic("no results found")
+		}
+		for i, r := range results.([]mig.LoaderEntry) {
+			err = resource.AddItem(cljs.Item{
+				// XXX This should be an Href to fetch the entry
+				Href: fmt.Sprintf("%s%s", ctx.Server.Host,
+					ctx.Server.BaseRoute),
+				Data: []cljs.Data{{Name: p.Type, Value: r}},
+			})
+			if err != nil {
+				panic(err)
 			}
-			for i, r := range results.([]mig.Investigator) {
-				err = resource.AddItem(cljs.Item{
-					Href: fmt.Sprintf("%s%s/investigator?investigatorid=%.0f",
-						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
-					Data: []cljs.Data{{Name: p.Type, Value: r}},
-				})
-				if err != nil {
-					panic(err)
-				}
-				if float64(i) > p.Limit {
-					break
-				}
-			}
-		case "manifest":
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d manifests", len(results.([]mig.ManifestRecord)))}
-			if len(results.([]mig.ManifestRecord)) == 0 {
-				panic("no results found")
-			}
-			for i, r := range results.([]mig.ManifestRecord) {
-				err = resource.AddItem(cljs.Item{
-					Href: fmt.Sprintf("%s%s/manifest?manifestid=%.0f",
-						ctx.Server.Host, ctx.Server.BaseRoute, r.ID),
-					Data: []cljs.Data{{Name: p.Type, Value: r}},
-				})
-				if err != nil {
-					panic(err)
-				}
-				if float64(i) > p.Limit {
-					break
-				}
-			}
-		case "loader":
-			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("returning search results with %d loaders", len(results.([]mig.LoaderEntry)))}
-			if len(results.([]mig.LoaderEntry)) == 0 {
-				panic("no results found")
-			}
-			for i, r := range results.([]mig.LoaderEntry) {
-				err = resource.AddItem(cljs.Item{
-					// XXX This should be an Href to fetch the entry
-					Href: fmt.Sprintf("%s%s", ctx.Server.Host,
-						ctx.Server.BaseRoute),
-					Data: []cljs.Data{{Name: p.Type, Value: r}},
-				})
-				if err != nil {
-					panic(err)
-				}
-				if float64(i) > p.Limit {
-					break
-				}
+			if float64(i) > p.Limit {
+				break
 			}
 		}
 	}
@@ -337,15 +291,6 @@ func parseSearchParameters(qp url.Values) (p migdbsearch.Parameters, filterFound
 			p.Offset, err = strconv.ParseFloat(qp["offset"][0], 64)
 			if err != nil {
 				panic("invalid offset parameter")
-			}
-		case "report":
-			switch qp["report"][0] {
-			case "complianceitems":
-				p.Report = qp["report"][0]
-			case "geolocations":
-				p.Report = qp["report"][0]
-			default:
-				panic("report not implemented")
 			}
 		case "status":
 			p.Status = qp["status"][0]

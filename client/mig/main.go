@@ -51,11 +51,6 @@ usage: %s <module> <global options> <module parameters>
 		 * notfound: 	Only print negative results
 		 * all:		Print all results
 
--render <mode>	 Defines how results should be rendered.
-
-		 * text (default):	Results are printed to the console
-		 * map:			Results are geolocated and a google map is generated
-
 -t <target>	 Target to launch the action on. If no target is specified, the value will
 		 default to all online agents (status='online')
 
@@ -103,7 +98,7 @@ func main() {
 		err                                       error
 		op                                        mig.Operation
 		a                                         mig.Action
-		migrc, show, render, target, expiration   string
+		migrc, show, target, expiration           string
 		afile, aname, targetfound, targetnotfound string
 		signAndOutput                             bool
 		printAndExit                              bool
@@ -127,7 +122,6 @@ func main() {
 	fs.BoolVar(&printAndExit, "p", false, "display action json that would be used and exit")
 	fs.StringVar(&migrc, "c", homedir+"/.migrc", "alternative configuration file")
 	fs.StringVar(&show, "show", "found", "type of results to show")
-	fs.StringVar(&render, "render", "text", "results rendering mode")
 	fs.StringVar(&target, "t", "", "action target")
 	fs.StringVar(&targetfound, "target-found", "", "targets agents that have found results in a previous action.")
 	fs.StringVar(&targetnotfound, "target-notfound", "", "targets agents that haven't found results in a previous action.")
@@ -425,7 +419,7 @@ readytolaunch:
 		fmt.Fprintf(os.Stderr, "[notice] stopped following action, but agents may still be running.\n")
 		fmt.Fprintf(os.Stderr, "fetching available results:\n")
 	}
-	err = cli.PrintActionResults(a, show, render)
+	err = cli.PrintActionResults(a, show)
 	if err != nil {
 		panic(err)
 	}
