@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// Investigator describes a single MIG investigator
 type Investigator struct {
 	ID             float64   `json:"id,omitempty"`
 	Name           string    `json:"name"`
@@ -25,7 +26,7 @@ type Investigator struct {
 	Permissions InvestigatorPerms `json:"permissions"`
 }
 
-// Check an investigator has given permission pv
+// CheckPermission validates if an investigator has given permission pv
 func (i *Investigator) CheckPermission(pv int64) bool {
 	switch pv {
 	case PermSearch:
@@ -68,7 +69,7 @@ func (i *Investigator) CheckPermission(pv int64) bool {
 	return false
 }
 
-// Describes permissions assigned to an investigator
+// InvestigatorPerms describes permissions assigned to an investigator
 type InvestigatorPerms struct {
 	Search             bool `json:"search"`
 	Action             bool `json:"action"`
@@ -91,7 +92,7 @@ type InvestigatorPerms struct {
 	InvestigatorUpdate bool `json:"investigator_update"`
 }
 
-// Convert a permission bit mask into a boolean permission set
+// FromMask converts a permission bit mask into a boolean permission set
 func (ip *InvestigatorPerms) FromMask(mask int64) {
 	if (mask & PermSearch) != 0 {
 		ip.Search = true
@@ -152,7 +153,7 @@ func (ip *InvestigatorPerms) FromMask(mask int64) {
 	}
 }
 
-// Convert a boolean permission set to a permission bit mask
+// ToMask converts a boolean permission set to a permission bit mask
 func (ip *InvestigatorPerms) ToMask() (ret int64) {
 	if ip.Search {
 		ret |= PermSearch
@@ -214,9 +215,8 @@ func (ip *InvestigatorPerms) ToMask() (ret int64) {
 	return ret
 }
 
-// Convert an existing boolean permission set to a descriptive string, used
-// primarily in mig-console for summarizing permissions assigned to an
-// investigator
+// ToDescriptive converts an existing boolean permission set to a descriptive string, used
+// primarily in mig-console for summarizing permissions assigned to an investigator
 func (ip *InvestigatorPerms) ToDescriptive() string {
 	cf := func(want int64, have int64) (bool, int64) {
 		var (
@@ -289,11 +289,11 @@ func (ip *InvestigatorPerms) ToDescriptive() string {
 	return ret
 }
 
-// Describe permission sets that can be applied; note default is omitted as this
+// PermSets describes permission sets that can be applied; note default is omitted as this
 // is currently always applied
 var PermSets = []string{"PermManifest", "PermLoader", "PermAdmin"}
 
-// Apply permission sets in slice sl to the investigator
+// FromSetList applies permission sets in slice sl to the investigator
 func (ip *InvestigatorPerms) FromSetList(sl []string) error {
 	for _, x := range sl {
 		switch x {
@@ -310,7 +310,7 @@ func (ip *InvestigatorPerms) FromSetList(sl []string) error {
 	return nil
 }
 
-// Set a default set of permissions on the investigator
+// DefaultSet sets a default set of permissions on the investigator
 func (ip *InvestigatorPerms) DefaultSet() {
 	ip.Search = true
 	ip.Action = true
@@ -320,7 +320,7 @@ func (ip *InvestigatorPerms) DefaultSet() {
 	ip.Dashboard = true
 }
 
-// Set manifest related permissions on the investigator
+// ManifestSet sets manifest related permissions on the investigator
 func (ip *InvestigatorPerms) ManifestSet() {
 	ip.Manifest = true
 	ip.ManifestSign = true
@@ -329,7 +329,7 @@ func (ip *InvestigatorPerms) ManifestSet() {
 	ip.ManifestLoaders = true
 }
 
-// Set loader related permissions on the investigator
+// LoaderSet sets loader related permissions on the investigator
 func (ip *InvestigatorPerms) LoaderSet() {
 	ip.Loader = true
 	ip.LoaderStatus = true
@@ -338,7 +338,7 @@ func (ip *InvestigatorPerms) LoaderSet() {
 	ip.LoaderNew = true
 }
 
-// Set administrative permissions on the investigator
+// AdminSet sets administrative permissions on the investigator
 func (ip *InvestigatorPerms) AdminSet() {
 	ip.Investigator = true
 	ip.InvestigatorCreate = true
@@ -368,6 +368,7 @@ const (
 	PermInvestigatorUpdate
 )
 
+// Possible status values for an investigator
 const (
 	StatusActiveInvestigator   string = "active"
 	StatusDisabledInvestigator string = "disabled"

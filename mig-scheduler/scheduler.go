@@ -228,7 +228,7 @@ func sendCommands(cmds []mig.Command, ctx Context) (err error) {
 		}
 		agtQueue := fmt.Sprintf("mig.agt.%s", cmd.Agent.QueueLoc)
 		go func() {
-			err = ctx.MQ.Chan.Publish(mig.Mq_Ex_ToAgents, agtQueue, true, false, msg)
+			err = ctx.MQ.Chan.Publish(mig.ExchangeToAgents, agtQueue, true, false, msg)
 			if err != nil {
 				ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, ActionID: cmd.Action.ID, CommandID: cmd.ID, Desc: "publishing failed to queue" + agtQueue}.Err()
 			} else {

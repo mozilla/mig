@@ -290,12 +290,12 @@ func initRelay(orig_ctx Context) (ctx Context, err error) {
 		panic(err)
 	}
 	// declare the "toagents" exchange used for communication from schedulers to agents
-	err = ctx.MQ.Chan.ExchangeDeclare(mig.Mq_Ex_ToAgents, "direct", true, false, false, false, nil)
+	err = ctx.MQ.Chan.ExchangeDeclare(mig.ExchangeToAgents, "direct", true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
 	// declare the "toschedulers" exchange used for communication from agents to schedulers
-	err = ctx.MQ.Chan.ExchangeDeclare(mig.Mq_Ex_ToSchedulers, "direct", true, false, false, false, nil)
+	err = ctx.MQ.Chan.ExchangeDeclare(mig.ExchangeToSchedulers, "direct", true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}

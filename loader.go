@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Describes a loader entry stored in the database
+// LoaderEntry describes a loader entry stored in the database
 type LoaderEntry struct {
 	ID        float64   `json:"id"`        // Loader ID
 	Name      string    `json:"name"`      // Loader name
@@ -25,6 +25,7 @@ type LoaderEntry struct {
 	ExpectEnv string    `json:"expectenv"` // Expected environment
 }
 
+// Validate validates a loader entry
 func (le *LoaderEntry) Validate() (err error) {
 	if le.Key != "" {
 		err = ValidateLoaderPrefixAndKey(le.Prefix + le.Key)
@@ -32,8 +33,8 @@ func (le *LoaderEntry) Validate() (err error) {
 	return nil
 }
 
-// Small helper type used primarily during the loader authentication
-// process between the API and database code, temporarily stores
+// LoaderAuthDetails is a small helper type used primarily during the loader
+// authentication process between the API and database code, temporarily stores
 // authentication information
 type LoaderAuthDetails struct {
 	ID   float64
@@ -41,6 +42,7 @@ type LoaderAuthDetails struct {
 	Salt []byte
 }
 
+// Validate validates a LoaderAuthDetails type
 func (lad *LoaderAuthDetails) Validate() error {
 	if len(lad.Hash) != LoaderHashedKeyLength ||
 		len(lad.Salt) != LoaderSaltLength {
@@ -49,24 +51,32 @@ func (lad *LoaderAuthDetails) Validate() error {
 	return nil
 }
 
-// Generate a new loader prefix value
+// GenerateLoaderPrefix will generate a new loader prefix value
 func GenerateLoaderPrefix() string {
 	return RandAPIKeyString(LoaderPrefixLength)
 }
 
-// Generate a new loader key value
+// GenerateLoaderKey will generate a new loader key value
 func GenerateLoaderKey() string {
 	return RandAPIKeyString(LoaderKeyLength)
 }
 
-// Various constants related to properties of the loader keys
-const LoaderPrefixAndKeyLength = 40 // Key length including prefix
-const LoaderPrefixLength = 8        // Prefix length
-const LoaderKeyLength = 32          // Length excluding prefix
-const LoaderHashedKeyLength = 32    // Length of hashed key in the database
-const LoaderSaltLength = 16         // Length of salt
+// LoaderPrefixAndKeyLength is the key length for a loader key including the prefix
+const LoaderPrefixAndKeyLength = 40
 
-// Validate a loader key, returns nil if it is valid
+// LoaderPrefixLength is the length of the loader prefix
+const LoaderPrefixLength = 8
+
+// LoaderKeyLength is the length of the loader key
+const LoaderKeyLength = 32
+
+// LoaderHashedKeyLength is the length of the hashed loader key in the database
+const LoaderHashedKeyLength = 32
+
+// LoaderSaltLength is the length of the salt applied to loader keys
+const LoaderSaltLength = 16
+
+// ValidateLoaderKey validates a loader key, returns nil if it is valid
 func ValidateLoaderKey(key string) error {
 	repstr := fmt.Sprintf("^[A-Za-z0-9]{%v}$", LoaderKeyLength)
 	ok, err := regexp.MatchString(repstr, key)
@@ -76,7 +86,7 @@ func ValidateLoaderKey(key string) error {
 	return nil
 }
 
-// Validate a loader prefix value, returns nil if it is valid
+// ValidateLoaderPrefix validates a loader prefix value, returns nil if it is valid
 func ValidateLoaderPrefix(prefix string) error {
 	repstr := fmt.Sprintf("^[A-Za-z0-9]{%v}$", LoaderPrefixLength)
 	ok, err := regexp.MatchString(repstr, prefix)
@@ -86,7 +96,7 @@ func ValidateLoaderPrefix(prefix string) error {
 	return nil
 }
 
-// Validate a loader key that includes the prefix
+// ValidateLoaderPrefixAndKey validates a loader key that includes the prefix
 func ValidateLoaderPrefixAndKey(pk string) error {
 	if len(pk) != LoaderPrefixAndKeyLength {
 		return fmt.Errorf("loader key is incorrect length")

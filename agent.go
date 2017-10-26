@@ -8,6 +8,7 @@ package mig /* import "mig.ninja/mig" */
 
 import "time"
 
+// Various agent status values
 const (
 	AgtStatusOnline    string = "online"
 	AgtStatusDestroyed string = "destroyed"
@@ -49,7 +50,7 @@ type AgentEnv struct {
 	Modules   []string    `json:"modules,omitempty"`
 }
 
-// Stores AWS specific agent environment values
+// AgentEnvAWS stores AWS specific agent environment values
 type AgentEnvAWS struct {
 	InstanceID   string `json:"instanceid,omitempty"`
 	LocalIPV4    string `json:"localipv4,omitempty"`
@@ -57,6 +58,8 @@ type AgentEnvAWS struct {
 	InstanceType string `json:"instancetype,omitempty"`
 }
 
+// AgentsStats stores information about the global MIG environment, primarily used
+// in command line tools and the API/scheduler
 type AgentsStats struct {
 	Timestamp             time.Time           `json:"timestamp"`
 	OnlineAgents          float64             `json:"onlineagents"`
@@ -71,6 +74,8 @@ type AgentsStats struct {
 	FlappingEndpoints     float64             `json:"flappingendpoints"`
 }
 
+// AgentsVersionsSum stores information on the count of agents at a specific version
+// level, primarily used in command line tools and the API/scheduler
 type AgentsVersionsSum struct {
 	Version string  `json:"version"`
 	Count   float64 `json:"count"`

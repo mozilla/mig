@@ -10,7 +10,7 @@ package mig /* import "mig.ninja/mig" */
 // components. You'd typically want to set this during install using flags
 // such as -ldflags "-X mig.ninja/mig.Version=20170913-0.06824ce0.dev" when
 // calling the go build tools.
-var Version string = ""
+var Version = ""
 
 func init() {
 	// If the default value of Version is not being specified using the build

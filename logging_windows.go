@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	MODE_STDOUT = 1 << iota
-	MODE_FILE
-	MODE_EVENTLOG
+	logModeStdout = 1 << iota
+	logModeFile
+	logModeEventlog
 )
 
 // Logging stores the attributes needed to perform the logging
@@ -42,6 +42,7 @@ type Log struct {
 	Priority                  int
 }
 
+// Emerg sets Log entry level to emergency
 func (l Log) Emerg() (mlog Log) {
 	mlog = l
 	mlog.Priority = eventlog.Error
@@ -49,6 +50,7 @@ func (l Log) Emerg() (mlog Log) {
 	return
 }
 
+// Alert sets Log entry level to alert
 func (l Log) Alert() (mlog Log) {
 	mlog = l
 	mlog.Priority = eventlog.Error
@@ -56,6 +58,7 @@ func (l Log) Alert() (mlog Log) {
 	return
 }
 
+// Crit sets Log entry level to critical
 func (l Log) Crit() (mlog Log) {
 	mlog = l
 	mlog.Priority = eventlog.Error
@@ -63,6 +66,7 @@ func (l Log) Crit() (mlog Log) {
 	return
 }
 
+// Err sets Log entry level to error
 func (l Log) Err() (mlog Log) {
 	mlog = l
 	mlog.Priority = eventlog.Error
@@ -70,6 +74,7 @@ func (l Log) Err() (mlog Log) {
 	return
 }
 
+// Warning sets Log entry level to warning
 func (l Log) Warning() (mlog Log) {
 	mlog = l
 	mlog.Priority = eventlog.Warning
@@ -77,6 +82,7 @@ func (l Log) Warning() (mlog Log) {
 	return
 }
 
+// Notice sets Log entry level to notice
 func (l Log) Notice() (mlog Log) {
 	mlog = l
 	mlog.Priority = eventlog.Warning
@@ -84,6 +90,7 @@ func (l Log) Notice() (mlog Log) {
 	return
 }
 
+// Info sets Log entry level to info
 func (l Log) Info() (mlog Log) {
 	mlog = l
 	mlog.Priority = eventlog.Info
@@ -91,7 +98,8 @@ func (l Log) Info() (mlog Log) {
 	return
 }
 
-// don't log debug messages on windows
+// Debug sets log entry level to debug, we don't log debug
+// messages on Windows
 func (l Log) Debug() (mlog Log) {
 	mlog = l
 	mlog.Priority = 999
@@ -99,7 +107,7 @@ func (l Log) Debug() (mlog Log) {
 	return
 }
 
-// Custom type to satisfy io.Writer to use as file logging output, handles
+// rotateLogWriter is a custom type to satisfy io.Writer to use as file logging output, handles
 // log file rotation
 type rotateLogWriter struct {
 	sync.Mutex
@@ -181,29 +189,29 @@ func (r *rotateLogWriter) initAndCheck() (err error) {
 
 // InitLogger prepares the context for logging based on the configuration
 // in Logging
-func InitLogger(orig_logctx Logging, progname string) (logctx Logging, err error) {
+func InitLogger(origLogctx Logging, progname string) (logctx Logging, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("mig.InitLogger() -> %v", e)
+			err = fmt.Errorf("InitLogger() -> %v", e)
 		}
 	}()
 
-	logctx = orig_logctx
+	logctx = origLogctx
 	switch logctx.Mode {
 	case "stdout":
-		logctx.logmode = MODE_STDOUT
+		logctx.logmode = logModeStdout
 		logctx, err = initLogStdOut(logctx)
 		if err != nil {
 			panic(err)
 		}
 	case "file":
-		logctx.logmode = MODE_FILE
+		logctx.logmode = logModeFile
 		logctx, err = initLogFile(logctx)
 		if err != nil {
 			panic(err)
 		}
 	case "syslog":
-		logctx.logmode = MODE_EVENTLOG
+		logctx.logmode = logModeEventlog
 		logctx, err = initEventlog(logctx, progname)
 		if err != nil {
 			panic(err)
@@ -211,7 +219,7 @@ func InitLogger(orig_logctx Logging, progname string) (logctx Logging, err error
 	default:
 		log.Println("Logging mode is missing. Assuming stdout.")
 		logctx.Mode = "stdout"
-		logctx.logmode = MODE_STDOUT
+		logctx.logmode = logModeStdout
 		logctx, err = initLogStdOut(logctx)
 		if err != nil {
 			panic(err)
@@ -242,11 +250,11 @@ func InitLogger(orig_logctx Logging, progname string) (logctx Logging, err error
 }
 
 // initEventlog creates a connection to event logs and stores the handler in ctx
-func initEventlog(orig_logctx Logging, progname string) (logctx Logging, err error) {
-	logctx = orig_logctx
+func initEventlog(origLogctx Logging, progname string) (logctx Logging, err error) {
+	logctx = origLogctx
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("mig.initEventlog() -> %v", e)
+			err = fmt.Errorf("initEventlog() -> %v", e)
 		}
 	}()
 	const name = "mylog"
@@ -263,14 +271,14 @@ func initEventlog(orig_logctx Logging, progname string) (logctx Logging, err err
 }
 
 // initLogFile creates a logfile and stores the descriptor in ctx
-func initLogFile(orig_logctx Logging) (logctx Logging, err error) {
+func initLogFile(origLogctx Logging) (logctx Logging, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("mig.InitLogFile() -> %v", e)
+			err = fmt.Errorf("initLogFile() -> %v", e)
 		}
 	}()
 
-	logctx = orig_logctx
+	logctx = origLogctx
 	err = logctx.rotateWriter.new(logctx.File, logctx.MaxFileSize)
 	if err != nil {
 		panic(err)
@@ -281,18 +289,18 @@ func initLogFile(orig_logctx Logging) (logctx Logging, err error) {
 
 // initLogStdOut does nothing except storing in ctx that logs should be
 // sent to stdout directly
-func initLogStdOut(orig_logctx Logging) (logctx Logging, err error) {
-	logctx = orig_logctx
+func initLogStdOut(origLogctx Logging) (logctx Logging, err error) {
+	logctx = origLogctx
 	return
 }
 
-// processLog receives events and perform logging and evaluationg of the log
-// if the log is too critical, Analyze will trigger a scheduler shutdown
+// ProcessLog receives events and performs logging and evaluation of the log
+// severity level, in the event of an emergency level entry stop will be true
 func ProcessLog(logctx Logging, l Log) (stop bool, err error) {
 	stop = false
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("mig.ProcessLog() -> %v", e)
+			err = fmt.Errorf("ProcessLog() -> %v", e)
 		}
 	}()
 
@@ -336,12 +344,12 @@ func ProcessLog(logctx Logging, l Log) (stop bool, err error) {
 	if l.Desc != "" {
 		logline += l.Desc
 	} else {
-		err = fmt.Errorf("Missing mandatory description in logent")
+		err = fmt.Errorf("missing mandatory description in logent")
 		return
 	}
 
 	switch logctx.logmode {
-	case MODE_EVENTLOG:
+	case logModeEventlog:
 		switch l.Priority {
 		case eventlog.Error:
 			err = logctx.fd.Error(1, logline)
@@ -360,10 +368,10 @@ func ProcessLog(logctx Logging, l Log) (stop bool, err error) {
 			err = logctx.fd.Info(3, logline)
 			return
 		}
-	case MODE_STDOUT:
+	case logModeStdout:
 		log.Println(logline)
 		return
-	case MODE_FILE:
+	case logModeFile:
 		log.Println(logline)
 		return
 	default:
@@ -373,6 +381,8 @@ func ProcessLog(logctx Logging, l Log) (stop bool, err error) {
 	return
 }
 
+// Destroy can be used to indicate no further logging with the given logging context
+// will take place
 func (logctx Logging) Destroy() {
 	if logctx.Mode == "syslog" {
 		_ = logctx.fd.Close()

@@ -6,18 +6,10 @@
 
 package mig /* import "mig.ninja/mig" */
 
+// Various constants that indicate exchange and queue names used in RabbitMQ
 const (
-	// rabbitmq exchanges and common queues
-	Mq_Ex_ToAgents     = "toagents"
-	Mq_Ex_ToSchedulers = "toschedulers"
-	Mq_Q_Heartbeat     = "mig.agt.heartbeats"
-	Mq_Q_Results       = "mig.agt.results"
-
-	// event queues
-	Ev_Q_Agt_Auth_Fail = "agent.authentication.failure"
-	Ev_Q_Agt_New       = "agent.new"
-	Ev_Q_Cmd_Res       = "command.results"
-
-	// dummy queue for scheduler heartbeats to the relays
-	Ev_Q_Sched_Hb = "scheduler.heartbeat"
+	ExchangeToAgents     = "toagents"
+	ExchangeToSchedulers = "toschedulers"
+	QueueAgentHeartbeat  = "mig.agt.heartbeats"
+	QueueAgentResults    = "mig.agt.results"
 )
