@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-// Describes a manifest record stored within the MIG database
+// ManifestRecord describes a manifest record stored within the MIG database
 type ManifestRecord struct {
 	ID         float64   `json:"id"`                // Manifest record ID
 	Name       string    `json:"name"`              // The name of the manifest record
@@ -38,7 +38,7 @@ type ManifestRecord struct {
 	Signatures []string  `json:"signatures"`        // Signatures applied to the record
 }
 
-// Validate an existing manifest record
+// Validate validates an existing manifest record
 func (m *ManifestRecord) Validate() (err error) {
 	if m.Name == "" {
 		return fmt.Errorf("manifest has invalid name")
@@ -57,7 +57,7 @@ func (m *ManifestRecord) Validate() (err error) {
 	return
 }
 
-// Sign a manifest record
+// Sign will sign a manifest record using the indicated key ID
 func (m *ManifestRecord) Sign(keyid string, secring io.Reader) (sig string, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -83,7 +83,7 @@ func (m *ManifestRecord) Sign(keyid string, secring io.Reader) (sig string, err 
 	return
 }
 
-// Convert a manifest record into a manifest response
+// ManifestResponse converts a manifest record into a manifest response
 func (m *ManifestRecord) ManifestResponse() (ManifestResponse, error) {
 	ret := ManifestResponse{}
 
@@ -137,7 +137,7 @@ func (m *ManifestRecord) ManifestResponse() (ManifestResponse, error) {
 	return ret, nil
 }
 
-// Returns the requested file object as a gzip compressed byte slice
+// ManifestObject returns the requested file object as a gzip compressed byte slice
 // from the manifest record
 func (m *ManifestRecord) ManifestObject(obj string) ([]byte, error) {
 	var bufw bytes.Buffer
@@ -195,8 +195,8 @@ func (m *ManifestRecord) ManifestObject(obj string) ([]byte, error) {
 	return ret, nil
 }
 
-// Load manifest content from a file on the file system (a gzip'd tar file),
-// primarily utilized by mig-console during manifest creation operations.
+// ContentFromFile loads manifest content from a file on the file system (a gzip'd tar file),
+// primarily utilized by mig-console during manifest creation operations
 func (m *ManifestRecord) ContentFromFile(path string) (err error) {
 	var buf bytes.Buffer
 	fd, err := os.Open(path)
@@ -218,7 +218,7 @@ func (m *ManifestRecord) ContentFromFile(path string) (err error) {
 	return
 }
 
-// Write manifest content to a file on the file system
+// FileFromContent writes manifest content to a file on the file system
 func (m *ManifestRecord) FileFromContent(path string) (err error) {
 	fd, err := os.Create(path)
 	if err != nil {
@@ -238,20 +238,20 @@ func (m *ManifestRecord) FileFromContent(path string) (err error) {
 	return nil
 }
 
-// Manifest parameters are sent from the loader to the API as part of
+// ManifestParameters are sent from the loader to the API as part of
 // a manifest request.
 type ManifestParameters struct {
 	AgentIdentifier Agent  `json:"agent"`  // Agent context information
 	Object          string `json:"object"` // Object being requested
 }
 
-// Validate parameters included in a manifest request
+// Validate validetes a ManifestParameters type for correct formatting
 func (m *ManifestParameters) Validate() error {
 	return nil
 }
 
-// Validate parameters included in a manifest request with an object fetch
-// component
+// ValidateFetch validates the parameters included in a manifest request with an
+// object fetch component
 func (m *ManifestParameters) ValidateFetch() error {
 	err := m.Validate()
 	if err != nil {
@@ -263,19 +263,19 @@ func (m *ManifestParameters) ValidateFetch() error {
 	return m.Validate()
 }
 
-// The response to a manifest object fetch
+// ManifestFetchResponse is the response to a manifest object fetch
 type ManifestFetchResponse struct {
 	Data []byte `json:"data"`
 }
 
-// The response to a standard manifest request
+// ManifestResponse is the response to a standard manifest request
 type ManifestResponse struct {
 	LoaderName string          `json:"loader_name"`
 	Entries    []ManifestEntry `json:"entries"`
 	Signatures []string        `json:"signatures"`
 }
 
-// Validate a manifest response
+// Validate validates a ManifestResponse type ensuring required content is present
 func (m *ManifestResponse) Validate() error {
 	if m.LoaderName == "" {
 		return fmt.Errorf("manifest response has no loader name")
@@ -283,8 +283,9 @@ func (m *ManifestResponse) Validate() error {
 	return nil
 }
 
-// Validates signatures stored in the manifest against keys in keyring, returns
-// the number of valid signature matches
+// VerifySignatures verifies the signatures present in a manifest response against the keys
+// present in keyring. It returns the number of valid unique signatures identified in the
+// ManifestResponse.
 func (m *ManifestResponse) VerifySignatures(keyring io.Reader) (validcnt int, err error) {
 	var sigs []string
 
@@ -335,20 +336,17 @@ func (m *ManifestResponse) VerifySignatures(keyring io.Reader) (validcnt int, er
 	return
 }
 
-// Describes individual file elements within a manifest
+// ManifestEntry describes an individual file element within a manifest
 type ManifestEntry struct {
 	Name   string `json:"name"`   // Corresponds to a bundle name
 	SHA256 string `json:"sha256"` // SHA256 of entry
 }
 
-// The bundle dictionary is used to map tokens within the loader manifest to
+// BundleDictionaryEntry is used to map tokens within the loader manifest to
 // objects on the file system. We don't allow specification of an exact path
 // for interrogation or manipulation in the manifest. This results in some
 // restrictions but hardens the loader against making unauthorized changes
 // to the file system.
-//
-// If a Transform function is set on the entry, this is used to transform
-// bytes into the data set prior to hash calculation
 type BundleDictionaryEntry struct {
 	Name   string
 	Path   string
@@ -393,12 +391,15 @@ var bundleEntryWindows = []BundleDictionaryEntry{
 	{"loaderconfig", "C:\\mig\\mig-loader.cfg", "", 0600},
 }
 
+// BundleDictionary maps GOOS platform names to specific bundle entry values
 var BundleDictionary = map[string][]BundleDictionaryEntry{
 	"linux":   bundleEntryLinux,
 	"darwin":  bundleEntryDarwin,
 	"windows": bundleEntryWindows,
 }
 
+// GetHostBundle returns the correct BundleDictionaryEntry given the platform the
+// code is executing on
 func GetHostBundle() ([]BundleDictionaryEntry, error) {
 	switch runtime.GOOS {
 	case "linux":
@@ -411,7 +412,7 @@ func GetHostBundle() ([]BundleDictionaryEntry, error) {
 	return nil, fmt.Errorf("no entry for %v in bundle dictionary", runtime.GOOS)
 }
 
-// Populates a slice of BundleDictionaryEntrys, adding the SHA256 checksums
+// HashBundle populates a slice of BundleDictionaryEntrys, adding the SHA256 checksums
 // from the file system
 func HashBundle(b []BundleDictionaryEntry) ([]BundleDictionaryEntry, error) {
 	ret := b

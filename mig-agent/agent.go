@@ -889,7 +889,7 @@ func sendResults(ctx *Context, result mig.Command) (err error) {
 		panic(err)
 	}
 
-	err = publish(ctx, mig.Mq_Ex_ToSchedulers, mig.Mq_Q_Results, body)
+	err = publish(ctx, mig.ExchangeToSchedulers, mig.QueueAgentResults, body)
 	if err != nil {
 		panic(err)
 	}
@@ -930,7 +930,7 @@ func heartbeat(ctx *Context) (err error) {
 		}
 		desc := fmt.Sprintf("heartbeat %q", body)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
-		publish(ctx, mig.Mq_Ex_ToSchedulers, mig.Mq_Q_Heartbeat, body)
+		publish(ctx, mig.ExchangeToSchedulers, mig.QueueAgentHeartbeat, body)
 		// update the local heartbeat file
 		err = ioutil.WriteFile(path.Join(ctx.Agent.RunDir, "mig-agent.ok"), []byte(time.Now().String()), 0644)
 		if err != nil {

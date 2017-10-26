@@ -35,12 +35,12 @@ func verifyPermission(moduleName string, acl ACL, fingerprints []string) error {
 		// No ACL entry found for this module name, see if we can find a default
 		aclent, ok = acl["default"]
 		if !ok {
-			return fmt.Errorf("No ACL entry found for %v, and no default present", moduleName)
+			return fmt.Errorf("no ACL entry found for %v, and no default present", moduleName)
 		}
 		aclname = "default"
 	}
 	if aclent.MinimumWeight < 1 {
-		return fmt.Errorf("Invalid ACL %v, weight must be > 0", aclname)
+		return fmt.Errorf("invalid ACL %v, weight must be > 0", aclname)
 	}
 	var seenFp []string
 	signaturesWeight := 0
@@ -48,7 +48,7 @@ func verifyPermission(moduleName string, acl ACL, fingerprints []string) error {
 		// if the same key is used to sign multiple times, return an error
 		for _, seen := range seenFp {
 			if seen == fp {
-				return fmt.Errorf("Permission violation: key %v used to sign multiple times", fp)
+				return fmt.Errorf("permission violation: key %v used to sign multiple times", fp)
 			}
 		}
 		for _, signer := range aclent.Investigators {
@@ -59,7 +59,7 @@ func verifyPermission(moduleName string, acl ACL, fingerprints []string) error {
 		seenFp = append(seenFp, fp)
 	}
 	if signaturesWeight < aclent.MinimumWeight {
-		return fmt.Errorf("Permission denied for operation %v, insufficient signatures weight"+
+		return fmt.Errorf("permission denied for operation %v, insufficient signatures weight"+
 			" (need %v, got %v)", moduleName, aclent.MinimumWeight, signaturesWeight)
 	}
 	return nil

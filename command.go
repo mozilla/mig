@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+// Command describes an action as applied to a single agent, and will include
+// results
 type Command struct {
 	ID     float64 `json:"id"`
 	Action Action  `json:"action"`
@@ -34,6 +36,7 @@ type Command struct {
 	FinishTime time.Time        `json:"finishtime"`
 }
 
+// Various command status values
 const (
 	StatusSent      string = "sent"
 	StatusSuccess   string = "success"
@@ -43,12 +46,12 @@ const (
 	StatusTimeout   string = "timeout"
 )
 
-// FromFile reads a command from a local file on the file system
+// CmdFromFile reads a command from a local file on the file system
 // and return the mig.Command structure
 func CmdFromFile(path string) (cmd Command, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("mig.CmdFromFile()-> %v", e)
+			err = fmt.Errorf("CmdFromFile() -> %v", e)
 		}
 	}()
 	jsonCmd, err := ioutil.ReadFile(path)
@@ -71,13 +74,13 @@ func CmdFromFile(path string) (cmd Command, err error) {
 // necessary fields, and returns an error when it doesn't.
 func checkCmd(cmd Command) error {
 	if cmd.Agent.Name == "" {
-		return errors.New("cmd.Agent.Name is empty. Expecting string.")
+		return errors.New("command agent name is empty")
 	}
 	if cmd.Agent.QueueLoc == "" {
-		return errors.New("cmd.Agent.QueueLoc is empty. Expecting string.")
+		return errors.New("command queue location is empty")
 	}
 	if cmd.Status == "" {
-		return errors.New("cmd.Status is empty. Expecting string.")
+		return errors.New("command status is empty")
 	}
 	return nil
 }

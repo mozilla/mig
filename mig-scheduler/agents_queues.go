@@ -24,12 +24,12 @@ func startHeartbeatsListener(ctx Context) (heartbeatChan <-chan amqp.Delivery, e
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving startHeartbeatsListener()"}.Debug()
 	}()
 
-	_, err = ctx.MQ.Chan.QueueDeclare(mig.Mq_Q_Heartbeat, true, false, false, false, nil)
+	_, err = ctx.MQ.Chan.QueueDeclare(mig.QueueAgentHeartbeat, true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	err = ctx.MQ.Chan.QueueBind(mig.Mq_Q_Heartbeat, mig.Mq_Q_Heartbeat, mig.Mq_Ex_ToSchedulers, false, nil)
+	err = ctx.MQ.Chan.QueueBind(mig.QueueAgentHeartbeat, mig.QueueAgentHeartbeat, mig.ExchangeToSchedulers, false, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +39,7 @@ func startHeartbeatsListener(ctx Context) (heartbeatChan <-chan amqp.Delivery, e
 		panic(err)
 	}
 
-	heartbeatChan, err = ctx.MQ.Chan.Consume(mig.Mq_Q_Heartbeat, "", true, false, false, false, nil)
+	heartbeatChan, err = ctx.MQ.Chan.Consume(mig.QueueAgentHeartbeat, "", true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -176,12 +176,12 @@ func startResultsListener(ctx Context) (resultsChan <-chan amqp.Delivery, err er
 		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving startResultsListener()"}.Debug()
 	}()
 
-	_, err = ctx.MQ.Chan.QueueDeclare(mig.Mq_Q_Results, true, false, false, false, nil)
+	_, err = ctx.MQ.Chan.QueueDeclare(mig.QueueAgentResults, true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	err = ctx.MQ.Chan.QueueBind(mig.Mq_Q_Results, mig.Mq_Q_Results, mig.Mq_Ex_ToSchedulers, false, nil)
+	err = ctx.MQ.Chan.QueueBind(mig.QueueAgentResults, mig.QueueAgentResults, mig.ExchangeToSchedulers, false, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -191,7 +191,7 @@ func startResultsListener(ctx Context) (resultsChan <-chan amqp.Delivery, err er
 		panic(err)
 	}
 
-	resultsChan, err = ctx.MQ.Chan.Consume(mig.Mq_Q_Results, "", true, false, false, false, nil)
+	resultsChan, err = ctx.MQ.Chan.Consume(mig.QueueAgentResults, "", true, false, false, false, nil)
 	if err != nil {
 		panic(err)
 	}

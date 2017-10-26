@@ -6,7 +6,8 @@
 
 package mig /* import "mig.ninja/mig" */
 
-// Describes results that are produced by mig-runner
+// RunnerResult describes results that are produced by mig-runner. This data
+// would be consumed by mig-runner plugins.
 type RunnerResult struct {
 	Action     Action    `json:"action"`
 	Commands   []Command `json:"commands"`
