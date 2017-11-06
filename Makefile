@@ -348,7 +348,7 @@ vet:
 	$(GO) vet mig.ninja/mig/database/...
 	$(GO) vet mig.ninja/mig
 
-clean: clean-agent
+clean:
 	rm -rf bin
 	rm -rf tmp
 
