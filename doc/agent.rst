@@ -36,7 +36,7 @@ which are used to select the proper init method. Once started, the agent will
 send a heartbeat to the public relay, and also store that heartbeat in its
 `run` directory. The location of the `run` directory is platform specific.
 
-* windows: C:\mig
+* windows: C:\\mig
 * darwin: /Library/Preferences/mig/
 * linux: /var/lib/mig/
 
