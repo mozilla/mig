@@ -132,26 +132,38 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 	if conf.GPG.UseAPIKeyAuth != "" {
 		return
 	}
-	// if the env variable to the gpg agent socket isn't set, try to
-	// find the socket and set the variable
-	if os.Getenv("GPG_AGENT_INFO") == "" {
-		_, err = os.Stat(conf.GPG.Home + "/S.gpg-agent")
-		if err == nil {
-			// socket was found, set it
-			os.Setenv("GPG_AGENT_INFO", conf.GPG.Home+"/S.gpg-agent")
-		}
-	}
-	if clientPassphrase != "" {
-		pgp.CachePassphrase(clientPassphrase)
-	}
-	// try to make a signed token, just to check that we can access the private key
-	_, err = cli.MakeSignedToken()
-	if err != nil {
-		err = fmt.Errorf("failed to generate a security token using key %v from %v: %v",
-			conf.GPG.KeyID, conf.GPG.Home+"/secring.gpg", err)
-		return
-	}
-	return
+    if conf.GPG.UseAPIKeyAuth != "" {             
+        return             
+    }
+    err = ValidateGPGKey(conf, cli)
+    if err != nil {
+        err = fmt.Errorf("failed to validate gpg key: %v", err)
+        return        
+    }
+    return
+
+}    
+
+// ValidateGPGKey verifies the private key is available by trying to create a signed token
+func ValidateGPGKey (conf Configuration, cli Client) (err error) {
+    if os.Getenv("GPG_AGENT_INFO") == "" {
+        _, err = os.Stat(conf.GPG.Home + "/S.gpg-agent")
+        if err == nil {
+            // socket was found, set it
+            os.Setenv("GPG_AGENT_INFO", conf.GPG.Home+"/S.gpg-agent")
+        }             
+    }                      
+    if clientPassphrase != "" {
+        pgp.CachePassphrase(clientPassphrase)  
+    }
+    // try to make a signed token, just to check that we can access the private key               
+    _, err = cli.MakeSignedToken()
+    if err != nil {
+        err = fmt.Errorf("failed to generate a security token using key %v from %v: %v",
+            conf.GPG.KeyID, conf.GPG.Home+"/secring.gpg", err)
+        return        
+    }
+    return
 }
 
 // ReadConfiguration loads a client configuration from a local configuration file
