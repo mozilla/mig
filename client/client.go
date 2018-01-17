@@ -142,6 +142,8 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 
 // ValidateGPGKey verifies the private key is available by trying to create a signed token
 func ValidateGPGKey (conf Configuration, cli Client) (err error) {
+	// if the env variable to the gpg agent socket isn't set, try to
+	// find the socket and set the variable	
 	if os.Getenv("GPG_AGENT_INFO") == "" {
 		_, err = os.Stat(conf.GPG.Home + "/S.gpg-agent")
 		if err == nil {
