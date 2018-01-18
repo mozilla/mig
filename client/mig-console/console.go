@@ -78,6 +78,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	_, err = client.ValidateGPGKey(conf)
+	if err != nil {
+		panic(err)
+	}
 	cli, err := client.NewClient(conf, "console-"+mig.Version)
 	if err != nil {
 		panic(err)

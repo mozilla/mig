@@ -155,6 +155,10 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		_, err = client.ValidateGPGKey(conf)
+		if err != nil {
+			panic(err)
+		}
 		cli, err = client.NewClient(conf, "cmd-"+mig.Version)
 		if err != nil {
 			panic(err)
@@ -297,13 +301,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	if !printAndExit {
+		// not in printAndExit mode, need to validate GPG Key
+		_, err = client.ValidateGPGKey(conf)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	cli, err = client.NewClient(conf, "cmd-"+mig.Version)
-	// We only treat this error as fatal if we are not in printAndExit mode; an error
-	// being returned from NewClient indicates the private key may not have been accessible,
-	// but it is not required to print the action.
-	if err != nil && !printAndExit {
+	if err != nil {
 		panic(err)
 	}
+
 	if verbose {
 		cli.EnableDebug()
 	}

@@ -127,11 +127,12 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 		Proxy: http.ProxyFromEnvironment,
 	}
 	cli.API = &http.Client{Transport: tr}
-	// If the client is using API key authentication to access the API, we don't have
-	// anything left to do here.
-	if conf.GPG.UseAPIKeyAuth != "" {
-		return
-	}
+	return
+}
+
+// ValidateGPGKey verifies the private key is available by trying to create a signed token
+func ValidateGPGKey(conf Configuration) (cli Client, err error) {
+	cli.Conf = conf
 	// if the env variable to the gpg agent socket isn't set, try to
 	// find the socket and set the variable
 	if os.Getenv("GPG_AGENT_INFO") == "" {
