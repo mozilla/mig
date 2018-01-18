@@ -66,6 +66,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	cli, err = client.ValidateGPGKey(conf, cli)
+	if err != nil {
+		panic(err)
+	}
 	cli, err := client.NewClient(conf, "generator-"+mig.Version)
 	if err != nil {
 		panic(err)

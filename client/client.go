@@ -27,7 +27,6 @@ import (
 	"github.com/cheggaaa/pb"
 	"github.com/jvehent/cljs"
 	"golang.org/x/crypto/openpgp"
-	"gopkg.in/gcfg.v1"
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
 	"mig.ninja/mig/pgp"
@@ -132,6 +131,10 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 	if conf.GPG.UseAPIKeyAuth != "" {
 		return
 	}
+}
+
+// ValidateGPGKey verifies the private key is available by trying to create a signed token
+func ValidateGPGKey(conf Configuration, cli Client) (cli Client, err error) {
 	// if the env variable to the gpg agent socket isn't set, try to
 	// find the socket and set the variable
 	if os.Getenv("GPG_AGENT_INFO") == "" {
@@ -145,7 +148,7 @@ func NewClient(conf Configuration, version string) (cli Client, err error) {
 		pgp.CachePassphrase(clientPassphrase)
 	}
 	// try to make a signed token, just to check that we can access the private key
-	_, err = cli.MakeSignedToken()
+	cli, err = cli.MakeSignedToken()
 	if err != nil {
 		err = fmt.Errorf("failed to generate a security token using key %v from %v: %v",
 			conf.GPG.KeyID, conf.GPG.Home+"/secring.gpg", err)

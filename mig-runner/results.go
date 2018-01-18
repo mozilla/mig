@@ -9,11 +9,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
 	"os"
 	"path"
 	"time"
+
+	"mig.ninja/mig"
+	"mig.ninja/mig/client"
 )
 
 // Given the name of a scheduled job, retrieve the path that should be used
@@ -50,7 +51,10 @@ func getResults(r mig.RunnerResult) (err error) {
 	}()
 
 	mlog("fetching results for %v/%.0f", r.EntityName, r.Action.ID)
-
+	cli, err = client.ValidateGPGKey(ctx.ClientConf, cli)
+	if err != nil {
+		panic(err)
+	}
 	cli, err := client.NewClient(ctx.ClientConf, "mig-runner-results")
 	if err != nil {
 		panic(err)
