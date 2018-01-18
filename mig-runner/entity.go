@@ -7,12 +7,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/gorhill/cronexpr"
-	"gopkg.in/gcfg.v1"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
 	"path"
 	"time"
+
+	"github.com/gorhill/cronexpr"
+	"mig.ninja/mig"
+	"mig.ninja/mig/client"
 )
 
 // The default expiry time for an action launched by the runner if the
@@ -68,7 +68,10 @@ func (e *entity) launchAction() (err error) {
 		panic(err)
 	}
 	act.Name = fmt.Sprintf("mig-runner: %v", e.name)
-
+	cli, err = client.ValidateGPGKey(ctx.ClientConf, cli)
+	if err != nil {
+		panic(err)
+	}
 	cli, err := client.NewClient(ctx.ClientConf, "mig-runner")
 	if err != nil {
 		panic(err)
