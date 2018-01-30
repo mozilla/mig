@@ -114,7 +114,8 @@ func main() {
 			fmt.Println("error: ", err)
 			break
 		}
-		orders := strings.Split(strings.TrimSpace(input), " ")
+		input = strings.TrimSpace(input)
+		orders := strings.Split(input, " ")
 		switch orders[0] {
 		case "action":
 			if len(orders) == 2 {
