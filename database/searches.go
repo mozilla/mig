@@ -434,7 +434,10 @@ func (db *DB) SearchActions(p search.Parameters) (actions []mig.Action, err erro
 		vals = append(vals, p.ThreatFamily)
 		valctr += 1
 	}
-	query := fmt.Sprintf(`SELECT %s FROM actions %s WHERE %s GROUP BY actions.id
+	if valctr > 0 {
+		where = "WHERE " + where;
+	}
+	query := fmt.Sprintf(`SELECT %s FROM actions %s %s GROUP BY actions.id
 		ORDER BY actions.validfrom DESC LIMIT $%d OFFSET $%d;`,
 		columns, join, where, valctr+1, valctr+2)
 	vals = append(vals, uint64(p.Limit), uint64(p.Offset))
@@ -640,7 +643,10 @@ func (db *DB) SearchAgents(p search.Parameters) (agents []mig.Agent, err error) 
 		join += ` INNER JOIN signatures ON ( actions.id = signatures.actionid )
 			INNER JOIN investigators ON ( signatures.investigatorid = investigators.id ) `
 	}
-	query := fmt.Sprintf(`SELECT %s FROM agents %s WHERE %s GROUP BY agents.id
+	if valctr > 0 {
+		where = "WHERE " + where;
+	}
+	query := fmt.Sprintf(`SELECT %s FROM agents %s %s GROUP BY agents.id
 		ORDER BY agents.heartbeattime DESC LIMIT $%d OFFSET $%d;`,
 		columns, join, where, valctr+1, valctr+2)
 	vals = append(vals, uint64(p.Limit), uint64(p.Offset))
@@ -826,7 +832,10 @@ func (db *DB) SearchInvestigators(p search.Parameters) (investigators []mig.Inve
 	if joinAgent {
 		join += " INNER JOIN agents ON ( commands.agentid = agents.id ) "
 	}
-	query := fmt.Sprintf(`SELECT %s FROM investigators %s WHERE %s GROUP BY investigators.id
+	if valctr > 0 {
+		where = "WHERE " + where;
+	}
+	query := fmt.Sprintf(`SELECT %s FROM investigators %s %s GROUP BY investigators.id
 		ORDER BY investigators.id ASC LIMIT $%d OFFSET $%d;`,
 		columns, join, where, valctr+1, valctr+2)
 	vals = append(vals, uint64(p.Limit), uint64(p.Offset))
@@ -911,7 +920,10 @@ func (db *DB) SearchManifests(p search.Parameters) (mrecords []mig.ManifestRecor
 		vals = append(vals, p.Status)
 		valctr += 1
 	}
-	query := fmt.Sprintf(`SELECT %s FROM manifests WHERE %s ORDER BY timestamp DESC;`, columns, where)
+	if valctr > 0 {
+		where = "WHERE " + where;
+	}
+	query := fmt.Sprintf(`SELECT %s FROM manifests %s ORDER BY timestamp DESC;`, columns, where)
 	stmt, err := db.c.Prepare(query)
 	if err != nil {
 		err = fmt.Errorf("Error while preparing search statement: '%v' in '%s'", err, query)
@@ -987,7 +999,10 @@ func (db *DB) SearchLoaders(p search.Parameters) (lrecords []mig.LoaderEntry, er
 		vals = append(vals, ids.minLdrID, ids.maxLdrID)
 		valctr += 2
 	}
-	query := fmt.Sprintf(`SELECT %s FROM loaders WHERE %s ORDER BY loadername;`, columns, where)
+	if valctr > 0 {
+		where = "WHERE " + where;
+	}
+	query := fmt.Sprintf(`SELECT %s FROM loaders %s ORDER BY loadername;`, columns, where)
 	stmt, err := db.c.Prepare(query)
 	if err != nil {
 		err = fmt.Errorf("Error while preparing search statement: '%v' in '%s'", err, query)
