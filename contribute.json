@@ -9,7 +9,7 @@
     "participate": {
         "home": "https://mig.mozilla.org/",
         "docs": "https://mig.mozilla.org/doc.html",
-        "irc": "irc://irc.mozilla.org/#infosec",
+        "irc": "irc://irc.mozilla.org/#mig",
         "irc-contacts": [
             "ulfr",
             "alm",
