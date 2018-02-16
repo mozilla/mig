@@ -14,7 +14,7 @@
             "ulfr",
             "alm",
             "weir",
-            "pwnbus", 
+            "pwnbus"
         ]
     },
     "bugs": {
@@ -29,6 +29,6 @@
         "go",
         "dfir",
         "security",
-        "infosec",
+        "infosec"
     ]
 }
