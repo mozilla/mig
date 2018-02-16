@@ -1,0 +1,34 @@
+{
+    "name": "MIG: Mozilla InvestiGator",
+    "description": "Mozilla's real-time digital forensics and investigation platform.",
+    "repository": {
+        "url": "https://github.com/mozilla/mig",
+        "license": "MPL2",
+        "tests": "https://travis-ci.org/mozilla/mig"
+    },
+    "participate": {
+        "home": "https://mig.mozilla.org/",
+        "docs": "https://mig.mozilla.org/doc.html",
+        "irc": "irc://irc.mozilla.org/#infosec",
+        "irc-contacts": [
+            "ulfr",
+            "alm",
+            "weir",
+            "pwnbus", 
+        ]
+    },
+    "bugs": {
+        "list": "https://github.com/mozilla/mig/issues",
+        "report": "https://github.com/mozilla/mig/issues/new",
+        "mentored": "https://github.com/mozilla/mig/issues?q=is%3Aissue+is%3Aclosed"
+    },
+    "urls": {
+        "prod": "https://api.mig.mozilla.org"
+    },
+    "keywords": [
+        "go",
+        "dfir",
+        "security",
+        "infosec",
+    ]
+}
