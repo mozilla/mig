@@ -320,10 +320,10 @@ func investigatorCreator(cli client.Client) (err error) {
 	}
 	switch strings.ToLower(respv) {
 	case "yes":
-		fmt.Println("Investigator will have manifest management permissions\n")
+		fmt.Println("Investigator will have manifest management permissions")
 		pset.ManifestSet()
 	case "no":
-		fmt.Println("Investigator will not have manifest management permissions\n")
+		fmt.Println("Investigator will not have manifest management permissions")
 	default:
 		panic("must specify yes or no")
 	}

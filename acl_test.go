@@ -148,7 +148,7 @@ func TestValidACLMultipleSignersOneValid(t *testing.T) {
 	err = verifyPermission("file", acl, []string{"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
 		"DDDDDDDDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"})
 	if err == nil {
-		t.Fatalf("verifyPermission should have failed", err)
+		t.Fatalf("verifyPermission should have failed. Error: %v", err)
 	}
 }
 

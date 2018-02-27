@@ -106,7 +106,7 @@ func (r *run) ParamsCreator() (interface{}, error) {
 		case "dp":
 			p.DestinationPort, err = strconv.ParseFloat(splitted[1], 64)
 			if err != nil {
-				fmt.Println("invalid destination port: %v", err)
+				fmt.Printf("invalid destination port: %v\n", err)
 				continue
 			}
 		case "p":
@@ -114,13 +114,13 @@ func (r *run) ParamsCreator() (interface{}, error) {
 		case "c":
 			p.Count, err = strconv.ParseFloat(splitted[1], 64)
 			if err != nil {
-				fmt.Println("invalid count: %v", err)
+				fmt.Printf("invalid count: %v\n", err)
 				continue
 			}
 		case "t":
 			p.Timeout, err = strconv.ParseFloat(splitted[1], 64)
 			if err != nil {
-				fmt.Println("invalid timeout: %v", err)
+				fmt.Printf("invalid timeout: %v\n", err)
 				continue
 			}
 		case "help":

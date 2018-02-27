@@ -93,7 +93,7 @@ func (r *run) ParamsCreator() (interface{}, error) {
 				continue
 			}
 			if _, exist := p.Searches[label]; exist {
-				fmt.Printf("A search labelled", label, "already exist. Override it?\n(y/n)> ")
+				fmt.Printf("A search labelled %s already exist. Override it?\n(y/n)> ", label)
 				scanner.Scan()
 				if err := scanner.Err(); err != nil {
 					fmt.Println("Invalid input.")

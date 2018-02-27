@@ -141,6 +141,6 @@ func makeSchedulerInvestigator(orig_ctx Context) (inv mig.Investigator, err erro
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("created migscheduler identity with ID %d and key ID %s", iid, inv.PGPFingerprint)}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("created migscheduler identity with ID %f and key ID %s", iid, inv.PGPFingerprint)}
 	return
 }

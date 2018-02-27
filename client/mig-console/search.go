@@ -97,7 +97,7 @@ The following search parameters are available, per search type:
         - agentname=<str>       search loaders for associated agent names
 
 All searches accept the 'limit=<num>' parameter to limits the number of results returned by a search, defaults to 100
-Parameters that accept a <str> can use wildcards * and % (ex: name=jul%veh% ).
+Parameters that accept a <str> can use wildcards * and %% (ex: name=jul%%veh%% ).
 No spaces are permitted within parameters. Spaces are used to separate search parameters.
 `)
 		return nil

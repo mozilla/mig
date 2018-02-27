@@ -46,7 +46,7 @@ func createAction(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received action for creation '%s'", action)}.Debug()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received action for creation '%v'", action)}.Debug()
 
 	// Init action fields
 	action.ID = mig.GenID()

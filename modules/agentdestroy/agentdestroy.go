@@ -56,7 +56,7 @@ type results struct {
 
 func (r *run) ValidateParameters() (err error) {
 	if r.Parameters.PID < 2 || r.Parameters.PID > 65535 {
-		return fmt.Errorf("PID '%s' is not in the range [2:65535]", r.Parameters.PID)
+		return fmt.Errorf("PID '%d' is not in the range [2:65535]", r.Parameters.PID)
 	}
 	if r.Parameters.Version == "" {
 		return fmt.Errorf("parameter 'version' is empty. Expecting version.")

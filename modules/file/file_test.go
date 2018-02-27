@@ -92,13 +92,13 @@ func TestValidateParameters(t *testing.T) {
 	r.Parameters = *newParameters()
 	err := r.ValidateParameters()
 	if err != nil {
-		t.Fatal("ValidateParameters: %v", err)
+		t.Fatalf("ValidateParameters: %v", err)
 	}
 
 	r.Parameters.Searches["s1"] = &s
 	err = r.ValidateParameters()
 	if err == nil {
-		t.Fatalf("parameters with empty search path should not validate", err)
+		t.Fatalf("parameters with empty search path should not validate. Error: %v", err)
 	}
 
 	s.Paths = append(s.Paths, "/testing")

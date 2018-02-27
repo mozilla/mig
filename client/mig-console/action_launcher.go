@@ -357,8 +357,7 @@ times			show the various timestamps of the action
 				fmt.Println(`Invalid times. Expects settimes <start> <stop.)
 examples:
 settimes 2014-06-30T12:00:00.0Z 2014-06-30T14:00:00.0Z
-settimes now +60m
-`)
+settimes now +60m`)
 				break
 			}
 			if orders[1] == "now" {
@@ -366,7 +365,7 @@ settimes now +60m
 				a.ValidFrom = time.Now().Add(-60 * time.Second).UTC()
 				period, err := time.ParseDuration(orders[2])
 				if err != nil {
-					fmt.Println("Failed to parse duration '%s': %v", orders[2], err)
+					fmt.Printf("Failed to parse duration '%s': %v\n", orders[2], err)
 					break
 				}
 				a.ExpireAfter = a.ValidFrom.Add(period)
@@ -374,12 +373,12 @@ settimes now +60m
 			} else {
 				a.ValidFrom, err = time.Parse("2014-01-01T00:00:00.0Z", orders[1])
 				if err != nil {
-					fmt.Println("Failed to parse time '%s': %v", orders[1], err)
+					fmt.Printf("Failed to parse time '%s': %v\n", orders[1], err)
 					break
 				}
 				a.ExpireAfter, err = time.Parse("2014-01-01T00:00:00.0Z", orders[2])
 				if err != nil {
-					fmt.Println("Failed to parse time '%s': %v", orders[2], err)
+					fmt.Printf("Failed to parse time '%s': %v\n", orders[2], err)
 					break
 				}
 			}

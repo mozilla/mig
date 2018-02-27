@@ -374,7 +374,7 @@ func TestVerifyBadSig(t *testing.T) {
 	keyring.Seek(0, 0)
 	err = a.VerifyACL(acl, keyring, false)
 	if err == nil {
-		t.Fatalf("VerifyACL should have failed", err)
+		t.Fatalf("VerifyACL should have failed. Error: %v", err)
 	}
 
 	// Try this again, but this time add the invalid signer to the keyring and invalidate the entry

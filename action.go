@@ -332,7 +332,7 @@ func (a Action) String() (str string, err error) {
 	if err != nil {
 		return
 	}
-	str += fmt.Sprintf("name=%s;target=%s;validfrom=%d;expireafter=%s;operations=%s;",
+	str += fmt.Sprintf("name=%s;target=%s;validfrom=%d;expireafter=%d;operations=%s;",
 		a.Name, a.Target, a.ValidFrom.UTC().Unix(), a.ExpireAfter.UTC().Unix(), args)
 	return
 }
