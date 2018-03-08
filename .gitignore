@@ -21,3 +21,4 @@ tmp/
 workers/*/*.html
 modules/*/*.html
 tools/vagrant/.vagrant
+develop/docker/database/schema.sql
