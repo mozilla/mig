@@ -17,7 +17,13 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main" > /etc
 # Install ``python-software-properties``, ``software-properties-common`` and PostgreSQL 9.5
 #  There are some warnings (in red) that show up during the build. You can hide
 #  them by prefixing each apt-get statement with DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y python-software-properties software-properties-common postgresql-9.5 postgresql-client-9.5 postgresql-contrib-9.5
+RUN apt-get update &&\
+    apt-get install -y \
+        python-software-properties \
+        software-properties-common \
+        postgresql-9.5 \
+        postgresql-client-9.5 \
+        postgresql-contrib-9.5
 
 # Note: The official Debian and Ubuntu images automatically ``apt-get clean``
 # after each ``apt-get``
@@ -43,16 +49,16 @@ RUN echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf
 # Run Postgres and create all of the roles and such that we need.
 # The passwords of each of the roles are set to "docker".
 COPY schema.sql /db
-RUN service postgresql start || exit 1 &&\
-    psql -c "CREATE ROLE migadmin;" || exit 1 &&\
-    psql -c "ALTER ROLE migadmin WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'docker';" || exit 1 &&\
-    psql -c "CREATE ROLE migapi;" || exit 1 &&\
-    psql -c "ALTER ROLE migapi WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'docker';" || exit 1 &&\
-    psql -c "CREATE ROLE migscheduler;" || exit 1 &&\
-    psql -c "ALTER ROLE migscheduler WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'docker';" || exit 1 &&\
-    psql -c "CREATE DATABASE mig;" || exit 1 &&\
-    psql -f schema.sql mig || exit 1 &&\
-    service postgresql stop || exit 1;
+RUN service postgresql start &&\
+    psql -c "CREATE ROLE migadmin;" &&\
+    psql -c "ALTER ROLE migadmin WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'docker';" &&\
+    psql -c "CREATE ROLE migapi;" &&\
+    psql -c "ALTER ROLE migapi WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'docker';" &&\
+    psql -c "CREATE ROLE migscheduler;" &&\
+    psql -c "ALTER ROLE migscheduler WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'docker';" &&\
+    psql -c "CREATE DATABASE mig;"
+    psql -f schema.sql mig &&\
+    service postgresql stop ;
 
 
 # Expose the PostgreSQL port
