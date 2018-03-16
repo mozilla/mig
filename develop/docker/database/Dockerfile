@@ -56,7 +56,7 @@ RUN service postgresql start &&\
     psql -c "ALTER ROLE migapi WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'docker';" &&\
     psql -c "CREATE ROLE migscheduler;" &&\
     psql -c "ALTER ROLE migscheduler WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'docker';" &&\
-    psql -c "CREATE DATABASE mig;"
+    psql -c "CREATE DATABASE mig;" &&\
     psql -f schema.sql mig &&\
     service postgresql stop ;
 
