@@ -32,6 +32,8 @@ RUN echo "NODENAME=rabbit@localhost" | tee --append /etc/rabbitmq/rabbitmq-env.c
 		"^(toworkers|migevent\..*)$" &&\
     service rabbitmq-server stop
 
+# Expose the port that RabbitMQ listens on to other containers and to localhost.
+EXPOSE 5672
 
 # Set the default command to run when starting the container
 CMD ["/usr/sbin/rabbitmq-server"]
