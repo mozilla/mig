@@ -1,0 +1,28 @@
+FROM ubuntu
+
+WORKDIR /go/src/mig.ninja/mig
+
+# Install the dependencies required to build the scheduler software.
+RUN apt update &&\
+    apt install -y golang git make
+
+# Make the directories we need to put all the config and source code into.
+RUN mkdir -p /etc/mig/ &&\
+    mkdir -p /opt/mig/bin &&\
+    mkdir -p /go/src/mig.ninja/mig/
+
+# Add all of the source code and such to our working directory.
+ADD . /go/src/mig.ninja/mig/
+
+# Make sure the Go compiler knows where to find our source code.
+ENV GOPATH /go
+
+# Copy the configuration file for the Scheduler used when running in Docker.
+COPY ./mig-scheduler/scheduler-docker.cfg /etc/mig/scheduler.cfg
+
+# Build the API from the source code.
+RUN make mig-scheduler &&\
+    mv bin/linux/amd64/mig-scheduler /opt/mig/bin/mig-scheduler
+
+# Default command to run when the container is run.
+CMD ["sh", "/go/src/mig.ninja/mig/mig-scheduler/docker-run.sh"]

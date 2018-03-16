@@ -1,0 +1,40 @@
+version: '3.5'
+
+services:
+    mig-db:
+        build: develop/docker/database/
+            # context: develop/docker/database/
+            # dockerfile: develop/docker/database/Dockerfile
+        ports:
+            - "5432:5432"
+        networks:
+            - default
+    mig-mq:
+        build: develop/docker/queue/
+            # context: develop/docker/queue/
+            # dockerfile: develop/docker/queue/Dockerfile
+        ports:
+            - "5672:5672"
+        networks:
+            - default
+    mig-api:
+        build:
+            context: .
+            dockerfile: Dockerfile.api
+        depends_on:
+            - mig-db
+        ports:
+            - "1664:1664"
+        networks:
+            - default
+    mig-scheduler:
+        build:
+            context: .
+            dockerfile: Dockerfile.scheduler
+        depends_on:
+            - mig-mq
+        networks:
+            - default
+
+networks:
+    default:
