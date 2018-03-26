@@ -43,7 +43,7 @@ func Verify(data string, signature string, keyring io.Reader) (valid bool, entit
 		panic(err)
 	}
 
-	entity, err = openpgp.CheckDetachedSignature(ring, srcReader, sigBlock.Body)
+	entity, err = openpgp.CheckArmoredDetachedSignature(ring, srcReader, sigBlock.Body)
 	if err != nil {
 		panic(err)
 	}
