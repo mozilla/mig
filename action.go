@@ -332,8 +332,10 @@ func (a Action) String() (str string, err error) {
 	if err != nil {
 		return
 	}
-	str += fmt.Sprintf("name=%s;target=%s;validfrom=%d;expireafter=%s;operations=%s;",
+	encoded := fmt.Sprintf("name=%s;target=%s;validfrom=%d;expireafter=%s;operations=%s;",
 		a.Name, a.Target, a.ValidFrom.UTC().Unix(), a.ExpireAfter.UTC().Unix(), args)
+	fmt.Printf("Encoding action to string: %s\n", encoded)
+	str += encoded
 	return
 }
 
