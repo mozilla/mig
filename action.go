@@ -332,8 +332,16 @@ func (a Action) String() (str string, err error) {
 	if err != nil {
 		return
 	}
-	str += fmt.Sprintf("name=%s;target=%s;validfrom=%d;expireafter=%d;operations=%s;",
-		a.Name, a.Target, a.ValidFrom.UTC().Unix(), a.ExpireAfter.UTC().Unix(), args)
+
+	// Before this addition, the code below (`str += fmt.Sprintf(...)`) was formatting
+	// `a.ExpireAfter.UTC().Unix()` as a string, using `%s`.  In version 1.10 of the Go
+	// compiler, this is an error.  However in older versions, the numeric value would
+	// be converted to a string and wrapped with the formatting information you see
+	// being added here.
+	expire := fmt.Sprintf("%%!s(int64=%d)", a.ExpireAfter.UTC().Unix())
+
+	str += fmt.Sprintf("name=%s;target=%s;validfrom=%d;expireafter=%s;operations=%s;",
+		a.Name, a.Target, a.ValidFrom.UTC().Unix(), expire, args)
 	return
 }
 
