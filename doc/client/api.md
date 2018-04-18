@@ -11,11 +11,68 @@
 
 ## Endpoint Table of Contents
 
+* [Retrieve top-level API documentation]()
+* [Retrieve documentation for a module]()
 * [Create an action]()
 * [Dispatch an action]()
 * [Check the status of a dispatched action]()
 
 ## Endpoint Documentation
+
+### Retrieve top-level API documentation
+
+```
+GET /v1/documentation
+```
+
+Retrieve a JSON document describing all of the endpoints supported by the API.
+
+#### Parameters
+
+None
+
+#### Response
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| currentVersion | string | The most recent version of the API. | "v2" |
+| versions | `[]{ version: string, endpoints: []Endpoint }` | An array of objects containing descriptions of endpoints exposed by each version of the API | See below |
+
+##### Example Response
+
+##### Status Codes
+
+* `200` indicates that the request was handled successfully.
+
+### Retrieve documentation for a module
+
+```
+GET /v1/module/:name/documentation
+```
+
+Retrieve a JSON document describing the configuration accepted by a module
+and what it does.
+
+#### Parameters
+
+The `name` positional parameter in the URL must be the name of the module to retrieve
+documentation for as a string. E.g. `pkg`, `file`, etc.
+
+#### Response
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| module | string | The name of the module | "pkg" |
+| version | string | The semantic version of the mdoule | "v1.2.3" |
+| description | string | An explanation of what the module does | "Find packages on the host" |
+| configuration | Module | An object describing the configuration parameters | See below |
+
+##### Example Response
+
+##### Status Codes
+
+* `200` indicates that the response was served successfully.
+* `400` indicates that the module requested does not exist.
 
 ### Create an action
 
