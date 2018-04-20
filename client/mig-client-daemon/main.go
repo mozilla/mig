@@ -12,13 +12,14 @@ import (
 	"os/user"
 	"path"
 
+	actionsAPI "mig.ninja/mig/client/mig-client-daemon/api/actions"
 	"mig.ninja/mig/client/mig-client-daemon/config"
 )
 
 const configFileName string = ".mig.conf.json"
 
 func main() {
-	// Load the user's configuration file
+	// Load the user's configuration file.
 	currentUser, err := user.Current()
 	if err != nil {
 		panic(err)
@@ -27,7 +28,11 @@ func main() {
 
 	clientConfig := config.MustLoad(configPath)
 
+	// Set up and launch the HTTP server.
 	bindAddr := fmt.Sprintf("127.0.0.1:%d", clientConfig.ListenPort)
 	fmt.Printf("Client daemon listening on %s\n", bindAddr)
+
+	createActionEndpt := actionsAPI.NewCreateHandler()
+	http.Handle("/v1/actions/create", createActionEndpt)
 	http.ListenAndServe(bindAddr, nil)
 }
