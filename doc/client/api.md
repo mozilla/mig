@@ -5,8 +5,9 @@
 1. All endpoints using the `GET` and `DELETE` methods accept input in URL parameters.
 2. All other endpoints accept parameters encoded as JSON in the body of the request.
 3. Data types are expressed using TypeScript's notation for [basic](https://www.typescriptlang.org/docs/handbook/basic-types.html) and [composite](https://www.typescriptlang.org/docs/handbook/advanced-types.html) types.
-4. Complex data types like `Target` and `Module` may be defined in [doc/client/api-types.md](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api-types.md).
-5. URLs may contain positional parameter for identifiers, which are always strings. E.g. in `/actions/:id/status`, `:id` is a positional parameter.
+4. We use `Option<type>` as a synonym for `type | null` because the latter disrupts the Markdown formatting of tables.
+5. Complex data types like `Target` and `Module` may be defined in [doc/client/api-types.md](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api-types.md).
+6. URLs may contain positional parameter for identifiers, which are always strings. E.g. in `/actions/:id/status`, `:id` is a positional parameter.
 
 
 ## Endpoint Table of Contents
@@ -98,7 +99,7 @@ This allows investigators to review and modify actions before dispatching them.
 
 | Name | Type | Description | Example |
 | ---- | ---- | ----------- | ------- |
-| error | `string | null` | If the action cannot be created, an error will be returned. | "Invalid module configuration." |
+| error | `Option<string>` | If the action cannot be created, an error will be returned. | "Invalid module configuration." |
 | action | string | An identifier for the newly-created action. | "abc123...def" |
 
 
@@ -130,7 +131,7 @@ After an action has been created, this endpoint can be invoked to dispatch that 
 
 | Name | Type | Description | Example |
 | ---- | ---- | ----------- | ------- |
-| error | `string | null` | If the action cannot be dispatched, an error will be returned. | "Action has expired." |
+| error | `Option<string>` | If the action cannot be dispatched, an error will be returned. | "Action has expired." |
 | status | string | The new status of the action. | "dispatched" |
 
 ##### Status Codes
@@ -159,7 +160,7 @@ The only parameter is the `:id` positional parameter in the endpoint URL.
 
 | Name | Type | Description | Example |
 | ---- | ---- | ----------- | ------- |
-| error | `string | null` | If the action's status cannot be retrieved, an error will be returned. | null |
+| error | `Option<string>` | If the action's status cannot be retrieved, an error will be returned. | null |
 | status | string | The status of the action. | "in-progress" |
 | agentsTargeted | number | The number agents that the action will be scheduled for | 32 |
 | sent | number | The number of agents to whom the action has been sent | 10 |
