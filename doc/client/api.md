@@ -92,7 +92,7 @@ This allows investigators to review and modify actions before dispatching them.
 | module | string | The name of the module the action should invoke. | "pkg" |
 | expireAfter | number | The number of seconds after which the action should expire. | 300 |
 | target | Target | A description of the agents to have run the action. | [Target examples](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api-types.md#target) |
-| moduleConfig | Module | An object providing configuration values for the module specified. | [Module example]() |
+| moduleConfig | Module | An object providing configuration values for the module specified. | [Module examples](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api-types.md#module) |
 
 #### Response
 
