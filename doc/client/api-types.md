@@ -53,9 +53,17 @@ type Endpoint = {
 
 type RawSQL = string
 
-type Target = RawSQL
-
 type RegExp = string
+
+// Multiple target queries can be specified and will be joined with `AND`.
+type Target = Array<TargetQuery>
+
+type TargetQuery
+    = TargetWithSQL
+    | TargetAll
+    | TargetByAgentDetails
+    | TargetByHostDetails
+    | TargetByTag
 
 type Module
     = AgentDestroyModule
@@ -71,6 +79,45 @@ type Module
     | NetStatModule
     | SSHKeyModule
     | YaraModule
+
+// This type is a fallback for investigators to write the arbitrary SQL queries they may have used
+// for advanced targeting.
+type TargetWithSQL = {
+    sql: RawSQL
+}
+
+// Regardless of whether `all` is `true` or `false`, this type specifies all online agents as targets.
+type TargetAll = {
+    all: bool
+}
+
+// Enables targeting agents by details specific to a given agent.
+// At least one field must be present for this target query to be considered valid.
+type TargetByAgentDetails = {
+    id: number?,
+    name: string?,
+    queueLocation: string?,
+    version: string?,
+    pid: number?,
+    status: string?
+}
+
+// Enables targeting agents by details specific to the agent's host environment.
+// At least one field must be present for this target query to be considered valid.
+// See the [cheatsheet](https://github.com/mozilla/mig/blob/master/doc/cheatsheet.rst#environments)
+// for more information about this.
+type TargetByHostDetails = {
+    ident: string?,
+    os: string?,
+    arch: string?,
+    publicIP: string?
+}
+
+// Enables targeting agents by one of their tags.
+type TargetByTag = {
+    tagName: string,
+    value: any
+}
 
 type AgentDestroyModule = {
     pid: number,
@@ -176,4 +223,53 @@ type YaraModule = {
     yaraRules: string,
     fileSearch: string
 }
+```
+
+## Examples
+
+### Target
+
+```typescript
+[
+    {
+        tagName: "operator",
+        value: "IT"
+    },
+    {
+        os: "linux"
+    }
+]
+```
+
+```typescript
+[
+    {
+        os: "linux"
+    }
+    {
+        name: "buildbot"
+    }
+]
+```
+
+```typescript
+[
+    {
+        sql: "id IN (SELECT agentid FROM commands, json_array_elements(commands.results) AS r WHERE commands.actionid = 12345 AND r#>>'{foundanything}' = 'true')"
+    }
+]
+```
+
+```typescript
+[
+    {
+        all: true
+    }
+]
+```
+
+### Module
+
+```typescript
+
 ```

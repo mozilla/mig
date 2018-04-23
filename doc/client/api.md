@@ -5,17 +5,17 @@
 1. All endpoints using the `GET` and `DELETE` methods accept input in URL parameters.
 2. All other endpoints accept parameters encoded as JSON in the body of the request.
 3. Data types are expressed using TypeScript's notation for [basic](https://www.typescriptlang.org/docs/handbook/basic-types.html) and [composite](https://www.typescriptlang.org/docs/handbook/advanced-types.html) types.
-4. Complex data types like `Target` and `Module` may be defined in [doc/client/api-types.md]().
+4. Complex data types like `Target` and `Module` may be defined in [doc/client/api-types.md](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api-types.md).
 5. URLs may contain positional parameter for identifiers, which are always strings. E.g. in `/actions/:id/status`, `:id` is a positional parameter.
 
 
 ## Endpoint Table of Contents
 
-* [Retrieve top-level API documentation]()
-* [Retrieve documentation for a module]()
-* [Create an action]()
-* [Dispatch an action]()
-* [Check the status of a dispatched action]()
+* [Retrieve top-level API documentation](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#endpoint-documentation)
+* [Retrieve documentation for a module](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#retrieve-documentation-for-a-module)
+* [Create an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#create-an-action)
+* [Dispatch an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#dispatch-an-action)
+* [Check the status of a dispatched action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#check-the-status-of-a-dispatched-action)
 
 ## Endpoint Documentation
 
