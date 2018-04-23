@@ -270,6 +270,35 @@ type YaraModule = {
 
 ### Module
 
-```typescript
+Ping module
 
+```typescript
+{
+    destination: "127.0.0.1",
+    destinationPort: 8080,
+    protocol: "tcp"
+}
+```
+
+File module
+
+```typescript
+{
+    options: {
+        maxDepth: 1,
+        limit: 100
+    },
+    search: {
+        path: "/etc/passwd",
+        modifiedSinceMinutes: 2880
+    }
+}
+```
+
+NetStat module
+
+```typescript
+{
+    remoteConnectedIPAddress: "1.2.3.4"
+}
 ```
