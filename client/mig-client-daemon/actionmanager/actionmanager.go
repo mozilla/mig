@@ -17,6 +17,9 @@ import (
 	"mig.ninja/mig/client/mig-client-daemon/targeting"
 )
 
+// The number of random bytes to generate for action identifiers.
+const internalActionIDLength uint = 3
+
 // ActionCatalog maintains information about actions that have been
 // created, dispatched, etc.
 type ActionCatalog struct {
@@ -33,12 +36,12 @@ func NewActionCatalog() ActionCatalog {
 // CreateAction attempts to create a new action with the supplied information
 // and register it to the catalog, returning the identifier of the
 // newly-created action as a string.
-func (catalog *ActionCatalog) CreateAction(
+func (catalog *ActionCatalog) Create(
 	module modules.Module,
 	agentTargetSpecifiers []targeting.Query,
 	expireAfter time.Duration,
 ) (ident.Identifier, error) {
-	id := ident.GenerateUniqueID(3, 250*time.Millisecond, func(id ident.Identifier) bool {
+	id := ident.GenerateUniqueID(internalActionIDLength, 250*time.Millisecond, func(id ident.Identifier) bool {
 		_, alreadyTaken := catalog.actions[id]
 		return !alreadyTaken
 	})
@@ -54,4 +57,10 @@ func (catalog *ActionCatalog) CreateAction(
 	// target := strings.Join(queryStrings, " AND ")
 
 	return id, nil
+}
+
+// Lookup checks for an action with a given internal identifier in the action catalog.
+func (catalog ActionCatalog) Lookup(actionID ident.Identifier) (mig.Action, bool) {
+	action, found := catalog.actions[actionID]
+	return action, found
 }

@@ -15,7 +15,7 @@ import (
 	"mig.ninja/mig/client/mig-client-daemon/targeting"
 )
 
-func TestCreateAction(t *testing.T) {
+func TestCreate(t *testing.T) {
 	// Some data to create targeting queries with.
 	queueLoc := "linux"
 	online := "online"
@@ -103,11 +103,11 @@ func TestCreateAction(t *testing.T) {
 	idsGenerated := []ident.Identifier{}
 
 	for caseNum, testCase := range testCases {
-		t.Logf("Running TestCreateAction case #%d.\n\t%s\n", caseNum, testCase.Description)
+		t.Logf("Running TestCreate case #%d.\n\t%s\n", caseNum, testCase.Description)
 
 		actions := NewActionCatalog()
 
-		id, err := actions.CreateAction(
+		id, err := actions.Create(
 			testCase.Module,
 			testCase.TargetQueries,
 			testCase.Expiration)
@@ -121,10 +121,129 @@ func TestCreateAction(t *testing.T) {
 
 		for _, idSeen := range idsGenerated {
 			if id == idSeen {
-				t.Errorf("Expected CreateAction to generate unique IDs, but got %s twice.", id)
+				t.Errorf("Expected Create to generate unique IDs, but got %s twice.", id)
 			}
 		}
 
 		idsGenerated = append(idsGenerated, id)
+	}
+}
+
+func TestGetAction(t *testing.T) {
+	// Some data to create targeting queries with.
+	queueLoc := "linux"
+	online := "online"
+
+	testCases := []struct {
+		Description       string
+		Module            modules.Module
+		TargetQueries     []targeting.Query
+		Expiration        time.Duration
+		ShouldCreateFirst bool
+		ExpectError       bool
+		ExpectToFind      bool
+	}{
+		{
+			Description: `
+			We should be able to find actions that we successfully create.
+			`,
+			Module: modules.Pkg{
+				Name:    "*libssl*",
+				Version: nil,
+			},
+			TargetQueries: []targeting.Query{
+				targeting.ByAgentDetails{
+					ID:            nil,
+					Name:          nil,
+					QueueLocation: &queueLoc,
+					Version:       nil,
+					Pid:           nil,
+					Status:        &online,
+				},
+				targeting.ByTag{
+					TagName:  "operator",
+					TagValue: "IT",
+				},
+			},
+			Expiration:        1 * time.Hour,
+			ShouldCreateFirst: true,
+			ExpectError:       false,
+			ExpectToFind:      true,
+		},
+		{
+			Description: `
+			We should not be able to find actions that are not successfully created.
+			`,
+			Module: modules.Pkg{
+				Name:    "*libssl*",
+				Version: nil,
+			},
+			TargetQueries: []targeting.Query{
+				targeting.ByHostDetails{
+					Ident:    nil,
+					OS:       nil,
+					Arch:     nil,
+					PublicIP: nil,
+				},
+			},
+			Expiration:        1 * time.Hour,
+			ShouldCreateFirst: true,
+			ExpectError:       true,
+			ExpectToFind:      false,
+		},
+		{
+			Description: `
+			We should not be able to find actions that we don't create.
+			`,
+			Module: modules.Pkg{
+				Name:    "*libssl*",
+				Version: nil,
+			},
+			TargetQueries: []targeting.Query{
+				targeting.ByHostDetails{
+					Ident:    nil,
+					OS:       nil,
+					Arch:     nil,
+					PublicIP: nil,
+				},
+			},
+			Expiration:        1 * time.Hour,
+			ShouldCreateFirst: false,
+			ExpectError:       false,
+			ExpectToFind:      false,
+		},
+	}
+
+	for caseNum, testCase := range testCases {
+		t.Logf("Running TestGetAction case #%d.\n\t%s\n", caseNum, testCase.Description)
+
+		actions := NewActionCatalog()
+
+		lastActionID := ident.EmptyID
+
+		if testCase.ShouldCreateFirst {
+			id, err := actions.Create(
+				testCase.Module,
+				testCase.TargetQueries,
+				testCase.Expiration)
+
+			gotErr := err != nil
+			if !testCase.ExpectError && gotErr {
+				t.Errorf("Did not expect to get an error, but got %s", err.Error())
+			} else if testCase.ExpectError && !gotErr {
+				t.Errorf("Expected to get an error, but did not")
+			}
+
+			lastActionID = id
+		}
+
+		action, found := actions.Lookup(lastActionID)
+		if testCase.ExpectToFind && !found {
+			t.Errorf("Expected to find a newly-created action in the action catalog, but did not")
+		} else if !testCase.ExpectToFind && found {
+			t.Errorf("Did not expect to find an action, but we did")
+		} else if testCase.ExpectToFind && action.Target == "" {
+			t.Errorf("Expected to find an action, but got one that hasn't been initialized")
+		}
 	}
 }
