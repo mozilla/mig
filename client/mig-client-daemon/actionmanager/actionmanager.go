@@ -7,10 +7,11 @@
 package actionmanager
 
 import (
+	//"strings"
 	"time"
 
 	"mig.ninja/mig"
-	migclient "mig.ninja/mig/client"
+	//migclient "mig.ninja/mig/client"
 	"mig.ninja/mig/client/mig-client-daemon/modules"
 	"mig.ninja/mig/client/mig-client-daemon/targeting"
 )
@@ -37,6 +38,16 @@ func (catalog *ActionCatalog) CreateAction(
 	expireAfter time.Duration,
 ) (string, error) {
 	id := catalog.generateActionID()
+
+	queryStrings := []string{}
+	for _, query := range agentTargetSpecifiers {
+		whereClause, err := query.ToSQLWhereClause()
+		if err != nil {
+			return "", err
+		}
+		queryStrings = append(queryStrings, whereClause)
+	}
+	// target := strings.Join(queryStrings, " AND ")
 
 	return id, nil
 }

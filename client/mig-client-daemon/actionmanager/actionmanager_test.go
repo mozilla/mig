@@ -9,7 +9,7 @@ package actionmanager
 import (
 	"testing"
 	"time"
-	
+
 	"mig.ninja/mig/client/mig-client-daemon/modules"
 	"mig.ninja/mig/client/mig-client-daemon/targeting"
 )
@@ -18,40 +18,38 @@ func TestCreateAction(t *testing.T) {
 	// Some data to create targeting queries with.
 	queueLoc := "linux"
 	online := "online"
-	tagName := "operator"
-	tagValue := "IT"
 
 	testCases := []struct {
-		Description string,
-		Module modules.Module
-		TargetQueries []targeting.Query,
-		Expiration time.Duration,
-		ExpectError bool,
+		Description   string
+		Module        modules.Module
+		TargetQueries []targeting.Query
+		Expiration    time.Duration
+		ExpectError   bool
 	}{
 		{
 			Description: `
 			Given a valid set of target queries, should be able to create
 			a new action.
 			`,
-			Module: modules.PkgModule {
-				name: "*libssl*",
-				version: nil,
+			Module: modules.Pkg{
+				Name:    "*libssl*",
+				Version: nil,
 			},
 			TargetQueries: []targeting.Query{
 				targeting.ByAgentDetails{
-					ID: nil,
-					Name: nil,
+					ID:            nil,
+					Name:          nil,
 					QueueLocation: &queueLoc,
-					Version: nil,
-					Pid: nil,
-					Status: &online,
+					Version:       nil,
+					Pid:           nil,
+					Status:        &online,
 				},
 				targeting.ByTag{
-					TagName: &tagName,
-					value: &tagValue,
+					TagName:  "operator",
+					TagValue: "IT",
 				},
 			},
-			Expiration: 1 * time.Hour,
+			Expiration:  1 * time.Hour,
 			ExpectError: false,
 		},
 		{
@@ -59,29 +57,56 @@ func TestCreateAction(t *testing.T) {
 			Given an invalid set of target queries, creating a new action
 			should fail.
 			`,
-			Module: modules.PkgModule {
-				name: "*libssl*",
-				version: nil,
+			Module: modules.Pkg{
+				Name:    "*libssl*",
+				Version: nil,
 			},
 			TargetQueries: []targeting.Query{
 				targeting.ByHostDetails{
-					Ident: nil,
-					OS: nil,
-					Arch: nil,
+					Ident:    nil,
+					OS:       nil,
+					Arch:     nil,
 					PublicIP: nil,
 				},
 			},
-			Expiration: 1 * time.Hour,
+			Expiration:  1 * time.Hour,
 			ExpectError: true,
-		}
+		},
+		{
+			Description: `
+			IDs for actions produced by the ActionCatalog should be unique.
+			`,
+			Module: modules.Pkg{
+				Name:    "*libssl*",
+				Version: nil,
+			},
+			TargetQueries: []targeting.Query{
+				targeting.ByAgentDetails{
+					ID:            nil,
+					Name:          nil,
+					QueueLocation: &queueLoc,
+					Version:       nil,
+					Pid:           nil,
+					Status:        &online,
+				},
+				targeting.ByTag{
+					TagName:  "operator",
+					TagValue: "IT",
+				},
+			},
+			Expiration:  1 * time.Hour,
+			ExpectError: false,
+		},
 	}
+
+	idsGenerated := []string{}
 
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestCreateAction case #%d.\n\t%s\n", caseNum, testCase.Description)
 
 		actions := NewActionCatalog()
 
-		newId, err := actions.CreateAction(
+		id, err := actions.CreateAction(
 			testCase.Module,
 			testCase.TargetQueries,
 			testCase.Expiration)
@@ -90,7 +115,15 @@ func TestCreateAction(t *testing.T) {
 		if !testCase.ExpectError && gotErr {
 			t.Errorf("Did not expect an error, but got %s", err.Error())
 		} else if testCase.ExpectError && !gotErr {
-			t.Errof("Expected to get an error, but did not.")
+			t.Errorf("Expected to get an error, but did not.")
 		}
+
+		for _, idSeen := range idsGenerated {
+			if id == idSeen {
+				t.Errorf("Expected CreateAction to generate unique IDs, but got %s twice.", id)
+			}
+		}
+
+		idsGenerated = append(idsGenerated, id)
 	}
 }
