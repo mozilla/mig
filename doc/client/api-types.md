@@ -116,7 +116,7 @@ type TargetByHostDetails = {
 // Enables targeting agents by one of their tags.
 type TargetByTag = {
     tagName: string,
-    value: any
+    value: string
 }
 
 type AgentDestroyModule = {
