@@ -7,13 +7,12 @@
 package actionmanager
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	//"strings"
 	"time"
 
 	"mig.ninja/mig"
 	//migclient "mig.ninja/mig/client"
+	"mig.ninja/mig/client/mig-client-daemon/ident"
 	"mig.ninja/mig/client/mig-client-daemon/modules"
 	"mig.ninja/mig/client/mig-client-daemon/targeting"
 )
@@ -21,13 +20,13 @@ import (
 // ActionCatalog maintains information about actions that have been
 // created, dispatched, etc.
 type ActionCatalog struct {
-	actions map[string]mig.Action
+	actions map[ident.Identifier]mig.Action
 }
 
 // NewActionCatalog creates a new `ActionCatalog`.
 func NewActionCatalog() ActionCatalog {
 	return ActionCatalog{
-		actions: make(map[string]mig.Action),
+		actions: make(map[ident.Identifier]mig.Action),
 	}
 }
 
@@ -38,8 +37,11 @@ func (catalog *ActionCatalog) CreateAction(
 	module modules.Module,
 	agentTargetSpecifiers []targeting.Query,
 	expireAfter time.Duration,
-) (string, error) {
-	id := catalog.generateActionID()
+) (ident.Identifier, error) {
+	id := ident.GenerateUniqueID(3, 250*time.Millisecond, func(id ident.Identifier) bool {
+		_, alreadyTaken := catalog.actions[id]
+		return !alreadyTaken
+	})
 
 	queryStrings := []string{}
 	for _, query := range agentTargetSpecifiers {
@@ -52,35 +54,4 @@ func (catalog *ActionCatalog) CreateAction(
 	// target := strings.Join(queryStrings, " AND ")
 
 	return id, nil
-}
-
-// generateActionID creates an identifier that can be used by the
-// `ActionCatalog` to track an action being managed internally.
-func (catalog ActionCatalog) generateActionID() string {
-	bytesToGenerate := 3
-	sleepBetweenReadAttempts := 250 * time.Millisecond
-
-	randBytes := make([]byte, bytesToGenerate)
-
-	for {
-		// We don't necessarily need cryptographically secure random bytes for IDs
-		// but they're reliable and easy to deal with.
-		bytesRead, err := rand.Read(randBytes)
-		if err != nil || bytesRead < bytesToGenerate {
-			// If we encountered an error, it's probablt because the OS' pool of
-			// entropy has been exhausted.  So we will just wait a little bit.
-			<-time.After(sleepBetweenReadAttempts)
-			continue
-		}
-
-		stringID := hex.EncodeToString(randBytes)
-
-		_, alreadyTaken := catalog.actions[stringID]
-		if alreadyTaken {
-			continue
-		}
-
-		// We have generated a random ID that is not already in use.
-		return stringID
-	}
 }

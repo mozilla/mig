@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"mig.ninja/mig/client/mig-client-daemon/ident"
 	"mig.ninja/mig/client/mig-client-daemon/modules"
 	"mig.ninja/mig/client/mig-client-daemon/targeting"
 )
@@ -99,7 +100,7 @@ func TestCreateAction(t *testing.T) {
 		},
 	}
 
-	idsGenerated := []string{}
+	idsGenerated := []ident.Identifier{}
 
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestCreateAction case #%d.\n\t%s\n", caseNum, testCase.Description)

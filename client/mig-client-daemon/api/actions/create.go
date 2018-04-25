@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"mig.ninja/mig/client/mig-client-daemon/api"
+	"mig.ninja/mig/client/mig-client-daemon/ident"
 )
 
 // createRequest contains the body of a request to create an action.
@@ -25,8 +25,8 @@ type createRequest struct {
 // createResponse contains the body of a response to a request to have an
 // action created.
 type createResponse struct {
-	Error  *string        `json:"error"`
-	Action api.Identifier `json:"action"`
+	Error  *string          `json:"error"`
+	Action ident.Identifier `json:"action"`
 }
 
 // CreateHandler is an HTTP handler that will attempt to handle requests to
@@ -52,12 +52,12 @@ func (handler CreateHandler) ServeHTTP(res http.ResponseWriter, req *http.Reques
 		res.WriteHeader(http.StatusBadRequest)
 		response.Encode(&createResponse{
 			Error:  &errMsg,
-			Action: api.EmptyID,
+			Action: ident.EmptyID,
 		})
 		return
 	}
 
-	madeUpID := api.Identifier("Testing. Be sure to fix me later!")
+	madeUpID := ident.Identifier("Testing. Be sure to fix me later!")
 	response.Encode(&createResponse{
 		Error:  nil,
 		Action: madeUpID,
