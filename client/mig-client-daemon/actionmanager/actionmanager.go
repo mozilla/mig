@@ -7,7 +7,7 @@
 package actionmanager
 
 import (
-	//"strings"
+	"strings"
 	"time"
 
 	"mig.ninja/mig"
@@ -54,7 +54,14 @@ func (catalog *ActionCatalog) Create(
 		}
 		queryStrings = append(queryStrings, whereClause)
 	}
-	// target := strings.Join(queryStrings, " AND ")
+	target := strings.Join(queryStrings, " AND ")
+
+	action := mig.Action{}
+	action.ExpireAfter = time.Now().Add(expireAfter)
+	action.Target = target
+	action.Name = string(id)
+
+	catalog.actions[id] = action
 
 	return id, nil
 }
