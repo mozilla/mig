@@ -6,12 +6,35 @@
 
 package modules
 
+import (
+	"mig.ninja/mig/modules/pkg"
+)
+
 // Pkg contains the configuration parameters required to run the Pkg module.
 type Pkg struct {
-	Name    string
-	Version *string
+	PackageName string  `json:"packageName"`
+	Version     *string `json:"packageVersion"`
 }
 
-func (module Pkg) Validate() error {
-	return nil
+func (module Pkg) Name() string {
+	return "pkg"
+}
+
+func (module Pkg) ToParameters() (interface{}, error) {
+	version := ""
+
+	if module.Version != nil {
+		version = *module.Version
+	}
+
+	params := pkg.Parameters{
+		PkgMatch: pkg.PkgMatch{
+			Matches: []string{
+				module.PackageName,
+			},
+		},
+		VerMatch: version,
+	}
+
+	return params, nil
 }

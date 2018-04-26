@@ -7,7 +7,12 @@
 package modules
 
 // Module is implemented by types that contain parameters for a module
-// supported by the MIG agent.
+// supported by the MIG agent.  The `ToParameters` method is expected to
+// validate the module configuration data and return a data type that
+// can be set as the `Parameters` field in an `Action`'s
+// [Operation.Parameters](https://github.com/mozilla/mig/blob/master/action.go#L84)
+// field.
 type Module interface {
-	Validate() error
+	Name() string
+	ToParameters() (interface{}, error)
 }
