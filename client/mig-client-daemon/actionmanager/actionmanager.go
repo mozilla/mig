@@ -56,10 +56,21 @@ func (catalog *ActionCatalog) Create(
 	}
 	target := strings.Join(queryStrings, " AND ")
 
+	moduleParams, err := module.ToParameters()
+	if err != nil {
+		return ident.EmptyID, err
+	}
+
 	action := mig.Action{}
 	action.ExpireAfter = time.Now().Add(expireAfter)
 	action.Target = target
 	action.Name = string(id)
+	action.Operations = []mig.Operation{
+		{
+			Module:     module.Name(),
+			Parameters: moduleParams,
+		},
+	}
 
 	catalog.actions[id] = action
 

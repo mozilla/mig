@@ -33,8 +33,8 @@ func TestCreate(t *testing.T) {
 			a new action.
 			`,
 			Module: modules.Pkg{
-				Name:    "*libssl*",
-				Version: nil,
+				PackageName: "*libssl*",
+				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
 				targeting.ByAgentDetails{
@@ -59,8 +59,8 @@ func TestCreate(t *testing.T) {
 			should fail.
 			`,
 			Module: modules.Pkg{
-				Name:    "*libssl*",
-				Version: nil,
+				PackageName: "*libssl*",
+				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
 				targeting.ByHostDetails{
@@ -78,8 +78,8 @@ func TestCreate(t *testing.T) {
 			IDs for actions produced by the ActionCatalog should be unique.
 			`,
 			Module: modules.Pkg{
-				Name:    "*libssl*",
-				Version: nil,
+				PackageName: "*libssl*",
+				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
 				targeting.ByAgentDetails{
@@ -148,8 +148,8 @@ func TestGetAction(t *testing.T) {
 			We should be able to find actions that we successfully create.
 			`,
 			Module: modules.Pkg{
-				Name:    "*libssl*",
-				Version: nil,
+				PackageName: "*libssl*",
+				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
 				targeting.ByAgentDetails{
@@ -175,8 +175,8 @@ func TestGetAction(t *testing.T) {
 			We should not be able to find actions that are not successfully created.
 			`,
 			Module: modules.Pkg{
-				Name:    "*libssl*",
-				Version: nil,
+				PackageName: "*libssl*",
+				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
 				targeting.ByHostDetails{
@@ -196,8 +196,8 @@ func TestGetAction(t *testing.T) {
 			We should not be able to find actions that we don't create.
 			`,
 			Module: modules.Pkg{
-				Name:    "*libssl*",
-				Version: nil,
+				PackageName: "*libssl*",
+				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
 				targeting.ByHostDetails{
