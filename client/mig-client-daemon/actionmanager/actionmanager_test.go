@@ -75,7 +75,7 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			Description: `
-			IDs for actions produced by the ActionCatalog should be unique.
+			IDs for actions produced by the Catalog should be unique.
 			`,
 			Module: modules.Pkg{
 				PackageName: "*libssl*",
@@ -105,7 +105,7 @@ func TestCreate(t *testing.T) {
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestCreate case #%d.\n\t%s\n", caseNum, testCase.Description)
 
-		actions := NewActionCatalog()
+		actions := NewCatalog()
 
 		id, err := actions.Create(
 			testCase.Module,
@@ -217,7 +217,7 @@ func TestGetAction(t *testing.T) {
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestGetAction case #%d.\n\t%s\n", caseNum, testCase.Description)
 
-		actions := NewActionCatalog()
+		actions := NewCatalog()
 
 		lastActionID := ident.EmptyID
 

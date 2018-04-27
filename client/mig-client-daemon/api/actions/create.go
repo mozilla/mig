@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 
+	actions "mig.ninja/mig/client/mig-client-daemon/actionmanager"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
 )
 
@@ -32,11 +33,14 @@ type createResponse struct {
 // CreateHandler is an HTTP handler that will attempt to handle requests to
 // have an action created by an investigator.
 type CreateHandler struct {
+	actionCatalog actions.Catalog
 }
 
 // NewCreateHandler constructs a `CreateHandler`.
-func NewCreateHandler() CreateHandler {
-	return CreateHandler{}
+func NewCreateHandler(catalog actions.Catalog) CreateHandler {
+	return CreateHandler{
+		actionCatalog: catalog,
+	}
 }
 
 func (handler CreateHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {

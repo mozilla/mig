@@ -20,15 +20,15 @@ import (
 // The number of random bytes to generate for action identifiers.
 const internalActionIDLength uint = 3
 
-// ActionCatalog maintains information about actions that have been
+// Catalog maintains information about actions that have been
 // created, dispatched, etc.
-type ActionCatalog struct {
+type Catalog struct {
 	actions map[ident.Identifier]mig.Action
 }
 
-// NewActionCatalog creates a new `ActionCatalog`.
-func NewActionCatalog() ActionCatalog {
-	return ActionCatalog{
+// NewCatalog creates a new `Catalog`.
+func NewCatalog() Catalog {
+	return Catalog{
 		actions: make(map[ident.Identifier]mig.Action),
 	}
 }
@@ -36,7 +36,7 @@ func NewActionCatalog() ActionCatalog {
 // CreateAction attempts to create a new action with the supplied information
 // and register it to the catalog, returning the identifier of the
 // newly-created action as a string.
-func (catalog *ActionCatalog) Create(
+func (catalog *Catalog) Create(
 	module modules.Module,
 	agentTargetSpecifiers []targeting.Query,
 	expireAfter time.Duration,
@@ -78,7 +78,7 @@ func (catalog *ActionCatalog) Create(
 }
 
 // Lookup checks for an action with a given internal identifier in the action catalog.
-func (catalog ActionCatalog) Lookup(actionID ident.Identifier) (mig.Action, bool) {
+func (catalog Catalog) Lookup(actionID ident.Identifier) (mig.Action, bool) {
 	action, found := catalog.actions[actionID]
 	return action, found
 }
