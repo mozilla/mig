@@ -12,7 +12,8 @@ import (
 	"os/user"
 	"path"
 
-	actionsAPI "mig.ninja/mig/client/mig-client-daemon/api/actions"
+	"mig.ninja/mig/client/mig-client-daemon/actions"
+	"mig.ninja/mig/client/mig-client-daemon/api/actions"
 	"mig.ninja/mig/client/mig-client-daemon/config"
 )
 
@@ -28,11 +29,15 @@ func main() {
 
 	clientConfig := config.MustLoad(configPath)
 
+	// Set up dependencies for services offered by the API.
+	actionsCatalog := actions.NewCatalog()
+
 	// Set up and launch the HTTP server.
 	bindAddr := fmt.Sprintf("127.0.0.1:%d", clientConfig.ListenPort)
-	fmt.Printf("Client daemon listening on %s\n", bindAddr)
 
-	createActionEndpt := actionsAPI.NewCreateHandler()
+	createActionEndpt := actionsAPI.NewCreateHandler(actionsCatalog)
 	http.Handle("/v1/actions/create", createActionEndpt)
+
+	fmt.Printf("Client daemon listening on %s\n", bindAddr)
 	http.ListenAndServe(bindAddr, nil)
 }

@@ -4,7 +4,7 @@
 //
 // Contributor: Zack Mullaly zmullaly@mozilla.com [:zack]
 
-package actionmanager
+package actions
 
 import (
 	"testing"

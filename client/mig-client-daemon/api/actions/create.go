@@ -4,14 +4,14 @@
 //
 // Contributor: Zack Mullaly zmullaly@mozilla.com [:zack]
 
-package actions
+package actionsAPI
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 
-	actions "mig.ninja/mig/client/mig-client-daemon/actionmanager"
+	actions "mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
 )
 

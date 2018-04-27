@@ -4,7 +4,7 @@
 //
 // Contributor: Zack Mullaly zmullaly@mozilla.com [:zack]
 
-package actions
+package actionsAPI
 
 import (
 	"encoding/json"
@@ -12,6 +12,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"mig.ninja/mig/client/mig-client-daemon/actions"
 )
 
 func TestCreateHandler(t *testing.T) {
@@ -35,7 +37,8 @@ func TestCreateHandler(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		handler := NewCreateHandler()
+		catalog := actions.NewCatalog()
+		handler := NewCreateHandler(catalog)
 		server := httptest.NewServer(handler)
 
 		response, err := http.Post(server.URL, "application/json", strings.NewReader(test.Body))
