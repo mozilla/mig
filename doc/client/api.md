@@ -15,6 +15,8 @@
 * [Retrieve top-level API documentation](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#endpoint-documentation)
 * [Retrieve documentation for a module](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#retrieve-documentation-for-a-module)
 * [Create an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#create-an-action)
+* [Retrieve an action for signing](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#retrieve-an-action-for-signing)
+* [Provide a signature for an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#provide-a-signture-for-an-action)
 * [Dispatch an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#dispatch-an-action)
 * [Check the status of a dispatched action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#check-the-status-of-a-dispatched-action)
 
@@ -107,11 +109,56 @@ This allows investigators to review and modify actions before dispatching them.
 
 * `200` indicates that the action was created successfully.
 * `400` indicates that some data provided as a parameter was incorrectly formatted or otherwise invalid.
-* `500` indicates that the daemon encountered an error due to an internal failure.
 
 #### Example Request
 
 #### Example Response
+
+### Retrieve an action for signing
+
+```
+GET /v1/actions/:id/signing
+```
+
+#### Parameters
+
+The `id` positional argument should be the ID of an action, as returned by the "create an action" endpoint.
+
+#### Response
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| action | string | An action formatted as a string that can be signed by an investigator. | No example |
+
+##### Status Codes
+
+* `200` indicates that the ID provided was valid and a signable action has been retrieved.
+* `400` indicates that the ID provided was invalid.
+
+### Provide a signature for an action
+
+```
+PUT /v1/actions/:id/sign
+```
+
+#### Parameters
+
+The `id` positional argument is expected to be a string identifier for an action created by the client daemon.
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| signature | string | A base64-encoded signature of the action provided | No example |
+
+#### Response
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| error | `Option<string>` | If the signature is not valid base64 or the action does not exist, an error will be returned | "Signature is not valid base64" |
+
+##### Status Codes
+
+* `200` indicates that the ID corresponds to a valid action and that the signature provided has been appended to it.
+* `400` indicates that either the signature provided is invalid or that the ID does not correspond to a valid action.
 
 ### Dispatch an action
 
