@@ -25,6 +25,7 @@ type readForSigningRequest struct {
 // readForSigningResponse contains the body of a response to a request to
 // retrieve an action in a signable form.
 type readForSigningResponse struct {
+	Error  *string
 	Action string
 }
 
@@ -37,7 +38,7 @@ type ReadForSigningHandler struct {
 // NewReadForSigningHandler constructs a `ReadForSigningHandler`.
 func NewReadForSigningHandler(catalog actions.Catalog) ReadForSigningHandler {
 	return ReadForSigningHandler{
-		actionCatalog: actions.Catalog,
+		actionCatalog: catalog,
 	}
 }
 
@@ -46,6 +47,7 @@ func (handler ReadForSigningHandler) ServeHTTP(res http.ResponseWriter, req *htt
 	response := json.NewEncoder(res)
 
 	response.Encode(&readForSigningResponse{
+		Error:  nil,
 		Action: "",
 	})
 }
