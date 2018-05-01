@@ -128,6 +128,7 @@ The `id` positional argument should be the ID of an action, as returned by the "
 
 | Name | Type | Description | Example |
 | ---- | ---- | ----------- | ------- |
+| error | `Option<string>` | If the action requested does not exist, an error will be returned. | null |
 | action | string | An action formatted as a string that can be signed by an investigator. | No example |
 
 ##### Status Codes
