@@ -61,14 +61,15 @@ func (catalog *Catalog) Create(
 		return ident.EmptyID, err
 	}
 
-	action := mig.Action{}
-	action.ExpireAfter = time.Now().Add(expireAfter)
-	action.Target = target
-	action.Name = string(id)
-	action.Operations = []mig.Operation{
-		{
-			Module:     module.Name(),
-			Parameters: moduleParams,
+	action := mig.Action{
+		Name:        string(id),
+		ExpireAfter: time.Now().Add(expireAfter),
+		Target:      target,
+		Operations: []mig.Operation{
+			{
+				Module:     module.Name(),
+				Parameters: moduleParams,
+			},
 		},
 	}
 
