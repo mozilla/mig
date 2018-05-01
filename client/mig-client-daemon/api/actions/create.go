@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"net/http"
 
-	actions "mig.ninja/mig/client/mig-client-daemon/actions"
+	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
 )
 
