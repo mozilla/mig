@@ -33,7 +33,7 @@ func NewCatalog() Catalog {
 	}
 }
 
-// CreateAction attempts to create a new action with the supplied information
+// Create attempts to create a new action with the supplied information
 // and register it to the catalog, returning the identifier of the
 // newly-created action as a string.
 func (catalog *Catalog) Create(
