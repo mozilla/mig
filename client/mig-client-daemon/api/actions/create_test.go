@@ -45,6 +45,7 @@ Action creation should fail if invalid data is supplied for a module configurati
 
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestCreateHandler case #%d.\n%s\n", caseNum, testCase.Description)
+
 		catalog := actions.NewCatalog()
 		handler := NewCreateHandler(catalog)
 		server := httptest.NewServer(handler)
