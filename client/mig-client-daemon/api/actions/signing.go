@@ -8,9 +8,10 @@ package actionsAPI
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
-	//"github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
@@ -45,9 +46,35 @@ func NewReadForSigningHandler(catalog actions.Catalog) ReadForSigningHandler {
 func (handler ReadForSigningHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	response := json.NewEncoder(res)
+	urlVars := mux.Vars(req)
+
+	reqData := readForSigningRequest{
+		Action: ident.Identifier(urlVars["id"]),
+	}
+
+	action, found := handler.actionCatalog.Lookup(reqData.Action)
+	if !found {
+		errMsg := fmt.Sprintf("No such action %s.", string(reqData.Action))
+		res.WriteHeader(http.StatusBadRequest)
+		response.Encode(&readForSigningResponse{
+			Error:  &errMsg,
+			Action: "",
+		})
+		return
+	}
+
+	actionStr, err := action.String()
+	if err != nil {
+		errMsg := err.Error()
+		response.Encode(&readForSigningResponse{
+			Error:  &errMsg,
+			Action: "",
+		})
+		return
+	}
 
 	response.Encode(&readForSigningResponse{
 		Error:  nil,
-		Action: "",
+		Action: actionStr,
 	})
 }
