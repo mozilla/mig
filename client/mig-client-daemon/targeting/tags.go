@@ -30,5 +30,6 @@ func (query *ByTag) InitFromMap(jsonMap map[string]interface{}) error {
 	}
 
 	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.DisallowUnknownFields()
 	return decoder.Decode(query)
 }

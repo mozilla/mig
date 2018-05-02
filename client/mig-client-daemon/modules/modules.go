@@ -7,8 +7,6 @@
 package modules
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 )
 
@@ -21,12 +19,13 @@ import (
 type Module interface {
 	Name() string
 	ToParameters() (interface{}, error)
+	InitFromMap(map[string]interface{}) error
 }
 
 // FromMap attempts to populate a `Module` with data from a `map` containing
 // configuration data for a module specified by `moduleName`.
 func FromMap(moduleName string, jsonMap map[string]interface{}) (Module, error) {
-	pkg := Pkg{}
+	pkg := new(Pkg)
 
 	moduleContainers := map[string]Module{
 		pkg.Name(): pkg,
@@ -34,18 +33,12 @@ func FromMap(moduleName string, jsonMap map[string]interface{}) (Module, error) 
 
 	module, found := moduleContainers[moduleName]
 	if !found {
-		return InvalidModule{}, errors.New("Not a recognized module.")
+		return new(InvalidModule), errors.New("Not a recognized module.")
 	}
 
-	encoded, encodeErr := json.Marshal(&jsonMap)
-	if encodeErr != nil {
-		return InvalidModule{}, encodeErr
-	}
-
-	decoder := json.NewDecoder(bytes.NewReader(encoded))
-	decodeErr := decoder.Decode(&module)
-	if decodeErr != nil {
-		return InvalidModule{}, decodeErr
+	err := module.InitFromMap(jsonMap)
+	if err != nil {
+		return new(InvalidModule), err
 	}
 
 	return module, nil

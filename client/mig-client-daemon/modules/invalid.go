@@ -14,10 +14,14 @@ import (
 // module configuration data is supplied to the API.
 type InvalidModule struct{}
 
-func (module InvalidModule) Name() string {
+func (module *InvalidModule) Name() string {
 	return "Invalid module"
 }
 
-func (module InvalidModule) ToParameters() (interface{}, error) {
+func (module *InvalidModule) ToParameters() (interface{}, error) {
 	return nil, errors.New("Invalid module.")
+}
+
+func (module *InvalidModule) InitFromMap(_ map[string]interface{}) error {
+	return errors.New("Invalid module.")
 }

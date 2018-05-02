@@ -28,6 +28,7 @@ func FromMap(jsonMap map[string]interface{}) (Query, error) {
 		new(ByTag),
 	}
 
+	fmt.Printf("trying to load query from data %v\n", jsonMap)
 	for _, query := range queryContainers {
 		fmt.Printf("Attempting to decode target into %T\n", query)
 		err := query.InitFromMap(jsonMap)

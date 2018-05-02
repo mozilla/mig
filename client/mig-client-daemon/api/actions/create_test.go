@@ -38,7 +38,7 @@ We should be able to have an action created provided we supply a valid module co
 		}
 	],
 	"moduleConfig": {
-		"name": "libssl"
+		"packageName": "libssl"
 	}
 }`,
 			ExpectError:    false,
@@ -59,7 +59,7 @@ Action creation should fail if invalid data is supplied for a module configurati
 		}
 	],
 	"moduleConfig": {
-		"name": "libssl"
+		"packageName": "libssl"
 	}
 }`,
 			ExpectError:    true,

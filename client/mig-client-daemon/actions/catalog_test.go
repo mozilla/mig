@@ -29,10 +29,9 @@ func TestCreate(t *testing.T) {
 	}{
 		{
 			Description: `
-			Given a valid set of target queries, should be able to create
-			a new action.
+Given a valid set of target queries, should be able to create a new action.
 			`,
-			Module: modules.Pkg{
+			Module: &modules.Pkg{
 				PackageName: "*libssl*",
 				Version:     nil,
 			},
@@ -55,10 +54,9 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			Description: `
-			Given an invalid set of target queries, creating a new action
-			should fail.
+Given an invalid set of target queries, creating a new action should fail.
 			`,
-			Module: modules.Pkg{
+			Module: &modules.Pkg{
 				PackageName: "*libssl*",
 				Version:     nil,
 			},
@@ -75,9 +73,9 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			Description: `
-			IDs for actions produced by the Catalog should be unique.
+IDs for actions produced by the Catalog should be unique.
 			`,
-			Module: modules.Pkg{
+			Module: &modules.Pkg{
 				PackageName: "*libssl*",
 				Version:     nil,
 			},
@@ -147,7 +145,7 @@ func TestGetAction(t *testing.T) {
 			Description: `
 			We should be able to find actions that we successfully create.
 			`,
-			Module: modules.Pkg{
+			Module: &modules.Pkg{
 				PackageName: "*libssl*",
 				Version:     nil,
 			},
@@ -174,7 +172,7 @@ func TestGetAction(t *testing.T) {
 			Description: `
 			We should not be able to find actions that are not successfully created.
 			`,
-			Module: modules.Pkg{
+			Module: &modules.Pkg{
 				PackageName: "*libssl*",
 				Version:     nil,
 			},
@@ -195,7 +193,7 @@ func TestGetAction(t *testing.T) {
 			Description: `
 			We should not be able to find actions that we don't create.
 			`,
-			Module: modules.Pkg{
+			Module: &modules.Pkg{
 				PackageName: "*libssl*",
 				Version:     nil,
 			},

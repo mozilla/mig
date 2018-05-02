@@ -7,6 +7,9 @@
 package modules
 
 import (
+	"bytes"
+	"encoding/json"
+
 	"mig.ninja/mig/modules/pkg"
 )
 
@@ -16,11 +19,11 @@ type Pkg struct {
 	Version     *string `json:"packageVersion"`
 }
 
-func (module Pkg) Name() string {
+func (module *Pkg) Name() string {
 	return "pkg"
 }
 
-func (module Pkg) ToParameters() (interface{}, error) {
+func (module *Pkg) ToParameters() (interface{}, error) {
 	version := ""
 
 	if module.Version != nil {
@@ -37,4 +40,15 @@ func (module Pkg) ToParameters() (interface{}, error) {
 	}
 
 	return params, nil
+}
+
+func (module *Pkg) InitFromMap(jsonData map[string]interface{}) error {
+	encoded, err := json.Marshal(jsonData)
+	if err != nil {
+		return err
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.DisallowUnknownFields()
+	return decoder.Decode(module)
 }

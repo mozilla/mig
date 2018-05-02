@@ -24,7 +24,7 @@ import (
 
 func TestReadForSigningHandler(t *testing.T) {
 	catalog := actions.NewCatalog()
-	module := modules.Pkg{
+	module := &modules.Pkg{
 		PackageName: "*libssl*",
 	}
 	target := []targeting.Query{
