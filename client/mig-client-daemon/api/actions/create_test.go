@@ -18,30 +18,38 @@ import (
 
 func TestCreateHandler(t *testing.T) {
 	testCases := []struct {
+		Description    string
 		Body           string
 		ExpectError    bool
 		ExpectedStatus int
 	}{
 		// Well-formed body containing valid data.
 		{
+			Description: `
+We should be able to have an action created provided we supply a valid module configuration.
+			`,
 			Body:           "{\"module\": \"pkg\", \"expireAfter\": 600, \"target\": \"status='online'\", \"moduleConfig\": {\"name\": \"libssl\"}}",
 			ExpectError:    false,
 			ExpectedStatus: http.StatusOK,
 		},
 		// Invalid body. `expireAfter` must be a number.
 		{
+			Description: `
+Action creation should fail if invalid data is supplied for a module configuration.
+			`,
 			Body:           "{\"module\": \"pkg\", \"expireAfter\": \"bad\", \"target\": \"status='online'\", \"moduleConfig\": {\"name\": \"libssl\"}}",
 			ExpectError:    true,
 			ExpectedStatus: http.StatusBadRequest,
 		},
 	}
 
-	for _, test := range testCases {
+	for caseNum, testCase := range testCases {
+		t.Logf("Running TestCreateHandler case #%d.\n%s\n", caseNum, testCase.Description)
 		catalog := actions.NewCatalog()
 		handler := NewCreateHandler(catalog)
 		server := httptest.NewServer(handler)
 
-		response, err := http.Post(server.URL, "application/json", strings.NewReader(test.Body))
+		response, err := http.Post(server.URL, "application/json", strings.NewReader(testCase.Body))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -54,13 +62,13 @@ func TestCreateHandler(t *testing.T) {
 		}
 
 		gotErr := respData.Error != nil
-		if test.ExpectError && !gotErr {
+		if testCase.ExpectError && !gotErr {
 			t.Errorf("Expected to get an error, but did not.")
-		} else if !test.ExpectError && gotErr {
+		} else if !testCase.ExpectError && gotErr {
 			t.Errorf("Did not expect to get an error, but got %s", *respData.Error)
 		}
-		if response.StatusCode != test.ExpectedStatus {
-			t.Errorf("Expected status code %d. Got %d", test.ExpectedStatus, response.StatusCode)
+		if response.StatusCode != testCase.ExpectedStatus {
+			t.Errorf("Expected status code %d. Got %d", testCase.ExpectedStatus, response.StatusCode)
 		}
 	}
 }
