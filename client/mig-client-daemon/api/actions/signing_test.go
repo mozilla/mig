@@ -41,7 +41,7 @@ func TestReadForSigningHandler(t *testing.T) {
 	}{
 		{
 			Description: `
-			We can retrieve actions that are being maintained by the client daemon.
+We can retrieve actions that are being maintained by the client daemon.
 			`,
 			ID:             validID,
 			ExpectError:    false,
@@ -49,7 +49,7 @@ func TestReadForSigningHandler(t *testing.T) {
 		},
 		{
 			Description: `
-			We can not retrieve actions that are not being maintained by the client daemon.
+We can not retrieve actions that are not being maintained by the client daemon.
 			`,
 			ID:             ident.Identifier("invalidid"),
 			ExpectError:    true,
@@ -61,7 +61,7 @@ func TestReadForSigningHandler(t *testing.T) {
 	server := httptest.NewServer(handler)
 
 	for caseNum, testCase := range testCases {
-		t.Logf("Running TestReadForSigningHandler case #%d.\n\t%s\n", caseNum, testCase.Description)
+		t.Logf("Running TestReadForSigningHandler case #%d.\n%s\n", caseNum, testCase.Description)
 
 		reqURL := fmt.Sprintf("%s/v1/actions/%s/signing", server.URL, testCase.ID)
 
