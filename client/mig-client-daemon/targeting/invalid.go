@@ -14,7 +14,7 @@ import (
 // targeting data is supplied to the API.
 type InvalidQuery struct{}
 
-func (target InvalidQuery) ToSQLWhereClause() (string, error) {
+func (target *InvalidQuery) ToSQLWhereClause() (string, error) {
 	return "", errors.New("Invalid target.")
 }
 

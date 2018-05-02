@@ -28,7 +28,7 @@ func TestReadForSigningHandler(t *testing.T) {
 		PackageName: "*libssl*",
 	}
 	target := []targeting.Query{
-		targeting.ByTag{
+		&targeting.ByTag{
 			TagName:  "operator",
 			TagValue: "IT",
 		},

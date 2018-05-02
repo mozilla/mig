@@ -27,7 +27,20 @@ func TestCreateHandler(t *testing.T) {
 			Description: `
 We should be able to have an action created provided we supply a valid module configuration.
 			`,
-			Body:           "{\"module\": \"pkg\", \"expireAfter\": 600, \"target\": \"[{\"tagName\": \"operator\", \"tagValue\": \"IT\"}]\", \"moduleConfig\": {\"name\": \"libssl\"}}",
+			Body: `
+{
+	"module": "pkg",
+	"expireAfter": 600,
+	"target": [
+		{
+			"tagName": "operator",
+			"value": "IT"
+		}
+	],
+	"moduleConfig": {
+		"name": "libssl"
+	}
+}`,
 			ExpectError:    false,
 			ExpectedStatus: http.StatusOK,
 		},
@@ -35,7 +48,20 @@ We should be able to have an action created provided we supply a valid module co
 			Description: `
 Action creation should fail if invalid data is supplied for a module configuration.
 			`,
-			Body:           "{\"module\": \"pkg\", \"expireAfter\": \"bad\", \"target\": \"[{\"tagName\": \"operator\", \"tagValue\": \"IT\"}]\", \"moduleConfig\": {\"name\": \"libssl\"}}",
+			Body: `
+{
+	"module": "pkg",
+	"expireAfter": "bad",
+	"target": [
+		{
+			"tagName": "operator",
+			"value": "IT"
+		}
+	],
+	"moduleConfig": {
+		"name": "libssl"
+	}
+}`,
 			ExpectError:    true,
 			ExpectedStatus: http.StatusBadRequest,
 		},
@@ -43,7 +69,20 @@ Action creation should fail if invalid data is supplied for a module configurati
 			Description: `
 Action creation should fail if invalid targeting data is supplied.
 			`,
-			Body:           "{\"module\": \"pkg\", \"expireAfter\": \"bad\", \"target\": \"[{\"invalid\": \"operator\", \"tagValue\": \"IT\"}]\", \"moduleConfig\": {\"name\": \"libssl\"}}",
+			Body: `
+{
+	"module": "pkg",
+	"expireAfter": "bad",
+	"target": [
+		{
+			"invalid": "operator",
+			"value": "IT"
+		}
+	],
+	"moduleConfig": {
+		"name": "libssl"
+	}
+}`,
 			ExpectError:    true,
 			ExpectedStatus: http.StatusBadRequest,
 		},

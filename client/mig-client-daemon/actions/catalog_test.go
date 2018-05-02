@@ -37,7 +37,7 @@ func TestCreate(t *testing.T) {
 				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
-				targeting.ByAgentDetails{
+				&targeting.ByAgentDetails{
 					ID:            nil,
 					Name:          nil,
 					QueueLocation: &queueLoc,
@@ -45,7 +45,7 @@ func TestCreate(t *testing.T) {
 					Pid:           nil,
 					Status:        &online,
 				},
-				targeting.ByTag{
+				&targeting.ByTag{
 					TagName:  "operator",
 					TagValue: "IT",
 				},
@@ -63,7 +63,7 @@ func TestCreate(t *testing.T) {
 				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
-				targeting.ByHostDetails{
+				&targeting.ByHostDetails{
 					Ident:    nil,
 					OS:       nil,
 					Arch:     nil,
@@ -82,7 +82,7 @@ func TestCreate(t *testing.T) {
 				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
-				targeting.ByAgentDetails{
+				&targeting.ByAgentDetails{
 					ID:            nil,
 					Name:          nil,
 					QueueLocation: &queueLoc,
@@ -90,7 +90,7 @@ func TestCreate(t *testing.T) {
 					Pid:           nil,
 					Status:        &online,
 				},
-				targeting.ByTag{
+				&targeting.ByTag{
 					TagName:  "operator",
 					TagValue: "IT",
 				},
@@ -152,7 +152,7 @@ func TestGetAction(t *testing.T) {
 				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
-				targeting.ByAgentDetails{
+				&targeting.ByAgentDetails{
 					ID:            nil,
 					Name:          nil,
 					QueueLocation: &queueLoc,
@@ -160,7 +160,7 @@ func TestGetAction(t *testing.T) {
 					Pid:           nil,
 					Status:        &online,
 				},
-				targeting.ByTag{
+				&targeting.ByTag{
 					TagName:  "operator",
 					TagValue: "IT",
 				},
@@ -179,7 +179,7 @@ func TestGetAction(t *testing.T) {
 				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
-				targeting.ByHostDetails{
+				&targeting.ByHostDetails{
 					Ident:    nil,
 					OS:       nil,
 					Arch:     nil,
@@ -200,7 +200,7 @@ func TestGetAction(t *testing.T) {
 				Version:     nil,
 			},
 			TargetQueries: []targeting.Query{
-				targeting.ByHostDetails{
+				&targeting.ByHostDetails{
 					Ident:    nil,
 					OS:       nil,
 					Arch:     nil,

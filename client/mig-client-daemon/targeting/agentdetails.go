@@ -7,6 +7,8 @@
 package targeting
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -25,7 +27,7 @@ type ByAgentDetails struct {
 	Status        *string `json:"status"`
 }
 
-func (query ByAgentDetails) ToSQLWhereClause() (string, error) {
+func (query *ByAgentDetails) ToSQLWhereClause() (string, error) {
 	allNil := query.ID == nil &&
 		query.Name == nil &&
 		query.QueueLocation == nil &&
@@ -59,4 +61,14 @@ func (query ByAgentDetails) ToSQLWhereClause() (string, error) {
 
 	queryString := strings.Join(queryStrings, " AND ")
 	return queryString, nil
+}
+
+func (query *ByAgentDetails) InitFromMap(jsonData map[string]interface{}) error {
+	encoded, err := json.Marshal(jsonData)
+	if err != nil {
+		return err
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	return decoder.Decode(query)
 }

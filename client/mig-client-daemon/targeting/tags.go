@@ -7,6 +7,8 @@
 package targeting
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -17,6 +19,16 @@ type ByTag struct {
 	TagValue string `json:"value"`
 }
 
-func (query ByTag) ToSQLWhereClause() (string, error) {
+func (query *ByTag) ToSQLWhereClause() (string, error) {
 	return fmt.Sprintf("tags->>'%s' = '%s'", query.TagName, query.TagValue), nil
+}
+
+func (query *ByTag) InitFromMap(jsonMap map[string]interface{}) error {
+	encoded, err := json.Marshal(jsonMap)
+	if err != nil {
+		return err
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	return decoder.Decode(query)
 }

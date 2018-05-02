@@ -7,9 +7,8 @@
 package targeting
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 // Query is implemented by types that can be converted into a string
@@ -17,29 +16,27 @@ import (
 // target agents that we want to run an action.
 type Query interface {
 	ToSQLWhereClause() (string, error)
+	InitFromMap(map[string]interface{}) error
 }
 
 // FromMap attempts to populate a `Query` with data from a `map` containing
 // targeting parameters parsed from JSON.
 func FromMap(jsonMap map[string]interface{}) (Query, error) {
 	queryContainers := []Query{
-		ByAgentDetails{},
-		ByHostDetails{},
-		ByTag{},
+		new(ByAgentDetails),
+		new(ByHostDetails),
+		new(ByTag),
 	}
-
-	encoded, encodeErr := json.Marshal(jsonMap)
-	if encodeErr != nil {
-		return InvalidQuery{}, encodeErr
-	}
-	decoder := json.NewDecoder(bytes.NewReader(encoded))
 
 	for _, query := range queryContainers {
-		err := decoder.Decode(&query)
+		fmt.Printf("Attempting to decode target into %T\n", query)
+		err := query.InitFromMap(jsonMap)
 		if err == nil {
+			fmt.Println("Succeeded")
 			return query, nil
 		}
+		fmt.Printf("Failed. Error = %s\n", err.Error())
 	}
 
-	return InvalidQuery{}, errors.New("Not a recognized agent target query.")
+	return new(InvalidQuery), errors.New("Not a recognized agent target query.")
 }

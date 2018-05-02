@@ -7,6 +7,8 @@
 package targeting
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -23,7 +25,7 @@ type ByHostDetails struct {
 	PublicIP *string `json:"publicIP"`
 }
 
-func (query ByHostDetails) ToSQLWhereClause() (string, error) {
+func (query *ByHostDetails) ToSQLWhereClause() (string, error) {
 	allNil := query.Ident == nil &&
 		query.OS == nil &&
 		query.Arch == nil &&
@@ -49,4 +51,14 @@ func (query ByHostDetails) ToSQLWhereClause() (string, error) {
 
 	queryString := strings.Join(queryStrings, " AND ")
 	return queryString, nil
+}
+
+func (query *ByHostDetails) InitFromMap(jsonData map[string]interface{}) error {
+	encoded, err := json.Marshal(jsonData)
+	if err != nil {
+		return err
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	return decoder.Decode(query)
 }
