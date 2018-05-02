@@ -17,12 +17,12 @@ import (
 // In order for this `Query` to be considered valid, at least one of the fields
 // in the struct must be provided.
 type ByAgentDetails struct {
-	ID            *uint
-	Name          *string
-	QueueLocation *string
-	Version       *string
-	Pid           *uint
-	Status        *string
+	ID            *uint   `json:"id"`
+	Name          *string `json:"name"`
+	QueueLocation *string `json:"queueLocation"`
+	Version       *string `json:"version"`
+	Pid           *uint   `json:"pid"`
+	Status        *string `json:"status"`
 }
 
 func (query ByAgentDetails) ToSQLWhereClause() (string, error) {

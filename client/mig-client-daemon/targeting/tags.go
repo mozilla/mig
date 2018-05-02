@@ -13,8 +13,8 @@ import (
 // ByTag is a targeting `Query` used to target agents based on data in an
 // agent's tags.
 type ByTag struct {
-	TagName  string
-	TagValue string
+	TagName  string `json:"tagName"`
+	TagValue string `json:"value"`
 }
 
 func (query ByTag) ToSQLWhereClause() (string, error) {

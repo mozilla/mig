@@ -10,17 +10,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
+	"mig.ninja/mig/client/mig-client-daemon/modules"
+	"mig.ninja/mig/client/mig-client-daemon/targeting"
 )
 
 // createRequest contains the body of a request to create an action.
 type createRequest struct {
-	ModuleName          string                 `json:"module"`
-	ExpireAfterSeconds  uint64                 `json:"expireAfter"`
-	AgentsToTarget      string                 `json:"target"`
-	ModuleConfiguration map[string]interface{} `json:"moduleConfig"`
+	ModuleName          string                   `json:"module"`
+	ExpireAfterSeconds  uint64                   `json:"expireAfter"`
+	TargetQueries       []map[string]interface{} `json:"target"`
+	ModuleConfiguration map[string]interface{}   `json:"moduleConfig"`
 }
 
 // createResponse contains the body of a response to a request to have an
@@ -61,9 +64,49 @@ func (handler CreateHandler) ServeHTTP(res http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	madeUpID := ident.Identifier("Testing. Be sure to fix me later!")
+	queryIndex := 0
+	queries := make([]targeting.Query, len(request.TargetQueries))
+	for _, queryConfig := range request.TargetQueries {
+		query, err := targeting.FromMap(queryConfig)
+		if err != nil {
+			errMsg := fmt.Sprintf("Invalid agent target query data found. Error: %s", err.Error())
+			res.WriteHeader(http.StatusBadRequest)
+			response.Encode(&createResponse{
+				Error:  &errMsg,
+				Action: ident.EmptyID,
+			})
+			return
+		}
+
+		queries[queryIndex] = query
+		queryIndex++
+	}
+
+	module, err := modules.FromMap(request.ModuleName, request.ModuleConfiguration)
+	if err != nil {
+		errMsg := fmt.Sprintf("Invalid module configuration. Error: %s", err.Error())
+		res.WriteHeader(http.StatusBadRequest)
+		response.Encode(&createResponse{
+			Error:  &errMsg,
+			Action: ident.EmptyID,
+		})
+		return
+	}
+
+	expireAfter := time.Duration(request.ExpireAfterSeconds) * time.Second
+	actionID, err := handler.actionCatalog.Create(module, queries, expireAfter)
+	if err != nil {
+		errMsg := fmt.Sprintf("Could not create action. Error: %s", err.Error())
+		res.WriteHeader(http.StatusBadRequest)
+		response.Encode(&createResponse{
+			Error:  &errMsg,
+			Action: ident.EmptyID,
+		})
+		return
+	}
+
 	response.Encode(&createResponse{
 		Error:  nil,
-		Action: madeUpID,
+		Action: actionID,
 	})
 }

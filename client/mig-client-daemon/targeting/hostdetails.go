@@ -17,10 +17,10 @@ import (
 // In order for this `Query` to be considered valid, at least one of the fields
 // in the struct must be provided.
 type ByHostDetails struct {
-	Ident    *string
-	OS       *string
-	Arch     *string
-	PublicIP *string
+	Ident    *string `json:"ident"`
+	OS       *string `json:"os"`
+	Arch     *string `json:"arch"`
+	PublicIP *string `json:"publicIP"`
 }
 
 func (query ByHostDetails) ToSQLWhereClause() (string, error) {

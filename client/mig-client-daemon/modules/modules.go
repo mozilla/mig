@@ -6,6 +6,12 @@
 
 package modules
 
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+)
+
 // Module is implemented by types that contain parameters for a module
 // supported by the MIG agent.  The `ToParameters` method is expected to
 // validate the module configuration data and return a data type that
@@ -15,4 +21,32 @@ package modules
 type Module interface {
 	Name() string
 	ToParameters() (interface{}, error)
+}
+
+// FromMap attempts to populate a `Module` with data from a `map` containing
+// configuration data for a module specified by `moduleName`.
+func FromMap(moduleName string, jsonMap map[string]interface{}) (Module, error) {
+	pkg := Pkg{}
+
+	moduleContainers := map[string]Module{
+		pkg.Name(): pkg,
+	}
+
+	module, found := moduleContainers[moduleName]
+	if !found {
+		return InvalidModule{}, errors.New("Not a recognized module.")
+	}
+
+	encoded, encodeErr := json.Marshal(&jsonMap)
+	if encodeErr != nil {
+		return InvalidModule{}, encodeErr
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decodeErr := decoder.Decode(&module)
+	if decodeErr != nil {
+		return InvalidModule{}, decodeErr
+	}
+
+	return module, nil
 }
