@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
+
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
 	"mig.ninja/mig/client/mig-client-daemon/modules"
@@ -58,7 +60,9 @@ We can not retrieve actions that are not being maintained by the client daemon.
 	}
 
 	handler := NewReadForSigningHandler(catalog)
-	server := httptest.NewServer(handler)
+	router := mux.NewRouter()
+	router.Handle("/v1/actions/{id}/signing", handler)
+	server := httptest.NewServer(router)
 
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestReadForSigningHandler case #%d.\n%s\n", caseNum, testCase.Description)
