@@ -92,7 +92,7 @@ Action creation should fail if invalid targeting data is supplied.
 		t.Logf("Running TestCreateHandler case #%d.\n%s\n", caseNum, testCase.Description)
 
 		catalog := actions.NewCatalog()
-		handler := NewCreateHandler(catalog)
+		handler := NewCreateHandler(&catalog)
 		server := httptest.NewServer(handler)
 
 		response, err := http.Post(server.URL, "application/json", strings.NewReader(testCase.Body))

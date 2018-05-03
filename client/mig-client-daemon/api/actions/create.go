@@ -36,11 +36,11 @@ type createResponse struct {
 // CreateHandler is an HTTP handler that will attempt to handle requests to
 // have an action created by an investigator.
 type CreateHandler struct {
-	actionCatalog actions.Catalog
+	actionCatalog *actions.Catalog
 }
 
 // NewCreateHandler constructs a `CreateHandler`.
-func NewCreateHandler(catalog actions.Catalog) CreateHandler {
+func NewCreateHandler(catalog *actions.Catalog) CreateHandler {
 	return CreateHandler{
 		actionCatalog: catalog,
 	}

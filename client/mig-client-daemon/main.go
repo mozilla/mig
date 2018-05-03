@@ -13,7 +13,7 @@ import (
 	"path"
 
 	"mig.ninja/mig/client/mig-client-daemon/actions"
-	"mig.ninja/mig/client/mig-client-daemon/api/actions"
+	"mig.ninja/mig/client/mig-client-daemon/api"
 	"mig.ninja/mig/client/mig-client-daemon/config"
 )
 
@@ -33,11 +33,13 @@ func main() {
 	actionsCatalog := actions.NewCatalog()
 
 	// Set up and launch the HTTP server.
+	router := api.MainRouterV1(api.Dependencies{
+		ActionsCatalog: &actionsCatalog,
+	})
+
+	http.Handle("/", router)
+
 	bindAddr := fmt.Sprintf("127.0.0.1:%d", clientConfig.ListenPort)
-
-	createActionEndpt := actionsAPI.NewCreateHandler(actionsCatalog)
-	http.Handle("/v1/actions/create", createActionEndpt)
-
 	fmt.Printf("Client daemon listening on %s\n", bindAddr)
 	http.ListenAndServe(bindAddr, nil)
 }

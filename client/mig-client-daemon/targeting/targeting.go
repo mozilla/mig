@@ -8,7 +8,6 @@ package targeting
 
 import (
 	"errors"
-	"fmt"
 )
 
 // Query is implemented by types that can be converted into a string
@@ -28,15 +27,11 @@ func FromMap(jsonMap map[string]interface{}) (Query, error) {
 		new(ByTag),
 	}
 
-	fmt.Printf("trying to load query from data %v\n", jsonMap)
 	for _, query := range queryContainers {
-		fmt.Printf("Attempting to decode target into %T\n", query)
 		err := query.InitFromMap(jsonMap)
 		if err == nil {
-			fmt.Println("Succeeded")
 			return query, nil
 		}
-		fmt.Printf("Failed. Error = %s\n", err.Error())
 	}
 
 	return new(InvalidQuery), errors.New("Not a recognized agent target query.")

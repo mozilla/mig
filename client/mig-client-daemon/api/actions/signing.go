@@ -33,11 +33,11 @@ type readForSigningResponse struct {
 // ReadForSigningHandler is an HTTP handler that handles requests to retrieve
 // actions in a form in which a detached signature for them can be produced.
 type ReadForSigningHandler struct {
-	actionCatalog actions.Catalog
+	actionCatalog *actions.Catalog
 }
 
 // NewReadForSigningHandler constructs a `ReadForSigningHandler`.
-func NewReadForSigningHandler(catalog actions.Catalog) ReadForSigningHandler {
+func NewReadForSigningHandler(catalog *actions.Catalog) ReadForSigningHandler {
 	return ReadForSigningHandler{
 		actionCatalog: catalog,
 	}

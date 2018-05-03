@@ -59,7 +59,7 @@ We can not retrieve actions that are not being maintained by the client daemon.
 		},
 	}
 
-	handler := NewReadForSigningHandler(catalog)
+	handler := NewReadForSigningHandler(&catalog)
 	router := mux.NewRouter()
 	router.Handle("/v1/actions/{id}/signing", handler)
 	server := httptest.NewServer(router)
