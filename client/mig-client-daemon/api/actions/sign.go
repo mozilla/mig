@@ -8,7 +8,10 @@ package actionsAPI
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+
+	"github.com/gorilla/mux"
 
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
@@ -42,7 +45,42 @@ func NewProvideSignatureHandler(catalog *actions.Catalog) ProvideSignatureHandle
 
 func (handler ProvideSignatureHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
+	request := provideSignatureRequest{}
 	response := json.NewEncoder(res)
+
+	decoder := json.NewDecoder(req.Body)
+	defer req.Body.Close()
+	decodeErr := decoder.Decode(&request)
+	if decodeErr != nil {
+		errMsg := fmt.Sprintf("Failed to decode request body. Error: %s", decodeErr.Error())
+		res.WriteHeader(http.StatusBadRequest)
+		response.Encode(&provideSignatureResponse{
+			Error: &errMsg,
+		})
+		return
+	}
+
+	if request.Signature == "" {
+		errMsg := "Empty or missing signature."
+		res.WriteHeader(http.StatusBadRequest)
+		response.Encode(&provideSignatureResponse{
+			Error: &errMsg,
+		})
+		return
+	}
+
+	urlVars := mux.Vars(req)
+	request.ActionID = ident.Identifier(urlVars["id"])
+
+	err := handler.actionCatalog.AddSignature(request.ActionID, request.Signature)
+	if err != nil {
+		errMsg := fmt.Sprintf("Failed to add signature. Error: %s", err.Error())
+		res.WriteHeader(http.StatusBadRequest)
+		response.Encode(&provideSignatureResponse{
+			Error: &errMsg,
+		})
+		return
+	}
 
 	response.Encode(&provideSignatureResponse{
 		Error: nil,
