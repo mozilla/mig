@@ -19,14 +19,13 @@ type Dependencies struct {
 	ActionsCatalog *actions.Catalog
 }
 
-// MainRouterV1 constructs a router configured to serve the client daemon API.
-func MainRouterV1(deps Dependencies) *mux.Router {
+// RegisterRoutesV1 constructs and populates a subrouter based on `topRouter`
+// with a path prefix of "/v1".
+func MainRouterV1(topRouter *mux.Router, deps Dependencies) {
 	createAction := actionsAPI.NewCreateHandler(deps.ActionsCatalog)
 	readActionForSigning := actionsAPI.NewReadForSigningHandler(deps.ActionsCatalog)
 
-	router := mux.NewRouter()
-	router.Handle("/v1/actions/create", createAction).Methods("POST")
-	router.Handle("/v1/actions/{id}/signing", readActionForSigning).Methods("GET")
-
-	return router
+	router := topRouter.PathPrefix("/v1").Subrouter()
+	router.Handle("/actions/create", createAction).Methods("POST")
+	router.Handle("/actions/{id}/signing", readActionForSigning).Methods("GET")
 }

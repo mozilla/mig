@@ -12,6 +12,8 @@ import (
 	"os/user"
 	"path"
 
+	"github.com/gorilla/mux"
+
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/api"
 	"mig.ninja/mig/client/mig-client-daemon/config"
@@ -33,11 +35,12 @@ func main() {
 	actionsCatalog := actions.NewCatalog()
 
 	// Set up and launch the HTTP server.
-	router := api.MainRouterV1(api.Dependencies{
+	topRouter := mux.NewRouter()
+	api.RegisterRoutesV1(topRouter, api.Dependencies{
 		ActionsCatalog: &actionsCatalog,
 	})
 
-	http.Handle("/", router)
+	http.Handle("/", topRouter)
 
 	bindAddr := fmt.Sprintf("127.0.0.1:%d", clientConfig.ListenPort)
 	fmt.Printf("Client daemon listening on %s\n", bindAddr)
