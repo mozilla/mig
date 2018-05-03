@@ -56,10 +56,10 @@ We can provide signatures for actions in the client daemon.
 			Description: `
 Trying to provide a signature for an action that does not exist should fail.
 			`,
-			ActionID:       ident.EmptyID,
+			ActionID:       ident.Identifier("invalid"),
 			Body:           `{"signature": "testsignature"}`,
 			ExpectError:    true,
-			ExpectedStatus: http.StatusOK,
+			ExpectedStatus: http.StatusBadRequest,
 		},
 	}
 
@@ -71,7 +71,7 @@ Trying to provide a signature for an action that does not exist should fail.
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestProvideSignatureHandler case #%d.\n%s\n", caseNum, testCase.Description)
 
-		reqURL := fmt.Sprintf("%s/v1/actions/%s/signing", server.URL, testCase.ActionID)
+		reqURL := fmt.Sprintf("%s/v1/actions/%s/sign", server.URL, testCase.ActionID)
 
 		client := &http.Client{}
 		request, _ := http.NewRequest("PUT", reqURL, strings.NewReader(testCase.Body))
