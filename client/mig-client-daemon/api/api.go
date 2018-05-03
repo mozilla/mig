@@ -21,7 +21,7 @@ type Dependencies struct {
 
 // RegisterRoutesV1 constructs and populates a subrouter based on `topRouter`
 // with a path prefix of "/v1".
-func MainRouterV1(topRouter *mux.Router, deps Dependencies) {
+func RegisterRoutesV1(topRouter *mux.Router, deps Dependencies) {
 	createAction := actionsAPI.NewCreateHandler(deps.ActionsCatalog)
 	readActionForSigning := actionsAPI.NewReadForSigningHandler(deps.ActionsCatalog)
 
