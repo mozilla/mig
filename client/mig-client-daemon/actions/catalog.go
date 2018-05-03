@@ -7,7 +7,9 @@
 package actions
 
 import (
+	"errors"
 	"strings"
+	"sync"
 	"time"
 
 	"mig.ninja/mig"
@@ -24,12 +26,14 @@ const internalActionIDLength uint = 3
 // created, dispatched, etc.
 type Catalog struct {
 	actions map[ident.Identifier]mig.Action
+	lock    *sync.Mutex
 }
 
 // NewCatalog creates a new `Catalog`.
 func NewCatalog() Catalog {
 	return Catalog{
 		actions: make(map[ident.Identifier]mig.Action),
+		lock:    new(sync.Mutex),
 	}
 }
 
@@ -73,7 +77,10 @@ func (catalog *Catalog) Create(
 		},
 	}
 
-	catalog.actions[id] = action
+	err = catalog.update(id, action)
+	if err != nil {
+		return ident.EmptyID, err
+	}
 
 	return id, nil
 }
@@ -82,4 +89,24 @@ func (catalog *Catalog) Create(
 func (catalog Catalog) Lookup(actionID ident.Identifier) (mig.Action, bool) {
 	action, found := catalog.actions[actionID]
 	return action, found
+}
+
+// AddSignature appends a new signature to an action in the catalog.
+func (catalog *Catalog) AddSignature(actionID ident.Identifier, signature string) error {
+	action, found := catalog.Lookup(actionID)
+	if !found {
+		return errors.New("The requested action was not found.")
+	}
+
+	action.PGPSignatures = append(action.PGPSignatures, signature)
+	return catalog.update(actionID, action)
+}
+
+// update replaces or inserts an action in the catalog.
+func (catalog *Catalog) update(actionID ident.Identifier, newAction mig.Action) error {
+	catalog.lock.Lock()
+	defer catalog.lock.Unlock()
+
+	catalog.actions[actionID] = newAction
+	return nil
 }

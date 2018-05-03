@@ -245,3 +245,51 @@ func TestGetAction(t *testing.T) {
 		}
 	}
 }
+
+func TestAddSignature(t *testing.T) {
+	catalog := NewCatalog()
+	module := &modules.Pkg{
+		PackageName: "*libssl*",
+	}
+	target := []targeting.Query{
+		&targeting.ByTag{
+			TagName:  "operator",
+			TagValue: "IT",
+		},
+	}
+	validID, _ := catalog.Create(module, target, time.Hour)
+
+	testCases := []struct {
+		Description string
+		ActionID    ident.Identifier
+		ExpectError bool
+	}{
+		{
+			Description: `
+Adding a signature for an existing action should always succeed.
+			`,
+			ActionID:    validID,
+			ExpectError: false,
+		},
+		{
+			Description: `
+Adding a signature for an action that does not exist should always fail.
+			`,
+			ActionID:    ident.EmptyID,
+			ExpectError: true,
+		},
+	}
+
+	for caseNum, testCase := range testCases {
+		t.Logf("Running TestAddSignature case #%d.\n\t%s\n", caseNum, testCase.Description)
+
+		err := catalog.AddSignature(testCase.ActionID, "testsignature")
+		gotErr := err != nil
+
+		if testCase.ExpectError && !gotErr {
+			t.Errorf("Expected to get an error, but did not")
+		} else if !testCase.ExpectError && gotErr {
+			t.Errorf("Did not expect to get an error, but got %s", err.Error())
+		}
+	}
+}
