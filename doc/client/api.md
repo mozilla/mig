@@ -164,16 +164,14 @@ The `id` positional argument is expected to be a string identifier for an action
 ### Dispatch an action
 
 ```
-PUT /v1/actions/dispatch
+PUT /v1/actions/:id/dispatch
 ```
 
 After an action has been created, this endpoint can be invoked to dispatch that action to the MIG API.
 
 #### Parameters
 
-| Name | Type | Description | Example |
-| ---- | ---- | ----------- | ------- |
-| action | string | The identifier of an action to dispatch. | "abc123...def" |
+The positional argument `id` is expected to be the identifier of an action managed by the client daemon.
 
 #### Response
 
