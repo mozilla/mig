@@ -7,9 +7,16 @@
 package authentication
 
 import (
+	"crypto/rand"
+	"errors"
+	"fmt"
+	"math/big"
 	"net/http"
 	"time"
 )
+
+const migAPIVersion int = 1
+const pgpAuthHeader string = "X-PGPAUTHORIZATION"
 
 // UnsignedToken is the base of a token that a signature can be provided for
 // and then uploaded into an `Authenticator`.
@@ -30,23 +37,14 @@ type Token struct {
 // The second step is to update the token with a signature provided by the
 // investigator so that it can be used to authenticate requests.
 type PGPAuthorization struct {
-	unsignedToken    *UnsignedToken
-	signedToken      *Token
-	tokenGeneratedAt *time.Time
+	token *Token
 }
 
-// GenerateUnsignedToken creates and records an unsigned token that the
-// `PGPAuthorization` can receive an update for containing a signature.
-func (auth *PGPAuthorization) GenerateUnsignedToken() UnsignedToken {
-	return UnsignedToken{
-		token: "",
+// NewPGPAuthorization constructs a new `PGPAuthorization`.
+func NewPGPAuthorization() PGPAuthorization {
+	return PGPAuthorization{
+		token: nil,
 	}
-}
-
-// StoreSignedToken records a token with a signature provided so that it can be
-// used by `PGPAuthorization`
-func (auth *PGPAuthorization) StoreSignedToken(token Token) error {
-	return nil
 }
 
 // ProvideSignature appends a signature to an unsigned token so that it can be
@@ -57,6 +55,41 @@ func (tkn UnsignedToken) ProvideSignature(signature string) Token {
 	}
 }
 
+// String produces the string representation of a signed PGPAUTHORIZATION token.
+func (tkn Token) String() string {
+	return tkn.token
+}
+
+// GenerateUnsignedToken creates and records an unsigned token that the
+// `PGPAuthorization` can receive an update for containing a signature.
+func (auth *PGPAuthorization) GenerateUnsignedToken() UnsignedToken {
+	var err error
+	var nonce *big.Int = new(big.Int)
+
+	nonce, err = rand.Int(rand.Reader, nil)
+
+	for err != nil {
+		nonce, err = rand.Int(rand.Reader, nil)
+	}
+
+	currentTime := time.Now().UTC().String()
+
+	return UnsignedToken{
+		token: fmt.Sprintf("%d;%s;%s", migAPIVersion, currentTime, nonce.String()),
+	}
+}
+
+// StoreSignedToken records a token with a signature provided so that it can be
+// used by `PGPAuthorization`
+func (auth *PGPAuthorization) StoreSignedToken(token Token) {
+	*auth.token = token
+}
+
 func (auth PGPAuthorization) Authenticate(req *http.Request) error {
+	if auth.token == nil {
+		return errors.New("PGPAuthorization cannot perform authorization before a signed token is set.")
+	}
+
+	req.Header.Set(pgpAuthHeader, auth.token.String())
 	return nil
 }
