@@ -5,14 +5,3 @@
 // Contributor: Zack Mullaly zmullaly@mozilla.com [:zack]
 
 package migapi
-
-import (
-	"mig.ninja/mig"
-	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
-)
-
-// ActionDispatcher provides a service for dispatching actions to the MIG API.
-type ActionDispatcher interface {
-	// Dispatch sends an action to the MIG API.
-	Dispatch(mig.Action, authentication.Authenticator) error
-}
