@@ -33,7 +33,7 @@ type DispatchHandler struct {
 	actionCatalog *actions.Catalog
 }
 
-// NewDispatchHandler
+// NewDispatchHandler cponstructs a new `DispatchHandler`.
 func NewDispatchHandler(catalog *actions.Catalog) DispatchHandler {
 	return DispatchHandler{
 		actionCatalog: catalog,
@@ -43,6 +43,11 @@ func NewDispatchHandler(catalog *actions.Catalog) DispatchHandler {
 func (handler DispatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	response := json.NewEncoder(res)
+
+	//urlVars := mux.Vars(req)
+	//request := dispatchRequest{
+	//	ActionID: ident.Identifier(urlVars["id"]),
+	//}
 
 	response.Encode(&dispatchResponse{
 		Error:  nil,
