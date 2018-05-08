@@ -18,10 +18,6 @@ import (
 const migAPIVersion int = 1
 const pgpAuthHeader string = "X-PGPAUTHORIZATION"
 
-const emptyToken Token = Token{
-	token: "",
-}
-
 // UnsignedToken is the base of a token that a signature can be provided for
 // and then uploaded into an `Authenticator`.
 type UnsignedToken struct {
@@ -47,7 +43,13 @@ type PGPAuthorization struct {
 // NewPGPAuthorization constructs a new `PGPAuthorization`.
 func NewPGPAuthorization() PGPAuthorization {
 	return PGPAuthorization{
-		token: emptyToken,
+		token: emptyToken(),
+	}
+}
+
+func emptyToken() Token {
+	return Token{
+		token: "",
 	}
 }
 
@@ -88,7 +90,7 @@ func (auth *PGPAuthorization) StoreSignedToken(token Token) {
 }
 
 func (auth PGPAuthorization) Authenticate(req *http.Request) error {
-	if auth.token == emptyToken {
+	if auth.token == emptyToken() {
 		return errors.New("PGPAuthorization cannot perform authorization before a signed token is set.")
 	}
 
