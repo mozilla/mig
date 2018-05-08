@@ -18,6 +18,10 @@ import (
 const migAPIVersion int = 1
 const pgpAuthHeader string = "X-PGPAUTHORIZATION"
 
+const emptyToken Token = Token{
+	token: "",
+}
+
 // UnsignedToken is the base of a token that a signature can be provided for
 // and then uploaded into an `Authenticator`.
 type UnsignedToken struct {
@@ -37,13 +41,13 @@ type Token struct {
 // The second step is to update the token with a signature provided by the
 // investigator so that it can be used to authenticate requests.
 type PGPAuthorization struct {
-	token *Token
+	token Token
 }
 
 // NewPGPAuthorization constructs a new `PGPAuthorization`.
 func NewPGPAuthorization() PGPAuthorization {
 	return PGPAuthorization{
-		token: nil,
+		token: emptyToken,
 	}
 }
 
@@ -63,10 +67,8 @@ func (tkn Token) String() string {
 // GenerateUnsignedToken creates and records an unsigned token that the
 // `PGPAuthorization` can receive an update for containing a signature.
 func (auth *PGPAuthorization) GenerateUnsignedToken() UnsignedToken {
-	var err error
-	var nonce *big.Int = new(big.Int)
-
-	nonce, err = rand.Int(rand.Reader, nil)
+	max := big.NewInt(0x0FFFFFFFFFFFFFFD)
+	nonce, err := rand.Int(rand.Reader, max)
 
 	for err != nil {
 		nonce, err = rand.Int(rand.Reader, nil)
@@ -82,11 +84,11 @@ func (auth *PGPAuthorization) GenerateUnsignedToken() UnsignedToken {
 // StoreSignedToken records a token with a signature provided so that it can be
 // used by `PGPAuthorization`
 func (auth *PGPAuthorization) StoreSignedToken(token Token) {
-	*auth.token = token
+	auth.token = token
 }
 
 func (auth PGPAuthorization) Authenticate(req *http.Request) error {
-	if auth.token == nil {
+	if auth.token == emptyToken {
 		return errors.New("PGPAuthorization cannot perform authorization before a signed token is set.")
 	}
 

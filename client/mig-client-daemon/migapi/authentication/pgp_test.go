@@ -16,7 +16,7 @@ func TestTokenString(t *testing.T) {
 	t.Logf("Running TestTokenString")
 	t.Logf(`
 Tokens should be suffixed with the signature provided to the UnsignedToken it
-is based on
+is based on.
 	`)
 
 	auth := NewPGPAuthorization()
@@ -56,10 +56,10 @@ has not been provided.
 
 		auth := NewPGPAuthorization()
 		base := auth.GenerateUnsignedToken()
-		var token Token
 
 		if testCase.ShouldProvideSignature {
-			token = base.ProvideSignature("testsignature")
+			token := base.ProvideSignature("testsignature")
+			auth.StoreSignedToken(token)
 		}
 
 		request, _ := http.NewRequest("GET", "http://mig.ninja", nil)
@@ -73,7 +73,7 @@ has not been provided.
 			t.Errorf("Did not expect to get an error, but got %s", err.Error())
 		}
 
-		if !testCase.ExpectError && request.Header().Get("X-PGPAUTHORIZATION") == "" {
+		if !testCase.ExpectError && request.Header.Get("X-PGPAUTHORIZATION") == "" {
 			t.Errorf("Expected the X-PGPAUTHORIZATION header to be set but it is not.")
 		}
 	}
