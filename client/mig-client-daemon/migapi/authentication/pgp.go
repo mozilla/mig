@@ -8,8 +8,11 @@ package authentication
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
+	"net/http"
+	"sync"
 	"time"
 )
 
@@ -28,9 +31,24 @@ type Token struct {
 	token string
 }
 
+// PGPAuthorizer is an `Authenticator` that enables PGP-based authentication to
+// the MIG API.
+type PGPAuthorizer struct {
+	token Token
+	lock  *sync.Mutex
+}
+
 func emptyToken() Token {
 	return Token{
 		token: "",
+	}
+}
+
+// NewPGPAuthorizer constructs a `PGPAuthorizer` that
+func NewPGPAuthorizer() PGPAuthorizer {
+	return PGPAuthorizer{
+		token: emptyToken(),
+		lock:  new(sync.Mutex),
 	}
 }
 
@@ -71,15 +89,20 @@ func GeneratePGPChallenge() Challenge {
 
 // StoreSignedToken records a token with a signature provided so that it can be
 // used by `PGPAuthorization`
-// func (auth *PGPAuthorization) StoreSignedToken(token Token) {
-// 	auth.token = token
-// }
+func (auth *PGPAuthorizer) StoreSignedToken(token Token) {
+	auth.lock.Lock()
+	defer auth.lock.Unlock()
 
-// func (auth PGPAuthorization) Authenticate(req *http.Request) error {
-// 	if auth.token == emptyToken() {
-// 		return errors.New("PGPAuthorization cannot perform authorization before a signed token is set.")
-// 	}
+	auth.token = token
+}
 
-// 	req.Header.Set(pgpAuthHeader, auth.token.String())
-// 	return nil
-// }
+// Authenticate modifies a request so that PGP-based authentication to the MIG API
+// can take place.  If a token has not been set yet, an error will be returned.
+func (auth PGPAuthorizer) Authenticate(req *http.Request) error {
+	if auth.token == emptyToken() {
+		return errors.New("PGPAuthorization cannot perform authorization before a signed token is set")
+	}
+
+	req.Header.Set(pgpAuthHeader, auth.token.String())
+	return nil
+}
