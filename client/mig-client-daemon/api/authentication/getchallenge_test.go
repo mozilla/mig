@@ -17,7 +17,7 @@ import (
 func TestGetChallengeHandler(t *testing.T) {
 	t.Logf("The GetChallengeHandler should respond with a unique token.")
 
-	testCases := []struct{
+	testCases := []struct {
 		ChallengeReturned *string
 	}{
 		{
