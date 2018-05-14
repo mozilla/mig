@@ -13,6 +13,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	apiAuth "mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 )
 
 func TestCompleteChallengeHandler(t *testing.T) {
@@ -26,7 +28,7 @@ func TestCompleteChallengeHandler(t *testing.T) {
 			Description: `
 Well-formed requests should always be accepted.
 			`,
-			Body:           `{"challenge": "abc123", "signature": "def987"}`,
+			Body:           `{"challenge": "abc123", "signature": "dGVzdA=="}`,
 			ExpectError:    false,
 			ExpectedStatus: http.StatusOK,
 		},
@@ -48,7 +50,8 @@ Requests missing fields should be rejected.
 		},
 	}
 
-	handler := NewCompleteChallengeHandler()
+	auth := apiAuth.NewPGPAuthorizer()
+	handler := NewCompleteChallengeHandler(&auth)
 	server := httptest.NewServer(handler)
 
 	for caseNum, testCase := range testCases {

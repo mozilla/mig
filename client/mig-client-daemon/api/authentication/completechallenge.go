@@ -7,8 +7,12 @@
 package authentication
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
+
+	apiAuth "mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 )
 
 // completeChallengeRequest contains the body of a request to complete a
@@ -27,16 +31,46 @@ type completeChallengeResponse struct {
 // CompleteChallengeHandler is an HTTP handler that serves requests to
 // complete challenges for PGP-based authentication to the MIG API.
 type CompleteChallengeHandler struct {
+	authenticator *apiAuth.PGPAuthorizer
 }
 
 // NewCompleteChallengeHandler constructs a `CompleteChallengeHandler`.
-func NewCompleteChallengeHandler() CompleteChallengeHandler {
-	return CompleteChallengeHandler{}
+func NewCompleteChallengeHandler(auth *apiAuth.PGPAuthorizer) CompleteChallengeHandler {
+	return CompleteChallengeHandler{
+		authenticator: auth,
+	}
 }
 
 func (handler CompleteChallengeHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	response := json.NewEncoder(res)
+	request := completeChallengeRequest{}
+
+	decoder := json.NewDecoder(req.Body)
+	defer req.Body.Close()
+	err := decoder.Decode(&request)
+	if err != nil {
+		errMsg := fmt.Sprintf("Failed to decode request body. Error: %s", err.Error())
+		res.WriteHeader(http.StatusBadRequest)
+		response.Encode(&completeChallengeResponse{
+			Error: &errMsg,
+		})
+		return
+	}
+
+	_, err = base64.StdEncoding.DecodeString(request.Signature)
+	if err != nil {
+		errMsg := "Invalid signature"
+		res.WriteHeader(http.StatusBadRequest)
+		response.Encode(&completeChallengeResponse{
+			Error: &errMsg,
+		})
+		return
+	}
+
+	challenge := apiAuth.NewChallenge(request.Challenge)
+	token := challenge.ProvideSignature(request.Signature)
+	handler.authenticator.StoreSignedToken(token)
 
 	response.Encode(&completeChallengeResponse{
 		Error: nil,
