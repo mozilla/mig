@@ -12,6 +12,8 @@
 
 ## Endpoint Table of Contents
 
+* [Retrieve a signable token for authentication](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#retrieve-a-signable-token-for-authentication)
+* [Provide a signed authentication token](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#provide-a-signed-authentication-token)
 * [Retrieve top-level API documentation](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#endpoint-documentation)
 * [Retrieve documentation for a module](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#retrieve-documentation-for-a-module)
 * [Create an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#create-an-action)
@@ -21,6 +23,51 @@
 * [Check the status of a dispatched action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#check-the-status-of-a-dispatched-action)
 
 ## Endpoint Documentation
+
+
+### Retrieve a signable token for authentication
+
+```
+GET /v1/authentication/pgp
+```
+
+#### Parameters
+
+None
+
+#### Response
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| challenge | string | The base of an authentication token for which a detached signature should be computed | No example |
+
+##### Status Codes
+
+* `200` indicates that a challenge was successfully generated.
+
+### Provide a signed authentication token
+
+```
+POST /v1/authentication/pgp
+```
+
+#### Parameters
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| challenge | string | The base of an authentication token | No example |
+| signature | string | The detached signature over the challenge encoded as base64 | No example |
+
+#### Response
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| error | `Optional<string>` | If the signature or challenge is improperly formatted, an error will be returned | null |
+
+##### Status Codes
+
+* `200` indicates that the challenge and signature have been accepted.
+* `400` indicates that either the challenge or the signature are improperly formatted.
 
 ### Retrieve top-level API documentation
 

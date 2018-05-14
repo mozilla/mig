@@ -8,20 +8,18 @@ package authentication
 
 import (
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"math/big"
-	"net/http"
 	"time"
 )
 
 const migAPIVersion int = 1
 const pgpAuthHeader string = "X-PGPAUTHORIZATION"
 
-// UnsignedToken is the base of a token that a signature can be provided for
-// and then uploaded into an `Authenticator`.
-type UnsignedToken struct {
-	token string
+// Challenge is the base of a token that a signature can be provided for
+// and then loaded into an `Authenticator`.
+type Challenge struct {
+	challenge string
 }
 
 // Token contains a signed token string passed to the MIG API to prove that
@@ -30,34 +28,22 @@ type Token struct {
 	token string
 }
 
-// PGPAuthorization is an `Authenticator` that assists in performing
-// authentication in two steps.
-// The first step is to generate an unsigned token containing information
-// required by the API.
-// The second step is to update the token with a signature provided by the
-// investigator so that it can be used to authenticate requests.
-type PGPAuthorization struct {
-	token Token
-}
-
-// NewPGPAuthorization constructs a new `PGPAuthorization`.
-func NewPGPAuthorization() PGPAuthorization {
-	return PGPAuthorization{
-		token: emptyToken(),
-	}
-}
-
 func emptyToken() Token {
 	return Token{
 		token: "",
 	}
 }
 
-// ProvideSignature appends a signature to an unsigned token so that it can be
+// String returns the string representation of the PGP challenge.
+func (ch Challenge) String() string {
+	return ch.challenge
+}
+
+// ProvideSignature appends a signature to a challenge so that it can be
 // used to make requests to the MIG API.
-func (tkn UnsignedToken) ProvideSignature(signature string) Token {
+func (ch Challenge) ProvideSignature(signature string) Token {
 	return Token{
-		token: tkn.token + ";" + signature,
+		token: ch.String() + ";" + signature,
 	}
 }
 
@@ -66,9 +52,9 @@ func (tkn Token) String() string {
 	return tkn.token
 }
 
-// GenerateUnsignedToken creates and records an unsigned token that the
+// GeneratePGPChallenge creates and records an unsigned token that the
 // `PGPAuthorization` can receive an update for containing a signature.
-func (auth *PGPAuthorization) GenerateUnsignedToken() UnsignedToken {
+func GeneratePGPChallenge() Challenge {
 	max := big.NewInt(0x0FFFFFFFFFFFFFFD)
 	nonce, err := rand.Int(rand.Reader, max)
 
@@ -78,22 +64,22 @@ func (auth *PGPAuthorization) GenerateUnsignedToken() UnsignedToken {
 
 	currentTime := time.Now().UTC().String()
 
-	return UnsignedToken{
-		token: fmt.Sprintf("%d;%s;%s", migAPIVersion, currentTime, nonce.String()),
+	return Challenge{
+		challenge: fmt.Sprintf("%d;%s;%s", migAPIVersion, currentTime, nonce.String()),
 	}
 }
 
 // StoreSignedToken records a token with a signature provided so that it can be
 // used by `PGPAuthorization`
-func (auth *PGPAuthorization) StoreSignedToken(token Token) {
-	auth.token = token
-}
+// func (auth *PGPAuthorization) StoreSignedToken(token Token) {
+// 	auth.token = token
+// }
 
-func (auth PGPAuthorization) Authenticate(req *http.Request) error {
-	if auth.token == emptyToken() {
-		return errors.New("PGPAuthorization cannot perform authorization before a signed token is set.")
-	}
+// func (auth PGPAuthorization) Authenticate(req *http.Request) error {
+// 	if auth.token == emptyToken() {
+// 		return errors.New("PGPAuthorization cannot perform authorization before a signed token is set.")
+// 	}
 
-	req.Header.Set(pgpAuthHeader, auth.token.String())
-	return nil
-}
+// 	req.Header.Set(pgpAuthHeader, auth.token.String())
+// 	return nil
+// }
