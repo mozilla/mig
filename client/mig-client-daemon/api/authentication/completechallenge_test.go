@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gorilla/mux"
 	apiAuth "mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 )
 
@@ -52,7 +53,9 @@ Requests missing fields should be rejected.
 
 	auth := apiAuth.NewPGPAuthorizer()
 	handler := NewCompleteChallengeHandler(&auth)
-	server := httptest.NewServer(handler)
+	router := mux.NewRouter()
+	router.Handle("/v1/authentication", handler).Methods("POST")
+	server := httptest.NewServer(router)
 
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestCompleteChallengeHandler case #%d\n%s\n", caseNum, testCase.Description)

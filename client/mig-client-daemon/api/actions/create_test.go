@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gorilla/mux"
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 )
 
@@ -93,7 +94,9 @@ Action creation should fail if invalid targeting data is supplied.
 
 		catalog := actions.NewCatalog()
 		handler := NewCreateHandler(&catalog)
-		server := httptest.NewServer(handler)
+		router := mux.NewRouter()
+		router.Handle("/v1/actions", handler).Methods("POST")
+		server := httptest.NewServer(router)
 
 		response, err := http.Post(server.URL, "application/json", strings.NewReader(testCase.Body))
 		if err != nil {

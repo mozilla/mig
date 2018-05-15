@@ -61,7 +61,7 @@ We can not retrieve actions that are not being maintained by the client daemon.
 
 	handler := NewReadForSigningHandler(&catalog)
 	router := mux.NewRouter()
-	router.Handle("/v1/actions/{id}/signing", handler)
+	router.Handle("/v1/actions/{id}/signing", handler).Methods("GET")
 	server := httptest.NewServer(router)
 
 	for caseNum, testCase := range testCases {

@@ -69,7 +69,7 @@ If the connection to the MIG API fails, we should get an internal error.
 
 	handler := NewDispatchHandler(&catalog)
 	router := mux.NewRouter()
-	router.Handle("/v1/actions/{id}/dispatch", handler)
+	router.Handle("/v1/actions/{id}/dispatch", handler).Methods("PUT")
 	server := httptest.NewServer(router)
 
 	for caseNum, testCase := range testCases {

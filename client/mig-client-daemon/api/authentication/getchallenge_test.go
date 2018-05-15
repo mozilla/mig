@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/gorilla/mux"
 )
 
 func TestGetChallengeHandler(t *testing.T) {
@@ -32,6 +34,8 @@ func TestGetChallengeHandler(t *testing.T) {
 	}
 
 	handler := NewGetChallengeHandler()
+	router := mux.NewRouter()
+	router.Handle("/v1/authentication", handler).Methods("GET")
 	server := httptest.NewServer(handler)
 
 	for caseNum := 0; caseNum < len(testCases); caseNum++ {
