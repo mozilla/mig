@@ -8,6 +8,7 @@ package actions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -20,11 +21,14 @@ import (
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
 	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/dispatch"
 	"mig.ninja/mig/client/mig-client-daemon/modules"
 	"mig.ninja/mig/client/mig-client-daemon/targeting"
 )
 
 type mockDispatcher struct{}
+
+type mockDispatcherAlwaysError struct{}
 
 type mockAuthenticator struct{}
 
@@ -44,6 +48,7 @@ func TestDispatchHandler(t *testing.T) {
 	testCases := []struct {
 		Description    string
 		ActionID       ident.Identifier
+		Dispatcher     dispatch.ActionDispatcher
 		ExpectError    bool
 		ExpectedStatus int
 	}{
@@ -52,6 +57,7 @@ func TestDispatchHandler(t *testing.T) {
 We should be able to dispatch an action managed by the client daemon.
 			`,
 			ActionID:       validID,
+			Dispatcher:     mockDispatcher{},
 			ExpectError:    false,
 			ExpectedStatus: http.StatusOK,
 		},
@@ -60,6 +66,7 @@ We should be able to dispatch an action managed by the client daemon.
 We should not be able dispatch an action that does not exist.
 			`,
 			ActionID:       ident.Identifier("invalid"),
+			Dispatcher:     mockDispatcher{},
 			ExpectError:    true,
 			ExpectedStatus: http.StatusBadRequest,
 		},
@@ -67,21 +74,22 @@ We should not be able dispatch an action that does not exist.
 			Description: `
 If the connection to the MIG API fails, we should get an internal error.
 			`,
-			ActionID:       ident.Identifier("irrelevant"),
+			ActionID:       validID,
+			Dispatcher:     mockDispatcherAlwaysError{},
 			ExpectError:    true,
 			ExpectedStatus: http.StatusInternalServerError,
 		},
 	}
 
-	dispatcher := mockDispatcher{}
 	authenticator := mockAuthenticator{}
-	handler := NewDispatchHandler(&catalog, dispatcher, authenticator)
-	router := mux.NewRouter()
-	router.Handle("/v1/actions/{id}/dispatch", handler).Methods("PUT")
-	server := httptest.NewServer(router)
 
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestDispatchHandler case #%d.\n%s\n", caseNum, testCase.Description)
+
+		handler := NewDispatchHandler(&catalog, testCase.Dispatcher, authenticator)
+		router := mux.NewRouter()
+		router.Handle("/v1/actions/{id}/dispatch", handler).Methods("PUT")
+		server := httptest.NewServer(router)
 
 		reqURL := fmt.Sprintf("%s/v1/actions/%s/dispatch", server.URL, testCase.ActionID)
 
@@ -115,6 +123,10 @@ If the connection to the MIG API fails, we should get an internal error.
 
 func (mockDispatcher) Dispatch(_ mig.Action, _ authentication.Authenticator) error {
 	return nil
+}
+
+func (mockDispatcherAlwaysError) Dispatch(_ mig.Action, _ authentication.Authenticator) error {
+	return errors.New("mock dispatcher always error")
 }
 
 func (mockAuthenticator) Authenticate(_ *http.Request) error {

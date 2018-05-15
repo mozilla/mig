@@ -8,10 +8,12 @@ package actions
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	//"github.com/gorilla/mux"
 
+	"github.com/gorilla/mux"
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
 	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
@@ -26,7 +28,7 @@ type dispatchRequest struct {
 // dispatchResponse contains the body of a response to a dispatch request.
 type dispatchResponse struct {
 	Error  *string `json:"error"`
-	Status string  `json:"status"`
+	Status string  `json:"status,omitempty"`
 }
 
 // DispatchHandler is an HTTP handler for requests to have an action dispatched
@@ -54,13 +56,34 @@ func (handler DispatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Requ
 	res.Header().Set("Content-Type", "application/json")
 	response := json.NewEncoder(res)
 
-	//urlVars := mux.Vars(req)
-	//request := dispatchRequest{
-	//	ActionID: ident.Identifier(urlVars["id"]),
-	//}
+	urlVars := mux.Vars(req)
+	request := dispatchRequest{
+		ActionID: ident.Identifier(urlVars["id"]),
+	}
+	action, found := handler.actionCatalog.Lookup(request.ActionID)
+	if !found {
+		errMsg := fmt.Sprintf("Invalid action ID %s", string(request.ActionID))
+		res.WriteHeader(http.StatusBadRequest)
+		response.Encode(&dispatchResponse{
+			Error:  &errMsg,
+			Status: dispatch.StatusNone,
+		})
+		return
+	}
+
+	dispatchErr := handler.dispatcher.Dispatch(action, handler.authenticator)
+	if dispatchErr != nil {
+		errMsg := fmt.Sprintf("Failed to dispatch action. Error: %s", dispatchErr.Error())
+		res.WriteHeader(http.StatusInternalServerError)
+		response.Encode(&dispatchResponse{
+			Error:  &errMsg,
+			Status: dispatch.StatusNone,
+		})
+		return
+	}
 
 	response.Encode(&dispatchResponse{
 		Error:  nil,
-		Status: "dispatched",
+		Status: dispatch.StatusDispatched,
 	})
 }

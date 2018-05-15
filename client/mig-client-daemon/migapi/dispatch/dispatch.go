@@ -11,6 +11,16 @@ import (
 	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 )
 
+const (
+	// StatusDispatched indicates that an action has been dispatched to the
+	// MIG API.
+	StatusDispatched string = "dispatched"
+
+	// StatusNone indicates that an action's status has not changed or
+	// that it cannot be determined.
+	StatusNone string = ""
+)
+
 // ActionDispatcher provides a service for dispatching actions to the MIG API.
 type ActionDispatcher interface {
 	// Dispatch sends an action to the MIG API.
