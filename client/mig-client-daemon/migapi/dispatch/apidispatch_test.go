@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"mig.ninja/mig"
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/modules"
 	"mig.ninja/mig/client/mig-client-daemon/targeting"
@@ -35,7 +36,7 @@ func TestAPIDispatcherDispatch(t *testing.T) {
 A POST request should be sent to the MIG API's action creation endpoint, with
 authentication data added to the request
 			`,
-			Handler:     http.HandlerFunc(testVerifyFormatHandler),
+			Handler:     testVerifyFormatHandler(t),
 			ExpectError: false,
 		},
 		{
@@ -79,33 +80,40 @@ than status 202
 	}
 }
 
-func testVerifyFormatHandler(res http.ResponseWriter, req *http.Request) {
-	errorJSON := "{}"
-	statusCode := http.StatusAccepted
+func testVerifyFormatHandler(t *testing.T) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		errorJSON := "{}"
+		statusCode := http.StatusAccepted
 
-	body, _ := ioutil.ReadAll(req.Body)
-	reqData := map[string]interface{}{}
-	err := json.Unmarshal(body, &reqData)
-	_, hasAction := reqData["action"]
+		body, _ := ioutil.ReadAll(req.Body)
+		reqData := mig.Action{}
+		err := json.Unmarshal(body, &reqData)
 
-	if err != nil || !hasAction {
-		errorJSON = `{"code": 123456789, "message": "invalid request body; invalid JSON or missing action"}`
-		statusCode = http.StatusBadRequest
-	} else if req.Header.Get("X-PGPAUTHORIZATION") != testPGPAuthHeader {
-		errorJSON = `{"code": 123456789, "message": "missing or invalid auth header"}`
-		statusCode = http.StatusForbidden
-	} else if req.Method != "POST" {
-		errorJSON = `{"code": 123456789, "message": "not a POST request"}`
-		statusCode = http.StatusBadRequest
-	}
+		if err != nil {
+			t.Logf("Failed to decode request body")
 
-	resBody := fmt.Sprintf(`{
-		"collection": {
-			"error": %s
+			errorJSON = `{"code": 123456789, "message": "invalid request body; invalid JSON or missing action"}`
+			statusCode = http.StatusBadRequest
+		} else if req.Header.Get("X-PGPAUTHORIZATION") != testPGPAuthHeader {
+			t.Logf("Missing X-PGPAUTHENTICATION header")
+
+			errorJSON = `{"code": 123456789, "message": "missing or invalid auth header"}`
+			statusCode = http.StatusForbidden
+		} else if req.Method != "POST" {
+			t.Logf("Incorrect method")
+
+			errorJSON = `{"code": 123456789, "message": "not a POST request"}`
+			statusCode = http.StatusBadRequest
 		}
-	}`, errorJSON)
-	res.WriteHeader(statusCode)
-	res.Write([]byte(resBody))
+
+		resBody := fmt.Sprintf(`{
+			"collection": {
+				"error": %s
+			}
+		}`, errorJSON)
+		res.WriteHeader(statusCode)
+		res.Write([]byte(resBody))
+	}
 }
 
 func testRejectHandler(res http.ResponseWriter, req *http.Request) {
