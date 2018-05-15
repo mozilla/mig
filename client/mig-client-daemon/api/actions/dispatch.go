@@ -14,6 +14,8 @@ import (
 
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/dispatch"
 )
 
 // dispatchRequest contains the parameters of a request to dispatch an action.
@@ -31,12 +33,20 @@ type dispatchResponse struct {
 // to the MIG API.
 type DispatchHandler struct {
 	actionCatalog *actions.Catalog
+	dispatcher    dispatch.ActionDispatcher
+	authenticator authentication.Authenticator
 }
 
 // NewDispatchHandler cponstructs a new `DispatchHandler`.
-func NewDispatchHandler(catalog *actions.Catalog) DispatchHandler {
+func NewDispatchHandler(
+	catalog *actions.Catalog,
+	dispatcher dispatch.ActionDispatcher,
+	authenticator authentication.Authenticator,
+) DispatchHandler {
 	return DispatchHandler{
 		actionCatalog: catalog,
+		dispatcher:    dispatcher,
+		authenticator: authenticator,
 	}
 }
 
