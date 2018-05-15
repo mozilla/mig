@@ -14,7 +14,8 @@ import (
 // Configuration contains parsed configuration data required to run
 // the MIG Client Daemon.
 type Configuration struct {
-	ListenPort uint16 `json:"port"`
+	ListenPort       uint16 `json:"port"`
+	APIServerAddress string `json:"apiServerAddress"`
 }
 
 // MustLoad will try to load and parse a file at a given path into a

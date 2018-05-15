@@ -17,6 +17,8 @@ import (
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/api"
 	"mig.ninja/mig/client/mig-client-daemon/config"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/dispatch"
 )
 
 const configFileName string = ".mig.conf.json"
@@ -33,11 +35,17 @@ func main() {
 
 	// Set up dependencies for services offered by the API.
 	actionsCatalog := actions.NewCatalog()
+	actionDispatcher := dispatch.NewAPIDispatcher(clientConfig.APIServerAddress)
+	pgpAuthenticator := authentication.NewPGPAuthorizer()
 
 	// Set up and launch the HTTP server.
 	topRouter := mux.NewRouter()
 	api.RegisterRoutesV1(topRouter, api.Dependencies{
 		ActionsCatalog: &actionsCatalog,
+		ActionDispatch: api.ActionDispatchDependencies{
+			Dispatcher:    actionDispatcher,
+			Authenticator: &pgpAuthenticator,
+		},
 	})
 
 	http.Handle("/", topRouter)
