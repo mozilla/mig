@@ -65,7 +65,7 @@ Trying to provide a signature for an action that does not exist should fail.
 
 	handler := NewProvideSignatureHandler(&catalog)
 	router := mux.NewRouter()
-	router.Handle("/v1/actions/{id}/sign", handler).Methods("POST")
+	router.Handle("/v1/actions/{id}/sign", handler).Methods("PUT")
 	server := httptest.NewServer(router)
 
 	for caseNum, testCase := range testCases {

@@ -54,7 +54,7 @@ Requests missing fields should be rejected.
 	auth := apiAuth.NewPGPAuthorizer()
 	handler := NewCompleteChallengeHandler(&auth)
 	router := mux.NewRouter()
-	router.Handle("/v1/authentication", handler).Methods("POST")
+	router.Handle("/v1/authentication/pgp", handler).Methods("POST")
 	server := httptest.NewServer(router)
 
 	for caseNum, testCase := range testCases {

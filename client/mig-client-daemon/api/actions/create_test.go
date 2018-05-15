@@ -8,6 +8,7 @@ package actions
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -95,10 +96,11 @@ Action creation should fail if invalid targeting data is supplied.
 		catalog := actions.NewCatalog()
 		handler := NewCreateHandler(&catalog)
 		router := mux.NewRouter()
-		router.Handle("/v1/actions", handler).Methods("POST")
+		router.Handle("/v1/actions/create", handler).Methods("POST")
 		server := httptest.NewServer(router)
+		reqURL := fmt.Sprintf("%s/v1/actions/create", server.URL)
 
-		response, err := http.Post(server.URL, "application/json", strings.NewReader(testCase.Body))
+		response, err := http.Post(reqURL, "application/json", strings.NewReader(testCase.Body))
 		if err != nil {
 			t.Fatal(err)
 		}

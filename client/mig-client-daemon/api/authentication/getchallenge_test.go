@@ -35,7 +35,7 @@ func TestGetChallengeHandler(t *testing.T) {
 
 	handler := NewGetChallengeHandler()
 	router := mux.NewRouter()
-	router.Handle("/v1/authentication", handler).Methods("GET")
+	router.Handle("/v1/authentication/pgp", handler).Methods("GET")
 	server := httptest.NewServer(handler)
 
 	for caseNum := 0; caseNum < len(testCases); caseNum++ {
