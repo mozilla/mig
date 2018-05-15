@@ -16,11 +16,17 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"mig.ninja/mig"
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	"mig.ninja/mig/client/mig-client-daemon/ident"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 	"mig.ninja/mig/client/mig-client-daemon/modules"
 	"mig.ninja/mig/client/mig-client-daemon/targeting"
 )
+
+type mockDispatcher struct{}
+
+type mockAuthenticator struct{}
 
 func TestDispatchHandler(t *testing.T) {
 	catalog := actions.NewCatalog()
@@ -67,7 +73,9 @@ If the connection to the MIG API fails, we should get an internal error.
 		},
 	}
 
-	handler := NewDispatchHandler(&catalog)
+	dispatcher := mockDispatcher{}
+	authenticator := mockAuthenticator{}
+	handler := NewDispatchHandler(&catalog, dispatcher, authenticator)
 	router := mux.NewRouter()
 	router.Handle("/v1/actions/{id}/dispatch", handler).Methods("PUT")
 	server := httptest.NewServer(router)
@@ -103,4 +111,12 @@ If the connection to the MIG API fails, we should get an internal error.
 			t.Errorf("Expected to get status %d but got %d", testCase.ExpectedStatus, response.StatusCode)
 		}
 	}
+}
+
+func (mockDispatcher) Dispatch(_ mig.Action, _ authentication.Authenticator) error {
+	return nil
+}
+
+func (mockAuthenticator) Authenticate(_ *http.Request) error {
+	return nil
 }
