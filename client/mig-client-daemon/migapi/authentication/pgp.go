@@ -52,6 +52,14 @@ func NewPGPAuthorizer() PGPAuthorizer {
 	}
 }
 
+// NewChallenge constructs a `Challenge` out of a previously-issued challenge
+// as a string.
+func NewChallenge(chalString string) Challenge {
+	return Challenge{
+		challenge: chalString,
+	}
+}
+
 // String returns the string representation of the PGP challenge.
 func (ch Challenge) String() string {
 	return ch.challenge

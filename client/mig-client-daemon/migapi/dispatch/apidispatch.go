@@ -13,13 +13,17 @@ import (
 
 // APIDispatcher is a `Dispatcher` that will send actions to the MIG API.
 type APIDispatcher struct {
+	baseAddress string
 }
 
 // NewAPIDispatcher constructs a new `APIDispatcher`.
-func NewAPIDispatcher() APIDispatcher {
-	return APIDispatcher{}
+func NewAPIDispatcher(serverURL string) APIDispatcher {
+	return APIDispatcher{
+		baseAddress: serverURL,
+	}
 }
 
+// Dispatch sends a POST request to the MIG API to create an action.
 func (dispatch APIDispatcher) Dispatch(
 	action mig.Action,
 	auth authentication.Authenticator,
