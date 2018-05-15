@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"mig.ninja/mig/client/mig-client-daemon/actions"
-	"mig.ninja/mig/client/mig-client-daemon/api/actions"
+	actionsapi "mig.ninja/mig/client/mig-client-daemon/api/actions"
 )
 
 // Dependencies contains all of the dependencies required to set up all of the
@@ -22,8 +22,8 @@ type Dependencies struct {
 // RegisterRoutesV1 constructs and populates a subrouter based on `topRouter`
 // with a path prefix of "/v1".
 func RegisterRoutesV1(topRouter *mux.Router, deps Dependencies) {
-	createAction := actionsAPI.NewCreateHandler(deps.ActionsCatalog)
-	readActionForSigning := actionsAPI.NewReadForSigningHandler(deps.ActionsCatalog)
+	createAction := actionsapi.NewCreateHandler(deps.ActionsCatalog)
+	readActionForSigning := actionsapi.NewReadForSigningHandler(deps.ActionsCatalog)
 
 	router := topRouter.PathPrefix("/v1").Subrouter()
 	router.Handle("/actions/create", createAction).Methods("POST")

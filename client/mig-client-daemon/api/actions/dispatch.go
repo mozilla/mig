@@ -4,7 +4,7 @@
 //
 // Contributor: Zack Mullaly zmullaly@mozilla.com [:zack]
 
-package actionsAPI
+package actions
 
 import (
 	"encoding/json"
