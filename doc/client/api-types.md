@@ -152,8 +152,8 @@ type TimeDriftModule = {
 }
 
 type PkgModule = {
-    name: RegExp,
-    version: string | null
+    packageName: RegExp,
+    packageVersion: string | null
 }
 
 type FileModule = {

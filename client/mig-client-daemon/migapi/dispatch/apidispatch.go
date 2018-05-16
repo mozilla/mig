@@ -7,15 +7,17 @@
 package dispatch
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"mig.ninja/mig"
 	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 )
+
+const createActionEndpt string = "/api/v1/action/create/"
 
 // APIDispatcher is a `Dispatcher` that will send actions to the MIG API.
 type APIDispatcher struct {
@@ -33,7 +35,7 @@ type collectionJSON struct {
 }
 
 type errorJSON struct {
-	Code    int    `json:"code"`
+	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
@@ -56,7 +58,7 @@ func (dispatcher APIDispatcher) Dispatch(
 	if parseErr != nil {
 		return parseErr
 	}
-	reqPath, _ := url.Parse("/api/v1/action/create")
+	reqPath, _ := url.Parse(createActionEndpt)
 	fullURL := baseURL.ResolveReference(reqPath)
 
 	// Create a reader for the JSON-encoded action.
@@ -64,14 +66,18 @@ func (dispatcher APIDispatcher) Dispatch(
 	if encodeErr != nil {
 		return encodeErr
 	}
-	bodyReader := bytes.NewReader(body)
+	// This isn't made clear in the documentation, but this is how the body
+	// of this request has to be formatted. See
+	// https://github.com/mozilla/mig/blob/master/client/client.go#L859
+	bodyStr := url.Values{"action": {string(body)}}.Encode()
+	bodyReader := strings.NewReader(bodyStr)
 
 	// Create an authenticated request.
 	request, createReqErr := http.NewRequest("POST", fullURL.String(), bodyReader)
 	if createReqErr != nil {
 		return createReqErr
 	}
-	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	authErr := auth.Authenticate(request)
 	if authErr != nil {
 		return authErr
@@ -85,9 +91,6 @@ func (dispatcher APIDispatcher) Dispatch(
 	}
 
 	// Check for an error in the response.
-	if response.StatusCode != http.StatusAccepted {
-		return errors.New("request not accepted by API")
-	}
 	respData := responseStructure{}
 	decoder := json.NewDecoder(response.Body)
 	defer response.Body.Close()
@@ -95,8 +98,13 @@ func (dispatcher APIDispatcher) Dispatch(
 	if decodeErr != nil {
 		return decodeErr
 	}
-	if respData.Collection.Error.Code != 0 {
+	if respData.Collection.Error.Code != "" {
 		return errors.New(respData.Collection.Error.Message)
+	}
+	// We test this case last because returning an error here gives us the
+	// least amount of information.
+	if response.StatusCode != http.StatusAccepted {
+		return errors.New("request not accepted by API")
 	}
 
 	return nil

@@ -26,8 +26,8 @@ type readForSigningRequest struct {
 // readForSigningResponse contains the body of a response to a request to
 // retrieve an action in a signable form.
 type readForSigningResponse struct {
-	Error  *string
-	Action string
+	Error  *string `json:"error"`
+	Action string  `json:"action"`
 }
 
 // ReadForSigningHandler is an HTTP handler that handles requests to retrieve

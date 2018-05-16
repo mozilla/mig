@@ -88,7 +88,7 @@ func GeneratePGPChallenge() Challenge {
 		nonce, err = rand.Int(rand.Reader, nil)
 	}
 
-	currentTime := time.Now().UTC().String()
+	currentTime := time.Now().UTC().Format(time.RFC3339)
 
 	return Challenge{
 		challenge: fmt.Sprintf("%d;%s;%s", migAPIVersion, currentTime, nonce.String()),

@@ -75,6 +75,7 @@ func (catalog *Catalog) Create(
 				Parameters: moduleParams,
 			},
 		},
+		SyntaxVersion: mig.ActionVersion,
 	}
 
 	err = catalog.update(id, action)
