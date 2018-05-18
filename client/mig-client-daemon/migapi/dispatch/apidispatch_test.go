@@ -12,6 +12,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -86,23 +88,42 @@ func testVerifyFormatHandler(t *testing.T) http.HandlerFunc {
 		statusCode := http.StatusAccepted
 
 		body, _ := ioutil.ReadAll(req.Body)
-		reqData := mig.Action{}
-		err := json.Unmarshal(body, &reqData)
+		bodyStr := string(body)
+		if !strings.HasPrefix(bodyStr, "action=") {
+			t.Logf("Incorreclty formatted body")
 
+			errorJSON = `{"code": "123456789", "message": "Improperly-formatted request body. Expected 'action=' prefix."}`
+			statusCode = http.StatusBadRequest
+		}
+		encodedAction, err := url.QueryUnescape(bodyStr[len("action="):])
 		if err != nil {
+			t.Logf("Failed to decode action")
+
+			errorJSON = `{"code": "123456789", "message": "could not decode action using QueryUnescape"}`
+			statusCode = http.StatusBadRequest
+		}
+		reqData := mig.Action{}
+		err = json.Unmarshal([]byte(encodedAction), &reqData)
+
+		if reqData.Name == "" {
+			t.Logf("Did not decode an action")
+
+			errorJSON = `{"code": "123456789", "message": "Did not decode an action"}`
+			statusCode = http.StatusBadRequest
+		} else if err != nil {
 			t.Logf("Failed to decode request body")
 
-			errorJSON = `{"code": 123456789, "message": "invalid request body; invalid JSON or missing action"}`
+			errorJSON = `{"code": "123456789", "message": "invalid request body; invalid JSON"}`
 			statusCode = http.StatusBadRequest
 		} else if req.Header.Get("X-PGPAUTHORIZATION") != testPGPAuthHeader {
 			t.Logf("Missing X-PGPAUTHENTICATION header")
 
-			errorJSON = `{"code": 123456789, "message": "missing or invalid auth header"}`
+			errorJSON = `{"code": "123456789", "message": "missing or invalid auth header"}`
 			statusCode = http.StatusForbidden
 		} else if req.Method != "POST" {
 			t.Logf("Incorrect method")
 
-			errorJSON = `{"code": 123456789, "message": "not a POST request"}`
+			errorJSON = `{"code": "123456789", "message": "not a POST request"}`
 			statusCode = http.StatusBadRequest
 		}
 
@@ -122,7 +143,7 @@ func testRejectHandler(res http.ResponseWriter, req *http.Request) {
 		{
 			"collection": {
 				"error": {
-					"code": 6077873045059431424,
+					"code": "6077873045059431424",
 					"message": "rejected"
 				}
 			}
