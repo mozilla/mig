@@ -17,6 +17,7 @@
 * [Retrieve top-level API documentation](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#endpoint-documentation)
 * [Retrieve documentation for a module](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#retrieve-documentation-for-a-module)
 * [Create an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#create-an-action)
+* [Retrieve an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#retrieve-an-action)
 * [Retrieve an action for signing](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#retrieve-an-action-for-signing)
 * [Provide a signature for an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#provide-a-signture-for-an-action)
 * [Dispatch an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#dispatch-an-action)
@@ -160,6 +161,31 @@ This allows investigators to review and modify actions before dispatching them.
 #### Example Request
 
 #### Example Response
+
+### Retrieve an action
+
+```
+GET /v1/actions/:id
+```
+
+#### Parameters
+
+The `id` positional argument should be the ID of an action, as returned by
+the "create an action" endpoint.
+
+#### Response
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| error | `Optional<string>` | If the action does not exist, an error will be returned | null |
+| action | object | An action structure encoded as JSON | See below |
+
+[Action structure](https://github.com/mozilla/mig/blob/master/action.go#L30)
+
+##### Status Codes
+
+* `200` indicates that the action was retrieved successfully
+* `400` indicates that the action does not exist
 
 ### Retrieve an action for signing
 
