@@ -178,7 +178,7 @@ the "create an action" endpoint.
 | Name | Type | Description | Example |
 | ---- | ---- | ----------- | ------- |
 | error | `Optional<string>` | If the action does not exist, an error will be returned | null |
-| action | object | An action structure encoded as JSON | See below |
+| action | `Optional<object>` | An action structure encoded as JSON | See below |
 
 [Action structure](https://github.com/mozilla/mig/blob/master/action.go#L30)
 
