@@ -11,7 +11,7 @@ import (
 )
 
 func TestByTagToSQLWhereClause(t *testing.T) {
-	expectedSQL := "tags->>'test' = 'testvalue'"
+	expectedSQL := "tags->>'test'='testvalue'"
 
 	query := ByTag{
 		TagName:  "test",
