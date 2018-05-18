@@ -20,7 +20,7 @@ type ByTag struct {
 }
 
 func (query *ByTag) ToSQLWhereClause() (string, error) {
-	return fmt.Sprintf("tags->>'%s' = '%s'", query.TagName, query.TagValue), nil
+	return fmt.Sprintf("tags->>'%s'='%s'", query.TagName, query.TagValue), nil
 }
 
 func (query *ByTag) InitFromMap(jsonMap map[string]interface{}) error {
