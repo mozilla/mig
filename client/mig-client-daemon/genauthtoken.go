@@ -17,8 +17,11 @@ import (
 	"mig.ninja/mig/pgp"
 )
 
-const DANGEROUS_PASSPHRASE string = "SIGNING KEY PASSPHRASE"
-const keyID string = "SIGNING KEY FINGERPRINT"
+// CONFIGURATION
+const (
+	DANGEROUS_PASSPHRASE = "SECRET KEY PASSPHRASE"
+	keyID                = "SECRET KEY FINGERPRINT"
+)
 
 func main() {
 	pgp.CachePassphrase(DANGEROUS_PASSPHRASE)
@@ -64,6 +67,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("Signed token\n")
 	fmt.Println(signedToken)
 }
