@@ -10,23 +10,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"mig.ninja/mig"
 	"mig.ninja/mig/pgp"
 )
 
-const DANGEROUS_PASSPHRASE string = "KEY PASSPHRASE (or empty string)"
-const keyID string = "KEY FINGERPRINT"
-
-const secringPath string = "/PATH TO HOME/.gnupg/secring.gpg"
-
-const toSign string = `{"id": 0, "name": "b2b943", "target": "tags->>'operator'='IT'", "description": {}, "threat": {}, "validfrom": "0001-01-01T00:00:00Z", "expireafter": "2018-05-18T17:10:42.656564731-04:00", "operations": [{"module": "pkg", "parameters": {"pkgmatch": {"matches": ["*libssl*"]}, "vermatch": ""}}], "pgpsignatures": null, "starttime": "0001-01-01T00:00:00Z", "finishtime": "0001-01-01T00:00:00Z", "lastupdatetime": "0001-01-01T00:00:00Z", "counters": {}, "syntaxversion": 2}`
+// CONFIGURATION
+const (
+	DANGEROUS_PASSPHRASE = "PASSPHRASE FOR SECRET KEY"
+	keyID                = "SECRET KEY FINGERPRINT"
+	secringPath          = "/HOME/.gnupg/secring.gpg"
+)
 
 func main() {
 	var action mig.Action
 
-	decoder := json.NewDecoder(strings.NewReader(toSign))
+	decoder := json.NewDecoder(os.Stdin)
 	decodeErr := decoder.Decode(&action)
 	if decodeErr != nil {
 		panic(decodeErr)
@@ -44,6 +43,5 @@ func main() {
 		panic(signErr)
 	}
 
-	fmt.Println("Signature\n")
 	fmt.Println(signature)
 }
