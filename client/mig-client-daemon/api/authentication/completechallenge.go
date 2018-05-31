@@ -57,15 +57,14 @@ func (handler CompleteChallengeHandler) ServeHTTP(res http.ResponseWriter, req *
 		return
 	}
 
+	missingField := ""
 	if request.Signature == "" {
-		errMsg := "No signature provided"
-		res.WriteHeader(http.StatusBadRequest)
-		response.Encode(&completeChallengeResponse{
-			Error: &errMsg,
-		})
-		return
+		missingField = "signature"
 	} else if request.Challenge == "" {
-		errMsg := "No challenge provided"
+		missingField = "challenge"
+	}
+	if missingField != "" {
+		errMsg := fmt.Sprintf("Missing JSON field in request body: \"%s\"", missingField)
 		res.WriteHeader(http.StatusBadRequest)
 		response.Encode(&completeChallengeResponse{
 			Error: &errMsg,
