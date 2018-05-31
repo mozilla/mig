@@ -35,14 +35,6 @@ Well-formed requests should always be accepted.
 		},
 		{
 			Description: `
-Requests containing a signature not encoded as base64 should be rejected.
-			`,
-			Body:           `{"challenge": "abc123", "signature": ";;;"}`,
-			ExpectError:    true,
-			ExpectedStatus: http.StatusBadRequest,
-		},
-		{
-			Description: `
 Requests missing fields should be rejected.
 			`,
 			Body:           `{"signature": "def123"}`,

@@ -7,7 +7,6 @@
 package authentication
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -58,9 +57,15 @@ func (handler CompleteChallengeHandler) ServeHTTP(res http.ResponseWriter, req *
 		return
 	}
 
-	_, err = base64.StdEncoding.DecodeString(request.Signature)
-	if err != nil {
-		errMsg := "Invalid signature"
+	if request.Signature == "" {
+		errMsg := "No signature provided"
+		res.WriteHeader(http.StatusBadRequest)
+		response.Encode(&completeChallengeResponse{
+			Error: &errMsg,
+		})
+		return
+	} else if request.Challenge == "" {
+		errMsg := "No challenge provided"
 		res.WriteHeader(http.StatusBadRequest)
 		response.Encode(&completeChallengeResponse{
 			Error: &errMsg,
