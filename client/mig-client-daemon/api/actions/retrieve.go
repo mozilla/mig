@@ -50,7 +50,7 @@ func (handler RetrieveHandler) ServeHTTP(res http.ResponseWriter, req *http.Requ
 		ActionID: ident.Identifier(urlValues["id"]),
 	}
 
-	action, found := handler.actionsCatalog.Lookup(request.ActionID)
+	record, found := handler.actionsCatalog.Lookup(request.ActionID)
 	if !found {
 		errMsg := fmt.Sprintf("No such action %s", string(request.ActionID))
 		res.WriteHeader(http.StatusBadRequest)
@@ -63,6 +63,6 @@ func (handler RetrieveHandler) ServeHTTP(res http.ResponseWriter, req *http.Requ
 
 	response.Encode(&retrieveResponse{
 		Error:  nil,
-		Action: &action,
+		Action: &record.Action,
 	})
 }

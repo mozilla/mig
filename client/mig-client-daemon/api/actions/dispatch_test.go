@@ -116,17 +116,20 @@ If the connection to the MIG API fails, we should get an internal error.
 		}
 
 		if testCase.ExpectedStatus != response.StatusCode {
-			t.Errorf("Expected to get status %d but got %d", testCase.ExpectedStatus, response.StatusCode)
+			t.Errorf(
+				"Expected to get status %d but got %d",
+				testCase.ExpectedStatus,
+				response.StatusCode)
 		}
 	}
 }
 
-func (mockDispatcher) Dispatch(_ mig.Action, _ authentication.Authenticator) error {
-	return nil
+func (mockDispatcher) Dispatch(_ mig.Action, _ authentication.Authenticator) (actions.InternalActionID, error) {
+	return actions.InternalActionID(32), nil
 }
 
-func (mockDispatcherAlwaysError) Dispatch(_ mig.Action, _ authentication.Authenticator) error {
-	return errors.New("mock dispatcher always error")
+func (mockDispatcherAlwaysError) Dispatch(_ mig.Action, _ authentication.Authenticator) (actions.InternalActionID, error) {
+	return actions.InvalidID, errors.New("mock dispatcher always error")
 }
 
 func (mockAuthenticator) Authenticate(_ *http.Request) error {

@@ -52,7 +52,7 @@ func (handler ReadForSigningHandler) ServeHTTP(res http.ResponseWriter, req *htt
 		Action: ident.Identifier(urlVars["id"]),
 	}
 
-	action, found := handler.actionCatalog.Lookup(reqData.Action)
+	record, found := handler.actionCatalog.Lookup(reqData.Action)
 	if !found {
 		errMsg := fmt.Sprintf("No such action %s.", string(reqData.Action))
 		res.WriteHeader(http.StatusBadRequest)
@@ -63,7 +63,7 @@ func (handler ReadForSigningHandler) ServeHTTP(res http.ResponseWriter, req *htt
 		return
 	}
 
-	actionStr, err := action.String()
+	actionStr, err := record.Action.String()
 	if err != nil {
 		errMsg := err.Error()
 		response.Encode(&readForSigningResponse{

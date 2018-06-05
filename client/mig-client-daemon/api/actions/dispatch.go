@@ -60,30 +60,34 @@ func (handler DispatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Requ
 	request := dispatchRequest{
 		ActionID: ident.Identifier(urlVars["id"]),
 	}
-	action, found := handler.actionCatalog.Lookup(request.ActionID)
+
+	actionRecord, found := handler.actionCatalog.Lookup(request.ActionID)
 	if !found {
 		errMsg := fmt.Sprintf("Invalid action ID %s", string(request.ActionID))
 		res.WriteHeader(http.StatusBadRequest)
 		response.Encode(&dispatchResponse{
 			Error:  &errMsg,
-			Status: dispatch.StatusNone,
+			Status: actions.StatusNone,
 		})
 		return
 	}
 
-	dispatchErr := handler.dispatcher.Dispatch(action, handler.authenticator)
+	internalActionID, dispatchErr := handler.dispatcher.Dispatch(actionRecord.Action, handler.authenticator)
 	if dispatchErr != nil {
 		errMsg := fmt.Sprintf("Failed to dispatch action. Error: %s", dispatchErr.Error())
 		res.WriteHeader(http.StatusInternalServerError)
 		response.Encode(&dispatchResponse{
 			Error:  &errMsg,
-			Status: dispatch.StatusNone,
+			Status: actions.StatusNone,
 		})
 		return
 	}
 
+	// By this point, we know the action exists, so we can ignore the error here.
+	handler.actionCatalog.MarkAsDispatched(request.ActionID, internalActionID)
+
 	response.Encode(&dispatchResponse{
 		Error:  nil,
-		Status: dispatch.StatusDispatched,
+		Status: actions.StatusDispatched,
 	})
 }

@@ -235,12 +235,12 @@ func TestGetAction(t *testing.T) {
 			lastActionID = id
 		}
 
-		action, found := actions.Lookup(lastActionID)
+		record, found := actions.Lookup(lastActionID)
 		if testCase.ExpectToFind && !found {
 			t.Errorf("Expected to find a newly-created action in the action catalog, but did not")
 		} else if !testCase.ExpectToFind && found {
 			t.Errorf("Did not expect to find an action, but we did")
-		} else if testCase.ExpectToFind && action.Target == "" {
+		} else if testCase.ExpectToFind && record.Action.Target == "" {
 			t.Errorf("Expected to find an action, but got one that hasn't been initialized")
 		}
 	}

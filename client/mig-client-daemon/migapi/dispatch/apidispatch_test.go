@@ -62,7 +62,7 @@ than status 202
 		},
 	}
 	validID, _ := catalog.Create(module, target, time.Hour)
-	action, _ := catalog.Lookup(validID)
+	record, _ := catalog.Lookup(validID)
 
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestAPIDispatcherDispatch case #%d\n%s\n", caseNum, testCase.Description)
@@ -71,7 +71,7 @@ than status 202
 		dispatcher := NewAPIDispatcher(server.URL)
 		authenticator := mockAuthenticator{}
 
-		err := dispatcher.Dispatch(action, authenticator)
+		_, err := dispatcher.Dispatch(record.Action, authenticator)
 		gotErr := err != nil
 
 		if testCase.ExpectError && !gotErr {
@@ -127,11 +127,33 @@ func testVerifyFormatHandler(t *testing.T) http.HandlerFunc {
 			statusCode = http.StatusBadRequest
 		}
 
-		resBody := fmt.Sprintf(`{
-			"collection": {
-				"error": %s
-			}
-		}`, errorJSON)
+		resBody := ""
+		if errorJSON != "{}" {
+			resBody = fmt.Sprintf(`{
+				"collection": {
+					"error": %s
+				}
+			}`, errorJSON)
+		} else {
+			// Success case where we want to mimick the MIG API.
+			resBody = `{
+				"collection": {
+					"error": {},
+					"items": [
+						{
+							"data": [
+								{
+									"name": "action ID 123456789",
+									"value": {
+										"id": 123456789
+									}
+								}
+							]
+						}
+					]
+				}
+			}`
+		}
 		res.WriteHeader(statusCode)
 		res.Write([]byte(resBody))
 	}
