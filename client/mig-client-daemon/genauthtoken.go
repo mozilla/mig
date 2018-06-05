@@ -8,6 +8,7 @@ package main
 
 import (
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"net/http"
 	"os/user"
@@ -17,14 +18,22 @@ import (
 	"mig.ninja/mig/pgp"
 )
 
-// CONFIGURATION
-const (
-	DANGEROUS_PASSPHRASE = "SECRET KEY PASSPHRASE"
-	keyID                = "SECRET KEY FINGERPRINT"
-)
-
 func main() {
-	pgp.CachePassphrase(DANGEROUS_PASSPHRASE)
+	secretKeyID := flag.String("key", "", "Fingerprint of secret key to use for signing")
+	passphrase := flag.String("passphrase", "", "Passphrase for secret key to use for signing")
+
+	flag.Parse()
+
+	if secretKeyID == nil || *secretKeyID == "" {
+		fmt.Println("Missing key ID")
+		return
+	}
+	if passphrase == nil || *passphrase == "" {
+		fmt.Println("Missing passphrase")
+		return
+	}
+
+	pgp.CachePassphrase(*passphrase)
 
 	curUser, err := user.Current()
 	if err != nil {
@@ -36,7 +45,7 @@ func main() {
 			Homedir: curUser.HomeDir,
 			GPG: client.GpgConf{
 				Home:  path.Join(curUser.HomeDir, ".gnupg"),
-				KeyID: keyID,
+				KeyID: *secretKeyID,
 			},
 		},
 		API: &http.Client{
