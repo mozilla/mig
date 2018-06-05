@@ -17,6 +17,13 @@ type APIResultAggregator struct {
 	baseAddress string
 }
 
+// NewAPIResultAggregator constructs a new `APIResultAggregator`.
+func NewAPIResultAggregator(baseAddr string) APIResultAggregator {
+	return APIResultAggregator{
+		baseAddress: baseAddr,
+	}
+}
+
 // Search queries the MIG API until it reads all of the results generated as
 // a result of an action being executed by agents.
 func (aggregator APIResultAggregator) Search(
