@@ -21,6 +21,7 @@
 * [Retrieve an action for signing](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#retrieve-an-action-for-signing)
 * [Provide a signature for an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#provide-a-signture-for-an-action)
 * [Dispatch an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#dispatch-an-action)
+* [Retrieve results for an action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#retrieve-results-for-an-action)
 * [Check the status of a dispatched action](https://github.com/mozilla/mig/blob/client-daemon/doc/client/api.md#check-the-status-of-a-dispatched-action)
 
 ## Endpoint Documentation
@@ -262,6 +263,31 @@ The positional argument `id` is expected to be the identifier of an action manag
 #### Example Request
 
 #### Example Response
+
+### Retrieve results for an action
+
+```
+GET /v1/results
+```
+
+#### Parameters
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| action | string | The identifier of an action being managed by the daemon | abc123 |
+
+#### Response
+
+| Name | Type | Description | Example |
+| ---- | ---- | ----------- | ------- |
+| error | `Optional<string>` | An error message if results cannot be retrieved | "No results" |
+| results | `[]Result` | An array of results produced by agents | See example response |
+
+##### Status Codes
+
+* `200` indicates that results have successfully been retrieved.
+* `400` indicates that the action specified does not exist.
+* `500` indicates that communication with the MIG API failed.
 
 ### Check the status of a dispatched action
 

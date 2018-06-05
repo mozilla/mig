@@ -80,6 +80,15 @@ type Module
     | SSHKeyModule
     | YaraModule
 
+// Contains whatever result information is produced by agents that have run an action.
+type Result = {
+    errors: Array<string>,
+    foundanything: boolean,
+    success: boolean,
+    elements: Array<object>,
+    statistics: Array<object>
+}
+
 // This type is a fallback for investigators to write the arbitrary SQL queries they may have used
 // for advanced targeting.
 type TargetWithSQL = {
