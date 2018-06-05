@@ -8,22 +8,37 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
+	"os/user"
+	"path"
 
 	"mig.ninja/mig"
 	"mig.ninja/mig/pgp"
 )
 
-// CONFIGURATION
-const (
-	DANGEROUS_PASSPHRASE = "PASSPHRASE FOR SECRET KEY"
-	keyID                = "SECRET KEY FINGERPRINT"
-	secringPath          = "/HOME/.gnupg/secring.gpg"
-)
-
 func main() {
 	var action mig.Action
+
+	secretKeyID := flag.String("key", "", "Fingerprint of secret key to use for signing")
+	passphrase := flag.String("passphrase", "", "Passphrase for secret key to use for signing")
+	secringPath := flag.String("secring", defaultSecringPath(), "Path to secring.gpg file")
+
+	flag.Parse()
+
+	if secretKeyID == nil || *secretKeyID == "" {
+		fmt.Println("Missing key ID")
+		return
+	}
+	if passphrase == nil || *passphrase == "" {
+		fmt.Println("Missing secret key passphrase")
+		return
+	}
+	if secringPath == nil || *secringPath == "" {
+		fmt.Println("Missing secring.gpg path")
+		return
+	}
 
 	decoder := json.NewDecoder(os.Stdin)
 	decodeErr := decoder.Decode(&action)
@@ -31,17 +46,25 @@ func main() {
 		panic(decodeErr)
 	}
 
-	pgp.CachePassphrase(DANGEROUS_PASSPHRASE)
+	pgp.CachePassphrase(*passphrase)
 
-	secring, err := os.Open(secringPath)
+	secring, err := os.Open(*secringPath)
 	if err != nil {
 		panic(err)
 	}
 
-	signature, signErr := action.Sign(keyID, secring)
+	signature, signErr := action.Sign(*secretKeyID, secring)
 	if signErr != nil {
 		panic(signErr)
 	}
 
 	fmt.Println(signature)
+}
+
+func defaultSecringPath() string {
+	curUser, err := user.Current()
+	if err != nil {
+		return ""
+	}
+	return path.Join(curUser.HomeDir, ".gnupg", "secring.gpg")
 }
