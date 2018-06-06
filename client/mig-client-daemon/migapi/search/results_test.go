@@ -7,8 +7,10 @@
 package search
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"mig.ninja/mig/client/mig-client-daemon/actions"
@@ -27,7 +29,7 @@ func TestAPIResultAggregatorSearch(t *testing.T) {
 We should be able to retrieve a couple of results from a single response.
 			`,
 			ActionID:           actions.InternalActionID(32),
-			Handler:            http.HandlerFunc(serveResults),
+			Handler:            serveResults(),
 			ExpectError:        false,
 			NumExpectedResults: 2,
 		},
@@ -36,7 +38,7 @@ We should be able to retrieve a couple of results from a single response.
 We should be able to retrieve a large number of results from multiple requests.
 			`,
 			ActionID:           actions.InternalActionID(10),
-			Handler:            serveManyResults(),
+			Handler:            serveManyResults(t),
 			ExpectError:        false,
 			NumExpectedResults: 125,
 		},
@@ -78,77 +80,116 @@ We should get an error if one appears in a response.
 	}
 }
 
-func serveResults(res http.ResponseWriter, req *http.Request) {
-	res.Header().Set("Content-Type", "application/json")
-	res.Write([]byte(`{
-		"collection": {
-			"error": {},
-			"items": [
-				{
-					"data": {
-						"name": "command",
-						"value": {}
-					}
-				},
-				{
-					"data": {
-						"name": "command",
-						"value": {}
+func serveResults() http.Handler {
+	hasBeenCalled := false
+
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		if hasBeenCalled {
+			res.Write([]byte(`{
+				"collection": {
+					"error": {
+						"code": "0123123",
+						"message": "no results found"
 					}
 				}
-			]
+			}`))
+		} else {
+			hasBeenCalled = true
 		}
-	}`))
+
+		res.Header().Set("Content-Type", "application/json")
+		res.Write([]byte(`{
+			"collection": {
+				"error": {},
+				"items": [
+					{
+						"data": [
+							{
+								"name": "command",
+								"value": {
+									"results": [
+										{
+											"foundanything": true,
+											"success": true,
+											"elements": [],
+											"statistics": [],
+											"errors": []
+										},
+										{
+											"foundanything": true,
+											"success": true,
+											"elements": [],
+											"statistics": [],
+											"errors": []
+										}
+									]
+								}
+							}
+						]
+					}
+				]
+			}
+		}`))
+	})
 }
 
-func serveManyResults() http.HandlerFunc {
-	maxToSend := 125
+func serveManyResults(t *testing.T) http.HandlerFunc {
+	const maxToSend = 125
+	const sendEachRequest = 25
+
 	sent := 0
+
+	itemStr := `
+			{
+				"data": [
+					{
+						"name": "command",
+						"value": {
+							"results": [
+								{
+									"foundanything": true,
+									"success": true,
+									"elements": [],
+									"statistics": [],
+									"errors": []
+								}
+							]
+						}
+					}
+				]
+			}`
+	items := make([]string, sendEachRequest)
+	for i := 0; i < sendEachRequest; i++ {
+		items[i] = itemStr
+	}
+	itemsJSON := strings.Join(items, ",\n")
 
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		res.Header().Set("Content-Type", "application/json")
 		if sent < maxToSend {
-			res.Write([]byte(`{
-				"collection": {
-					"error": {},
-					"items": [
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } },
-						{ "data": { "name": "command", "value": {} } }
-					]
-				}
-			}`))
+			responseStr := fmt.Sprintf(`
+{
+	"collection": {
+		"error": {},
+		"items": [
+			%s
+		]
+	}
+}`, itemsJSON)
+			t.Logf("Sending response %s", responseStr)
+			res.Write([]byte(responseStr))
 
 			sent += 25
 		} else {
-			res.Write([]byte(`{
-				"collection": {
-					"error": {},
-					"items": []
-				}
-			}`))
+			res.Write([]byte(`
+{
+	"collection": {
+		"error": {
+			"code": "0123123",
+			"message": "no results found"
+		}
+	}
+}`))
 		}
 	})
 }
