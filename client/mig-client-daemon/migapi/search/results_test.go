@@ -27,7 +27,7 @@ func TestAPIResultAggregatorSearch(t *testing.T) {
 We should be able to retrieve a couple of results from a single response.
 			`,
 			ActionID:           actions.InternalActionID(32),
-			Handler:            serveResults(t),
+			Handler:            http.HandlerFunc(serveResults),
 			ExpectError:        false,
 			NumExpectedResults: 2,
 		},
@@ -36,7 +36,7 @@ We should be able to retrieve a couple of results from a single response.
 We should be able to retrieve a large number of results from multiple requests.
 			`,
 			ActionID:           actions.InternalActionID(10),
-			Handler:            serveManyResults(t),
+			Handler:            serveManyResults(),
 			ExpectError:        false,
 			NumExpectedResults: 125,
 		},
@@ -45,7 +45,7 @@ We should be able to retrieve a large number of results from multiple requests.
 We should get an error if one appears in a response.
 			`,
 			ActionID:           actions.InternalActionID(0),
-			Handler:            serveError(t),
+			Handler:            http.HandlerFunc(serveError),
 			ExpectError:        true,
 			NumExpectedResults: 0,
 		},
@@ -78,32 +78,30 @@ We should get an error if one appears in a response.
 	}
 }
 
-func serveResults(t *testing.T) http.HandlerFunc {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		res.Header().Set("Content-Type", "application/json")
-		res.Write([]byte(`{
-			"collection": {
-				"error": {},
-				"items": [
-					{
-						"data": {
-							"name": "command",
-							"value": {}
-						}
-					},
-					{
-						"data": {
-							"name": "command",
-							"value": {}
-						}
+func serveResults(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+	res.Write([]byte(`{
+		"collection": {
+			"error": {},
+			"items": [
+				{
+					"data": {
+						"name": "command",
+						"value": {}
 					}
-				]
-			}
-		}`))
-	})
+				},
+				{
+					"data": {
+						"name": "command",
+						"value": {}
+					}
+				}
+			]
+		}
+	}`))
 }
 
-func serveManyResults(t *testing.T) http.HandlerFunc {
+func serveManyResults() http.HandlerFunc {
 	maxToSend := 125
 	sent := 0
 
@@ -155,16 +153,14 @@ func serveManyResults(t *testing.T) http.HandlerFunc {
 	})
 }
 
-func serveError(t *testing.T) http.HandlerFunc {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		res.Header().Set("Content-Type", "application/json")
-		res.Write([]byte(`{
-			"collection": {
-				"error": {
-					"code": "123456789",
-					"message": "serving an error for testing purposes"
-				}
+func serveError(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+	res.Write([]byte(`{
+		"collection": {
+			"error": {
+				"code": "123456789",
+				"message": "serving an error for testing purposes"
 			}
-		}`))
-	})
+		}
+	}`))
 }
