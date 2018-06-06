@@ -58,9 +58,7 @@ func NewAPIResultAggregator(baseAddr string) APIResultAggregator {
 
 // Search queries the MIG API until it reads all of the results generated as
 // a result of an action being executed by agents.
-func (aggregator APIResultAggregator) Search(
-	actionID actions.InternalActionID,
-) ([]modules.Result, error) {
+func (aggregator APIResultAggregator) Search(actionID actions.InternalActionID) ([]modules.Result, error) {
 	const limitResultsPerRequest = 50
 
 	resultsReceived := 0
