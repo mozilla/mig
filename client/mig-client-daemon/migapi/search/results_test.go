@@ -38,7 +38,7 @@ We should be able to retrieve a large number of results from multiple requests.
 			ActionID:           actions.InternalActionID(10),
 			Handler:            serveManyResults(t),
 			ExpectError:        false,
-			NumExpectedResults: 123,
+			NumExpectedResults: 125,
 		},
 		{
 			Description: `
@@ -80,15 +80,91 @@ We should get an error if one appears in a response.
 
 func serveResults(t *testing.T) http.HandlerFunc {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		res.Header().Set("Content-Type", "application/json")
+		res.Write([]byte(`{
+			"collection": {
+				"error": {},
+				"items": [
+					{
+						"data": {
+							"name": "command",
+							"value": {}
+						}
+					},
+					{
+						"data": {
+							"name": "command",
+							"value": {}
+						}
+					}
+				]
+			}
+		}`))
 	})
 }
 
 func serveManyResults(t *testing.T) http.HandlerFunc {
+	maxToSend := 125
+	sent := 0
+
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		res.Header().Set("Content-Type", "application/json")
+		if sent < maxToSend {
+			res.Write([]byte(`{
+				"collection": {
+					"error": {},
+					"items": [
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } },
+						{ "data": { "name": "command", "value": {} } }
+					]
+				}
+			}`))
+
+			sent += 25
+		} else {
+			res.Write([]byte(`{
+				"collection": {
+					"error": {},
+					"items": []
+				}
+			}`))
+		}
 	})
 }
 
 func serveError(t *testing.T) http.HandlerFunc {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		res.Header().Set("Content-Type", "application/json")
+		res.Write([]byte(`{
+			"collection": {
+				"error": {
+					"code": "123456789",
+					"message": "serving an error for testing purposes"
+				}
+			}
+		}`))
 	})
 }
