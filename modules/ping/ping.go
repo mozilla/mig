@@ -36,11 +36,11 @@ func init() {
 }
 
 type run struct {
-	Parameters params
+	Parameters Params
 	Results    modules.Result
 }
 
-type params struct {
+type Params struct {
 	Destination     string  `json:"destination"`               // ipv4, ipv6 or fqdn.
 	DestinationPort float64 `json:"destinationport,omitempty"` // 16 bits integer. Throws an error when used with icmp. Defaults to 80 otherwise.
 	Protocol        string  `json:"protocol"`                  // icmp, tcp, udp
