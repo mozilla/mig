@@ -8,16 +8,18 @@ package results
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"mig.ninja/mig/client/mig-client-daemon/actions"
+	"mig.ninja/mig/client/mig-client-daemon/ident"
 	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 	"mig.ninja/mig/client/mig-client-daemon/migapi/search"
 	"mig.ninja/mig/modules"
 )
 
 type searchResultsRequest struct {
-	ActionID actions.InternalActionID
+	ActionID ident.Identifier
 }
 
 type searchResultsResponse struct {
@@ -61,8 +63,34 @@ func (handler SearchResultsHandler) ServeHTTP(res http.ResponseWriter, req *http
 		return
 	}
 
+	request := searchResultsRequest{
+		ActionID: ident.Identifier(actionIDs[0]),
+	}
+
+	record, found := handler.actionsCatalog.Lookup(request.ActionID)
+	if !found {
+		res.WriteHeader(http.StatusBadRequest)
+		errMsg := fmt.Sprintf("no such action %s", request.ActionID)
+		response.Encode(&searchResultsResponse{
+			Error:   &errMsg,
+			Results: []modules.Result{},
+		})
+		return
+	}
+
+	results, err := handler.results.Search(record.InternalID, handler.authenticator)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		errMsg := fmt.Sprintf("failde to retrieve results from the MIG API. Error: %s", err.Error())
+		response.Encode(&searchResultsResponse{
+			Error:   &errMsg,
+			Results: []modules.Result{},
+		})
+		return
+	}
+
 	response.Encode(&searchResultsResponse{
 		Error:   nil,
-		Results: []modules.Result{},
+		Results: results,
 	})
 }

@@ -80,7 +80,7 @@ We should get an error if authentication fails.
 			Aggregator:     mockAggregator{},
 			Authenticator:  mockAuthenticator{ShouldSucceed: false},
 			ExpectError:    true,
-			ExpectedStatus: http.StatusForbidden,
+			ExpectedStatus: http.StatusInternalServerError,
 		},
 	}
 
@@ -124,9 +124,15 @@ We should get an error if authentication fails.
 
 func (aggregator mockAggregator) Search(
 	_ actions.InternalActionID,
-	_ authentication.Authenticator,
+	auth authentication.Authenticator,
 ) ([]moduletypes.Result, error) {
 	const numResults = 2
+
+	req, _ := http.NewRequest("GET", "www.google.com", nil)
+	err := auth.Authenticate(req)
+	if err != nil {
+		return []moduletypes.Result{}, err
+	}
 
 	results := make([]moduletypes.Result, numResults)
 	for i := 0; i < numResults; i++ {
