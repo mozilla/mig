@@ -128,7 +128,7 @@ func (aggregator mockAggregator) Search(
 ) ([]moduletypes.Result, error) {
 	const numResults = 2
 
-	req, _ := http.NewRequest("GET", "www.google.com", nil)
+	req, _ := http.NewRequest("GET", "www.mozilla.org", nil)
 	err := auth.Authenticate(req)
 	if err != nil {
 		return []moduletypes.Result{}, err
