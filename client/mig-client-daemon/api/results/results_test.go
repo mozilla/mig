@@ -55,7 +55,7 @@ func TestSearchResultsHandler(t *testing.T) {
 		{
 			Description: `
 We should be able to search for results for a valid action.
-						`,
+			`,
 			ActionID:       validID,
 			Aggregator:     mockAggregator{},
 			Authenticator:  mockAuthenticator{ShouldSucceed: true},
@@ -65,7 +65,7 @@ We should be able to search for results for a valid action.
 		{
 			Description: `
 We should get an error if an invalid action ID is submitted.
-						`,
+			`,
 			ActionID:       ident.Identifier("invalid"),
 			Aggregator:     mockAggregator{},
 			Authenticator:  mockAuthenticator{ShouldSucceed: true},
@@ -75,7 +75,7 @@ We should get an error if an invalid action ID is submitted.
 		{
 			Description: `
 We should get an error if authentication fails.
-						`,
+			`,
 			ActionID:       validID,
 			Aggregator:     mockAggregator{},
 			Authenticator:  mockAuthenticator{ShouldSucceed: false},
