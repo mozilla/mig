@@ -8,6 +8,7 @@ package search
 
 import (
 	"mig.ninja/mig/client/mig-client-daemon/actions"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 	"mig.ninja/mig/modules"
 )
 
@@ -16,5 +17,5 @@ import (
 // This action must be identified by the identifier that the MIG API uses,
 // which can be retrieved by doing a lookup into a `Catalog`.
 type ResultAggregator interface {
-	Search(actions.InternalActionID) ([]modules.Result, error)
+	Search(actions.InternalActionID, authentication.Authenticator) ([]modules.Result, error)
 }

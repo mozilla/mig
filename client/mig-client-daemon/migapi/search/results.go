@@ -15,6 +15,7 @@ import (
 
 	"mig.ninja/mig"
 	"mig.ninja/mig/client/mig-client-daemon/actions"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 	"mig.ninja/mig/modules"
 )
 
@@ -58,7 +59,10 @@ func NewAPIResultAggregator(baseAddr string) APIResultAggregator {
 
 // Search queries the MIG API until it reads all of the results generated as
 // a result of an action being executed by agents.
-func (aggregator APIResultAggregator) Search(actionID actions.InternalActionID) ([]modules.Result, error) {
+func (aggregator APIResultAggregator) Search(
+	actionID actions.InternalActionID,
+	auth authentication.Authenticator,
+) ([]modules.Result, error) {
 	const limitResultsPerRequest = 50
 
 	resultsReceived := 0
@@ -80,7 +84,15 @@ func (aggregator APIResultAggregator) Search(actionID actions.InternalActionID) 
 		endptPath, _ := url.Parse(apiEndptPath)
 		endptURL := baseAddr.ResolveReference(endptPath)
 
-		response, err := http.Get(endptURL.String())
+		client := &http.Client{}
+		request, _ := http.NewRequest("GET", endptURL.String(), nil)
+		err := auth.Authenticate(request)
+		if err != nil {
+			err = fmt.Errorf("authentication failed. Error: %s", err.Error())
+			return []modules.Result{}, err
+		}
+
+		response, err := client.Do(request)
 		if err != nil {
 			err = fmt.Errorf("failed to send request to the MIG API. Error: %s", err.Error())
 			return []modules.Result{}, err

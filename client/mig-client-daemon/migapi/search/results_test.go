@@ -7,6 +7,7 @@
 package search
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -14,12 +15,18 @@ import (
 	"testing"
 
 	"mig.ninja/mig/client/mig-client-daemon/actions"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 )
+
+type mockAuthenticator struct {
+	ShouldSucceed bool
+}
 
 func TestAPIResultAggregatorSearch(t *testing.T) {
 	testCases := []struct {
 		Description        string
 		ActionID           actions.InternalActionID
+		Authenticator      authentication.Authenticator
 		Handler            http.Handler
 		ExpectError        bool
 		NumExpectedResults uint
@@ -29,6 +36,7 @@ func TestAPIResultAggregatorSearch(t *testing.T) {
 We should be able to retrieve a couple of results from a single response.
 			`,
 			ActionID:           actions.InternalActionID(32),
+			Authenticator:      mockAuthenticator{ShouldSucceed: true},
 			Handler:            serveResults(),
 			ExpectError:        false,
 			NumExpectedResults: 2,
@@ -38,15 +46,27 @@ We should be able to retrieve a couple of results from a single response.
 We should be able to retrieve a large number of results from multiple requests.
 			`,
 			ActionID:           actions.InternalActionID(10),
+			Authenticator:      mockAuthenticator{ShouldSucceed: true},
 			Handler:            serveManyResults(t),
 			ExpectError:        false,
 			NumExpectedResults: 125,
 		},
 		{
 			Description: `
+We should get an error if authentication fails.
+			`,
+			ActionID:           actions.InternalActionID(32),
+			Authenticator:      mockAuthenticator{ShouldSucceed: false},
+			Handler:            serveResults(),
+			ExpectError:        true,
+			NumExpectedResults: 0,
+		},
+		{
+			Description: `
 We should get an error if one appears in a response.
 			`,
 			ActionID:           actions.InternalActionID(0),
+			Authenticator:      mockAuthenticator{ShouldSucceed: true},
 			Handler:            http.HandlerFunc(serveError),
 			ExpectError:        true,
 			NumExpectedResults: 0,
@@ -62,7 +82,7 @@ We should get an error if one appears in a response.
 		server := httptest.NewServer(testCase.Handler)
 		results := NewAPIResultAggregator(server.URL)
 
-		foundResults, err := results.Search(testCase.ActionID)
+		foundResults, err := results.Search(testCase.ActionID, testCase.Authenticator)
 
 		gotErr := err != nil
 		if testCase.ExpectError && !gotErr {
@@ -176,7 +196,6 @@ func serveManyResults(t *testing.T) http.HandlerFunc {
 		]
 	}
 }`, itemsJSON)
-			t.Logf("Sending response %s", responseStr)
 			res.Write([]byte(responseStr))
 
 			sent += 25
@@ -204,4 +223,11 @@ func serveError(res http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}`))
+}
+
+func (auth mockAuthenticator) Authenticate(_ *http.Request) error {
+	if auth.ShouldSucceed {
+		return nil
+	}
+	return errors.New("Auth was instructed to fail for test")
 }
