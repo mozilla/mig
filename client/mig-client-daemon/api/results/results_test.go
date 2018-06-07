@@ -55,7 +55,7 @@ func TestSearchResultsHandler(t *testing.T) {
 		{
 			Description: `
 We should be able to search for results for a valid action.
-			`,
+						`,
 			ActionID:       validID,
 			Aggregator:     mockAggregator{},
 			Authenticator:  mockAuthenticator{ShouldSucceed: true},
@@ -65,7 +65,7 @@ We should be able to search for results for a valid action.
 		{
 			Description: `
 We should get an error if an invalid action ID is submitted.
-			`,
+						`,
 			ActionID:       ident.Identifier("invalid"),
 			Aggregator:     mockAggregator{},
 			Authenticator:  mockAuthenticator{ShouldSucceed: true},
@@ -75,7 +75,7 @@ We should get an error if an invalid action ID is submitted.
 		{
 			Description: `
 We should get an error if authentication fails.
-			`,
+						`,
 			ActionID:       validID,
 			Aggregator:     mockAggregator{},
 			Authenticator:  mockAuthenticator{ShouldSucceed: false},
@@ -92,7 +92,7 @@ We should get an error if authentication fails.
 		router.Handle("/v1/results", handler).Methods("GET")
 		server := httptest.NewServer(router)
 
-		reqURL := fmt.Sprintf("%s/v1/results", server.URL)
+		reqURL := fmt.Sprintf("%s/v1/results?action=%s", server.URL, testCase.ActionID)
 		response, err := http.Get(reqURL)
 		if err != nil {
 			t.Fatal(err)
@@ -122,7 +122,10 @@ We should get an error if authentication fails.
 	}
 }
 
-func (aggregator mockAggregator) Search(_ actions.InternalActionID) ([]moduletypes.Result, error) {
+func (aggregator mockAggregator) Search(
+	_ actions.InternalActionID,
+	_ authentication.Authenticator,
+) ([]moduletypes.Result, error) {
 	const numResults = 2
 
 	results := make([]moduletypes.Result, numResults)
