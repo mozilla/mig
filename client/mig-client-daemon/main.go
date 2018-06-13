@@ -19,6 +19,7 @@ import (
 	"mig.ninja/mig/client/mig-client-daemon/config"
 	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 	"mig.ninja/mig/client/mig-client-daemon/migapi/dispatch"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/search"
 )
 
 const configFileName string = ".mig.conf.json"
@@ -37,6 +38,7 @@ func main() {
 	actionsCatalog := actions.NewCatalog()
 	actionDispatcher := dispatch.NewAPIDispatcher(clientConfig.APIServerAddress)
 	pgpAuthenticator := authentication.NewPGPAuthorizer()
+	searchResults := search.NewAPIResultAggregator(clientConfig.APIServerAddress)
 
 	// Set up and launch the HTTP server.
 	topRouter := mux.NewRouter()
@@ -44,6 +46,10 @@ func main() {
 		ActionsCatalog: &actionsCatalog,
 		ActionDispatch: api.ActionDispatchDependencies{
 			Dispatcher:    actionDispatcher,
+			Authenticator: &pgpAuthenticator,
+		},
+		ResultSearch: api.ResultSearchDependencies{
+			Aggregator:    searchResults,
 			Authenticator: &pgpAuthenticator,
 		},
 	})

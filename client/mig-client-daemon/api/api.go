@@ -12,8 +12,10 @@ import (
 	"mig.ninja/mig/client/mig-client-daemon/actions"
 	actionsapi "mig.ninja/mig/client/mig-client-daemon/api/actions"
 	authapi "mig.ninja/mig/client/mig-client-daemon/api/authentication"
+	resultsapi "mig.ninja/mig/client/mig-client-daemon/api/results"
 	"mig.ninja/mig/client/mig-client-daemon/migapi/authentication"
 	"mig.ninja/mig/client/mig-client-daemon/migapi/dispatch"
+	"mig.ninja/mig/client/mig-client-daemon/migapi/search"
 )
 
 // ActionDispatchDependencies contains the dependencies required to set up
@@ -23,11 +25,19 @@ type ActionDispatchDependencies struct {
 	Authenticator *authentication.PGPAuthorizer
 }
 
+// ResultSearchDependencies contains the dependencies required to set up
+// the result search endpoint's request handler.
+type ResultSearchDependencies struct {
+	Aggregator    search.ResultAggregator
+	Authenticator authentication.Authenticator
+}
+
 // Dependencies contains all of the dependencies required to set up all of the
 // request handlers for endpoints served by the API.
 type Dependencies struct {
 	ActionsCatalog *actions.Catalog
 	ActionDispatch ActionDispatchDependencies
+	ResultSearch   ResultSearchDependencies
 }
 
 // RegisterRoutesV1 constructs and populates a subrouter based on `topRouter`
@@ -40,6 +50,7 @@ func RegisterRoutesV1(topRouter *mux.Router, deps Dependencies) {
 	readActionForSigning := actionsapi.NewReadForSigningHandler(deps.ActionsCatalog)
 	signAction := actionsapi.NewProvideSignatureHandler(deps.ActionsCatalog)
 	dispatchAction := actionsapi.NewDispatchHandler(deps.ActionsCatalog, deps.ActionDispatch.Dispatcher, deps.ActionDispatch.Authenticator)
+	searchResults := resultsapi.NewSearchResultsHandler(deps.ActionsCatalog, deps.ResultSearch.Aggregator, deps.ResultSearch.Authenticator)
 
 	router := topRouter.PathPrefix("/v1").Subrouter()
 	router.Handle("/authentication/pgp", getPGPChallenge).Methods("GET")
@@ -49,4 +60,5 @@ func RegisterRoutesV1(topRouter *mux.Router, deps Dependencies) {
 	router.Handle("/actions/{id}/signing", readActionForSigning).Methods("GET")
 	router.Handle("/actions/{id}/sign", signAction).Methods("PUT")
 	router.Handle("/actions/{id}/dispatch", dispatchAction).Methods("PUT")
+	router.Handle("/results", searchResults).Methods("GET")
 }
