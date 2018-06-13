@@ -77,7 +77,7 @@ func (aggregator APIResultAggregator) Search(
 	for {
 		// Approach copied from FetchActionResults in client/client.go
 		apiEndptPath := fmt.Sprintf(
-			"search?type=command&limit=%d&offset=%d&actionid=%d",
+			"/api/v1/search?type=command&limit=%d&offset=%d&actionid=%d",
 			limitResultsPerRequest,
 			resultsReceived,
 			actionID)
