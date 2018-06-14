@@ -33,11 +33,11 @@ func init() {
 }
 
 type run struct {
-	Parameters params
+	Parameters Parameters
 	Results    modules.Result
 }
 
-type params struct {
+type Parameters struct {
 	LocalMAC         []string `json:"localmac,omitempty"`
 	LocalIP          []string `json:"localip,omitempty"`
 	NeighborMAC      []string `json:"neighbormac,omitempty"`

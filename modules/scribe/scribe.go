@@ -47,7 +47,7 @@ func init() {
 }
 
 type run struct {
-	Parameters parameters
+	Parameters Parameters
 	Results    modules.Result
 }
 
@@ -235,15 +235,15 @@ type statistics struct {
 	ExecRuntime string `json:"execruntime"` // Total execution time.
 }
 
-type parameters struct {
+type Parameters struct {
 	ScribeDoc   scribelib.Document `json:"scribedoc"`   // The scribe document for analysis.
 	OnlyTrue    bool               `json:"onlytrue"`    // Only return true evaluations
 	HumanOutput bool               `json:"humanoutput"` // Use scribe extended output mode.
 	JSONOutput  bool               `json:"jsonoutput"`  // Use JSON output mode.
 }
 
-func newParameters() *parameters {
-	return &parameters{}
+func newParameters() *Parameters {
+	return &Parameters{}
 }
 
 // Enhanced privacy mode for scribe module, mask identifiers

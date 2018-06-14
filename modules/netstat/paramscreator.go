@@ -49,7 +49,7 @@ namespaces              enable namespace resolution (linux)
 func (r *run) ParamsCreator() (interface{}, error) {
 	fmt.Println("initializing netstat parameters creation")
 	var err error
-	var p params
+	var p Parameters
 	fmt.Printf("%s\n", help)
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -192,7 +192,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	var p params
+	var p Parameters
 	p.LocalMAC = lm
 	p.NeighborMAC = nm
 	p.LocalIP = li
