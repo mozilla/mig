@@ -26,14 +26,38 @@ type Module interface {
 // configuration data for a module specified by `moduleName`.
 func FromMap(moduleName string, jsonMap map[string]interface{}) (Module, error) {
 	pkg := new(Pkg)
+	ping := new(Ping)
+	file := new(File)
+	scribe := new(Scribe)
+	memory := new(Memory)
+	netstat := new(NetStat)
+	sshkey := new(SSHKey)
+	fswatch := new(FSWatch)
+	audit := new(Audit)
+	agentdestroy := new(AgentDestroy)
+	dispatch := new(Dispatch)
+	timedrift := new(TimeDrift)
+	//yara := new(Yara)
 
 	moduleContainers := map[string]Module{
-		pkg.Name(): pkg,
+		pkg.Name():          pkg,
+		ping.Name():         ping,
+		file.Name():         file,
+		scribe.Name():       scribe,
+		memory.Name():       memory,
+		netstat.Name():      netstat,
+		sshkey.Name():       sshkey,
+		fswatch.Name():      fswatch,
+		audit.Name():        audit,
+		agentdestroy.Name(): agentdestroy,
+		dispatch.Name():     dispatch,
+		timedrift.Name():    timedrift,
+		//yara.Name():    yara,
 	}
 
 	module, found := moduleContainers[moduleName]
 	if !found {
-		return new(InvalidModule), errors.New("Not a recognized module.")
+		return new(InvalidModule), errors.New("not a recognized module")
 	}
 
 	err := module.InitFromMap(jsonMap)
