@@ -156,8 +156,8 @@ type ScribeModule = {
     jsonOutput: bool?
 }
 
-// No parameters
 type TimeDriftModule = {
+    drift: string
 }
 
 type PkgModule = {
@@ -170,8 +170,8 @@ type FileModule = {
         maxDepth: number?,
         matchAll: bool?,
         matchAny: bool?,
-        matchEntireFile: bool??,
-        findMismatchingFiles: bool?,
+        matchEntireFile: bool?,
+        mismatchingContent: string?,
         limit: number?,
         includeFileSha256: bool?,
         decompressFiles: bool?,
@@ -182,7 +182,8 @@ type FileModule = {
         name: string?,
         description: string?
         content: string?,
-        sizeBytes: number?,
+        minSizeBytes: number?,
+        maxSizeBytes: number?,
         modifiedSinceMinutes: number?,
         modifiedAfterMinutes: number?,
         mode: string?,
