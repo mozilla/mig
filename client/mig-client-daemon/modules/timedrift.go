@@ -9,13 +9,14 @@ package modules
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"mig.ninja/mig/modules/timedrift"
 )
 
 // TimeDrift contains the configuration parameters required to run the timedrift module.
 type TimeDrift struct {
-	Drift string `json:"drift"`
+	Drift uint `json:"drift"`
 }
 
 func (module *TimeDrift) Name() string {
@@ -24,7 +25,7 @@ func (module *TimeDrift) Name() string {
 
 func (module *TimeDrift) ToParameters() (interface{}, error) {
 	params := timedrift.Parameters{
-		Drift: module.Drift,
+		Drift: fmt.Sprintf("%ds", module.Drift),
 	}
 	return params, nil
 }
