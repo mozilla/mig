@@ -35,7 +35,7 @@ func init() {
 }
 
 type run struct {
-	Parameters parameters
+	Parameters Parameters
 	Results    modules.Result
 }
 

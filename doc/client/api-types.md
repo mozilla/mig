@@ -231,7 +231,7 @@ type SSHKeyModule = {
 
 type YaraModule = {
     yaraRules: string,
-    fileSearch: string
+    filePaths: []string
 }
 ```
 

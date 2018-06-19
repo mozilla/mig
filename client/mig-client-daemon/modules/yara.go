@@ -9,14 +9,16 @@ package modules
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"mig.ninja/mig/modules/yara"
 )
 
 // Yara contains the configuration parameters required to run the Yara module.
 type Yara struct {
-	Rules      string `json:"yaraRules"`
-	FileSearch string `json:"fileSearch"`
+	Rules string   `json:"yaraRules"`
+	Files []string `json:"filePaths"`
 }
 
 func (module *Yara) Name() string {
@@ -24,9 +26,15 @@ func (module *Yara) Name() string {
 }
 
 func (module *Yara) ToParameters() (interface{}, error) {
+	fileSearches := make([]string, len(module.Files))
+
+	for index := 0; index < len(module.Files); index++ {
+		fileSearches[index] = fmt.Sprintf("-path %s", module.Files[index])
+	}
+
 	params := yara.Parameters{
 		YaraRules:  module.Rules,
-		FileSearch: module.FileSearch,
+		FileSearch: strings.Join(fileSearches, " "),
 	}
 
 	return params, nil
