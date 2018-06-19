@@ -62,10 +62,10 @@ func (module *Memory) ToParameters() (interface{}, error) {
 		MatchAll:    matchAll,
 	}
 	search := memory.Search{
-		Names:     module.Names,
-		Libraries: module.Libraries,
-		Bytes:     module.Bytes,
-		Contents:  module.Contents,
+		Names:     module.Search.Names,
+		Libraries: module.Search.Libraries,
+		Bytes:     module.Search.Bytes,
+		Contents:  module.Search.Contents,
 		Options:   options,
 	}
 	params := memory.Parameters{
