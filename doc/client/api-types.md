@@ -157,7 +157,7 @@ type ScribeModule = {
 }
 
 type TimeDriftModule = {
-    drift: string
+    drift: int?
 }
 
 type PkgModule = {
