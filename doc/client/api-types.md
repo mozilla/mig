@@ -180,7 +180,6 @@ type FileModule = {
     search: {
         path: string,
         name: string?,
-        description: string?
         content: string?,
         minSizeBytes: number?,
         maxSizeBytes: number?,
@@ -206,11 +205,10 @@ type MemoryModule = {
         matchAll: bool?
     },
     search: {
-        description: string?,
-        name: string?,
-        library: string?,
-        bytes: string?,
-        content: string?
+        names: []string,
+        libraries: []string,
+        bytes: []string,
+        contents: []string
     }
 }
 
