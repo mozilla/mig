@@ -25,6 +25,7 @@ func FromMap(jsonMap map[string]interface{}) (Query, error) {
 		new(ByAgentDetails),
 		new(ByHostDetails),
 		new(ByTag),
+		new(All),
 	}
 
 	for _, query := range queryContainers {
