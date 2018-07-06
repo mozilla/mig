@@ -69,7 +69,7 @@ func (r *run) ParamsCreator() (interface{}, error) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		var label string
-		var search search
+		var search Search
 		for {
 			fmt.Println("Give a name to this search, or 'done' to exit")
 			fmt.Printf("label> ")
@@ -223,7 +223,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	var s search
+	var s Search
 	s.Names = names
 	s.Libraries = libraries
 	s.Bytes = bytes

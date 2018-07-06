@@ -1,4 +1,4 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
+/// This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
@@ -12,11 +12,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	yara "github.com/hillu/go-yara"
 	"regexp"
 	"runtime"
 	"strings"
 	"time"
+
+	yara "github.com/hillu/go-yara"
 
 	"mig.ninja/mig/modules"
 	"mig.ninja/mig/modules/file"
@@ -34,7 +35,7 @@ func init() {
 }
 
 type run struct {
-	Parameters parameters
+	Parameters Parameters
 	Results    modules.Result
 }
 
@@ -220,7 +221,7 @@ type YaraElements struct {
 	Matches []YaraMatch // Module returns a list of matches
 }
 
-type parameters struct {
+type Parameters struct {
 	YaraRules  string `json:"yara"`       // Yara rules as a string
 	FileSearch string `json:"filesearch"` // file module parameters for file search
 }

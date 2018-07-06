@@ -21,3 +21,8 @@ tmp/
 workers/*/*.html
 modules/*/*.html
 tools/vagrant/.vagrant
+
+" Want to ignore changes to these 'scripts' because dangerous configuration
+" values are hardcoded into them at present.
+client/mig-client-daemon/signaction.go
+client/mig-client-daemon/genauthtoken.go

@@ -16,12 +16,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"time"
+
 	"github.com/mozilla/masche/listlibs"
 	"github.com/mozilla/masche/memaccess"
 	"github.com/mozilla/masche/process"
 	"mig.ninja/mig/modules"
-	"regexp"
-	"time"
 )
 
 var debug bool = false
@@ -38,33 +39,33 @@ func init() {
 }
 
 type run struct {
-	Parameters params
+	Parameters Parameters
 	Results    modules.Result
 }
 
-type params struct {
-	Searches map[string]search `json:"searches,omitempty"`
+type Parameters struct {
+	Searches map[string]Search `json:"searches,omitempty"`
 }
 
-func newParameters() *params {
-	var p params
-	p.Searches = make(map[string]search)
+func newParameters() *Parameters {
+	var p Parameters
+	p.Searches = make(map[string]Search)
 	return &p
 }
 
-type search struct {
+type Search struct {
 	Description string   `json:"description,omitempty"`
 	Names       []string `json:"names,omitempty"`
 	Libraries   []string `json:"libraries,omitempty"`
 	Bytes       []string `json:"bytes,omitempty"`
 	Contents    []string `json:"contents,omitempty"`
-	Options     options  `json:"options,omitempty"`
+	Options     Options  `json:"options,omitempty"`
 	checks      []check
 	checkmask   checkType
 	isactive    bool
 }
 
-type options struct {
+type Options struct {
 	Offset      float64 `json:"offset,omitempty"`
 	MaxLength   float64 `json:"maxlength,omitempty"`
 	LogFailures bool    `json:"logfailures,omitempty"`
@@ -97,7 +98,7 @@ type searchresult []matchedps
 
 type matchedps struct {
 	Process psres  `json:"process"`
-	Search  search `json:"search"`
+	Search  Search `json:"search"`
 }
 
 type psres struct {
@@ -128,7 +129,7 @@ func newResults() *modules.Result {
 	return &modules.Result{Elements: make(searchResults)}
 }
 
-func (s *search) makeChecks() (err error) {
+func (s *Search) makeChecks() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("makeChecks() -> %v", e)
@@ -187,12 +188,12 @@ func (s *search) makeChecks() (err error) {
 	return
 }
 
-func (s *search) activate() {
+func (s *Search) activate() {
 	s.isactive = true
 	return
 }
 
-func (s *search) deactivate() {
+func (s *Search) deactivate() {
 	s.isactive = false
 	return
 }
@@ -446,7 +447,7 @@ func (r *run) evaluateProcess(proc process.Process) (err error) {
 }
 
 // checkName compares the "name" (binary full path) of a process against name checks
-func (s search) checkName(proc process.Process, procname string) (matchedall bool) {
+func (s Search) checkName(proc process.Process, procname string) (matchedall bool) {
 	matchedall = true
 	if s.checkmask&checkName == 0 {
 		// this search has no name check
@@ -479,7 +480,7 @@ func (s search) checkName(proc process.Process, procname string) (matchedall boo
 
 // checkLibraries retrieves the linked libraries of a process and compares them with the
 // regexes of library checks
-func (s search) checkLibraries(proc process.Process, procname string) (matchedall bool) {
+func (s Search) checkLibraries(proc process.Process, procname string) (matchedall bool) {
 	matchedall = true
 	if s.checkmask&checkLib == 0 {
 		// this search has no library check

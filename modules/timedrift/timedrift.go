@@ -16,11 +16,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"mig.ninja/mig/modules"
 	"net"
 	"os"
 	"strings"
 	"time"
+
+	"mig.ninja/mig/modules"
 )
 
 type module struct {
@@ -35,12 +36,12 @@ func init() {
 }
 
 type run struct {
-	Parameters params
+	Parameters Parameters
 	Results    modules.Result
 }
 
-// a simple parameters structure, the format is arbitrary
-type params struct {
+// Parameters is a simple parameters structure, the format is arbitrary
+type Parameters struct {
 	Drift string `json:"drift"`
 }
 
@@ -346,7 +347,7 @@ If no drift is set, the module only returns local time.
 func (r *run) ParamsCreator() (interface{}, error) {
 	fmt.Println("initializing timedrift parameters creation")
 	var err error
-	var p params
+	var p Parameters
 	printHelp(false)
 	scanner := bufio.NewScanner(os.Stdin)
 	for {

@@ -50,7 +50,7 @@ icmp, tcp and udp ping.
 func (r *run) ParamsParser(args []string) (interface{}, error) {
 	var (
 		err      error
-		pa       params
+		pa       Params
 		d, p     string
 		dp, c, t float64
 		fs       flag.FlagSet
@@ -83,7 +83,7 @@ func (r *run) ParamsParser(args []string) (interface{}, error) {
 func (r *run) ParamsCreator() (interface{}, error) {
 	var (
 		err error
-		p   params
+		p   Params
 	)
 	printHelp(false)
 	scanner := bufio.NewScanner(os.Stdin)

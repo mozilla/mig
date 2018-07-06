@@ -57,18 +57,18 @@ func init() {
 }
 
 type run struct {
-	Parameters parameters
+	Parameters Parameters
 	Results    modules.Result
 }
 
-// parameters describes the parameters the file module uses as input upon
+// Parameters describes the parameters the file module uses as input upon
 // invocation
-type parameters struct {
+type Parameters struct {
 	Searches map[string]*Search `json:"searches,omitempty"`
 }
 
-func newParameters() *parameters {
-	var p parameters
+func newParameters() *Parameters {
+	var p Parameters
 	p.Searches = make(map[string]*Search)
 	return &p
 }
@@ -86,7 +86,7 @@ type Search struct {
 	SHA1             []string `json:"sha1,omitempty"`
 	SHA2             []string `json:"sha2,omitempty"`
 	SHA3             []string `json:"sha3,omitempty"`
-	Options          options  `json:"options,omitempty"`
+	Options          Options  `json:"options,omitempty"`
 	checks           []check
 	checkmask        checkType
 	isactive         bool
@@ -96,7 +96,7 @@ type Search struct {
 	filesMatchingAll []string              // If Options.MatchAll, stores files matching all checks
 }
 
-type options struct {
+type Options struct {
 	MaxDepth     float64  `json:"maxdepth"`
 	MaxErrors    float64  `json:"maxerrors"`
 	RemoteFS     bool     `json:"remotefs,omitempty"`

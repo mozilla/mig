@@ -50,7 +50,7 @@ func init() {
 }
 
 type run struct {
-	Parameters parameters
+	Parameters Parameters
 	Results    modules.Result
 }
 
@@ -344,11 +344,11 @@ type Elements struct {
 
 // parameters contains the parameters used to control how the module executes a given
 // action
-type parameters struct {
+type Parameters struct {
 	Paths    []string `json:"paths"`    // Used to override default module search paths
 	MaxDepth int      `json:"maxdepth"` // Override default maximum search depth
 }
 
-func newParameters() *parameters {
-	return &parameters{}
+func newParameters() *Parameters {
+	return &Parameters{}
 }

@@ -75,11 +75,21 @@ func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 	}
 	logChan <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Debug()
 	ctx.OSIdent, err = getIssue()
-	if err == nil {
+
+	// Here we check that we read more than '\S'.
+	// See https://access.redhat.com/solutions/1138953
+	if err == nil && len(ctx.OSIdent) > 3 {
 		logChan <- mig.Log{Desc: "using /etc/issue for distribution ident"}.Debug()
 		goto haveident
 	}
 	logChan <- mig.Log{Desc: fmt.Sprintf("getIssue() failed: %v", err)}.Debug()
+
+	ctx.OSIdent, err = getOSRelease()
+	if err == nil {
+		logChan <- mig.Log{Desc: "using /etc/os-release for distribution ident"}.Debug()
+		goto haveident
+	}
+
 	logChan <- mig.Log{Desc: "warning, no valid linux os identification could be found"}.Info()
 haveident:
 	logChan <- mig.Log{Desc: fmt.Sprintf("Ident is %s", ctx.OSIdent)}.Debug()
@@ -130,6 +140,20 @@ func getIssue() (initname string, err error) {
 	}
 	initname = fmt.Sprintf("%s", issue[0:loc])
 	return
+}
+
+// getOSRelease reads /etc/os-release to retrieve the agent's ident from the
+// first line.
+func getOSRelease() (string, error) {
+	contents, err := ioutil.ReadFile("/etc/os-release")
+	if err != nil {
+		return "", fmt.Errorf("getOSRelease() -> %v", err)
+	}
+	index := bytes.IndexByte(contents, byte('\n'))
+	if index < 0 {
+		return "", fmt.Errorf("getOSRelease() -> OS release name not found")
+	}
+	return string(contents[0:index]), nil
 }
 
 // getInit parses /proc/1/cmdline to find out which init system is used
