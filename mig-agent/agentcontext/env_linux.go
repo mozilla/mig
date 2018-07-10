@@ -89,6 +89,7 @@ func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 		logChan <- mig.Log{Desc: "using /etc/os-release for distribution ident"}.Debug()
 		goto haveident
 	}
+	log <- mig.Log{Desc: fmt.Sprintf("getOSRelease() failed: %v", err)}.Debug()
 
 	logChan <- mig.Log{Desc: "warning, no valid linux os identification could be found"}.Info()
 haveident:
