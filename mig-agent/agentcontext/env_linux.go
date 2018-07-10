@@ -61,47 +61,64 @@ func findHostname(orig_ctx AgentContext) (ctx AgentContext, err error) {
 // findOSInfo gathers information about the Linux distribution if possible, and
 // determines the init type of the system.
 func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
+	defer func() { logChan <- mig.Log{Desc: "leaving findOSInfo()"}.Debug() }()
+
 	ctx = orig_ctx
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("findOSInfo() -> %v", e)
-		}
-		logChan <- mig.Log{Desc: "leaving findOSInfo()"}.Debug()
-	}()
-	ctx.OSIdent, err = getLSBRelease()
-	if err == nil {
-		logChan <- mig.Log{Desc: "using lsb release for distribution ident"}.Debug()
-		goto haveident
-	}
-	logChan <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Debug()
-	ctx.OSIdent, err = getIssue()
 
-	// Here we check that we read more than '\S'.
-	// See https://access.redhat.com/solutions/1138953
-	if err == nil && len(ctx.OSIdent) > 3 {
-		logChan <- mig.Log{Desc: "using /etc/issue for distribution ident"}.Debug()
-		goto haveident
+	ctx.OSIdent, err = getIdent()
+	if err != nil {
+		logChan <- mig.Log{Desc: fmt.Sprintf("findOSInfo() -> %v", err)}.Debug()
+		logChan <- mig.Log{Desc: "warning, no valid linux os identification could be found"}.Info()
+		return ctx, fmt.Errorf("findOSInfo() -> %v", err)
 	}
-	logChan <- mig.Log{Desc: fmt.Sprintf("getIssue() failed: %v", err)}.Debug()
-
-	ctx.OSIdent, err = getOSRelease()
-	if err == nil {
-		logChan <- mig.Log{Desc: "using /etc/os-release for distribution ident"}.Debug()
-		goto haveident
-	}
-	log <- mig.Log{Desc: fmt.Sprintf("getOSRelease() failed: %v", err)}.Debug()
-
-	logChan <- mig.Log{Desc: "warning, no valid linux os identification could be found"}.Info()
-haveident:
 	logChan <- mig.Log{Desc: fmt.Sprintf("Ident is %s", ctx.OSIdent)}.Debug()
 
 	ctx.Init, err = getInit()
 	if err != nil {
-		panic(err)
+		logChan <- mig.Log{Desc: fmt.Sprintf("findOSInfo() -> %v", err)}.Debug()
+		return ctx, fmt.Errorf("findOSInfo() -> %v", err)
 	}
 	logChan <- mig.Log{Desc: fmt.Sprintf("Init is %s", ctx.Init)}.Debug()
 
 	return
+}
+
+func getIdent() (string, error) {
+	methods := []struct {
+		name       string
+		findFn     func() (string, error)
+		validateFn func(string, error) bool
+	}{
+		{
+			name:       "getLSBRelease",
+			successLog: "using lsb release for distribution ident",
+			findFn:     getLSBRelease,
+			validateFn: func(_ string, err error) { err != nil },
+		},
+		{
+			// Here we check that we read more than '\S'.
+			// See https://access.redhat.com/solutions/1138953
+			name:       "getIssue",
+			successLog: "using /etc/issue for distribution ident",
+			findFn:     getIssue,
+			validateFn: func(issueName string, err error) { err != nil && len(issueName) > 3 },
+		},
+		{
+			name:       "getOSRelease",
+			successLog: "using /etc/os-release for distribution ident",
+			findFn:     getOSRelease,
+			validateFn: func(_ string, err error) { err != nil },
+		},
+	}
+
+	for _, findMethod := range methods {
+		ident, err := findMethod.findFn()
+		if !findMethod.validateFn(ident, err) {
+			return "", fmt.Errorf("%s failed: %v", findMethod.name, err)
+		}
+		logChan <- mig.Log{Desc: findMethod.successLog}.Debug()
+		return ident, nil
+	}
 }
 
 // getLSBRelease reads the linux identity from lsb_release -a
