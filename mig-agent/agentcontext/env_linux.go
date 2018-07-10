@@ -86,6 +86,7 @@ func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 func getIdent() (string, error) {
 	methods := []struct {
 		name       string
+		successLog string
 		findFn     func() (string, error)
 		validateFn func(string, error) bool
 	}{
