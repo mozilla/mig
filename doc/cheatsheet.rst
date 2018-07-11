@@ -325,7 +325,7 @@ mig-agent-search
 
 `mig-agent-search` is a small client that lists agents based on a query. It is
 useful to test target queries before using them live. You can obtain it via `go
-get mig.ninja/mig/client/mig-agent-search`.
+get github.com/mozilla/mig/client/mig-agent-search`.
 
 .. code:: bash
 

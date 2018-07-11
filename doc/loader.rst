@@ -155,7 +155,7 @@ Once complete, build the loader binary with your configuration file.
     # test if the loader configuration variable contains something different than the default value
     # and if so, replace the link to the default configuration with the provided configuration
     if [ conf/mig-loader-myenv.go.inc != "conf/mig-loader-conf.go.inc" ]; then rm mig-loader/configuration.go; cp conf/mig-loader-myenv.go.inc mig-loader/configuration.go; fi
-    GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go build  -o bin/linux/amd64/mig-loader -ldflags "-X mig.ninja/mig.Version=20160512-0.9fe5f23.dev" mig.ninja/mig/mig-loader
+    GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go build  -o bin/linux/amd64/mig-loader -ldflags "-X github.com/mozilla/mig.Version=20160512-0.9fe5f23.dev" github.com/mozilla/mig/mig-loader
 
 You will end up with a mig-loader binary in ``bin/linux/amd64`` you can copy into
 your manifest when you create it in a later step.
@@ -402,7 +402,7 @@ based, so first we make a loader package using our loader configuration.
     # test if the loader configuration variable contains something different than the default value
     # and if so, replace the link to the default configuration with the provided configuration
     if [ conf/mig-loader-myenv.go.inc != "conf/mig-loader-conf.go.inc" ]; then rm mig-loader/configuration.go; cp conf/mig-loader-myenv.go.inc mig-loader/configuration.go; fi
-    GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go build  -o bin/linux/amd64/mig-loader -ldflags "-X mig.ninja/mig.Version=20160516-0.8ba7319.dev" mig.ninja/mig/mig-loader
+    GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go build  -o bin/linux/amd64/mig-loader -ldflags "-X github.com/mozilla/mig.Version=20160516-0.8ba7319.dev" github.com/mozilla/mig/mig-loader
     rm -fr tmp
     install -s -D -m 0755 bin/linux/amd64/mig-loader tmp/sbin/mig-loader
     install -D -m 0644 LICENSE tmp/usr/share/doc/mig-loader/copyright

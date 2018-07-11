@@ -22,11 +22,11 @@ USER mig
 # Build the various tools that are found in a typical MIG environment.
 RUN export GOPATH=/go && \
     cd /go/src/mig.ninja/mig && \
-    go install mig.ninja/mig/mig-agent && \
-    go install mig.ninja/mig/mig-api && \
-    go install mig.ninja/mig/mig-scheduler && \
-    go install mig.ninja/mig/client/mig-console && \
-    go install mig.ninja/mig/client/mig && \
+    go install github.com/mozilla/mig/mig-agent && \
+    go install github.com/mozilla/mig/mig-api && \
+    go install github.com/mozilla/mig/mig-scheduler && \
+    go install github.com/mozilla/mig/client/mig-console && \
+    go install github.com/mozilla/mig/client/mig && \
     cp /go/src/mig.ninja/mig/tools/docker_start.sh /mig/docker_start.sh && \
     chmod +x /mig/docker_start.sh
 

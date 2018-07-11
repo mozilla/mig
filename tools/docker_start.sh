@@ -13,11 +13,11 @@ fail() {
 standalone_configure() {
 	echo Performing initial container configuration...
 
-	go install mig.ninja/mig/mig-scheduler || fail
-	go install mig.ninja/mig/mig-api || fail
-	go install -tags 'modmemory' mig.ninja/mig/client/mig || fail
-	go install -tags 'modmemory' mig.ninja/mig/client/mig-console || fail
-	go install -tags 'modmemory' mig.ninja/mig/mig-agent || fail
+	go install github.com/mozilla/mig/mig-scheduler || fail
+	go install github.com/mozilla/mig/mig-api || fail
+	go install -tags 'modmemory' github.com/mozilla/mig/client/mig || fail
+	go install -tags 'modmemory' github.com/mozilla/mig/client/mig-console || fail
+	go install -tags 'modmemory' github.com/mozilla/mig/mig-agent || fail
 
 	sudo sh -c "echo 'host all all 127.0.0.1/32 password' >> /etc/postgresql/9.5/main/pg_hba.conf"
 	sudo service postgresql restart || fail

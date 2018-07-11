@@ -60,7 +60,7 @@ Then retrieve MIG's source code using go get:
 
 .. code:: bash
 
-        $ go get mig.ninja/mig
+        $ go get github.com/mozilla/mig
 
 ``go get`` will place MIG under ``$GOPATH/src/mig.ninja/mig``. If you want you can run
 ``make test`` under this directory to verify the tests execute and ensure your go environment
@@ -69,18 +69,18 @@ is setup correctly.
 .. code:: bash
 
         $ make test
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/
-        ok      mig.ninja/mig/modules   0.103s
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/agentdestroy
-        ok      mig.ninja/mig/modules/agentdestroy      0.003s
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/example
-        ok      mig.ninja/mig/modules/example   0.003s
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/examplepersist
-        ok      mig.ninja/mig/modules/examplepersist    0.002s
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/file
-        ok      mig.ninja/mig/modules/file      0.081s
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/fswatch
-        ok      mig.ninja/mig/modules/fswatch   0.003s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/
+        ok      github.com/mozilla/mig/modules   0.103s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/agentdestroy
+        ok      github.com/mozilla/mig/modules/agentdestroy      0.003s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/example
+        ok      github.com/mozilla/mig/modules/example   0.003s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/examplepersist
+        ok      github.com/mozilla/mig/modules/examplepersist    0.002s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/file
+        ok      github.com/mozilla/mig/modules/file      0.081s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/fswatch
+        ok      github.com/mozilla/mig/modules/fswatch   0.003s
         ...
 
 Deploy the Postgres database
@@ -792,7 +792,7 @@ or ``go install``.
 
 .. code:: bash
 
-        $ go install -tags 'modnodefaults modmemory' mig.ninja/mig/mig-agent
+        $ go install -tags 'modnodefaults modmemory' github.com/mozilla/mig/mig-agent
 
 For details on the various tags that can be specified, see the source of the
 `modulepack package`_.
