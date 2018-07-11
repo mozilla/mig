@@ -28,7 +28,7 @@ standalone_configure() {
 		sudo -u postgres sh -c "psql -c \"ALTER ROLE $user WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD '$dbpass';\"" || fail
 	done
 	sudo -u postgres sh -c "psql -c 'CREATE DATABASE mig';" || fail
-	sudo -u postgres sh -c "psql -f /go/src/mig.ninja/mig/database/schema.sql mig;"
+	sudo -u postgres sh -c "psql -f /go/src/github.com/mozilla/mig/database/schema.sql mig;"
 
 	sudo sh -c "cat > /etc/supervisor/conf.d/mig-scheduler.inactive << EOF
 [program:mig-scheduler]
@@ -85,12 +85,12 @@ EOF"
 	sudo service postgresql stop
 
 	sudo mkdir -p /etc/mig || fail
-	sudo sh -c "cat /go/src/mig.ninja/mig/tools/api.cfg.demo | \
+	sudo sh -c "cat /go/src/github.com/mozilla/mig/tools/api.cfg.demo | \
 		sed \"s,APIPASS,${dbpass},\" > /etc/mig/api.cfg.demo"
-	sudo sh -c "cat /go/src/mig.ninja/mig/tools/scheduler.cfg.demo | \
+	sudo sh -c "cat /go/src/github.com/mozilla/mig/tools/scheduler.cfg.demo | \
 		sed \"s,SCHEDULERDBPASS,${dbpass},\" | \
 		sed \"s,SCHEDULERMQPASS,${mqpass},\" > /etc/mig/scheduler.cfg.demo"
-	sudo sh -c "cat /go/src/mig.ninja/mig/tools/mig-agent.cfg.demo | \
+	sudo sh -c "cat /go/src/github.com/mozilla/mig/tools/mig-agent.cfg.demo | \
 		sed \"s,AGENTPASS,${mqpass},\" > /etc/mig/mig-agent.cfg.demo"
 }
 
@@ -175,7 +175,7 @@ start_test() {
 	# Sleep a number of seconds to give the agent time to register before we run the
 	# test, the heartbeat interval is 30 seconds so 45 should be sufficient
 	sleep 45
-	mig -i /go/src/mig.ninja/mig/actions/integration_tests.json || exit 1
+	mig -i /go/src/github.com/mozilla/mig/actions/integration_tests.json || exit 1
 }
 
 # Start demo environment, just spawns a shell.

@@ -18,6 +18,6 @@ sudo -u postgres sh -c "psql -c \"ALTER ROLE migscheduler WITH NOSUPERUSER INHER
 
 # Add the schema
 sudo -u postgres sh -c "psql -c 'CREATE DATABASE mig';" || exit 1
-sudo -u postgres sh -c "psql -f /go/src/mig.ninja/mig/database/schema.sql mig;"
+sudo -u postgres sh -c "psql -f /go/src/github.com/mozilla/mig/database/schema.sql mig;"
 
 sudo service postgresql stop || exit 1
