@@ -6,7 +6,7 @@
 // - Julien Vehent jvehent@mozilla.com [:ulfr]
 // - Rob Murtha robmurtha@gmail.com [:robmurtha]
 
-package netstat /* import "mig.ninja/mig/modules/netstat" */
+package netstat /* import "github.com/mozilla/mig/modules/netstat" */
 
 import (
 	"bufio"

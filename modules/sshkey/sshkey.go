@@ -5,7 +5,7 @@
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
 // Package sshkey implements the sshkey module in the agent
-package sshkey /* import "mig.ninja/mig/modules/sshkey" */
+package sshkey /* import "github.com/mozilla/mig/modules/sshkey" */
 
 import (
 	"bytes"
@@ -19,8 +19,8 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/ssh"
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/modules/file"
+	"github.com/mozilla/mig/modules"
+	"github.com/mozilla/mig/modules/file"
 )
 
 // candidateRegex is the default content search regex we apply to locate private and

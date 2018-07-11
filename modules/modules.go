@@ -8,7 +8,7 @@
 For a guide on how to write modules, head over to
 http://mig.mozilla.org/doc/modules.rst.html
 */
-package modules /* import "mig.ninja/mig/modules" */
+package modules /* import "github.com/mozilla/mig/modules" */
 
 import (
 	"bufio"

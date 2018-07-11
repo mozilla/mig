@@ -21,10 +21,10 @@ import (
 	"time"
 
 	"github.com/streadway/amqp"
-	"mig.ninja/mig"
-	"mig.ninja/mig/mig-agent/agentcontext"
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/service"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/mig-agent/agentcontext"
+	"github.com/mozilla/mig/modules"
+	"github.com/mozilla/mig/service"
 )
 
 // publication lock is used to prevent publication when the channels are not

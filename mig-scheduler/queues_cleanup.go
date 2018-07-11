@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/streadway/amqp"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 // QueuesCleanup deletes rabbitmq queues of endpoints that no

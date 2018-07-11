@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package client /* import "mig.ninja/mig/client" */
+package client /* import "github.com/mozilla/mig/client" */
 
 import (
 	"bufio"
@@ -28,9 +28,9 @@ import (
 	"github.com/jvehent/cljs"
 	"golang.org/x/crypto/openpgp"
 	"gopkg.in/gcfg.v1"
-	"mig.ninja/mig"
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/pgp"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/modules"
+	"github.com/mozilla/mig/pgp"
 )
 
 var version string

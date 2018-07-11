@@ -9,7 +9,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 	"os"
 	"os/exec"
 )

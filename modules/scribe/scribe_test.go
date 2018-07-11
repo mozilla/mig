@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package scribe /* import "mig.ninja/mig/modules/scribe" */
+package scribe /* import "github.com/mozilla/mig/modules/scribe" */
 
 import (
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/testutil"
 	"testing"
 )
 

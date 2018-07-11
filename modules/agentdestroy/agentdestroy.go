@@ -8,13 +8,13 @@
 that has been upgraded. This module will refuse to suicide, meaning that
 an agent will not run this module against itself
 */
-package agentdestroy /* import "mig.ninja/mig/modules/agentdestroy" */
+package agentdestroy /* import "github.com/mozilla/mig/modules/agentdestroy" */
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/osext"
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 	"os"
 	"os/exec"
 	"runtime"

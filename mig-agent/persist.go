@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"mig.ninja/mig"
-	"mig.ninja/mig/mig-agent/agentcontext"
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/mig-agent/agentcontext"
+	"github.com/mozilla/mig/modules"
 
 	"gopkg.in/gcfg.v1"
 )

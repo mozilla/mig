@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package search /* import "mig.ninja/mig/database/search" */
+package search /* import "github.com/mozilla/mig/database/search" */
 
 import (
 	"fmt"

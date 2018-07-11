@@ -8,8 +8,8 @@ package main
 import (
 	"fmt"
 	"gopkg.in/gcfg.v1"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/client"
 	"path"
 )
 

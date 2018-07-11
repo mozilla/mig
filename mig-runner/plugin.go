@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 	"os/exec"
 	"path"
 )

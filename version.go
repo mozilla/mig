@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package mig /* import "mig.ninja/mig" */
+package mig /* import "github.com/mozilla/mig" */
 
 // Version can be set at compile time to indicate the version of MIG
 // components. You'd typically want to set this during install using flags

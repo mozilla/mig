@@ -6,7 +6,7 @@
 
 // yara module implementation for MIG.
 
-package yara /* import "mig.ninja/mig/modules/yara" */
+package yara /* import "github.com/mozilla/mig/modules/yara" */
 
 import (
 	"bytes"
@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/modules/file"
+	"github.com/mozilla/mig/modules"
+	"github.com/mozilla/mig/modules/file"
 )
 
 type module struct {

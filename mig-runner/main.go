@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 var ctx Context

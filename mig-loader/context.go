@@ -12,9 +12,9 @@ import (
 	"os"
 	"path"
 
-	"mig.ninja/mig"
-	"mig.ninja/mig/mig-agent/agentcontext"
-	"mig.ninja/mig/service"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/mig-agent/agentcontext"
+	"github.com/mozilla/mig/service"
 	"runtime"
 )
 

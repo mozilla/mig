@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package memory /* import "mig.ninja/mig/modules/memory" */
+package memory /* import "github.com/mozilla/mig/modules/memory" */
 
 import (
 	"bufio"

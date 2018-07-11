@@ -9,5 +9,5 @@
 package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/fswatch"
+	_ "github.com/mozilla/mig/modules/fswatch"
 )

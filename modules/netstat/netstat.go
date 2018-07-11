@@ -7,7 +7,7 @@
 // netstat is a module that retrieves network information about the endpoint,
 // such as mac addresses, local and connected IPs, listening TCP and UDP
 // sockets and peers
-package netstat /* import "mig.ninja/mig/modules/netstat" */
+package netstat /* import "github.com/mozilla/mig/modules/netstat" */
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 )
 
 type module struct {

@@ -4,14 +4,14 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package fswatch /* import "mig.ninja/mig/modules/fswatch" */
+package fswatch /* import "github.com/mozilla/mig/modules/fswatch" */
 
 import (
 	"encoding/json"
 	"fmt"
 	"runtime"
 
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 )
 
 type module struct {

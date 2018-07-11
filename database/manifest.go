@@ -4,12 +4,12 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package database /* import "mig.ninja/mig/database" */
+package database /* import "github.com/mozilla/mig/database" */
 
 import (
 	"fmt"
 	_ "github.com/lib/pq"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 // Add a new manifest record to the database

@@ -4,10 +4,10 @@
 //
 // Contributor: Dustin J. Mitchell <dustin@mozilla.com>
 
-package timedrift /* import "mig.ninja/mig/modules/timedrift" */
+package timedrift /* import "github.com/mozilla/mig/modules/timedrift" */
 
 import (
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/testutil"
 	"testing"
 )
 

@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/jvehent/cljs"
-	"mig.ninja/mig"
-	migdbsearch "mig.ninja/mig/database/search"
+	"github.com/mozilla/mig"
+	migdbsearch "github.com/mozilla/mig/database/search"
 )
 
 type pagination struct {

@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package database /* import "mig.ninja/mig/database" */
+package database /* import "github.com/mozilla/mig/database" */
 
 import (
 	"database/sql"
@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"time"
 
-	"mig.ninja/mig"
-	"mig.ninja/mig/database/search"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/database/search"
 
 	_ "github.com/lib/pq"
 )

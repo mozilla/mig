@@ -9,7 +9,7 @@
 // match hashes in md5, sha1, sha256, sha384, sha512, sha3_224, sha3_256, sha3_384
 // and sha3_512.  The filesystem can be searched using patterns, as described in
 // the Parameters documentation at http://mig.mozilla.org/doc/module_file.html.
-package file /* import "mig.ninja/mig/modules/file" */
+package file /* import "github.com/mozilla/mig/modules/file" */
 
 import (
 	"bufio"
@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/sha3"
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 
 	"compress/gzip"
 )

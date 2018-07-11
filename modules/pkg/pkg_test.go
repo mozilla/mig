@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package pkg /* import "mig.ninja/mig/modules/pkg" */
+package pkg /* import "github.com/mozilla/mig/modules/pkg" */
 
 import (
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/testutil"
 	"testing"
 )
 

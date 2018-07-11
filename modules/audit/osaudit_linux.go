@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package audit /* import "mig.ninja/mig/modules/audit" */
+package audit /* import "github.com/mozilla/mig/modules/audit" */
 
 import (
 	"encoding/json"
