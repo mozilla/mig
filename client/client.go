@@ -838,6 +838,23 @@ func (cli Client) PostNewLoader(le mig.LoaderEntry) (newle mig.LoaderEntry, err 
 	return
 }
 
+func debugRequestInfo(req *http.Request) string {
+	debugInfo := struct {
+		Method  string              `json:"method"`
+		URL     string              `json:"url"`
+		Proto   string              `json:"protocol":`
+		Headers map[string][]string `json:"headers"`
+	}{
+		Method:  req.Method,
+		URL:     req.URL.String(),
+		Proto:   req.Proto,
+		Headers: req.Header,
+	}
+
+	encoded, _ := json.Marshal(debugInfo)
+	return string(encoded)
+}
+
 // PostAction submits a MIG Action to the API and returns the reflected action with API ID
 func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	defer func() {
@@ -845,6 +862,14 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 			err = fmt.Errorf("PostAction() -> %v", e)
 		}
 	}()
+
+	endptUrl, err := url.Parse(cli.Conf.API.URL)
+	if err != nil {
+		panic(fmt.Errorf("error parsing API base URL from config (%s): %s", cli.Conf.API.URL, err.Error()))
+	}
+	endptPath, _ := url.Parse("action/create/")
+	endptUrl = endptUrl.ResolveReference(endptPath)
+
 	a.SyntaxVersion = mig.ActionVersion
 	// serialize
 	ajson, err := json.Marshal(a)
@@ -853,7 +878,7 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	}
 	actionstr := string(ajson)
 	data := url.Values{"action": {actionstr}}
-	r, err := http.NewRequest("POST", cli.Conf.API.URL+"action/create/", strings.NewReader(data.Encode()))
+	r, err := http.NewRequest("POST", endptUrl.String(), strings.NewReader(data.Encode()))
 	if err != nil {
 		err = fmt.Errorf("error creating request to /action/create/: %s", err.Error())
 		panic(err)
@@ -861,7 +886,7 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := cli.Do(r)
 	if err != nil {
-		err = fmt.Errorf("error making request: %s", err.Error())
+		err = fmt.Errorf("error making request: %s\nRequest Data\n", err.Error(), debugRequestInfo(r))
 		panic(err)
 	}
 	defer resp.Body.Close()
