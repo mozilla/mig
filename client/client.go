@@ -855,19 +855,19 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	data := url.Values{"action": {actionstr}}
 	r, err := http.NewRequest("POST", cli.Conf.API.URL+"action/create/", strings.NewReader(data.Encode()))
 	if err != nil {
+		err = fmt.Errorf("error creating request to /action/create/: %s", err.Error())
 		panic(err)
 	}
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := cli.Do(r)
 	if err != nil {
+		err = fmt.Errorf("error making request: %s", err.Error())
 		panic(err)
 	}
 	defer resp.Body.Close()
-	if err != nil {
-		panic(err)
-	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		err = fmt.Errorf("error reading response: %s", err.Error())
 		panic(err)
 	}
 	if resp.StatusCode != http.StatusAccepted {
@@ -877,10 +877,12 @@ func (cli Client) PostAction(a mig.Action) (a2 mig.Action, err error) {
 	var resource *cljs.Resource
 	err = json.Unmarshal(body, &resource)
 	if err != nil {
+		err = fmt.Errorf("error parsing response JSON: %s", err.Error())
 		panic(err)
 	}
 	a2, err = ValueToAction(resource.Collection.Items[0].Data[0].Value)
 	if err != nil {
+		err = fmt.Errorf("error converting to action: %s", err.Error())
 		panic(err)
 	}
 	return
