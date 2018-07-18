@@ -364,9 +364,6 @@ func (cli Client) Do(r *http.Request) (resp *http.Response, err error) {
 	}
 	// execute the request
 	resp, err = cli.API.Do(r)
-	if resp == nil {
-		panic("failed to contact the API")
-	}
 	if err != nil {
 		msg := fmt.Errorf("request failed error: %d %s (%v)", resp.StatusCode, resp.Status, err)
 		panic(msg)
