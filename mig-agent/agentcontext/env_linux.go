@@ -114,11 +114,11 @@ func getIdent() (string, error) {
 
 	for _, findMethod := range methods {
 		ident, err := findMethod.findFn()
-		if !findMethod.validateFn(ident, err) {
-			return "", fmt.Errorf("%s failed: %v", findMethod.name, err)
+		if findMethod.validateFn(ident, err) {
+			logChan <- mig.Log{Desc: findMethod.successLog}.Debug()
+			return ident, nil
 		}
-		logChan <- mig.Log{Desc: findMethod.successLog}.Debug()
-		return ident, nil
+		logChan <- mig.Log{Desc: fmt.Errorf("%s failed: %v", findMethod.name, err)}.Debug()
 	}
 
 	return "", fmt.Errorf("none of the configured methods for detecting the host's ident worked")
