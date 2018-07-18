@@ -120,6 +120,8 @@ func getIdent() (string, error) {
 		logChan <- mig.Log{Desc: findMethod.successLog}.Debug()
 		return ident, nil
 	}
+
+	return "", fmt.Errorf("none of the configured methods for detecting the host's ident worked")
 }
 
 // getLSBRelease reads the linux identity from lsb_release -a
