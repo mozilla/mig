@@ -94,7 +94,7 @@ func getIdent() (string, error) {
 			name:       "getLSBRelease",
 			successLog: "using lsb release for distribution ident",
 			findFn:     getLSBRelease,
-			validateFn: func(_ string, err error) { err != nil },
+			validateFn: func(_ string, err error) { return err != nil },
 		},
 		{
 			// Here we check that we read more than '\S'.
@@ -102,13 +102,13 @@ func getIdent() (string, error) {
 			name:       "getIssue",
 			successLog: "using /etc/issue for distribution ident",
 			findFn:     getIssue,
-			validateFn: func(issueName string, err error) { err != nil && len(issueName) > 3 },
+			validateFn: func(issueName string, err error) { return err != nil && len(issueName) > 3 },
 		},
 		{
 			name:       "getOSRelease",
 			successLog: "using /etc/os-release for distribution ident",
 			findFn:     getOSRelease,
-			validateFn: func(_ string, err error) { err != nil },
+			validateFn: func(_ string, err error) { return err != nil },
 		},
 	}
 
