@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package fswatch /* import "mig.ninja/mig/modules/fswatch" */
+package fswatch /* import "github.com/mozilla/mig/modules/fswatch" */
 
 var localFsWatchProfile = profile{
 	entries: []profileEntry{

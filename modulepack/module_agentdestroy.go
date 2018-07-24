@@ -9,5 +9,5 @@
 package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/agentdestroy"
+	_ "github.com/mozilla/mig/modules/agentdestroy"
 )

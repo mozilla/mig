@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jvehent/cljs"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 	"net/http"
 	"strconv"
 )

@@ -8,5 +8,5 @@
 package main
 
 import (
-	_ "mig.ninja/mig/modulepack"
+	_ "github.com/mozilla/mig/modulepack"
 )

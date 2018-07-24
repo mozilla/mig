@@ -11,8 +11,8 @@ import (
 	"os"
 	"os/exec"
 
-	"mig.ninja/mig"
-	"mig.ninja/mig/service"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/service"
 )
 
 // On Windows, processes aren't forked by the init, so when the service is

@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package dispatch /* import "mig.ninja/mig/modules/dispatch" */
+package dispatch /* import "github.com/mozilla/mig/modules/dispatch" */
 
 import (
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/testutil"
 	"testing"
 )
 

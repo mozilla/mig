@@ -30,8 +30,8 @@ which would be a typical scenario, however this is not required.
 .. code:: bash
 
         $ GOPATH=$HOME/go
-        $ mkdir -p $GOPATH/src/mig.ninja
-        $ cd $GOPATH/src/mig.ninja
+        $ mkdir -p $GOPATH/src/github.com/mozilla
+        $ cd $GOPATH/src/github.com/mozilla
         $ git clone https://github.com/mozilla/mig.git
         $ cd mig
         $ docker build -t mozilla/mig:latest .

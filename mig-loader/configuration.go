@@ -7,7 +7,7 @@
 package main
 
 import (
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 // TAGS are useful to differentiate agents. You can add whatever values

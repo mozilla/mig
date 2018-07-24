@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 
 	"github.com/streadway/amqp"
 )

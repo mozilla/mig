@@ -14,8 +14,8 @@ import (
 	"os"
 	"time"
 
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/client"
 )
 
 func main() {

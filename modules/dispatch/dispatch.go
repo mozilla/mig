@@ -8,7 +8,7 @@
 // Persistent modules which generate alerts will have these alerts forwarded
 // to this module if the dispatch module is active. The dispatch module can then
 // forward the alerts on based on it's configuration.
-package dispatch /* import "mig.ninja/mig/modules/dispatch" */
+package dispatch /* import "github.com/mozilla/mig/modules/dispatch" */
 
 import (
 	"bytes"
@@ -19,8 +19,8 @@ import (
 	"runtime"
 	"time"
 
-	"mig.ninja/mig"
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/modules"
 )
 
 type module struct {

@@ -12,8 +12,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"mig.ninja/mig"
-	"mig.ninja/mig/pgp"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/pgp"
 
 	"github.com/jvehent/cljs"
 )

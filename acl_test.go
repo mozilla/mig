@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package mig /* import "mig.ninja/mig" */
+package mig /* import "github.com/mozilla/mig" */
 
 import (
 	"encoding/json"

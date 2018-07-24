@@ -14,7 +14,7 @@ package main
 // socket.
 
 import (
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 	"strings"
 	"sync"
 	"time"

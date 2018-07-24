@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"mig.ninja/mig/client"
+	"github.com/mozilla/mig/client"
 
 	"github.com/bobappleyard/readline"
 )

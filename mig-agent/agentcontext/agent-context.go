@@ -9,14 +9,14 @@
 // about the system a given agent or loader is running on. This includes
 // information unrelated to MIG itself, such as the hostname of the system,
 // IP addresses, and so on.
-package agentcontext /* import "mig.ninja/mig/mig-agent/agentcontext" */
+package agentcontext /* import "github.com/mozilla/mig/mig-agent/agentcontext" */
 
 import (
 	"fmt"
 	"github.com/kardianos/osext"
 	"io/ioutil"
 	mrand "math/rand"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 	"os"
 	"path"
 	"regexp"

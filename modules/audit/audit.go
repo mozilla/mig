@@ -10,14 +10,14 @@
 // write the audit event to it's log or send it to the dispatch module.
 //
 // The audit module is currently only supported on Linux.
-package audit /* import "mig.ninja/mig/modules/audit" */
+package audit /* import "github.com/mozilla/mig/modules/audit" */
 
 import (
 	"encoding/json"
 	"fmt"
 	"runtime"
 
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 )
 
 type module struct {

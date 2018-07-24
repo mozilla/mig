@@ -4,13 +4,13 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package memory /* import "mig.ninja/mig/modules/memory" */
+package memory /* import "github.com/mozilla/mig/modules/memory" */
 
 import (
 	"bytes"
 	"encoding/json"
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/modules"
+	"github.com/mozilla/mig/testutil"
 	"testing"
 )
 

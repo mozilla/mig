@@ -9,13 +9,13 @@
 package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/agentdestroy"
-	_ "mig.ninja/mig/modules/file"
-	_ "mig.ninja/mig/modules/fswatch"
-	_ "mig.ninja/mig/modules/netstat"
-	_ "mig.ninja/mig/modules/ping"
-	_ "mig.ninja/mig/modules/pkg"
-	_ "mig.ninja/mig/modules/scribe"
-	_ "mig.ninja/mig/modules/sshkey"
-	_ "mig.ninja/mig/modules/timedrift"
+	_ "github.com/mozilla/mig/modules/agentdestroy"
+	_ "github.com/mozilla/mig/modules/file"
+	_ "github.com/mozilla/mig/modules/fswatch"
+	_ "github.com/mozilla/mig/modules/netstat"
+	_ "github.com/mozilla/mig/modules/ping"
+	_ "github.com/mozilla/mig/modules/pkg"
+	_ "github.com/mozilla/mig/modules/scribe"
+	_ "github.com/mozilla/mig/modules/sshkey"
+	_ "github.com/mozilla/mig/modules/timedrift"
 )

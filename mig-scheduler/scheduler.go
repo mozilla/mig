@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/streadway/amqp"
-	"mig.ninja/mig"
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/pgp"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/modules"
+	"github.com/mozilla/mig/pgp"
 )
 
 func main() {

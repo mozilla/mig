@@ -6,7 +6,7 @@
 
 /* The PGP package is a helper around Golang's OpenPGP implementation
  */
-package pgp /* import "mig.ninja/mig/pgp" */
+package pgp /* import "github.com/mozilla/mig/pgp" */
 
 import (
 	"bytes"

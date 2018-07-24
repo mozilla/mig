@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package sshkey /* import "mig.ninja/mig/modules/sshkey" */
+package sshkey /* import "github.com/mozilla/mig/modules/sshkey" */
 
 import (
 	"bytes"
@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/modules"
+	"github.com/mozilla/mig/testutil"
 )
 
 func TestRegistration(t *testing.T) {

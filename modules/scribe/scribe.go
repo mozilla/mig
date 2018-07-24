@@ -5,7 +5,7 @@
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
 // scribe module implementation for MIG.
-package scribe /* import "mig.ninja/mig/modules/scribe" */
+package scribe /* import "github.com/mozilla/mig/modules/scribe" */
 
 import (
 	"bytes"
@@ -16,8 +16,8 @@ import (
 	"time"
 
 	scribelib "github.com/mozilla/scribe"
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/modules/file"
+	"github.com/mozilla/mig/modules"
+	"github.com/mozilla/mig/modules/file"
 )
 
 var stats statistics

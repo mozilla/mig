@@ -23,7 +23,7 @@ $ docker run -it mozilla/mig
 Or, if you have the source checked out in your GOPATH you can build your own image:
 
 ```bash
-$ cd $GOPATH/src/mig.ninja/mig
+$ cd $GOPATH/src/github.com/mozilla/mig
 $ docker build -t mozilla/mig:latest .
 $ docker run -it mozilla/mig
 ```

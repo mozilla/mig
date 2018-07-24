@@ -4,10 +4,10 @@
 //
 // Contributor: Dustin J. Mitchell <dustin@mozilla.com>
 
-package netstat /* import "mig.ninja/mig/modules/netstat" */
+package netstat /* import "github.com/mozilla/mig/modules/netstat" */
 
 import (
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/testutil"
 	"testing"
 )
 

@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package client /* import "mig.ninja/mig/client" */
+package client /* import "github.com/mozilla/mig/client" */
 
 import (
 	"fmt"

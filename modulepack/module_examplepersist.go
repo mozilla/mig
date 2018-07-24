@@ -9,5 +9,5 @@
 package modulepack
 
 import (
-	_ "mig.ninja/mig/modules/examplepersist"
+	_ "github.com/mozilla/mig/modules/examplepersist"
 )

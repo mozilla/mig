@@ -7,7 +7,7 @@ package main
 
 import (
 	"fmt"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 func logAgentAction(ctx Context, cmd mig.Command) (err error) {

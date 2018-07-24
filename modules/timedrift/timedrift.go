@@ -9,14 +9,14 @@ network time retrieved using NTP.
 
 Usage documentation is online at http://mig.mozilla.org/doc/module_timedrift.html
 */
-package timedrift /* import "mig.ninja/mig/modules/timedrift" */
+package timedrift /* import "github.com/mozilla/mig/modules/timedrift" */
 
 import (
 	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 	"net"
 	"os"
 	"strings"

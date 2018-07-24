@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"github.com/bobappleyard/readline"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/client"
 )
 
 // manifestReader is used to manipulate API manifests

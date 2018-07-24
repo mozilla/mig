@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 
 	"github.com/jvehent/cljs"
 )

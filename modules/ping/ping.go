@@ -8,7 +8,7 @@
 // ping module is used to check the connection between an endpoint
 // and a destination host.
 
-package ping /* import "mig.ninja/mig/modules/ping" */
+package ping /* import "github.com/mozilla/mig/modules/ping" */
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 	"net"
 	"os"
 	"strings"

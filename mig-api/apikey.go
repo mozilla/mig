@@ -15,7 +15,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"golang.org/x/crypto/pbkdf2"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 const APIKeyLength = 32
