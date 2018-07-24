@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package pgp /* import "mig.ninja/mig/pgp" */
+package pgp /* import "github.com/mozilla/mig/pgp" */
 
 import (
 	"bytes"

@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/bobappleyard/readline"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
-	"mig.ninja/mig/pgp"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/client"
+	"github.com/mozilla/mig/pgp"
 )
 
 // investigatorReader retrieves an agent from the api

@@ -8,7 +8,7 @@ package main
 import (
 	"fmt"
 	"github.com/jvehent/cljs"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 	"net/http"
 	"strconv"
 )

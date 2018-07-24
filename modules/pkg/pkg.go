@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package pkg /* import "mig.ninja/mig/modules/pkg" */
+package pkg /* import "github.com/mozilla/mig/modules/pkg" */
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ import (
 	"time"
 
 	scribelib "github.com/mozilla/scribe"
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 )
 
 var stats Statistics

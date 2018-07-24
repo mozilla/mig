@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package examplepersist /* import "mig.ninja/mig/modules/examplepersist" */
+package examplepersist /* import "github.com/mozilla/mig/modules/examplepersist" */
 
 import (
 	"flag"

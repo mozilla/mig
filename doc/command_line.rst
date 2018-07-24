@@ -11,7 +11,7 @@ to be simple and fast to use for basic investigations. Unlike the mig-console,
 it does not provide access to previous actions, search or investigators
 management.
 
-To install the MIG command line, use `go get mig.ninja/mig/client/mig`. This
+To install the MIG command line, use `go get github.com/mozilla/mig/client/mig`. This
 command will place a binary called `mig` under $GOPATH/bin/mig. On first run, it
 will invite you to create a configuration:
 

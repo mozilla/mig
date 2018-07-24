@@ -17,8 +17,8 @@ import (
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/jvehent/cljs"
-	"mig.ninja/mig"
-	"mig.ninja/mig/pgp"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/pgp"
 )
 
 var ctx Context

@@ -3,15 +3,15 @@
 # If AGENTMODULES is set, rebuild the agent with the indicated module tags
 if [[ ! -z "$AGENTMODULES" ]]; then
 	sudo env GOPATH=/go \
-		go install -tags "$AGENTMODULES" mig.ninja/mig/mig-agent
+		go install -tags "$AGENTMODULES" github.com/mozilla/mig/mig-agent
 fi
 
 # If CLIENTMODULES is set, rebuild the clients with the indicated module tags
 if [[ ! -z "$CLIENTMODULES" ]]; then
 	sudo env GOPATH=/go \
-		go install -tags "$CLIENTMODULES" mig.ninja/mig/client/mig-console
+		go install -tags "$CLIENTMODULES" github.com/mozilla/mig/client/mig-console
 	sudo env GOPATH=/go \
-		go install -tags "$CLIENTMODULES" mig.ninja/mig/client/mig
+		go install -tags "$CLIENTMODULES" github.com/mozilla/mig/client/mig
 fi
 
 # Update API configuration using the environment

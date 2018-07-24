@@ -9,7 +9,7 @@ package agentcontext
 import (
 	"bytes"
 	"fmt"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 	"os/exec"
 	"strings"
 )

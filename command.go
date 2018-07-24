@@ -4,14 +4,14 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package mig /* import "mig.ninja/mig" */
+package mig /* import "github.com/mozilla/mig" */
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 	"time"
 )
 

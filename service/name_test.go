@@ -1,4 +1,4 @@
-package service /* import "mig.ninja/mig/service" */
+package service /* import "github.com/mozilla/mig/service" */
 
 import (
 	"testing"

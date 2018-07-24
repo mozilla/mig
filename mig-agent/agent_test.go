@@ -11,7 +11,7 @@ import (
 	"os"
 	"testing"
 
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 var testContext Context

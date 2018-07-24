@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/bobappleyard/readline"
-	"mig.ninja/mig"
-	"mig.ninja/mig/client"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/client"
 )
 
 // loaderReader is used to manipulate loader entries

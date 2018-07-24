@@ -14,7 +14,7 @@ import (
 	"net/url"
 	"time"
 
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 // findLocalIPs updates the given context with the IP Addresses found in the machine.

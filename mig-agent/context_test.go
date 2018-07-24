@@ -11,7 +11,7 @@ import (
 	"path"
 	"testing"
 
-	"mig.ninja/mig/mig-agent/agentcontext"
+	"github.com/mozilla/mig/mig-agent/agentcontext"
 )
 
 func TestInitKeyring(t *testing.T) {

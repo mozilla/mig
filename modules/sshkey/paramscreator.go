@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package sshkey /* import "mig.ninja/mig/modules/sshkey" */
+package sshkey /* import "github.com/mozilla/mig/modules/sshkey" */
 
 import (
 	"bufio"

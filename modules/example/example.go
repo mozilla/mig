@@ -24,12 +24,12 @@ results.
  lookedup host www.google.com has IP 2607:f8b0:4002:c07::69
  stat: 3 stuff found
 */
-package example /* import "mig.ninja/mig/modules/example" */
+package example /* import "github.com/mozilla/mig/modules/example" */
 
 import (
 	"encoding/json"
 	"fmt"
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 	"net"
 	"os"
 	"regexp"

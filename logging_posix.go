@@ -6,7 +6,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package mig /* import "mig.ninja/mig" */
+package mig /* import "github.com/mozilla/mig" */
 
 import (
 	"fmt"

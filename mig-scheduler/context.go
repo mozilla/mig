@@ -20,8 +20,8 @@ import (
 
 	"github.com/streadway/amqp"
 	"gopkg.in/gcfg.v1"
-	"mig.ninja/mig"
-	migdb "mig.ninja/mig/database"
+	"github.com/mozilla/mig"
+	migdb "github.com/mozilla/mig/database"
 )
 
 // Context contains all configuration variables as well as handlers for

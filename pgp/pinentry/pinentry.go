@@ -19,7 +19,7 @@ limitations under the License.
 // Package pinentry interfaces with the pinentry(1) command to securely
 // prompt the user for a password using whichever user interface the
 // user is currently using.
-package pinentry /* import "mig.ninja/mig/pgp/pinentry" */
+package pinentry /* import "github.com/mozilla/mig/pgp/pinentry" */
 
 import (
 	"bufio"

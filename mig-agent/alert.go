@@ -9,7 +9,7 @@ package main
 import (
 	"fmt"
 
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 // alertHandler is called inside the agent when it recieves an alert message from a

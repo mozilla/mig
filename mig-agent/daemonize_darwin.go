@@ -8,7 +8,7 @@ package main
 
 import (
 	"fmt"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 	"os"
 	"os/exec"
 )

@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package mig /* import "mig.ninja/mig" */
+package mig /* import "github.com/mozilla/mig" */
 
 // This file contains structures and functions related to the handling of
 // manifests and state bundles by the MIG loader and API.
@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"mig.ninja/mig/pgp"
+	"github.com/mozilla/mig/pgp"
 	"os"
 	"path"
 	"runtime"

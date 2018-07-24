@@ -9,7 +9,7 @@
 using the Masche memory scanning package.
 Documentation of this module is online at http://mig.mozilla.org/doc/module_memory.html
 */
-package memory /* import "mig.ninja/mig/modules/memory" */
+package memory /* import "github.com/mozilla/mig/modules/memory" */
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ import (
 	"github.com/mozilla/masche/listlibs"
 	"github.com/mozilla/masche/memaccess"
 	"github.com/mozilla/masche/process"
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 	"regexp"
 	"time"
 )

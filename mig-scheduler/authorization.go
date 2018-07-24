@@ -8,7 +8,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 	"os"
 	"regexp"
 )
