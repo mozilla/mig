@@ -8,6 +8,7 @@ package agentcontext
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/mozilla/mig"
 	"github.com/mozilla/mig/service"
@@ -171,7 +172,7 @@ func getOSRelease() (string, error) {
 		return "", fmt.Errorf("getOSRelease() -> %v", err)
 	}
 
-	joined := strings.Replace(fileContent, "\n", " ", -1)
+	joined := strings.Replace(contents, "\n", " ", -1)
 
 	searches := []struct {
 		findSubstring string
