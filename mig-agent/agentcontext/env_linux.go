@@ -9,9 +9,9 @@ package agentcontext
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"github.com/mozilla/mig"
 	"github.com/mozilla/mig/service"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -170,11 +170,30 @@ func getOSRelease() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("getOSRelease() -> %v", err)
 	}
-	index := bytes.IndexByte(contents, byte('\n'))
-	if index < 0 {
-		return "", fmt.Errorf("getOSRelease() -> OS release name not found")
+
+	joined := strings.Replace(fileContent, "\n", " ", -1)
+
+	searches := []struct {
+		findSubstring string
+		identIfFound  string
+	}{
+		{
+			findSubstring: "NAME=\"CentOS Linux\" VERSION=\"7 (Core)\"",
+			identIfFound:  "CentOS 7",
+		},
+		{
+			findSubstring: "PRETTY_NAME=\"CentOS Linux 7 (Core)\"",
+			identIfFound:  "CentOS 7",
+		},
 	}
-	return string(contents[0:index]), nil
+
+	for _, search := range searches {
+		if strings.Contains(joined, search.findSubstring) {
+			return search.identIfFound, nil
+		}
+	}
+
+	return "", errors.New("could not find a valid ident")
 }
 
 // getInit parses /proc/1/cmdline to find out which init system is used
