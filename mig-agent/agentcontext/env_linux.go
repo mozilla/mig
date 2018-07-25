@@ -172,7 +172,7 @@ func getOSRelease() (string, error) {
 		return "", fmt.Errorf("getOSRelease() -> %v", err)
 	}
 
-	joined := strings.Replace(contents, "\n", " ", -1)
+	joined := strings.Replace(string(contents), "\n", " ", -1)
 
 	searches := []struct {
 		findSubstring string
