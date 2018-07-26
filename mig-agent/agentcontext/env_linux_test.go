@@ -52,12 +52,11 @@ REDHAT_SUPPORT_PRODUCT_VERSION="7"`,
 
 		reader := strings.NewReader(testCase.FileContents)
 		ident, err := getOSRelease(reader)
-		defer reader.Close()
 
 		gotErr := err != nil
 		if testCase.ExpectError && !gotErr {
 			t.Errorf("Expected to get an error but did not")
-		} else if !testCase.ExpectedIdent && gotErr {
+		} else if !testCase.ExpectError && gotErr {
 			t.Errorf("Did not expect to get an error, but got %s", err.Error())
 		} else if ident != testCase.ExpectedIdent {
 			t.Errorf("Expected to get ident \"%s\" but got \"%s\"", testCase.ExpectedIdent, ident)

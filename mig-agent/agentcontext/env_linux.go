@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/mozilla/mig"
 	"github.com/mozilla/mig/service"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
