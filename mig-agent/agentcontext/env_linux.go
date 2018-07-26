@@ -85,6 +85,15 @@ func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 }
 
 func getIdent() (string, error) {
+	osReleaseWrapper := func() (string, error) {
+		handle, openErr := os.Open("/etc/os-release")
+		if openErr != nil {
+			return "", openErr
+		}
+		defer handle.Close()
+		return getOSRelease(handle)
+	}
+
 	methods := []struct {
 		name       string
 		successLog string
@@ -108,7 +117,7 @@ func getIdent() (string, error) {
 		{
 			name:       "getOSRelease",
 			successLog: "using /etc/os-release for distribution ident",
-			findFn:     getOSRelease,
+			findFn:     osReleaseWrapper,
 			validateFn: func(_ string, err error) bool { return err == nil },
 		},
 	}
@@ -166,8 +175,8 @@ func getIssue() (initname string, err error) {
 
 // getOSRelease reads /etc/os-release to retrieve the agent's ident from the
 // first line.
-func getOSRelease() (string, error) {
-	contents, err := ioutil.ReadFile("/etc/os-release")
+func getOSRelease(fileHandle io.Reader) (string, error) {
+	contents, err := ioutil.ReadAll(fileHandle)
 	if err != nil {
 		return "", fmt.Errorf("getOSRelease() -> %v", err)
 	}
