@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/kardianos/osext"
-	service "mig.ninja/mig/service"
+	service "github.com/mozilla/mig/service"
 )
 
 // Run as a Windows service; the loader just runs in the background periodically calling

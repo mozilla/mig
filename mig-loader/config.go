@@ -12,8 +12,8 @@ import (
 	"path"
 	"strings"
 
-	"mig.ninja/mig"
-	"mig.ninja/mig/mig-agent/agentcontext"
+	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/mig-agent/agentcontext"
 
 	"gopkg.in/gcfg.v1"
 )

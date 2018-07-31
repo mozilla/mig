@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"github.com/bobappleyard/readline"
 	"io"
-	"mig.ninja/mig/client"
+	"github.com/mozilla/mig/client"
 	"strconv"
 	"strings"
 )

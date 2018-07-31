@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package pgp /* import "mig.ninja/mig/pgp" */
+package pgp /* import "github.com/mozilla/mig/pgp" */
 
 import (
 	"bytes"
@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"golang.org/x/crypto/openpgp"
 	"io"
-	"mig.ninja/mig/pgp/gpgagent"
-	"mig.ninja/mig/pgp/pinentry"
+	"github.com/mozilla/mig/pgp/gpgagent"
+	"github.com/mozilla/mig/pgp/pinentry"
 	"os"
 	"strings"
 )

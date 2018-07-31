@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 func startRoutines(ctx Context) {

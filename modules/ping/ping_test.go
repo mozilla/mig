@@ -4,10 +4,10 @@
 //
 // Contributor: Dustin J. Mitchell <dustin@mozilla.com>
 
-package ping /* import "mig.ninja/mig/modules/ping" */
+package ping /* import "github.com/mozilla/mig/modules/ping" */
 
 import (
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/testutil"
 	"testing"
 )
 

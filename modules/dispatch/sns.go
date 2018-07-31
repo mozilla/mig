@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package dispatch /* import "mig.ninja/mig/modules/dispatch" */
+package dispatch /* import "github.com/mozilla/mig/modules/dispatch" */
 
 import (
 	"github.com/aws/aws-sdk-go/aws"

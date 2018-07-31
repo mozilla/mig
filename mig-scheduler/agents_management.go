@@ -8,7 +8,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 	"time"
 )
 

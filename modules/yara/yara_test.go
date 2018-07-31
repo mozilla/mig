@@ -4,10 +4,10 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package yara /* import "mig.ninja/mig/modules/yara" */
+package yara /* import "github.com/mozilla/mig/modules/yara" */
 
 import (
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/testutil"
 	"testing"
 )
 

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"mig.ninja/mig"
+	"github.com/mozilla/mig"
 )
 
 var keyValidUser1 = `

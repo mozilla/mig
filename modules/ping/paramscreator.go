@@ -7,7 +7,7 @@
 /* The Ping module implements icmp, tcp and udp pings/
 Usage doc is online at http://mig.mozilla.org/doc/module_ping.html
 */
-package ping /* import "mig.ninja/mig/modules/ping" */
+package ping /* import "github.com/mozilla/mig/modules/ping" */
 
 import (
 	"bufio"

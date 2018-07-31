@@ -84,7 +84,7 @@ endif
 
 CGOLDFLAGS	:=
 GO 		:= GOOS=$(OS) GOARCH=$(ARCH) GO15VENDOREXPERIMENT=1 go
-MIGVERFLAGS	:= -X mig.ninja/mig.Version=$(BUILDREV)
+MIGVERFLAGS	:= -X github.com/mozilla/mig.Version=$(BUILDREV)
 GOLDFLAGS	:= -ldflags "$(MIGVERFLAGS) $(STRIPOPT)"
 INSTALL		:= install
 SERVERTARGETS   := mig-scheduler mig-api mig-runner runner-compliance runner-scribe
@@ -123,7 +123,7 @@ create-bindir:
 
 mig-agent: create-bindir
 	@echo building mig-agent for $(OS)/$(ARCH)
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-agent
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) github.com/mozilla/mig/mig-agent
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ]
 # If our build target is darwin and OSXPROCSIGID is set, sign the binary
@@ -132,40 +132,40 @@ mig-agent: create-bindir
 	fi
 
 mig-scheduler: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) mig.ninja/mig/mig-scheduler
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-scheduler $(GOLDFLAGS) github.com/mozilla/mig/mig-scheduler
 
 mig-api: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-api $(GOLDFLAGS) mig.ninja/mig/mig-api
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-api $(GOLDFLAGS) github.com/mozilla/mig/mig-api
 
 mig-runner: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-runner $(GOLDFLAGS) mig.ninja/mig/mig-runner
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-runner $(GOLDFLAGS) github.com/mozilla/mig/mig-runner
 
 mig-action-generator: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) github.com/mozilla/mig/client/mig-action-generator
 
 mig-loader: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader$(BINSUFFIX) $(GOLDFLAGS) mig.ninja/mig/mig-loader
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader$(BINSUFFIX) $(GOLDFLAGS) github.com/mozilla/mig/mig-loader
 	if [ $(OS) = "darwin" -a ! -z "$(OSXPROCSIGID)" ]; then \
 		codesign -s "$(OSXPROCSIGID)" $(BINDIR)/mig-loader; \
 	fi
 
 mig-action-verifier: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) mig.ninja/mig/client/mig-action-verifier
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-verifier $(GOLDFLAGS) github.com/mozilla/mig/client/mig-action-verifier
 
 mig-console: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) mig.ninja/mig/client/mig-console
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-console $(GOLDFLAGS) github.com/mozilla/mig/client/mig-console
 
 mig-cmd: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig $(GOLDFLAGS) mig.ninja/mig/client/mig
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig $(GOLDFLAGS) github.com/mozilla/mig/client/mig
 
 mig-agent-search: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-search $(GOLDFLAGS) mig.ninja/mig/client/mig-agent-search
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-search $(GOLDFLAGS) github.com/mozilla/mig/client/mig-agent-search
 
 runner-compliance: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-compliance $(GOLDFLAGS) mig.ninja/mig/runner-plugins/runner-compliance
+	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-compliance $(GOLDFLAGS) github.com/mozilla/mig/runner-plugins/runner-compliance
 
 runner-scribe: create-bindir
-	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-scribe $(GOLDFLAGS) mig.ninja/mig/runner-plugins/runner-scribe
+	$(GO) build $(GOOPTS) -o $(BINDIR)/runner-scribe $(GOLDFLAGS) github.com/mozilla/mig/runner-plugins/runner-scribe
 
 go_vendor_dependencies:
 	govend -v -u
@@ -309,44 +309,44 @@ doc:
 	make -C doc doc
 
 test:  test-modules
-	$(GO) test mig.ninja/mig/mig-agent/...
-	$(GO) test mig.ninja/mig/mig-scheduler/...
-	$(GO) test mig.ninja/mig/mig-api/...
-	$(GO) test mig.ninja/mig/mig-runner/...
-	$(GO) test mig.ninja/mig/mig-loader/...
-	$(GO) test mig.ninja/mig/client/...
-	$(GO) test mig.ninja/mig/database/...
-	$(GO) test mig.ninja/mig
+	$(GO) test github.com/mozilla/mig/mig-agent/...
+	$(GO) test github.com/mozilla/mig/mig-scheduler/...
+	$(GO) test github.com/mozilla/mig/mig-api/...
+	$(GO) test github.com/mozilla/mig/mig-runner/...
+	$(GO) test github.com/mozilla/mig/mig-loader/...
+	$(GO) test github.com/mozilla/mig/client/...
+	$(GO) test github.com/mozilla/mig/database/...
+	$(GO) test github.com/mozilla/mig
 
 test-modules:
-	$(GO) test mig.ninja/mig/modules/
-	$(GO) test mig.ninja/mig/modules/agentdestroy
-	$(GO) test mig.ninja/mig/modules/example
-	$(GO) test mig.ninja/mig/modules/examplepersist
-	$(GO) test mig.ninja/mig/modules/file
-	$(GO) test mig.ninja/mig/modules/fswatch
-	$(GO) test mig.ninja/mig/modules/dispatch
-	$(GO) test mig.ninja/mig/modules/audit
-	$(GO) test mig.ninja/mig/modules/memory
-	$(GO) test mig.ninja/mig/modules/netstat
-	$(GO) test mig.ninja/mig/modules/ping
-	$(GO) test mig.ninja/mig/modules/pkg
-	$(GO) test mig.ninja/mig/modules/scribe
-	$(GO) test mig.ninja/mig/modules/timedrift
-	$(GO) test mig.ninja/mig/modules/sshkey
+	$(GO) test github.com/mozilla/mig/modules/
+	$(GO) test github.com/mozilla/mig/modules/agentdestroy
+	$(GO) test github.com/mozilla/mig/modules/example
+	$(GO) test github.com/mozilla/mig/modules/examplepersist
+	$(GO) test github.com/mozilla/mig/modules/file
+	$(GO) test github.com/mozilla/mig/modules/fswatch
+	$(GO) test github.com/mozilla/mig/modules/dispatch
+	$(GO) test github.com/mozilla/mig/modules/audit
+	$(GO) test github.com/mozilla/mig/modules/memory
+	$(GO) test github.com/mozilla/mig/modules/netstat
+	$(GO) test github.com/mozilla/mig/modules/ping
+	$(GO) test github.com/mozilla/mig/modules/pkg
+	$(GO) test github.com/mozilla/mig/modules/scribe
+	$(GO) test github.com/mozilla/mig/modules/timedrift
+	$(GO) test github.com/mozilla/mig/modules/sshkey
 ifeq ($(WITHYARA),yes)
-	$(GO) test mig.ninja/mig/modules/yara
+	$(GO) test github.com/mozilla/mig/modules/yara
 endif
 
 vet:
-	$(GO) vet mig.ninja/mig/mig-agent/...
-	$(GO) vet mig.ninja/mig/mig-scheduler/...
-	$(GO) vet mig.ninja/mig/mig-api/...
-	$(GO) vet mig.ninja/mig/mig-runner/...
-	$(GO) vet mig.ninja/mig/client/...
-	$(GO) vet mig.ninja/mig/modules/...
-	$(GO) vet mig.ninja/mig/database/...
-	$(GO) vet mig.ninja/mig
+	$(GO) vet github.com/mozilla/mig/mig-agent/...
+	$(GO) vet github.com/mozilla/mig/mig-scheduler/...
+	$(GO) vet github.com/mozilla/mig/mig-api/...
+	$(GO) vet github.com/mozilla/mig/mig-runner/...
+	$(GO) vet github.com/mozilla/mig/client/...
+	$(GO) vet github.com/mozilla/mig/modules/...
+	$(GO) vet github.com/mozilla/mig/database/...
+	$(GO) vet github.com/mozilla/mig
 
 clean:
 	rm -rf bin

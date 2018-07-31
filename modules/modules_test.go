@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package modules /* import "mig.ninja/mig/modules" */
+package modules /* import "github.com/mozilla/mig/modules" */
 
 import (
 	"bytes"

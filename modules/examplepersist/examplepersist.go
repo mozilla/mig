@@ -4,7 +4,7 @@
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
 
-package examplepersist /* import "mig.ninja/mig/modules/examplepersist" */
+package examplepersist /* import "github.com/mozilla/mig/modules/examplepersist" */
 
 // This is an example persistent module that provides a basic template that
 // can be used to create one.
@@ -24,7 +24,7 @@ import (
 	"runtime"
 	"time"
 
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 )
 
 type module struct {

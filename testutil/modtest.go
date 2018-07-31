@@ -4,10 +4,10 @@
 //
 // Contributor: Dustin J. Mitchell <dustin@mozilla.com>
 
-package testutil /* import "mig.ninja/mig/testutil" */
+package testutil /* import "github.com/mozilla/mig/testutil" */
 
 import (
-	"mig.ninja/mig/modules"
+	"github.com/mozilla/mig/modules"
 	"testing"
 )
 

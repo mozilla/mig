@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"mig.ninja/mig/pgp"
+	"github.com/mozilla/mig/pgp"
 )
 
 var keyValidSigner1 = `

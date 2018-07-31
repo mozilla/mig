@@ -4,10 +4,10 @@
 //
 // Contributor: Dustin J. Mitchell <dustin@mozilla.com>
 
-package agentdestroy /* import "mig.ninja/mig/modules/agentdestroy" */
+package agentdestroy /* import "github.com/mozilla/mig/modules/agentdestroy" */
 
 import (
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/testutil"
 	"testing"
 )
 

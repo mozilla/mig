@@ -60,27 +60,27 @@ Then retrieve MIG's source code using go get:
 
 .. code:: bash
 
-        $ go get mig.ninja/mig
+        $ go get github.com/mozilla/mig
 
-``go get`` will place MIG under ``$GOPATH/src/mig.ninja/mig``. If you want you can run
+``go get`` will place MIG under ``$GOPATH/src/github.com/mozilla/mig``. If you want you can run
 ``make test`` under this directory to verify the tests execute and ensure your go environment
 is setup correctly.
 
 .. code:: bash
 
         $ make test
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/
-        ok      mig.ninja/mig/modules   0.103s
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/agentdestroy
-        ok      mig.ninja/mig/modules/agentdestroy      0.003s
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/example
-        ok      mig.ninja/mig/modules/example   0.003s
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/examplepersist
-        ok      mig.ninja/mig/modules/examplepersist    0.002s
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/file
-        ok      mig.ninja/mig/modules/file      0.081s
-        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test mig.ninja/mig/modules/fswatch
-        ok      mig.ninja/mig/modules/fswatch   0.003s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/
+        ok      github.com/mozilla/mig/modules   0.103s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/agentdestroy
+        ok      github.com/mozilla/mig/modules/agentdestroy      0.003s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/example
+        ok      github.com/mozilla/mig/modules/example   0.003s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/examplepersist
+        ok      github.com/mozilla/mig/modules/examplepersist    0.002s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/file
+        ok      github.com/mozilla/mig/modules/file      0.081s
+        GOOS=linux GOARCH=amd64 GO15VENDOREXPERIMENT=1 go test github.com/mozilla/mig/modules/fswatch
+        ok      github.com/mozilla/mig/modules/fswatch   0.003s
         ...
 
 Deploy the Postgres database
@@ -116,7 +116,7 @@ Next create the database and install the schema:
 .. code:: bash
 
         $ sudo -u postgres psql -c 'CREATE DATABASE mig;'
-        $ cd $GOPATH/src/mig.ninja/mig
+        $ cd $GOPATH/src/github.com/mozilla/mig
         $ sudo -u postgres psql -f database/schema.sql mig
 
 Create a PKI
@@ -143,7 +143,7 @@ AMQP clients to validate the RabbitMQ certificate correctly.
 
 	$ mkdir migca
 	$ cd migca
-	$ cp $GOPATH/src/mig.ninja/mig/tools/create_mig_ca.sh .
+	$ cp $GOPATH/src/github.com/mozilla/mig/tools/create_mig_ca.sh .
 	$ bash create_mig_ca.sh
 	[...]
 	enter the public dns name of the rabbitmq server agents will connect to> mymigrelay.example.net
@@ -266,7 +266,7 @@ by building and installing it, we will run it from ``/opt/mig`` in this example.
 .. code:: bash
 
         $ sudo mkdir -p /opt/mig/bin
-        $ cd $GOPATH/src/mig.ninja/mig
+        $ cd $GOPATH/src/github.com/mozilla/mig
         $ make mig-scheduler
         $ sudo cp bin/linux/amd64/mig-scheduler /opt/mig/bin/mig-scheduler
 
@@ -394,7 +394,7 @@ which is 192.168.1.150, on port 51664, and the public endpoint of the API is
 
 .. code:: bash
 
-        $ cd $GOPATH/src/mig.ninja/mig
+        $ cd $GOPATH/src/github.com/mozilla/mig
         $ make mig-api
         $ sudo cp bin/linux/amd64/mig-api /opt/mig/bin/mig-api
         $ sudo cp conf/api.cfg.inc /etc/mig/api.cfg
@@ -601,7 +601,7 @@ with the default support.
 .. code::
 
 	$ sudo apt-get install libreadline-dev
-        $ cd $GOPATH/src/mig.ninja/mig
+        $ cd $GOPATH/src/github.com/mozilla/mig
         $ make mig-cmd
         $ make mig-console
         $ bin/linux/amd64/mig-console
@@ -792,7 +792,7 @@ or ``go install``.
 
 .. code:: bash
 
-        $ go install -tags 'modnodefaults modmemory' mig.ninja/mig/mig-agent
+        $ go install -tags 'modnodefaults modmemory' github.com/mozilla/mig/mig-agent
 
 For details on the various tags that can be specified, see the source of the
 `modulepack package`_.

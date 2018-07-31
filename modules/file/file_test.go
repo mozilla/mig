@@ -4,7 +4,7 @@
 //
 // Contributor: Julien Vehent <ulfr@mozilla.com>
 
-package file /* import "mig.ninja/mig/modules/file" */
+package file /* import "github.com/mozilla/mig/modules/file" */
 
 import (
 	"bytes"
@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"mig.ninja/mig/modules"
-	"mig.ninja/mig/testutil"
+	"github.com/mozilla/mig/modules"
+	"github.com/mozilla/mig/testutil"
 )
 
 // basedir is the base directory for the tests, initialized in createFiles

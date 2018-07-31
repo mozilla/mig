@@ -4,11 +4,11 @@
 //
 // Contributor: Julien Vehent jvehent@mozilla.com [:ulfr]
 
-package mig /* import "mig.ninja/mig" */
+package mig /* import "github.com/mozilla/mig" */
 
 // Version can be set at compile time to indicate the version of MIG
 // components. You'd typically want to set this during install using flags
-// such as -ldflags "-X mig.ninja/mig.Version=20170913-0.06824ce0.dev" when
+// such as -ldflags "-X github.com/mozilla/mig.Version=20170913-0.06824ce0.dev" when
 // calling the go build tools.
 var Version = ""
 
