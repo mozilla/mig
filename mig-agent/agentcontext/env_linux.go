@@ -8,10 +8,12 @@ package agentcontext
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"github.com/mozilla/mig"
 	"github.com/mozilla/mig/service"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -61,36 +63,76 @@ func findHostname(orig_ctx AgentContext) (ctx AgentContext, err error) {
 // findOSInfo gathers information about the Linux distribution if possible, and
 // determines the init type of the system.
 func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
+	defer func() { logChan <- mig.Log{Desc: "leaving findOSInfo()"}.Debug() }()
+
 	ctx = orig_ctx
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("findOSInfo() -> %v", e)
-		}
-		logChan <- mig.Log{Desc: "leaving findOSInfo()"}.Debug()
-	}()
-	ctx.OSIdent, err = getLSBRelease()
-	if err == nil {
-		logChan <- mig.Log{Desc: "using lsb release for distribution ident"}.Debug()
-		goto haveident
+
+	ctx.OSIdent, err = getIdent()
+	if err != nil {
+		logChan <- mig.Log{Desc: fmt.Sprintf("findOSInfo() -> %v", err)}.Debug()
+		logChan <- mig.Log{Desc: "warning, no valid linux os identification could be found"}.Info()
+		return ctx, fmt.Errorf("findOSInfo() -> %v", err)
 	}
-	logChan <- mig.Log{Desc: fmt.Sprintf("getLSBRelease() failed: %v", err)}.Debug()
-	ctx.OSIdent, err = getIssue()
-	if err == nil {
-		logChan <- mig.Log{Desc: "using /etc/issue for distribution ident"}.Debug()
-		goto haveident
-	}
-	logChan <- mig.Log{Desc: fmt.Sprintf("getIssue() failed: %v", err)}.Debug()
-	logChan <- mig.Log{Desc: "warning, no valid linux os identification could be found"}.Info()
-haveident:
 	logChan <- mig.Log{Desc: fmt.Sprintf("Ident is %s", ctx.OSIdent)}.Debug()
 
 	ctx.Init, err = getInit()
 	if err != nil {
-		panic(err)
+		logChan <- mig.Log{Desc: fmt.Sprintf("findOSInfo() -> %v", err)}.Debug()
+		return ctx, fmt.Errorf("findOSInfo() -> %v", err)
 	}
 	logChan <- mig.Log{Desc: fmt.Sprintf("Init is %s", ctx.Init)}.Debug()
 
 	return
+}
+
+func getIdent() (string, error) {
+	osReleaseWrapper := func() (string, error) {
+		handle, openErr := os.Open("/etc/os-release")
+		if openErr != nil {
+			return "", openErr
+		}
+		defer handle.Close()
+		return getOSRelease(handle)
+	}
+
+	methods := []struct {
+		name       string
+		successLog string
+		findFn     func() (string, error)
+		validateFn func(string, error) bool
+	}{
+		{
+			name:       "getLSBRelease",
+			successLog: "using lsb release for distribution ident",
+			findFn:     getLSBRelease,
+			validateFn: func(_ string, err error) bool { return err == nil },
+		},
+		{
+			// Here we check that we read more than '\S'.
+			// See https://access.redhat.com/solutions/1138953
+			name:       "getIssue",
+			successLog: "using /etc/issue for distribution ident",
+			findFn:     getIssue,
+			validateFn: func(issueName string, err error) bool { return err == nil && len(issueName) > 3 },
+		},
+		{
+			name:       "getOSRelease",
+			successLog: "using /etc/os-release for distribution ident",
+			findFn:     osReleaseWrapper,
+			validateFn: func(_ string, err error) bool { return err == nil },
+		},
+	}
+
+	for _, findMethod := range methods {
+		ident, err := findMethod.findFn()
+		if findMethod.validateFn(ident, err) {
+			logChan <- mig.Log{Desc: findMethod.successLog}.Debug()
+			return ident, nil
+		}
+		logChan <- mig.Log{Desc: fmt.Sprintf("%s failed: %v", findMethod.name, err)}.Debug()
+	}
+
+	return "", fmt.Errorf("none of the configured methods for detecting the host's ident worked")
 }
 
 // getLSBRelease reads the linux identity from lsb_release -a
@@ -130,6 +172,39 @@ func getIssue() (initname string, err error) {
 	}
 	initname = fmt.Sprintf("%s", issue[0:loc])
 	return
+}
+
+// getOSRelease reads /etc/os-release to retrieve the agent's ident from the
+// first line.
+func getOSRelease(fileHandle io.Reader) (string, error) {
+	contents, err := ioutil.ReadAll(fileHandle)
+	if err != nil {
+		return "", fmt.Errorf("getOSRelease() -> %v", err)
+	}
+
+	joined := strings.Replace(string(contents), "\n", " ", -1)
+
+	searches := []struct {
+		findSubstring string
+		identIfFound  string
+	}{
+		{
+			findSubstring: "NAME=\"CentOS Linux\" VERSION=\"7 (Core)\"",
+			identIfFound:  "CentOS 7",
+		},
+		{
+			findSubstring: "PRETTY_NAME=\"CentOS Linux 7 (Core)\"",
+			identIfFound:  "CentOS 7",
+		},
+	}
+
+	for _, search := range searches {
+		if strings.Contains(joined, search.findSubstring) {
+			return search.identIfFound, nil
+		}
+	}
+
+	return "", errors.New("could not find a valid ident")
 }
 
 // getInit parses /proc/1/cmdline to find out which init system is used
