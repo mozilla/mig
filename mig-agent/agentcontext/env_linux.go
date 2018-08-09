@@ -8,10 +8,12 @@ package agentcontext
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"github.com/mozilla/mig"
 	"github.com/mozilla/mig/service"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -84,6 +86,15 @@ func findOSInfo(orig_ctx AgentContext) (ctx AgentContext, err error) {
 }
 
 func getIdent() (string, error) {
+	osReleaseWrapper := func() (string, error) {
+		handle, openErr := os.Open("/etc/os-release")
+		if openErr != nil {
+			return "", openErr
+		}
+		defer handle.Close()
+		return getOSRelease(handle)
+	}
+
 	methods := []struct {
 		name       string
 		successLog string
@@ -94,7 +105,7 @@ func getIdent() (string, error) {
 			name:       "getLSBRelease",
 			successLog: "using lsb release for distribution ident",
 			findFn:     getLSBRelease,
-			validateFn: func(_ string, err error) bool { return err != nil },
+			validateFn: func(_ string, err error) bool { return err == nil },
 		},
 		{
 			// Here we check that we read more than '\S'.
@@ -102,13 +113,13 @@ func getIdent() (string, error) {
 			name:       "getIssue",
 			successLog: "using /etc/issue for distribution ident",
 			findFn:     getIssue,
-			validateFn: func(issueName string, err error) bool { return err != nil && len(issueName) > 3 },
+			validateFn: func(issueName string, err error) bool { return err == nil && len(issueName) > 3 },
 		},
 		{
 			name:       "getOSRelease",
 			successLog: "using /etc/os-release for distribution ident",
-			findFn:     getOSRelease,
-			validateFn: func(_ string, err error) bool { return err != nil },
+			findFn:     osReleaseWrapper,
+			validateFn: func(_ string, err error) bool { return err == nil },
 		},
 	}
 
@@ -165,16 +176,35 @@ func getIssue() (initname string, err error) {
 
 // getOSRelease reads /etc/os-release to retrieve the agent's ident from the
 // first line.
-func getOSRelease() (string, error) {
-	contents, err := ioutil.ReadFile("/etc/os-release")
+func getOSRelease(fileHandle io.Reader) (string, error) {
+	contents, err := ioutil.ReadAll(fileHandle)
 	if err != nil {
 		return "", fmt.Errorf("getOSRelease() -> %v", err)
 	}
-	index := bytes.IndexByte(contents, byte('\n'))
-	if index < 0 {
-		return "", fmt.Errorf("getOSRelease() -> OS release name not found")
+
+	joined := strings.Replace(string(contents), "\n", " ", -1)
+
+	searches := []struct {
+		findSubstring string
+		identIfFound  string
+	}{
+		{
+			findSubstring: "NAME=\"CentOS Linux\" VERSION=\"7 (Core)\"",
+			identIfFound:  "CentOS 7",
+		},
+		{
+			findSubstring: "PRETTY_NAME=\"CentOS Linux 7 (Core)\"",
+			identIfFound:  "CentOS 7",
+		},
 	}
-	return string(contents[0:index]), nil
+
+	for _, search := range searches {
+		if strings.Contains(joined, search.findSubstring) {
+			return search.identIfFound, nil
+		}
+	}
+
+	return "", errors.New("could not find a valid ident")
 }
 
 // getInit parses /proc/1/cmdline to find out which init system is used
