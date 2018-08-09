@@ -95,14 +95,12 @@ func (proxies *proxyList) Set(value string) error {
 }
 
 func main() {
-	templateFilePath := path.Join(configTemplateDir, configTemplateFile)
-	fmt.Fprintf(os.Stderr, "Trying to load template %s\n", templateFilePath)
-	template, err := template.ParseFiles(templateFilePath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing template configuration: %s\n", err.Error())
-		os.Exit(1)
-	}
+	defaultTemplateFilePath := path.Join(configTemplateDir, configTemplateFile)
 
+	templateFilePath := flag.String(
+		"template",
+		defaultTemplateFilePath,
+		"Path to the mig-agent.cfg template to fill")
 	relayAddr := flag.String(
 		"relay",
 		"",
@@ -137,6 +135,13 @@ func main() {
 		defaultExtraPrivacy,
 		"Instruct the agent to run with extra privacy controls")
 	flag.Parse()
+
+	fmt.Fprintf(os.Stderr, "Trying to load template %s\n", *templateFilePath)
+	template, err := template.ParseFiles(*templateFilePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing template configuration: %s\n", err.Error())
+		os.Exit(1)
+	}
 
 	config := Config{
 		RelayAddress:     *relayAddr,
