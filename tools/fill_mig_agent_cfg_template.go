@@ -4,15 +4,62 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path"
 	"strings"
 	"text/template"
 )
 
-const (
-	configTemplateDir  = "release"
-	configTemplateFile = "mig-agent.cfg.template"
-)
+const configTemplate string = `[agent]
+    ; connection string to the MIG relay. must contain credentials.
+    relay            = "{{.RelayAddress}}"
+
+    ; location of the mig api
+    api             = "{{.APIURL}}"
+
+    proxies         = "{{.Proxies}}"
+
+    ; location of the local stat socket
+    socket           = "127.0.0.1:{{.StatSocketPort}}"
+
+    ; frequency at which heartbeat messages are sent to the MIG relay
+    heartbeatfreq    = "120s"
+
+    ; timeout after which a module that has not finished is killed by the agent
+    moduletimeout    = "300s"
+
+    ; in immortal mode, the agent that encounter a fatal error
+    ; will attempt to restart itself instead of just shutting down
+    isimmortal       = {{.Immortal}}
+
+    ; installservice orders the agent to deploy a service init configuration
+    ; and start itself during the endpoint's boot process
+    installservice   = {{.InstallAsService}}
+
+    ; attempt to retrieve the public IP behind which the agent is running
+    discoverpublicip = on
+
+    ; in check-in mode, the agent connects to the relay, runs all pending commands
+    ; and exits. this mode is used to run the agent as a cron job, not a daemon.
+    checkin = {{.CronMode}}
+
+    refreshenv = "5m"
+
+    ; enable privacy mode
+    extraprivacymode = {{.ExtraPrivacy}}
+
+[stats]
+    maxactions = 15
+
+[certs]
+    ca  = "/etc/mig/ca.crt"
+    cert = "/etc/mig/agent.crt"
+    key = "/etc/mig/agent.key"
+
+[logging]
+    mode    = "file" ; stdout | file | syslog
+    level   = "debug"
+    file    = "/var/log/mig-agent.log"
+    maxfilesize = 10485760
+`
 
 // Defaults
 const (
@@ -95,12 +142,6 @@ func (proxies *proxyList) Set(value string) error {
 }
 
 func main() {
-	defaultTemplateFilePath := path.Join(configTemplateDir, configTemplateFile)
-
-	templateFilePath := flag.String(
-		"template",
-		defaultTemplateFilePath,
-		"Path to the mig-agent.cfg template to fill")
 	relayAddr := flag.String(
 		"relay",
 		"",
@@ -136,12 +177,7 @@ func main() {
 		"Instruct the agent to run with extra privacy controls")
 	flag.Parse()
 
-	fmt.Fprintf(os.Stderr, "Trying to load template %s\n", *templateFilePath)
-	template, err := template.ParseFiles(*templateFilePath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing template configuration: %s\n", err.Error())
-		os.Exit(1)
-	}
+	template := template.Must(template.New("mig-agent.cfg").Parse(configTemplate))
 
 	config := Config{
 		RelayAddress:     *relayAddr,
@@ -159,7 +195,7 @@ func main() {
 	}
 
 	translated := translate(config)
-	err = template.Execute(os.Stdout, translated)
+	err := template.Execute(os.Stdout, translated)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error filling configuration template: %s\n", err.Error())
 		os.Exit(1)
