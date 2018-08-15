@@ -47,8 +47,7 @@ const configTemplate string = `[agent]
     extraprivacymode = {{.ExtraPrivacy}}
 
     ; Tags help investigators to target specific agents for queries.
-    ; Multiple tags can be supplied as demonstrated below and the
-    ; tag name and value are separated by a colon.
+    ; Multiple tags can be supplied as demonstrated below and the tag name and value are separated by a colon.
     ; tags = "operator:example"
     ; tags = "exampleTag:other"{{ range $tag, $value := .Tags }}
     tags = "{{ $tag }}:{{ $value }}"{{ end }}
