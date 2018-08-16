@@ -1,0 +1,46 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: mig-daemon
+  namespace: mig
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: mig-ds
+    spec:
+      hostPID: true
+      hostNetwork: true
+      containers:
+        - name: mig-agent
+          image: quay.io/mozmar/mig:8a3f0aaa97dccc808919f7cc561927571980893b
+          securityContext:
+            privileged: true
+            capabilities:
+               add:
+                 - SYS_PTRACE
+          volumeMounts:
+              - name: mig-agent-secrets
+                mountPath: "/etc/mig"
+                readOnly: true
+              - name: root-fs
+                mountPath: /rootfs
+      volumes:
+          - name: root-fs
+            hostPath:
+              path: /
+          - name: mig-agent-secrets
+            secret:
+                secretName: "mig-agent-secrets"
+                items:
+                  - key: agent.crt
+                    path: agent.crt
+                  - key: agent.key
+                    path: agent.key
+                  - key: ca.crt
+                    path: ca.crt
+                  - key: mig-agent.cfg
+                    path: mig-agent.cfg
+
