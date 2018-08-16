@@ -29,9 +29,10 @@ type Component struct {
 
 // Release contains information about a release of any component.
 type Release struct {
-  Tag   string `json:"tag"`
-  Date  string `json:"date"`
-  Notes string `json:"notes"`
+  Tag    string `json:"tag"`
+  Date   string `json:"date"`
+  Notes  string `json:"notes"`
+  Sha256 string `json:"sha256"`
 }
 
 // formatDate translates a date into a "year/month/day" format, using
@@ -44,13 +45,14 @@ func formatDate(date time.Time) string {
 
 // setLatestRelease updates a component with a new release, setting the
 // latest release tag and adding to its release history.
-func setLatestRelease(comp *Component, tag, notes string) {
+func setLatestRelease(comp *Component, tag, notes, sha256 string) {
   comp.LatestReleaseTag = tag
 
   comp.ReleaseHistory = append(comp.ReleaseHistory, Release{
     Tag: tag,
     Date: formatDate(time.Now()),
     Notes: notes,
+    Sha256: sha256,
   })
 }
 
@@ -117,6 +119,10 @@ func main() {
     "notes",
     "",
     "Notes describing the release")
+  sha256 := flag.String(
+    "sha256",
+    "",
+    "Hex encoding of the SHA256 hash of the released binary")
 
   flag.Parse()
 
@@ -145,7 +151,8 @@ func main() {
     fmt.Fprintf(os.Stderr, "No tag identifier supplied.\n")
     os.Exit(1)
   }
-  setLatestRelease(component, *tag, *notes)
+
+  setLatestRelease(component, *tag, *notes, *sha256)
 
   prefix := ""
   indent := "    "
