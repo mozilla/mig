@@ -110,6 +110,7 @@ type translatedConfig struct {
 	ExtraPrivacy     string
 }
 
+// onOrOff converts a bool from `true` to `"on"` and `false` to `"off"`.
 func onOrOff(on bool) string {
 	if on {
 		return "on"
@@ -131,6 +132,7 @@ func kvPairsToMap(kvs []string) (map[string]string, error) {
   return mapping, nil
 }
 
+// translate converts a `Config` into a `translatedConfig`.
 func translate(config Config) (translatedConfig, error) {
   tags, err := kvPairsToMap(config.Tags)
   if err != nil {
@@ -150,6 +152,17 @@ func translate(config Config) (translatedConfig, error) {
 	}
 
   return tx, nil
+}
+
+// usage prints a usage string giving a more detailed explanation about how
+// to use this tool.
+func usage() {
+  fmt.Fprintf(os.Stderr, "This program is used to generate a mig-agent.cfg file, which it prints to stdout.\n\n")
+  fmt.Fprintf(os.Stderr, "The generated configuration should be written to:\n")
+  fmt.Fprintf(os.Stderr, "\t/etc/mig/mig-agent.cfg on Linux and macOS.\n")
+  fmt.Fprintf(os.Stderr, "\tC:\\mig\\mig-agent.cfg on Windows.\n\n")
+  fmt.Fprintf(os.Stderr, "The -relay argument is required.\n\n")
+  flag.PrintDefaults()
 }
 
 // IsValid verifies that values that must be supplied for a configuration have
@@ -187,6 +200,8 @@ func (tags *tagList) Set(kvPair string) error {
 }
 
 func main() {
+  flag.Usage = usage
+
 	relayAddr := flag.String(
 		"relay",
 		"",
