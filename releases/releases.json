@@ -6,7 +6,7 @@
         "tag": "20180807-0.e8eb90a1.prod",
         "date": "2018/8/7",
         "notes": "Read the correct ident on CentOS 7",
-        "sha256": "",
+        "sha256": ""
       }
     ]
   },
@@ -17,7 +17,7 @@
         "tag": "20180807-0.e8eb90a1.prod",
         "date": "2018/8/7",
         "notes": "First release of the snazzy config tool",
-        "sha256": "",
+        "sha256": ""
       }
     ]
   }
