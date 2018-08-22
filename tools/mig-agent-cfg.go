@@ -87,7 +87,7 @@ type Config struct {
 	RelayAddress     string
 	APIURL           string
 	Proxies          proxyList
-  Tags             tagList
+	Tags             tagList
 	StatSocketPort   uint
 	Immortal         bool
 	InstallAsService bool
@@ -102,7 +102,7 @@ type translatedConfig struct {
 	RelayAddress     string
 	APIURL           string
 	Proxies          string
-  Tags             map[string]string
+	Tags             map[string]string
 	StatSocketPort   uint16
 	Immortal         string
 	InstallAsService string
@@ -121,29 +121,29 @@ func onOrOff(on bool) string {
 
 // kvPairsToMap converts strings formatted like `key=value` to a map.
 func kvPairsToMap(kvs []string) (map[string]string, error) {
-  mapping := map[string]string{}
-  for _, pair := range kvs {
-    parts := strings.Split(pair, "=")
-    if len(parts) != 2 {
-      return map[string]string{}, fmt.Errorf("encountered invalidly formatted tag \"%s\". Expected format key=value")
-    }
-    mapping[parts[0]] = parts[1]
-  }
-  return mapping, nil
+	mapping := map[string]string{}
+	for _, pair := range kvs {
+		parts := strings.Split(pair, "=")
+		if len(parts) != 2 {
+			return map[string]string{}, fmt.Errorf("encountered invalidly formatted tag \"%s\". Expected format key=value")
+		}
+		mapping[parts[0]] = parts[1]
+	}
+	return mapping, nil
 }
 
 // translate converts a `Config` into a `translatedConfig`.
 func translate(config Config) (translatedConfig, error) {
-  tags, err := kvPairsToMap(config.Tags)
-  if err != nil {
-    return translatedConfig{}, err
-  }
+	tags, err := kvPairsToMap(config.Tags)
+	if err != nil {
+		return translatedConfig{}, err
+	}
 
-  tx := translatedConfig{
+	tx := translatedConfig{
 		RelayAddress:     config.RelayAddress,
 		APIURL:           config.APIURL,
 		Proxies:          strings.Join([]string(config.Proxies), ","),
-    Tags:             tags,
+		Tags:             tags,
 		StatSocketPort:   uint16(config.StatSocketPort),
 		Immortal:         onOrOff(config.Immortal),
 		InstallAsService: onOrOff(config.InstallAsService),
@@ -151,18 +151,18 @@ func translate(config Config) (translatedConfig, error) {
 		ExtraPrivacy:     onOrOff(config.ExtraPrivacy),
 	}
 
-  return tx, nil
+	return tx, nil
 }
 
 // usage prints a usage string giving a more detailed explanation about how
 // to use this tool.
 func usage() {
-  fmt.Fprintf(os.Stderr, "This program is used to generate a mig-agent.cfg file, which it prints to stdout.\n\n")
-  fmt.Fprintf(os.Stderr, "The generated configuration should be written to:\n")
-  fmt.Fprintf(os.Stderr, "\t/etc/mig/mig-agent.cfg on Linux and macOS.\n")
-  fmt.Fprintf(os.Stderr, "\tC:\\mig\\mig-agent.cfg on Windows.\n\n")
-  fmt.Fprintf(os.Stderr, "The -relay argument is required.\n\n")
-  flag.PrintDefaults()
+	fmt.Fprintf(os.Stderr, "This program is used to generate a mig-agent.cfg file, which it prints to stdout.\n\n")
+	fmt.Fprintf(os.Stderr, "The generated configuration should be written to:\n")
+	fmt.Fprintf(os.Stderr, "\t/etc/mig/mig-agent.cfg on Linux and macOS.\n")
+	fmt.Fprintf(os.Stderr, "\tC:\\mig\\mig-agent.cfg on Windows.\n\n")
+	fmt.Fprintf(os.Stderr, "The -relay argument is required.\n\n")
+	flag.PrintDefaults()
 }
 
 // IsValid verifies that values that must be supplied for a configuration have
@@ -186,21 +186,21 @@ func (proxies *proxyList) Set(value string) error {
 
 // String is required by the `flag.Value` interface.
 func (tags *tagList) String() string {
-  return strings.Join([]string(*tags), ",")
+	return strings.Join([]string(*tags), ",")
 }
 
 // Set is required by the `flag.Value` interface. We use it to enable users to
 // supply multiple tag key=value pairs, which we collect into an array.
 func (tags *tagList) Set(kvPair string) error {
-  if !strings.Contains(kvPair, "=") {
-    return fmt.Errorf("expected tag argument to be formatted key=value")
-  }
-  *tags = append(*tags, kvPair)
-  return nil
+	if !strings.Contains(kvPair, "=") {
+		return fmt.Errorf("expected tag argument to be formatted key=value")
+	}
+	*tags = append(*tags, kvPair)
+	return nil
 }
 
 func main() {
-  flag.Usage = usage
+	flag.Usage = usage
 
 	relayAddr := flag.String(
 		"relay",
@@ -215,12 +215,12 @@ func main() {
 		&proxies,
 		"proxy",
 		"Address of a proxy to use. Multiple -proxy arguments are accepted")
-  var tags tagList
-  flag.Var(
-    &tags,
-    "tag",
-    "A tagName=tagValue pair to tag the agent with. Multuple -tag arguments are accepted")
-  statPort := flag.Uint(
+	var tags tagList
+	flag.Var(
+		&tags,
+		"tag",
+		"A tagName=tagValue pair to tag the agent with. Multuple -tag arguments are accepted")
+	statPort := flag.Uint(
 		"statport",
 		defaultStatSocketPort,
 		"Port to bind the agent's stat socket to on localhost")
@@ -248,7 +248,7 @@ func main() {
 		RelayAddress:     *relayAddr,
 		APIURL:           *apiUrl,
 		Proxies:          proxies,
-    Tags:             tags,
+		Tags:             tags,
 		StatSocketPort:   *statPort,
 		Immortal:         *immortal,
 		InstallAsService: *service,
@@ -261,10 +261,10 @@ func main() {
 	}
 
 	translated, err := translate(config)
-  if err != nil {
-    fmt.Fprintf(os.Stderr, "Error creating configuration: %s\n", err.Error())
-    os.Exit(1)
-  }
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating configuration: %s\n", err.Error())
+		os.Exit(1)
+	}
 
 	err = template.Execute(os.Stdout, translated)
 	if err != nil {
