@@ -1,34 +1,42 @@
 language: go
 go:
-    - "1.10"
-      #go_import_path: github.com/mozilla/mig
+- '1.10'
 addons:
-    postgresql: "9.5"
+  postgresql: '9.5'
 notifications:
-    irc:
-        channels:
-            - "irc.mozilla.org#mig"
+  irc:
+    channels:
+    - irc.mozilla.org#mig
 services:
-    - docker
+- docker
 before_install:
-    # this is a fix to get rng-tools to work in travis-ci
-    - sudo apt-get update -qq
-    - sudo apt-get install --yes rng-tools autoconf automake gcc
-    - sudo rm -f /dev/random
-    - sudo mknod -m 0666 /dev/random c 1 9
-    - echo HRNGDEVICE=/dev/urandom | sudo tee /etc/default/rng-tools
-    - sudo /etc/init.d/rng-tools restart
+- sudo apt-get update -qq
+- sudo apt-get install --yes rng-tools autoconf automake gcc
+- sudo rm -f /dev/random
+- sudo mknod -m 0666 /dev/random c 1 9
+- echo HRNGDEVICE=/dev/urandom | sudo tee /etc/default/rng-tools
+- sudo /etc/init.d/rng-tools restart
 script:
-    - make test
-    - docker build -t mozilla/mig .
-    - docker run -e MIGMODE=test mozilla/mig
-    - |
-        if [ ! -z "$TRAVIS_TAG" ]; then
-            # If a TRAVIS_TAG is set, this build follows a git tag --push and should trigger
-            # a release of a tagged container to dockerhub. Otherwise, we tag as latest.
-            docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-            docker tag mozilla/mig mozilla/mig:${TRAVIS_TAG}
-            docker tag mozilla/mig mozilla/mig:latest
-            docker push mozilla/mig
-        fi
-        docker logout
+- make test
+- bash tools/build-agent-release.sh
+- docker build -t mozilla/mig .
+- docker run -e MIGMODE=test mozilla/mig
+- |
+  if [ ! -z "$TRAVIS_TAG" ]; then
+      # If a TRAVIS_TAG is set, this build follows a git tag --push and should trigger
+      # a release of a tagged container to dockerhub. Otherwise, we tag as latest.
+      docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      docker tag mozilla/mig mozilla/mig:${TRAVIS_TAG}
+      docker tag mozilla/mig mozilla/mig:latest
+      docker push mozilla/mig
+  fi
+  docker logout
+deploy:
+  provider: s3
+  access_key_id: 'AKIAJ7VGWUJBJHH4J36A'
+  secret_access_key:
+    secure: OEz0Dl1NxIahP2RyOpP3vkl5Thvn2XU5IAeWoYrvGfuLtpdB5Jk+lfW9oeJrbfdCObXbAIdcR/HCUBae8AInbU4R6xCWir2cDhEJ1ZW4ujarhp9QGCgR3H+J1+I1BNeR+ugyIHurgQWVCYVDfLX9SiC4YvhOp6YTuVEVV3wEuLA=
+  bucket: 'mig-agent-releases'
+  skip_cleanup: true
+  region: us-west-2
+  local_dir: releases
