@@ -20,7 +20,7 @@ BUILDS=(
 # 3. The tag for the new release and
 # 4. The path to the new agent binary.
 function update_releases() {
-  releasejson=$(go run tools/update_release_json.go \
+  releasejson=$(go run tools/update-release-json.go \
     -releases $RELEASEDIR/$1 \
     -component $2 \
     -tag $3 \
@@ -44,7 +44,7 @@ for build in "${BUILDS[@]}"; do
   fi
 
   echo "Building an agentConfig tool for ${args[0]}/${args[1]}"
-  GOOS=${args[0]} GOARCH=${args[1]} go build -o $RELEASEDIR/mig-agent-cfg-${args[2]} tools/mig_agent_cfg.go
+  GOOS=${args[0]} GOARCH=${args[1]} go build -o $RELEASEDIR/mig-agent-cfg-${args[2]} tools/mig-agent-cfg.go
   if [ $? -eq 0 ]; then
     echo "+ Build succeeded"
     update_releases releases.json agentConfig $TAG mig-agent-cfg-${args[2]}
