@@ -67,7 +67,7 @@ func knownComponents() []string {
 	}
 }
 
-// component retrievses a pointer to a known component identified by its name,
+// component retrieves a pointer to a known component identified by its name,
 // which must match one of the "knownComponents", so that a new release can be
 // appended to it.
 func component(releases *ReleaseJSON, compName string) (*Component, error) {
