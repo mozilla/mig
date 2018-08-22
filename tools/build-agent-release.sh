@@ -14,17 +14,18 @@ BUILDS=(
 
 
 # update_releases invokes the update_release_json tool to record an agent update.
-# It expects to be called with three arguments:
+# It expects to be called with the following arguments:
 # 1. The path to the releases.json file to update,
-# 2. The tag for the new release and
-# 3. The path to the new agent binary.
+# 2. The component to update,
+# 3. The tag for the new release and
+# 4. The path to the new agent binary.
 function update_releases() {
   releasejson=$(go run tools/update_release_json.go \
     -releases $RELEASEDIR/$1 \
-    -component agent \
-    -tag $2 \
-    -binary $3 \
-    -sha256 $(cat $RELEASEDIR/$3 | openssl sha256))
+    -component $2 \
+    -tag $3 \
+    -binary $4 \
+    -sha256 $(cat $RELEASEDIR/$4 | openssl sha256))
 
   echo "$releasejson" > $RELEASEDIR/$1
 }
@@ -32,11 +33,21 @@ function update_releases() {
 
 for build in "${BUILDS[@]}"; do
   IFS=" " read -ra args <<< "$build"
+
   echo "Building an agent for ${args[0]}/${args[1]}"
   GOOS=${args[0]} GOARCH=${args[1]} go build -o $RELEASEDIR/mig-agent-${args[2]} github.com/mozilla/mig/mig-agent
   if [ $? -eq 0 ]; then
     echo "+ Build succeeded"
-    update_releases releases.json $TAG mig-agent-${args[2]}
+    update_releases releases.json agent $TAG mig-agent-${args[2]}
+  else
+    echo "- Build failed";
+  fi
+
+  echo "Building an agentConfig tool for ${args[0]}/${args[1]}"
+  GOOS=${args[0]} GOARCH=${args[1]} go build -o $RELEASEDIR/mig-agent-cfg-${args[2]} tools/mig_agent_cfg.go
+  if [ $? -eq 0 ]; then
+    echo "+ Build succeeded"
+    update_releases releases.json agentConfig $TAG mig-agent-cfg-${args[2]}
   else
     echo "- Build failed";
   fi
