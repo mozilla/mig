@@ -1,5 +1,13 @@
 RELEASEDIR=releases
-TAG=$(date +%Y%m%d)-0.$(git log --pretty=format:'%h' -n 1)
+DATESTAMP=$(date +%Y%m%d)
+LOGSTAMP=$(git log --pretty=format:'%h' -n 1)
+
+if [ "$LOGSTAMP" -eq "0" ]; then
+  echo "Couldn't get Git log"
+  exit 1
+fi
+
+TAG=$DATESTAMP-0.$LOGSTAMP
 
 BUILDS=(
   # FORMAT
