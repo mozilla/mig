@@ -4,12 +4,12 @@ TAG=$(date +%Y%m%d)-0.$(git log --pretty=format:'%h' -n 1)
 BUILDS=(
   # FORMAT
   # GOOS GOARCH BINSUFFIX
-  "darwin 386 darwin-i386-$TAG.prod"
-  "darwin amd64 darwin-amd64-$TAG.prod"
+  # "darwin 386 darwin-i386-$TAG.prod"
+  # "darwin amd64 darwin-amd64-$TAG.prod"
   "linux 386 linux-i386-$TAG.prod"
   "linux amd64 linux-amd64-$TAG.prod"
-  "windows 386 windows-i386-$TAG.prod.exe"
-  "windows amd64 windows-amd64-$TAG.prod.exe"
+  # "windows 386 windows-i386-$TAG.prod.exe"
+  # "windows amd64 windows-amd64-$TAG.prod.exe"
 )
 
 
