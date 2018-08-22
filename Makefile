@@ -142,7 +142,7 @@ mig-runner: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-runner $(GOLDFLAGS) github.com/mozilla/mig/mig-runner
 
 mig-action-generator: create-bindir
-	S(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) github.com/mozilla/mig/client/mig-action-generator
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) github.com/mozilla/mig/client/mig-action-generator
 
 mig-loader: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader$(BINSUFFIX) $(GOLDFLAGS) github.com/mozilla/mig/mig-loader
