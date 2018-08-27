@@ -124,7 +124,7 @@ create-bindir:
 mig-agent: create-bindir
 	@echo building mig-agent for $(OS)/$(ARCH)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) github.com/mozilla/mig/mig-agent
-	$(GO) build $(GOOPTS) -o $(BINDIR)/mig_agent_cfg tools/mig_agent_cfg.go
+	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-cfg tools/mig-agent-cfg.go
 	ln -fs "$$(pwd)/$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" "$$(pwd)/$(BINDIR)/mig-agent-latest"
 	[ -x "$(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX)" ]
 # If our build target is darwin and OSXPROCSIGID is set, sign the binary
