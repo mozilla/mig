@@ -1,54 +1,17 @@
-MIG: Mozilla InvestiGator
+Mozilla Investigator (MIG)
 =========================
-<img style="float: right" src="doc/.files/MIG-logo-CC-small.jpg" size="300px">
+<img style="float: right" src="doc/.files/MIG-logo-CC-small.jpg" size="300px" img src="image" width="35%">
+
+<em>Investigating vulnerability of remote endpoints.</em>
 
 [![Build Status](https://travis-ci.org/mozilla/mig.svg?branch=master)](https://travis-ci.org/mozilla/mig)
 
-MIG is Mozilla's platform for investigative surgery of remote endpoints.
-
-Quick Start w/ Docker
----------------------
-
-You can spin up a local-only MIG setup using docker. The container is not suitable for production use but
-lets you experiment with MIG quickly, providing a single container environment that has most of the MIG components
-available.
-
-To pull from Docker Hub:
-
-```bash
-$ docker pull mozilla/mig
-$ docker run -it mozilla/mig
-```
-
-Or, if you have the source checked out in your GOPATH you can build your own image:
-
-```bash
-$ cd $GOPATH/src/github.com/mozilla/mig
-$ docker build -t mozilla/mig:latest .
-$ docker run -it mozilla/mig
-```
-
-Once inside the container, you can use the MIG tools to query a local agent, as such:
-
-```bash
-mig@5345268590c8:~$ /go/bin/mig file -t all -path /usr/bin -sha2 5c1956eba492b2c3fffd8d3e43324b5c477c22727385be226119f7ffc24aad3f
-1 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
-Following action ID 7978299359234.
- 1 / 1 [=========================================================] 100.00% 0/s4s
-100.0% done in 3.029105958s
-1 sent, 1 done, 1 succeeded
-ed11f485244a /usr/bin/wget [lastmodified:2016-07-05 15:32:42 +0000 UTC, mode:-rwxr-xr-x, size:419080] in search 's1'
-1 agent has found results
-```
-
-To explore the capabilities of MIG, take a look at the [CheatSheet](https://github.com/mozilla/mig/blob/master/doc/cheatsheet.rst).
-
-What is this?
+What is Mozilla Investigator?
 -------------
 
-MIG is composed of agents installed on all systems of an infrastructure that are
-be queried in real-time to investigate the file-systems, network state, memory
-or configuration of endpoints.
+Mozilla Investigator (MIG) is a platform for investigating vulnerability of remote endpoints. Agents on all systems of an infrastructure facilitate queries of file systems, network states, memory, and endpoint configuration in real time. Using MIG, users can obtain information from many endpoints in an infrastructure simultaneously, thus identfying risk and improving security operations.
+
+In elementary words, it's an army of Sherlock Holmes's, my dear Watson!
 
 | Capability        | Linux | MacOS | Windows |
 | ----------------- | ----- | ----- | ------- |
@@ -97,6 +60,43 @@ Privacy and security are paramount. Agents never send raw data back to the
 platform, but only reply to questions instead. All actions are signed by GPG
 keys that are not stored in the platform, thus preventing a compromise from
 taking over the entire infrastructure.
+
+Quick Start w/ Docker
+---------------------
+
+You can spin up a local-only MIG setup using docker. The container is not suitable for production use but
+lets you experiment with MIG quickly, providing a single container environment that has most of the MIG components
+available.
+
+To pull from Docker Hub:
+
+```bash
+$ docker pull mozilla/mig
+$ docker run -it mozilla/mig
+```
+
+Or, if you have the source checked out in your GOPATH you can build your own image:
+
+```bash
+$ cd $GOPATH/src/github.com/mozilla/mig
+$ docker build -t mozilla/mig:latest .
+$ docker run -it mozilla/mig
+```
+
+Once inside the container, you can use the MIG tools to query a local agent, as such:
+
+```bash
+mig@5345268590c8:~$ /go/bin/mig file -t all -path /usr/bin -sha2 5c1956eba492b2c3fffd8d3e43324b5c477c22727385be226119f7ffc24aad3f
+1 agents will be targeted. ctrl+c to cancel. launching in 5 4 3 2 1 GO
+Following action ID 7978299359234.
+ 1 / 1 [=========================================================] 100.00% 0/s4s
+100.0% done in 3.029105958s
+1 sent, 1 done, 1 succeeded
+ed11f485244a /usr/bin/wget [lastmodified:2016-07-05 15:32:42 +0000 UTC, mode:-rwxr-xr-x, size:419080] in search 's1'
+1 agent has found results
+```
+
+To explore the capabilities of MIG, take a look at the [CheatSheet](https://github.com/mozilla/mig/blob/master/doc/cheatsheet.rst).
 
 Technology
 ----------
