@@ -33,9 +33,11 @@ script:
   docker logout
 deploy:
   provider: s3
-  access_key_id: $AWS_KEY_ID
-  secret_access_key: $AWS_SECRET_KEY
+  access_key_id: AKIAIE7AXHXLPYI6OBLQ
+  secret_access_key:
+    secure: U0LhIhoa0GZGj5R2CdagKSrP9qX5HrGMYjZSNnI5LYRM/Y0XuuBRUFajit8KspCcpV/H5RAvKmGE7P8TXFy8D7doh6ZrtCqsMsfEs3VMlik0Mm6ywBybFb4yTOH6GzFAmiWD8n7B8QgxhBktJESkYj+WZ/k8Wxhw6VXeka5mvlw=
   bucket: mig-agent-releases
+  skip_cleanup: true
   region: us-west-2
   skip_cleanup: true
   local_dir: releases
