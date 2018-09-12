@@ -37,7 +37,7 @@ With just a few commands, MIG users investigate thousands of remote systems.
 Design and Capability
 -------------
 
-MIG agents are designed to be lightweight, secure, and easy to deploy. You can ask your favorite sysadmins to add agents to base deployment without fear of breaking the entire production network. All parameters are built into the agent at compile time, including the list and ACLs of authorized investigators. PGP keys bolster security. Even if MIG's servers become compromised, *nobody* can access agents if keys are stored safely by the investigator.
+MIG agents are designed to be lightweight, secure, and easy to deploy. You can ask your favorite sysadmins to add agents to base deployment without fear of breaking the entire production network. All parameters are built into the agent at compile time, including the ACLs of authorized investigators. PGP keys bolster security. Even if MIG servers become compromised, *nobody* can access agents as long as keys are stored safely by the investigator.
 
 MIG is also designed to be fast and asynchronous. It uses AMQP to distribute actions
 to endpoints and relies on Go channels to prevent blocking components. The reliability of the platform is not dependent on long-running processes, as running actions and commands are stored in a PostgreSQL database and on disk cache.
