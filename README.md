@@ -23,10 +23,12 @@ The signature of the vulnerable PHP app (the md5 of a file, a regex,
 or simply a filename) can be searched for across all systems via
 the `file` module. Similarly, IOCs can be investigated using MIG, including:
 
-*log entries
-*backdoor files with md5 and sha 1/2/3 hashes
-*IP addresses from botnets
-*byte strings in processes memories
+<ul>
+<li>specific log entries</li>
+<li>backdoor files with md5 and sha 1/2/3 hashes</li>
+<li>IP addresses from botnets</li>
+<li>byte strings in processes memories</li>
+</ul> 
 
 With just a few simple commands, thousands of systems will be remotely investigated to identify whether or not you are at risk.
 
