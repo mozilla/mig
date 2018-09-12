@@ -79,7 +79,7 @@ $ docker build -t mozilla/mig:latest .
 $ docker run -it mozilla/mig
 ```
 
-Inside the container, use MIG to query a local agent:
+Use MIG inside the container to query a local agent:
 
 ```bash
 mig@5345268590c8:~$ /go/bin/mig file -t all -path /usr/bin -sha2 5c1956eba492b2c3fffd8d3e43324b5c477c22727385be226119f7ffc24aad3f
@@ -92,7 +92,7 @@ ed11f485244a /usr/bin/wget [lastmodified:2016-07-05 15:32:42 +0000 UTC, mode:-rw
 1 agent has found results
 ```
 
-To further explore the capabilities of MIG, examine the [CheatSheet](https://github.com/mozilla/mig/blob/master/doc/cheatsheet.rst).
+To further explore the capabilities of MIG, see the [CheatSheet](https://github.com/mozilla/mig/blob/master/doc/cheatsheet.rst).
 
 Technology
 ----------
@@ -115,11 +115,11 @@ Watch the MIG presentation at SANS DFIR Summit in Austin, TX:
 
 Discussion
 ----------
-Join **#mig** on [irc.mozilla.org](https://wiki.mozilla.org/IRC) (use a web
+Join **#mig** at [irc.mozilla.org](https://wiki.mozilla.org/IRC) (use a web
 client such as [mibbit](https://chat.mibbit.com)).
 
 Documentation
 -------------
-All documentation is available in the 'doc' directory and on http://mig.mozilla.org .
+All MIG documentation is available in the 'doc' directory and at http://mig.mozilla.org .
 * [Concepts & Internal Components](doc/concepts.rst)
 * [Installation & Configuration](doc/configuration.rst)
