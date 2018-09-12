@@ -34,18 +34,17 @@ With just a few simple commands, MIG users investigate thousands of remote syste
 
 ![MIG command line demo](doc/.files/mig-cmd-demo.gif)
 
-MIG agents are designed to be lightweight, secure, and easy to deploy, so you can
-ask your favorite sysadmins to add agents to base deployment without fear of
-breaking the entire production network. All parameters are built into the agent
-at compile time, including the list and ACLs of authorized investigators.
-Security is enforced using PGP keys. Even if MIG's servers are compromised, *nobody* can break into the agents
-if our keys are kept safe on the investigator's laptop.
+Design and Capability
+-------------
 
-MIG is designed to be fast and asynchronous. It uses AMQP to distribute actions
-to endpoints, and relies on Go channels to prevent components from blocking. The reliability of the platform doesn't depend on long-running processes, as running actions and commands are stored in a PostgreSQL database and on disk cache.
+MIG agents are designed to be lightweight, secure, and easy to deploy. You can ask your favorite sysadmins to add agents to base deployment without fear of breaking the entire production network. All parameters are built into the agent
+at compile time, including the list and ACLs of authorized investigators. Security is enforced using PGP keys. Even if MIG's servers are compromised, *nobody* can break into the agents if our keys are kept safe on the investigator's laptop.
 
-Most actions will only require milliseconds to run on agents. Larger actions, like searching for a hash in
-a big directory, will require a few minutes. Generally, an
+MIG is also designed to be fast and asynchronous. It uses AMQP to distribute actions
+to endpoints and relies on Go channels to prevent blocking components. The reliability of the platform is not dependent on long-running processes, as running actions and commands are stored in a PostgreSQL database and on disk cache.
+
+Most actions will only require milliseconds for agents to run. More demanding actions, like searching for a hash in
+a large directory, will require a few minutes. Generally, an
 investigation completes in 10 to 300 seconds.
 
 Privacy and security are paramount. Agents do NOT send raw data back to the
