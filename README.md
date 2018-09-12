@@ -22,15 +22,15 @@ thousands of systems isn't exactly appealing, is it?
 
 **MIG can help!** 
 
-MIG can search across all systems for the signature of the vulnerable PHP app (the md5 of a file, a regex,
-or simply a filename) via the `file` module. IOCs can also be investigated using MIG, including:
+MIG searches across all systems for the signature of the vulnerable PHP app (the md5 of a file, a regex,
+or simply a filename) via the `file` module. MIG also investigates IOCs, including:
 
 * specific log entries
 * backdoor files with md5 and sha 1/2/3 hashes
 * IP addresses from botnets
 * byte strings in processes memories
 
-With just a few simple commands, MIG users investigate thousands of remote systems to identify risk.
+MIG users investigate thousands of remote systems with just a few commands.
 
 ![MIG command line demo](doc/.files/mig-cmd-demo.gif)
 
