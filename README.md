@@ -11,17 +11,19 @@ What is Mozilla Investigator?
 
 Mozilla Investigator (MIG) is a platform for identifying vulnerability in remote endpoints. "Agents" installed over all systems of an infrastructure answer queries of file systems, network states, memory, and endpoint configuration in real time. With MIG, users can obtain information from many endpoints of an infrastructure simultaneously, thus identfying risk and improving security operations.
 
-In other words...it's an army of Sherlock Holmes's, my dear Watson!
+In other words...MIG is an army of Sherlock Holmes's at your fingertips, my dear Watson!
+
+When do I use MIG?
+-------------
 
 Suppose a critical vulnerability is released for your favorite PHP application. The vuln is already
 being exploited and security groups are releasing indicators of compromise (IOCs). The thought of manually inspecting
-thousands of systems isn't exactly exciting, is it?
+thousands of systems isn't so exciting, is it?
 
-MIG can help! 
+**MIG can help!** 
 
-The signature of the vulnerable PHP app (the md5 of a file, a regex,
-or simply a filename) can be searched for across all systems via
-the `file` module. Similarly, IOCs can be investigated using MIG, including:
+MIG can search across all systems for the signature of the vulnerable PHP app (the md5 of a file, a regex,
+or simply a filename) via the `file` module. IOCs can also be investigated using MIG, including:
 
 * specific log entries
 * backdoor files with md5 and sha 1/2/3 hashes
