@@ -42,15 +42,13 @@ if our keys are kept safe on the investigator's laptop.
 MIG is designed to be fast and asynchronous. It uses AMQP to distribute actions
 to endpoints, and relies on Go channels to prevent components from blocking. The reliability of the platform doesn't depend on long-running processes, as running actions and commands are stored in a PostgreSQL database and on disk cache.
 
-Speed is a strong requirement. Most actions will only take a few hundreds
-milliseconds to run on agents. Larger ones, for example when looking for a hash in
-a big directory, should run in less than a minute or two. All in all, an
-investigation usually completes in between 10 and 300 seconds.
+Most actions will only require milliseconds to run on agents. Larger actions, like searching for a hash in
+a big directory, will run in only a few minutes. Generally, an
+investigation completes in 10 to 300 seconds.
 
-Privacy and security are paramount. Agents never send raw data back to the
-platform, but only reply to questions instead. All actions are signed by GPG
-keys that are not stored in the platform, thus preventing a compromise from
-taking over the entire infrastructure.
+Privacy and security are paramount. Agents do NOT send raw data back to the
+platform, and only reply to queries. All actions are signed by GPG
+keys that are NOT stored in the platform, thus preventing compromised infrastructure.
 
 | Capability        | Linux | MacOS | Windows |
 | ----------------- | ----- | ----- | ------- |
