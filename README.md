@@ -9,9 +9,9 @@ Mozilla Investigator (MIG)
 What is Mozilla Investigator?
 -------------
 
-Mozilla Investigator (MIG) is a platform for investigating vulnerability of remote endpoints. Agents on all systems of an infrastructure facilitate queries of file systems, network states, memory, and endpoint configuration in real time. Using MIG, users can obtain information from many endpoints in an infrastructure simultaneously, thus identfying risk and improving security operations.
+Mozilla Investigator (MIG) is a platform for identifying vulnerability of remote endpoints. "Agents" in all systems of an infrastructure facilitate queries of file systems, network states, memory, and endpoint configuration in real time. Using MIG, users can obtain information from many endpoints in an infrastructure simultaneously, thus identfying risk and improving security operations.
 
-In elementary words, it's an army of Sherlock Holmes's, my dear Watson!
+In other words...it's an army of Sherlock Holmes's, my dear Watson!
 
 | Capability        | Linux | MacOS | Windows |
 | ----------------- | ----- | ----- | ------- |
