@@ -100,16 +100,16 @@ MIG is built in Go. It uses a REST API that receives signed JSON messages. The m
 to agents via RabbitMQ and stored in a PostgreSQL database.
 
 MIG is:
-* fast in distribution.
-* simple to deploy across platforms.
-* secured using OpenPGP.
-* respectful of privacy (never retrieves raw data from endpoints).
+* fast in distribution
+* simple to deploy across platforms
+* secured using OpenPGP
+* focused on privacy (never retrieves raw data from endpoints)
 
-Check out this 10 minute demonstration of the console interface:
+Watch this 10 minute demonstration of the console interface:
 
 [![MIG youtube video](http://img.youtube.com/vi/wJwj5YB6FFA/0.jpg)](http://www.youtube.com/watch?v=wJwj5YB6FFA)
 
-MIG was recently presented at the SANS DFIR Summit in Austin, TX. Watch the recording below:
+Watch the MIG presentation at SANS DFIR Summit in Austin, TX:
 
 [![MIG @ DFIR Summit 2015](http://img.youtube.com/vi/pLyKPf3VsxM/0.jpg)](http://www.youtube.com/watch?v=pLyKPf3VsxM)
 
