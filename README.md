@@ -23,29 +23,24 @@ The signature of the vulnerable PHP app (the md5 of a file, a regex,
 or simply a filename) can be searched for across all systems via
 the `file` module. Similarly, IOCs can be investigated using MIG, including:
 
-<ul>
-<li>specific log entries</li>
-<li>backdoor files with md5 and sha 1/2/3 hashes</li>
-<li>IP addresses from botnets</li>
-<li>byte strings in processes memories</li>
-</ul> 
+* specific log entries
+* backdoor files with md5 and sha 1/2/3 hashes
+* IP addresses from botnets
+* byte strings in processes memories
 
-With just a few simple commands, thousands of systems will be remotely investigated to identify whether or not you are at risk.
+With just a few simple commands, MIG users investigate thousands of remote systems to identify risk.
 
 ![MIG command line demo](doc/.files/mig-cmd-demo.gif)
 
-MIG agents are designed to be lightweight, secure, and easy to deploy so you can
-ask your favorite sysadmins to add it to a base deployment without fear of
+MIG agents are designed to be lightweight, secure, and easy to deploy, so you can
+ask your favorite sysadmins to add agents to base deployment without fear of
 breaking the entire production network. All parameters are built into the agent
 at compile time, including the list and ACLs of authorized investigators.
-Security is enforced using PGP keys, and even if MIG's servers are compromised,
-as long as our keys are safe on your investigator's laptop, no one will break
-into the agents.
+Security is enforced using PGP keys. Even if MIG's servers are compromised, *nobody* can break into the agents
+if our keys are kept safe on the investigator's laptop.
 
-MIG is designed to be fast, and asynchronous. It uses AMQP to distribute actions
-to endpoints, and relies on Go channels to prevent components from blocking.
-Running actions and commands are stored in a Postgresql database and on disk cache,
-such that the reliability of the platform doesn't depend on long-running processes.
+MIG is designed to be fast and asynchronous. It uses AMQP to distribute actions
+to endpoints, and relies on Go channels to prevent components from blocking. The reliability of the platform doesn't depend on long-running processes, as running actions and commands are stored in a PostgreSQL database and on disk cache.
 
 Speed is a strong requirement. Most actions will only take a few hundreds
 milliseconds to run on agents. Larger ones, for example when looking for a hash in
