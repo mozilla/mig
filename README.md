@@ -13,15 +13,6 @@ Mozilla Investigator (MIG) is a platform for identifying vulnerability of remote
 
 In other words...it's an army of Sherlock Holmes's, my dear Watson!
 
-| Capability        | Linux | MacOS | Windows |
-| ----------------- | ----- | ----- | ------- |
-| file inspection   | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) |
-| network inspection| ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | (partial) |
-| memory inspection | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) |
-| vuln management   | ![check](doc/.files/check_mark_green.png) | (planned) | (planned) |
-| log analysis      | (planned) | (planned) | (planned) |
-| system auditing   | ![check](doc/.files/check_mark_green.png) | (planned) | (planned) |
-
 Suppose a critical vulnerability is released for your favorite PHP application. The vuln is already
 being exploited and security groups are releasing indicators of compromise (IOCs). The thought of manually inspecting
 thousands of systems isn't exactly exciting, is it?
@@ -63,6 +54,15 @@ Privacy and security are paramount. Agents never send raw data back to the
 platform, but only reply to questions instead. All actions are signed by GPG
 keys that are not stored in the platform, thus preventing a compromise from
 taking over the entire infrastructure.
+
+| Capability        | Linux | MacOS | Windows |
+| ----------------- | ----- | ----- | ------- |
+| file inspection   | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) |
+| network inspection| ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | (partial) |
+| memory inspection | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) | ![check](doc/.files/check_mark_green.png) |
+| vuln management   | ![check](doc/.files/check_mark_green.png) | (planned) | (planned) |
+| log analysis      | (planned) | (planned) | (planned) |
+| system auditing   | ![check](doc/.files/check_mark_green.png) | (planned) | (planned) |
 
 Quick Start w/ Docker
 ---------------------
