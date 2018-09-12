@@ -2,7 +2,7 @@ Mozilla Investigator (MIG)
 =========================
 <img style="float: right" src="doc/.files/MIG-logo-CC-small.jpg" size="300px" img src="image" width="35%">
 
-<em>Investigating vulnerability of remote endpoints.</em>
+*Investigating vulnerability of remote endpoints.*
 
 [![Build Status](https://travis-ci.org/mozilla/mig.svg?branch=master)](https://travis-ci.org/mozilla/mig)
 
@@ -22,19 +22,22 @@ In other words...it's an army of Sherlock Holmes's, my dear Watson!
 | log analysis      | (planned) | (planned) | (planned) |
 | system auditing   | ![check](doc/.files/check_mark_green.png) | (planned) | (planned) |
 
-Imagine it is 7am on a saturday morning, and someone just released a
-critical vulnerability for your favorite PHP application. The vuln is already
-exploited and security groups are releasing indicators of compromise (IOCs).
-Your weekend isn't starting great, and the thought of manually inspecting
-thousands of systems isn't making it any better.
+Suppose a critical vulnerability is released for your favorite PHP application. The vuln is already
+being exploited and security groups are releasing indicators of compromise (IOCs). The thought of manually inspecting
+thousands of systems isn't exactly exciting, is it?
 
-MIG can help. The signature of the vulnerable PHP app (the md5 of a file, a regex,
-or just a filename) can be searched for across all your systems using
-the `file` module. Similarly, IOCs such as specific log entries, backdoor files
-with md5 and sha1/2/3 hashes, IP addresses from botnets or byte
-strings in processes memories can be investigated using MIG. Suddenly, your
-weekend is looking a lot better. And with just a few commands, thousands of systems
-will be remotely investigated to verify that you're not at risk.
+MIG can help! 
+
+The signature of the vulnerable PHP app (the md5 of a file, a regex,
+or simply a filename) can be searched for across all systems via
+the `file` module. Similarly, IOCs can be investigated using MIG, including:
+
+-log entries
+-backdoor files with md5 and sha 1/2/3 hashes
+-IP addresses from botnets
+-byte strings in processes memories
+
+With just a few simple commands, thousands of systems will be remotely investigated to identify whether or not you are at risk.
 
 ![MIG command line demo](doc/.files/mig-cmd-demo.gif)
 
