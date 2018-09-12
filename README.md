@@ -43,7 +43,7 @@ MIG is designed to be fast and asynchronous. It uses AMQP to distribute actions
 to endpoints, and relies on Go channels to prevent components from blocking. The reliability of the platform doesn't depend on long-running processes, as running actions and commands are stored in a PostgreSQL database and on disk cache.
 
 Most actions will only require milliseconds to run on agents. Larger actions, like searching for a hash in
-a big directory, will run in only a few minutes. Generally, an
+a big directory, will require a few minutes. Generally, an
 investigation completes in 10 to 300 seconds.
 
 Privacy and security are paramount. Agents do NOT send raw data back to the
@@ -59,21 +59,19 @@ keys that are NOT stored in the platform, thus preventing compromised infrastruc
 | log analysis      | (planned) | (planned) | (planned) |
 | system auditing   | ![check](doc/.files/check_mark_green.png) | (planned) | (planned) |
 
-Quick Start w/ Docker
+Quick Start with Docker
 ---------------------
 
-You can spin up a local-only MIG setup using docker. The container is not suitable for production use but
-lets you experiment with MIG quickly, providing a single container environment that has most of the MIG components
-available.
+You can explore a local-only MIG setup using Docker. Docker provides a single container environment with most MIG components available. Note the container is not intended for full MIG usage.
 
-To pull from Docker Hub:
+Pulling from Docker Hub:
 
 ```bash
 $ docker pull mozilla/mig
 $ docker run -it mozilla/mig
 ```
 
-Or, if you have the source checked out in your GOPATH you can build your own image:
+Alternatively, if the the source is checked out in your GOPATH, build your own image:
 
 ```bash
 $ cd $GOPATH/src/github.com/mozilla/mig
@@ -81,7 +79,7 @@ $ docker build -t mozilla/mig:latest .
 $ docker run -it mozilla/mig
 ```
 
-Once inside the container, you can use the MIG tools to query a local agent, as such:
+Inside the container, use MIG to query a local agent:
 
 ```bash
 mig@5345268590c8:~$ /go/bin/mig file -t all -path /usr/bin -sha2 5c1956eba492b2c3fffd8d3e43324b5c477c22727385be226119f7ffc24aad3f
@@ -94,7 +92,7 @@ ed11f485244a /usr/bin/wget [lastmodified:2016-07-05 15:32:42 +0000 UTC, mode:-rw
 1 agent has found results
 ```
 
-To explore the capabilities of MIG, take a look at the [CheatSheet](https://github.com/mozilla/mig/blob/master/doc/cheatsheet.rst).
+To further explore the capabilities of MIG, examine the [CheatSheet](https://github.com/mozilla/mig/blob/master/doc/cheatsheet.rst).
 
 Technology
 ----------
