@@ -42,7 +42,7 @@ MIG agents are designed to be lightweight, secure, and easy to deploy. You can a
 MIG is also designed to be fast and asynchronous. It uses AMQP to distribute actions
 to endpoints and relies on Go channels to prevent blocking components. The reliability of the platform is not dependent on long-running processes, as running actions and commands are stored in a PostgreSQL database and on disk cache.
 
-Most actions only require milliseconds for agents to run. More demanding actions, like searching for a hash in
+Most actions require only milliseconds for agents to run. More demanding actions, like searching for a hash in
 a large directory, require a few minutes. Generally, an
 investigation completes in 10 to 300 seconds.
 
