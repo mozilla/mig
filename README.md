@@ -30,7 +30,7 @@ or simply a filename) via the `file` module. MIG also investigates IOCs, includi
 * IP addresses from botnets
 * byte strings in processes memories
 
-With just a few commands, MIG users investigate thousands of remote systems.
+With just a few commands, MIG users can investigate *thousands* of remote systems.
 
 ![MIG command line demo](doc/.files/mig-cmd-demo.gif)
 
