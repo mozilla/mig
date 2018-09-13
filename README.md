@@ -17,8 +17,8 @@ When do I use MIG?
 -------------
 
 Suppose a critical vulnerability has just been released for your favorite PHP application. The vuln is already
-being exploited and security groups are releasing indicators of compromise (IOCs). The thought of manually inspecting
-thousands of systems isn't exactly appealing, is it?
+being exploited and security groups are releasing indicators of compromise (IOCs). The thought of inspecting
+thousands of systems manually isn't exactly appealing, is it?
 
 **MIG can help!** 
 
