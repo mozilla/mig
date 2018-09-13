@@ -60,9 +60,9 @@ keys that are NOT stored in the platform, thereby preventing infrastructure comp
 Quick Start with Docker
 ---------------------
 
-You can explore a local-only MIG setup using Docker. Docker provides a single container environment with most MIG components available. Note the container is not intended for full MIG usage.
+You can explore a local-only MIG setup using Docker. Docker provides a single container environment with most MIG components available. *Note that this setup is not intended for comprehensive MIG usage.*
 
-Pulling from Docker Hub:
+Pull from Docker Hub:
 
 ```bash
 $ docker pull mozilla/mig
