@@ -195,6 +195,7 @@ func initDB(orig_ctx Context) (ctx Context, err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "leaving initDB()"}.Debug()
 	}()
 
+	fmt.Fprintf(os.Stdout, "Attempting to connect to postgresql database...")
 	ctx = orig_ctx
 	ctx.DB, err = migdb.Open(ctx.Postgres.DBName, ctx.Postgres.User, ctx.Postgres.Password,
 		ctx.Postgres.Host, ctx.Postgres.Port, ctx.Postgres.SSLMode)
