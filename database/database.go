@@ -25,7 +25,7 @@ func Open(dbname, user, password, host string, port int, sslmode string) (db DB,
 	if err != nil {
 		return
 	}
-	err = db.c.Ping()
+	_, err = db.c.Query("SELECT 1")
 	return
 }
 
