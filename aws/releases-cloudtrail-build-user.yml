@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Sets up a managed policy for Mig to build and deploy to s3."
+Parameters:
+  S3BucketMigBuilds:
+    Type: "String"
+    Description: "The S3 bucket that your build job will be writing out to. (arn:aws:s3:::mig-agent-releases)"
+Resources:
+  PutBuildstoS3:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Managed policy for travis-ci to put builds to s3."
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action: "s3:PutObject"
+            Resource:
+              - !Ref S3BucketMigBuilds
+          -
+            Effect: "Allow"
+            Action: "s3:GetObject"
+            Resource:
+              - !Ref S3BucketMigBuilds
+          -
+            Effect: "Allow"
+            Action: "s3:DeleteObject"
+            Resource:
+              - !Ref S3BucketMigBuilds
+  BuildUser:
+    Type: AWS::IAM::User
+    Properties:
+      ManagedPolicyArns:
+        - !Ref PutBuildstoS3
+      UserName: mig-build-user
