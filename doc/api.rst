@@ -64,19 +64,19 @@ POST /api/v1/heartbeat
   - `pid`: An integer representing the agent's process ID
   - `queueLoc`: The name of the queue the agent is reading from and writing to
   - `startTime:` The time at which the agent sent the heartbeat formatted like "2009-11-10T23:00:00Z"
-  - `environment`:
-    - `init`: A string containing the name of the host's init system, such as systemd
-    - `ident`: A string containing the name of the host's OS identifier
-    - `os`: A string containing the name of the host's OS family (linux, darwin, windows, ...)
-    - `arch`: A string containing the host's architecture, such as "x86_64"
-    - `proxied`: A boolean that is true if the agent uses a proxy
-    - `proxy`: A string containing the address of the proxy used by the agent if any
-    - `addresses`: An array of strings containing IP addresses associated with network interfaces on the host
-    - `publicIP`: A string containing the IP address of the agent's host from the API's perspective
-    - `modules`: An array of strings containing names of modules enabled by the agent
-  - `tags`:
-    - `name`: A string name for the tag
-    - `value`: A string value for the tag
+  - `environment`: An object
+  - `environment.init`: A string containing the name of the host's init system, such as systemd
+  - `environment.ident`: A string containing the name of the host's OS identifier
+  - `environment.os`: A string containing the name of the host's OS family (linux, darwin, windows, ...)
+  - `environment.arch`: A string containing the host's architecture, such as "x86_64"
+  - `environment.proxied`: A boolean that is true if the agent uses a proxy
+  - `environment.proxy`: A string containing the address of the proxy used by the agent if any
+  - `environment.addresses`: An array of strings containing IP addresses associated with network interfaces on the host
+  - `environment.publicIP`: A string containing the IP address of the agent's host from the API's perspective
+  - `environment.modules`: An array of strings containing names of modules enabled by the agent
+  - `tags`: An array of objects
+  - `tags[i].name`: A string name for the tag
+  - `tags[i].value`: A string value for the tag
 * Response Code:
   - `200`: The heartbeat was accepted and recorded successfully
   - `400`: The body of the request was incorrectly formatted or missing data
