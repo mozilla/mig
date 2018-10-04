@@ -91,4 +91,6 @@ func (handler UploadHeartbeat) ServeHTTP(response http.ResponseWriter, request *
 		resEncoder.Encode(&uploadHeartbeatResponse{&errMsg})
 		return
 	}
+
+	resEncoder.Encode(&uploadHeartbeatResponse{nil})
 }

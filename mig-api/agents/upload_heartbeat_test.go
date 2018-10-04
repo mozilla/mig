@@ -111,35 +111,38 @@ func TestUploadHeartbeat(t *testing.T) {
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestUploadHeartbeat case #%d: %s", caseNum, testCase.Description)
 
-		server := httptest.NewServer(NewUploadHeartbeat(MockPersistHeartbeat{
-			PersistFn: testCase.PersistFn,
-		}))
-		defer server.Close()
+		func() {
+			server := httptest.NewServer(NewUploadHeartbeat(MockPersistHeartbeat{
+				PersistFn: testCase.PersistFn,
+			}))
+			defer server.Close()
 
-		response, err := http.Post(server.URL, "application/json", strings.NewReader(testCase.RequestBody))
-		if err != nil {
-			t.Fatal(err)
-		} else {
+			response, err := http.Post(server.URL, "application/json", strings.NewReader(testCase.RequestBody))
+			if err != nil {
+				t.Fatalf("Error making request: %v", err)
+			}
+
+			respData := uploadHeartbeatResponse{}
+			decoder := json.NewDecoder(response.Body)
+			decodeErr := decoder.Decode(&respData)
+
 			defer response.Body.Close()
-		}
 
-		respData := uploadHeartbeatResponse{}
-		decoder := json.NewDecoder(response.Body)
-		decodeErr := decoder.Decode(&respData)
-		if decodeErr != nil {
-			t.Fatal(decodeErr)
-		}
+			if decodeErr != nil {
+				t.Fatalf("Error decoding response from server: %v", decodeErr)
+			}
 
-		if response.StatusCode != testCase.ExpectedStatus {
-			t.Errorf("Expected status code %d but got %d", testCase.ExpectedStatus, response.StatusCode)
-		}
+			if response.StatusCode != testCase.ExpectedStatus {
+				t.Errorf("Expected status code %d but got %d", testCase.ExpectedStatus, response.StatusCode)
+			}
 
-		gotErr := respData.Error != nil
-		if gotErr && !testCase.ShouldError {
-			t.Errorf("Did not expect to get an error but got '%s'", *respData.Error)
-		} else if !gotErr && testCase.ShouldError {
-			t.Errorf("Expected to get an error but did not")
-		}
+			gotErr := respData.Error != nil
+			if gotErr && !testCase.ShouldError {
+				t.Errorf("Did not expect to get an error but got '%s'", *respData.Error)
+			} else if !gotErr && testCase.ShouldError {
+				t.Errorf("Expected to get an error but did not")
+			}
+		}()
 	}
 }
 
