@@ -8,7 +8,9 @@ package agents
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
 )
 
 // PersistHeartbeat abstracts over operations that allow the MIG API to
@@ -20,11 +22,11 @@ type PersistHeartbeat interface {
 // UploadHeartbeat is an HTTP request handler that serves POST requests
 // containing a Heartbeat encoded as JSON.
 type UploadHeartbeat struct {
-	persist *PersistHeartbeat
+	persist PersistHeartbeat
 }
 
 // NewUploadHeartbeat constructs a new UploadHeartbeat.
-func NewUploadHeartbeat(persist *PersistHeartbeat) UploadHeartbeat {
+func NewUploadHeartbeat(persist PersistHeartbeat) UploadHeartbeat {
 	return UploadHeartbeat{
 		persist: persist,
 	}
@@ -57,8 +59,8 @@ type Heartbeat struct {
 	PID         uint        `json:"pid"`
 	QueueLoc    string      `json:"queueLoc"`
 	StartTime   time.Time   `json:"startTime"`
-	Environment environment `json:"environment"`
-	Tags        []tag       `json:"tags"`
+	Environment Environment `json:"environment"`
+	Tags        []Tag       `json:"tags"`
 }
 
 type uploadHeartbeatResponse struct {
