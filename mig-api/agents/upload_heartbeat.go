@@ -39,7 +39,7 @@ type Environment struct {
 	Ident     string   `json:"ident"`
 	OS        string   `json:"os"`
 	Arch      string   `json:"arch"`
-	IsProxied bool     `json:"isPrpxied"`
+	IsProxied bool     `json:"isProxied"`
 	Proxy     string   `json:"proxy"`
 	Addresses []string `json:"addresses"`
 	PublicIP  string   `json:"publicIP"`
