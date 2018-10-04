@@ -800,6 +800,29 @@ GET /api/v1/command
 }
 ```
 
+### Upload result
+
+```
+POST /api/v1/result
+```
+
+* Description: upload a result produced by a module query
+* Authentication: none
+* Parameters:
+  * `action`: the unique identifier of the action for which the results were produced
+  * `results`: an array of objects
+    * `foundAnything`: a boolean set to true if the result is positive
+    * `success`: a boolean set to true if the query was successfully executed
+    * `elements`: an array of arbitrary objects
+    * `statistics`: an array of arbitrary objects
+    * `errors`: an array of strings describing any errors that may have occurred while processing the query
+* Response Code:
+  * `200`: the result was recorded successfully
+  * `400`: the action for which the result was created does not exist
+  * `500`: the result could not be recorded due to an internal failure
+* Response:
+  * `error`: a string describing why the result was not recorded if an error occurred, else null
+
 ### Retrieve investigator
 
 ```
