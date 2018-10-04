@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -67,6 +68,39 @@ type uploadHeartbeatResponse struct {
 	Error *string `json:"error"`
 }
 
+// validate ensures that a heartbeat message contains reasonable-looking data.
+// Most of the utility of this function is just in making sure that all of the fields
+// are populated.  Go will decode JSON missing some of the required fields and supply
+// zero values (such as "" for strings) instead of erroring, which is not what we want.
+func (hb Heartbeat) validate() error {
+	missingFields := map[string]bool{
+		"name":                 hb.Name == "",
+		"mode":                 hb.Mode == "",
+		"version":              hb.Version == "",
+		"queueLoc":             hb.QueueLoc == "",
+		"pid":                  hb.PID == 0,
+		"environment.init":     hb.Environment.Init == "",
+		"environment.ident":    hb.Environment.Ident == "",
+		"environment.os":       hb.Environment.OS == "",
+		"environment.arch":     hb.Environment.Arch == "",
+		"environment.publicIP": hb.Environment.PublicIP == "",
+	}
+
+	missing := []string{}
+
+	for fieldName, isMissing := range missingFields {
+		if isMissing {
+			missing = append(missing, fieldName)
+		}
+	}
+
+	if len(missing) != 0 {
+		return fmt.Errorf("missing field(s): %s", strings.Join(missing, ", "))
+	}
+
+	return nil
+}
+
 func (handler UploadHeartbeat) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	reqData := Heartbeat{}
 	decoder := json.NewDecoder(request.Body)
@@ -79,6 +113,14 @@ func (handler UploadHeartbeat) ServeHTTP(response http.ResponseWriter, request *
 	decodeErr := decoder.Decode(&reqData)
 	if decodeErr != nil {
 		errMsg := fmt.Sprintf("Failed to decode request body: %s", decodeErr.Error())
+		response.WriteHeader(http.StatusBadRequest)
+		resEncoder.Encode(&uploadHeartbeatResponse{&errMsg})
+		return
+	}
+
+	validateErr := reqData.validate()
+	if validateErr != nil {
+		errMsg := fmt.Sprintf("Missing fields in request body: %s", validateErr.Error())
 		response.WriteHeader(http.StatusBadRequest)
 		resEncoder.Encode(&uploadHeartbeatResponse{&errMsg})
 		return
