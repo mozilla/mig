@@ -51,7 +51,7 @@ func TestUpload(t *testing.T) {
               "findings": 1
             },
             "errors": []
-          },
+          }
         ]
       }`,
 			PersistFn: func(_ float64, _ []modules.Result) error { return nil },
