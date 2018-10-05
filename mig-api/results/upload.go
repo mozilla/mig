@@ -14,10 +14,32 @@ import (
 	"github.com/mozilla/mig/modules"
 )
 
+// PersistError represents each of the possible failures that may occur
+// within an implementation of the PersistResults interface.
+// Think of this as an enum, with each const declared with the prefix
+// `PersistError` being a variant of this enum.
+// This type implements the error interface.
+type PersistError uint
+
+const (
+	// PersistErrorNil indicates that no error occurred.
+	PersistErrorNil = iota
+
+	// PersistErrorInvalidAction indicates that the action specified does not exist.
+	PersistErrorInvalidAction PersistError = iota
+
+	// PersistErrorNotAuthorized indicates that the agent was not authorized to save results.
+	PersistErrorNotAuthorized PersistError = iota
+
+	// PersistErrorMediumFailure indicates that the results could not be saved due to
+	// an error relating to the medium they would be saved to (e.g. disk, database).
+	PersistErrorMediumFailure PersistError = iota
+)
+
 // PersistResults abstracts over operations that allow the MIG API to
 // save results produced while executing an action.
 type PersistResults interface {
-	PersistResults(float64, []modules.Result) error
+	PersistResults(float64, []modules.Result) PersistError
 }
 
 // Upload is an HTTP request handler that serves PUT requests
@@ -51,6 +73,22 @@ type uploadResponse struct {
 func NewUpload(persist PersistResults) Upload {
 	return Upload{
 		persist: persist,
+	}
+}
+
+// Error implements the error interface for PersistError.
+func (err PersistError) Error() string {
+	switch err {
+	case PersistErrorNil:
+		return ""
+	case PersistErrorInvalidAction:
+		return "invalid action does not exist"
+	case PersistErrorNotAuthorized:
+		return "not authorized"
+	case PersistErrorMediumFailure:
+		return "failed to write to medium"
+	default:
+		return ""
 	}
 }
 
@@ -111,9 +149,18 @@ func (handler Upload) ServeHTTP(response http.ResponseWriter, request *http.Requ
 	}
 
 	persistErr := handler.persist.PersistResults(reqData.Action, results)
-	if persistErr != nil {
+	if persistErr != PersistErrorNil {
 		errMsg := fmt.Sprintf("Failed to save results: %s", persistErr.Error())
-		response.WriteHeader(http.StatusInternalServerError)
+
+		switch persistErr {
+		case PersistErrorMediumFailure:
+			response.WriteHeader(http.StatusInternalServerError)
+		case PersistErrorNotAuthorized:
+			response.WriteHeader(http.StatusUnauthorized)
+		default:
+			response.WriteHeader(http.StatusBadRequest)
+		}
+
 		resEncoder.Encode(&uploadResponse{&errMsg})
 		return
 	}

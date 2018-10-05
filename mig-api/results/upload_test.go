@@ -8,7 +8,6 @@ package results
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,7 +17,7 @@ import (
 )
 
 type MockPersistResults struct {
-	PersistFn func(float64, []modules.Result) error
+	PersistFn func(float64, []modules.Result) PersistError
 }
 
 func TestUpload(t *testing.T) {
@@ -27,7 +26,7 @@ func TestUpload(t *testing.T) {
 		ShouldError    bool
 		ExpectedStatus int
 		RequestBody    string
-		PersistFn      func(float64, []modules.Result) error
+		PersistFn      func(float64, []modules.Result) PersistError
 	}{
 		{
 			Description:    `Should get status 200 if persisting succeeds`,
@@ -54,7 +53,7 @@ func TestUpload(t *testing.T) {
           }
         ]
       }`,
-			PersistFn: func(_ float64, _ []modules.Result) error { return nil },
+			PersistFn: func(_ float64, _ []modules.Result) PersistError { return PersistErrorNil },
 		},
 		{
 			Description:    `Should get an error if request is missing data`,
@@ -63,7 +62,7 @@ func TestUpload(t *testing.T) {
 			RequestBody: `{
         "results": []
       }`,
-			PersistFn: func(_ float64, _ []modules.Result) error { return nil },
+			PersistFn: func(_ float64, _ []modules.Result) PersistError { return PersistErrorNil },
 		},
 		{
 			Description:    `Should get an error if persisting fails`,
@@ -73,7 +72,7 @@ func TestUpload(t *testing.T) {
         "action": 172341,
         "results": []
       }`,
-			PersistFn: func(_ float64, _ []modules.Result) error { return errors.New("test fail") },
+			PersistFn: func(_ float64, _ []modules.Result) PersistError { return PersistErrorMediumFailure },
 		},
 		{
 			Description:    `Should get an error if persisting fails because the action is invalid`,
@@ -83,7 +82,17 @@ func TestUpload(t *testing.T) {
         "action": 12341,
         "results": []
       }`,
-			PersistFn: func(_ float64, _ []modules.Result) error { return errors.New("invalid action") },
+			PersistFn: func(_ float64, _ []modules.Result) PersistError { return PersistErrorInvalidAction },
+		},
+		{
+			Description:    `Should get an error if the agent is determined to not be allowed to save results`,
+			ShouldError:    true,
+			ExpectedStatus: http.StatusUnauthorized,
+			RequestBody: `{
+        "action": 184234,
+        "results": []
+      }`,
+			PersistFn: func(_ float64, _ []modules.Result) PersistError { return PersistErrorNotAuthorized },
 		},
 	}
 
@@ -125,6 +134,6 @@ func TestUpload(t *testing.T) {
 	}
 }
 
-func (mock MockPersistResults) PersistResults(actionID float64, results []modules.Result) error {
+func (mock MockPersistResults) PersistResults(actionID float64, results []modules.Result) PersistError {
 	return mock.PersistFn(actionID, results)
 }
