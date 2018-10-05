@@ -803,7 +803,7 @@ GET /api/v1/command
 ### Upload result
 
 ```
-POST /api/v1/result
+PUT /api/v1/result
 ```
 
 * Description: upload a result produced by a module query
@@ -819,6 +819,7 @@ POST /api/v1/result
 * Response Code:
   * `200`: the result was recorded successfully
   * `400`: the action for which the result was created does not exist
+  * `401`: the agent is not authorized to upload results for the specified action
   * `500`: the result could not be recorded due to an internal failure
 * Response:
   * `error`: a string describing why the result was not recorded if an error occurred, else null
