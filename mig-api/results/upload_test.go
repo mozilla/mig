@@ -70,7 +70,15 @@ func TestUpload(t *testing.T) {
 			ExpectedStatus: http.StatusInternalServerError,
 			RequestBody: `{
         "action": 172341,
-        "results": []
+        "results": [
+          {
+            "foundAnything": false,
+            "success": true,
+            "elements": {},
+            "statistics": {},
+            "errors": []
+          }
+        ]
       }`,
 			PersistFn: func(_ float64, _ []modules.Result) PersistError { return PersistErrorMediumFailure },
 		},
@@ -80,7 +88,15 @@ func TestUpload(t *testing.T) {
 			ExpectedStatus: http.StatusBadRequest,
 			RequestBody: `{
         "action": 12341,
-        "results": []
+        "results": [
+          {
+            "foundAnything": false,
+            "success": true,
+            "elements": {},
+            "statistics": {},
+            "errors": []
+          }
+        ]
       }`,
 			PersistFn: func(_ float64, _ []modules.Result) PersistError { return PersistErrorInvalidAction },
 		},
@@ -90,7 +106,15 @@ func TestUpload(t *testing.T) {
 			ExpectedStatus: http.StatusUnauthorized,
 			RequestBody: `{
         "action": 184234,
-        "results": []
+        "results": [
+          {
+            "foundAnything": false,
+            "success": true,
+            "elements": {},
+            "statistics": {},
+            "errors": []
+          }
+        ]
       }`,
 			PersistFn: func(_ float64, _ []modules.Result) PersistError { return PersistErrorNotAuthorized },
 		},
