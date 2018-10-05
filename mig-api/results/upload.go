@@ -28,22 +28,32 @@ type Upload struct {
 	persist PersistResult
 }
 
-// NewUpload constructs a new Upload.
-func NewUpload(persist PersistResult) Upload {
-	return Upload{
-		persist: persist,
-	}
+// result is used to decouple our request data type from the rest of MIG's types.
+// The toModuleResult method provides a convenient conversion to modules.Result.
+type result struct {
+	FoundAnything bool        `json:"foundAnything"`
+	Success       bool        `json:"success"`
+	Elements      interface{} `json:"elements"`
+	Statistics    interface{} `json:"statistics"`
+	Errors        []string    `json:"errors"`
 }
 
 // uploadRequest contains the body of a request to the Upload handler.
 type uploadRequest struct {
-	Action  float64          `json:"action"`
-	Results []modules.Result `json:"results"`
+	Action  float64  `json:"action"`
+	Results []result `json:"results"`
 }
 
 // uploadResponse contains the body of a response to a request to upload results.
 type uploadResponse struct {
 	Error *string `json:"error"`
+}
+
+// NewUpload constructs a new Upload.
+func NewUpload(persist PersistResult) Upload {
+	return Upload{
+		persist: persist,
+	}
 }
 
 // validate ensures that a results upload request contains all of the data
@@ -58,6 +68,18 @@ func (req uploadRequest) validate() error {
 	}
 
 	return nil
+}
+
+// toModuleResult converts instances of our result abstraction into a Result
+// used by the rest of MIG.
+func (res result) toModuleResult() modules.Result {
+	return modules.Result{
+		FoundAnything: res.FoundAnything,
+		Success:       res.Success,
+		Elements:      res.Elements,
+		Statistics:    res.Statistics,
+		Errors:        res.Errors,
+	}
 }
 
 func (handler Upload) ServeHTTP(response http.ResponseWriter, request *http.Request) {
@@ -85,7 +107,12 @@ func (handler Upload) ServeHTTP(response http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	persistErr := handler.persist.PersistResult(reqData.Action, reqData.Results)
+	results := make([]module.Result, len(reqData.Results))
+	for i, res := range reqData.Results {
+		results[i] = reqData.Results[i].toModuleResult()
+	}
+
+	persistErr := handler.persist.PersistResult(reqData.Action, results)
 	if persistErr != nil {
 		errMsg := fmt.Sprintf("Failed to save results: %s", persistErr.Error())
 		response.WriteHeader(http.StatusInternalServerError)
