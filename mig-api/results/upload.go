@@ -10,8 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/mozilla/mig/modules"
 )
@@ -25,7 +23,7 @@ type PersistResults interface {
 // Upload is an HTTP request handler that serves PUT requests
 // containing results produced while executing an action.
 type Upload struct {
-	persist PersistResult
+	persist PersistResults
 }
 
 // result is used to decouple our request data type from the rest of MIG's types.
@@ -50,7 +48,7 @@ type uploadResponse struct {
 }
 
 // NewUpload constructs a new Upload.
-func NewUpload(persist PersistResult) Upload {
+func NewUpload(persist PersistResults) Upload {
 	return Upload{
 		persist: persist,
 	}
@@ -59,7 +57,7 @@ func NewUpload(persist PersistResult) Upload {
 // validate ensures that a results upload request contains all of the data
 // required to satisfy the request.
 func (req uploadRequest) validate() error {
-	if req.Action == "" {
+	if req.Action == 0.0 {
 		return fmt.Errorf("missing action field")
 	}
 
@@ -107,12 +105,12 @@ func (handler Upload) ServeHTTP(response http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	results := make([]module.Result, len(reqData.Results))
+	results := make([]modules.Result, len(reqData.Results))
 	for i, res := range reqData.Results {
-		results[i] = reqData.Results[i].toModuleResult()
+		results[i] = res.toModuleResult()
 	}
 
-	persistErr := handler.persist.PersistResult(reqData.Action, results)
+	persistErr := handler.persist.PersistResults(reqData.Action, results)
 	if persistErr != nil {
 		errMsg := fmt.Sprintf("Failed to save results: %s", persistErr.Error())
 		response.WriteHeader(http.StatusInternalServerError)
