@@ -16,6 +16,6 @@ func NewNilAuthenticator() NilAuthenticator {
 }
 
 // Authenticate always returns nil.
-func (auth NilAuthenticator) Authetnicate(_ Heartbeat) error {
+func (auth NilAuthenticator) Authenticate(_ Heartbeat) error {
 	return nil
 }
