@@ -18,10 +18,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streadway/amqp"
-	"gopkg.in/gcfg.v1"
 	"github.com/mozilla/mig"
 	migdb "github.com/mozilla/mig/database"
+	"github.com/streadway/amqp"
+	"gopkg.in/gcfg.v1"
 )
 
 // Context contains all configuration variables as well as handlers for
