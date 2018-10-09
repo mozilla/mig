@@ -14,22 +14,32 @@ import (
 	"time"
 )
 
+const timeToExpireHeartbeat = 5 * time.Minute
+
 // PersistHeartbeat abstracts over operations that allow the MIG API to
 // save some information about agents sent in a heartbeat message.
 type PersistHeartbeat interface {
 	PersistHeartbeat(Heartbeat) error
 }
 
+// Authenticator abstracts over operations that authenticate agents to
+// determine whether an agent should be allowed to persist a heartbeat.
+type Authenticator interface {
+	Authenticate(Heartbeat) error
+}
+
 // UploadHeartbeat is an HTTP request handler that serves POST requests
 // containing a Heartbeat encoded as JSON.
 type UploadHeartbeat struct {
 	persist PersistHeartbeat
+	auth    Authenticator
 }
 
 // NewUploadHeartbeat constructs a new UploadHeartbeat.
-func NewUploadHeartbeat(persist PersistHeartbeat) UploadHeartbeat {
+func NewUploadHeartbeat(persist PersistHeartbeat, auth Authenticator) UploadHeartbeat {
 	return UploadHeartbeat{
 		persist: persist,
+		auth:    auth,
 	}
 }
 
@@ -98,6 +108,25 @@ func (hb Heartbeat) validate() error {
 		return fmt.Errorf("missing field(s): %s", strings.Join(missing, ", "))
 	}
 
+	// After checking that we have all the fields we want, we will check that those fields
+	// appear to contain sensible values.
+	isExpired := time.Now().Add(-timeToExpireHeartbeat).After(hb.StartTime)
+	hasBadMode := hb.Mode != "" && hb.Mode != "daemon" && hb.Mode != "checkin"
+	nameTooLong := len(hb.Name) > 1024
+	versionTooLong := len(hb.Version) > 128
+	errorConditions := map[bool]string{
+		isExpired:      "heartbeat expired",
+		hasBadMode:     "agent reported an invalid mode",
+		nameTooLong:    "agent reported a name that is too long",
+		versionTooLong: "agent reported a version string that is too long",
+	}
+
+	for didError, errMsg := range errorConditions {
+		if didError {
+			return fmt.Errorf(errMsg)
+		}
+	}
+
 	return nil
 }
 
@@ -122,6 +151,14 @@ func (handler UploadHeartbeat) ServeHTTP(response http.ResponseWriter, request *
 	if validateErr != nil {
 		errMsg := fmt.Sprintf("Missing fields in request body: %s", validateErr.Error())
 		response.WriteHeader(http.StatusBadRequest)
+		resEncoder.Encode(&uploadHeartbeatResponse{&errMsg})
+		return
+	}
+
+	authErr := handler.auth.Authenticate(reqData)
+	if authErr != nil {
+		errMsg := fmt.Sprintf("Agent is not authorized to upload heartbeats: %s", authErr.Error())
+		response.WriteHeader(http.StatusUnauthorized)
 		resEncoder.Encode(&uploadHeartbeatResponse{&errMsg})
 		return
 	}
