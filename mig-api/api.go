@@ -18,6 +18,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jvehent/cljs"
 	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/mig-api/agents"
 	"github.com/mozilla/mig/pgp"
 )
 
@@ -70,8 +71,11 @@ func main() {
 	r := mux.NewRouter()
 	s := r.PathPrefix(ctx.Server.BaseRoute).Subrouter()
 
+	postHeartbeat := agents.NewUploadHeartbeat(agents.NewPersistHeartbeatPostgres(nil))
+
 	// unauthenticated endpoints
 	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")
+	s.Handle("/heartbeat", postHeartbeat).Methods("POST")
 	s.HandleFunc("/ip", getIP).Methods("GET")
 	s.HandleFunc("/publickey/{pgp_fingerprint}", getPublicKey).Methods("GET")
 
