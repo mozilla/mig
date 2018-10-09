@@ -497,6 +497,35 @@ GET /api/v1/action
 }
 ```
 
+### List actions
+
+```
+GET /api/v1/actions
+```
+
+* Description: retrieve a list of actions queued for the agent to run
+* Authentication: none
+* Parameters:
+  * `queue`: a string containing the name of the queue from which actions for the agent can be read
+* Response Code:
+  * `200`: Actions for the agent have been successfully retrieved
+  * `400`: The request was missing required data or fomratted incorrectly
+  * `401`: The agent is not authorized to retrieve actions
+  * `500`: Actions could not be retrieved due to an internal failure
+* Response:
+  * `error`: An error message describing the failure if an error occurred, else null
+  * `action`: An object
+    * `name`: A string describing the action
+    * `target`: A string containing a query that specifies which agents should run the action
+    * `validFrom`: The time from which the action is considered valid
+    * `expireAfter`: The time after which the action is considered expired
+    * `operations`: An array of objects
+      * `module`: The name of the module to run
+      * `parameters`: An object containing the parameters required to execute the module
+    * `signatures`: An array of strings containing base64-encoded signatures over the action
+    * `status`: A string describing the current state of the action
+    * `syntaxVersion`: An integer indicating the version of the action format
+
 ### Create action
 
 ```
