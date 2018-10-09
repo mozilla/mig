@@ -79,6 +79,7 @@ POST /api/v1/heartbeat
 * Response Code:
   * `200`: The heartbeat was accepted and recorded successfully
   * `400`: The body of the request was incorrectly formatted or missing data
+  * `401`: The agent is not authorized to uploadheartbeats
   * `500`: The heartbeat could not be recorded
 * Response: JSON
   * `error`: A string describing an error if one occurred, else null

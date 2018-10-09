@@ -71,7 +71,9 @@ func main() {
 	r := mux.NewRouter()
 	s := r.PathPrefix(ctx.Server.BaseRoute).Subrouter()
 
-	postHeartbeat := agents.NewUploadHeartbeat(agents.NewPersistHeartbeatPostgres(nil))
+	postHeartbeat := agents.NewUploadHeartbeat(
+		agents.NewPersistHeartbeatPostgres(nil),
+		agents.NewNilAuthenticator())
 
 	// unauthenticated endpoints
 	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")

@@ -9,14 +9,20 @@ package agents
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 type MockPersistHeartbeat struct {
 	PersistFn func(Heartbeat) error
+}
+
+type MockAuthenticator struct {
+	AuthFn func(Heartbeat) error
 }
 
 func TestUploadHeartbeat(t *testing.T) {
@@ -26,18 +32,19 @@ func TestUploadHeartbeat(t *testing.T) {
 		ExpectedStatus int
 		RequestBody    string
 		PersistFn      func(Heartbeat) error
+		AuthFn         func(Heartbeat) error
 	}{
 		{
 			Description:    `Should get status 200 if persisting succeeds`,
 			ShouldError:    false,
 			ExpectedStatus: http.StatusOK,
-			RequestBody: `{
+			RequestBody: fmt.Sprintf(`{
         "name": "name",
-        "mode": "mode",
+        "mode": "checkin",
         "version": "version",
         "pid": 3210,
         "queueLoc": "loc",
-        "startTime": "2018-10-03T20:45:00Z",
+        "startTime": "%s",
         "environment": {
           "init": "init",
           "ident": "ident",
@@ -50,18 +57,19 @@ func TestUploadHeartbeat(t *testing.T) {
           "modules": []
         },
         "tags": []
-      }`,
+      }`, time.Now().Format(time.RFC3339)),
 			PersistFn: func(_ Heartbeat) error { return nil },
+			AuthFn:    func(_ Heartbeat) error { return nil },
 		},
 		{
 			Description:    `Should get status 400 if body is missing required data`,
 			ShouldError:    true,
 			ExpectedStatus: http.StatusBadRequest,
-			RequestBody: `
+			RequestBody: fmt.Sprintf(`
       {
         "name": "name",
         "queueLoc": "loc",
-        "startTime": "2018-10-03T20:45:00Z",
+        "startTime": "%s",
         "environment": {
           "init": "init",
           "ident": "ident",
@@ -74,22 +82,22 @@ func TestUploadHeartbeat(t *testing.T) {
           "modules": []
         },
         "tags": []
-      }
-      `,
+      }`, time.Now().Format(time.RFC3339)),
 			PersistFn: func(_ Heartbeat) error { return nil },
+			AuthFn:    func(_ Heartbeat) error { return nil },
 		},
 		{
 			Description:    `Should get status 500 if persisting fails`,
 			ShouldError:    true,
 			ExpectedStatus: http.StatusInternalServerError,
-			RequestBody: `
+			RequestBody: fmt.Sprintf(`
       {
         "name": "name",
-        "mode": "mode",
+        "mode": "checkin",
         "version": "version",
         "pid": 3210,
         "queueLoc": "loc",
-        "startTime": "2018-10-03T20:45:00Z",
+        "startTime": "%s",
         "environment": {
           "init": "init",
           "ident": "ident",
@@ -102,9 +110,65 @@ func TestUploadHeartbeat(t *testing.T) {
           "modules": []
         },
         "tags": []
-      }
-      `,
+      }`, time.Now().Format(time.RFC3339)),
 			PersistFn: func(_ Heartbeat) error { return errors.New("test fail") },
+			AuthFn:    func(_ Heartbeat) error { return nil },
+		},
+		{
+			Description:    `Should get status 401 if authentication fails`,
+			ShouldError:    true,
+			ExpectedStatus: http.StatusUnauthorized,
+			RequestBody: fmt.Sprintf(`
+      {
+        "name": "name",
+        "mode": "checkin",
+        "version": "version",
+        "pid": 3210,
+        "queueLoc": "loc",
+        "startTime": "%s",
+        "environment": {
+          "init": "init",
+          "ident": "ident",
+          "os": "os",
+          "arch": "arch",
+          "isProxied": false,
+          "proxy": "",
+          "addresses": [],
+          "publicIP": "publicip",
+          "modules": []
+        },
+        "tags": []
+      }`, time.Now().Format(time.RFC3339)),
+			PersistFn: func(_ Heartbeat) error { return nil },
+			AuthFn:    func(_ Heartbeat) error { return errors.New("test fail") },
+		},
+		{
+			Description:    `Should get status 400 if an invalid mode is provided`,
+			ShouldError:    true,
+			ExpectedStatus: http.StatusBadRequest,
+			RequestBody: fmt.Sprintf(`
+      {
+        "name": "name",
+        "mode": "invalid",
+        "version": "version",
+        "pid": 3210,
+        "queueLoc": "loc",
+        "startTime": "%s",
+        "environment": {
+          "init": "init",
+          "ident": "ident",
+          "os": "os",
+          "arch": "arch",
+          "isProxied": false,
+          "proxy": "",
+          "addresses": [],
+          "publicIP": "publicip",
+          "modules": []
+        },
+        "tags": []
+      }`, time.Now().Format(time.RFC3339)),
+			PersistFn: func(_ Heartbeat) error { return nil },
+			AuthFn:    func(_ Heartbeat) error { return nil },
 		},
 	}
 
@@ -112,9 +176,9 @@ func TestUploadHeartbeat(t *testing.T) {
 		t.Logf("Running TestUploadHeartbeat case #%d: %s", caseNum, testCase.Description)
 
 		func() {
-			server := httptest.NewServer(NewUploadHeartbeat(MockPersistHeartbeat{
-				PersistFn: testCase.PersistFn,
-			}))
+			server := httptest.NewServer(NewUploadHeartbeat(
+				MockPersistHeartbeat{PersistFn: testCase.PersistFn},
+				MockAuthenticator{AuthFn: testCase.AuthFn}))
 			defer server.Close()
 
 			response, err := http.Post(server.URL, "application/json", strings.NewReader(testCase.RequestBody))
@@ -148,4 +212,8 @@ func TestUploadHeartbeat(t *testing.T) {
 
 func (mock MockPersistHeartbeat) PersistHeartbeat(hb Heartbeat) error {
 	return mock.PersistFn(hb)
+}
+
+func (mock MockAuthenticator) Authenticate(hb Heartbeat) error {
+	return mock.AuthFn(hb)
 }
