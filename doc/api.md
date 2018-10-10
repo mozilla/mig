@@ -507,10 +507,10 @@ GET /api/v1/actions
 * Authentication: none
 * Parameters:
   * `queue`: a string containing the name of the queue from which actions for the agent can be read
+  * `limit`: an integer limit on the number of actions that should be returned. 0 indicates no limit
 * Response Code:
   * `200`: Actions for the agent have been successfully retrieved
   * `400`: The request was missing required data or fomratted incorrectly
-  * `401`: The agent is not authorized to retrieve actions
   * `500`: Actions could not be retrieved due to an internal failure
 * Response:
   * `error`: An error message describing the failure if an error occurred, else null
