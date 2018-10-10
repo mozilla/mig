@@ -514,7 +514,7 @@ GET /api/v1/actions
   * `500`: Actions could not be retrieved due to an internal failure
 * Response:
   * `error`: An error message describing the failure if an error occurred, else null
-  * `action`: An object
+  * `actions`: An array of objects
     * `name`: A string describing the action
     * `target`: A string containing a query that specifies which agents should run the action
     * `validFrom`: The time from which the action is considered valid
