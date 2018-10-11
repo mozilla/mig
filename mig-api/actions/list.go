@@ -27,7 +27,7 @@ type ListActions interface {
 // to retrieve a list of actions that can be run.
 //
 // This request handler must be able to construct a means of retrieving actions
-// given a queue location string and integer limit.
+// given a queue location string.
 type List struct {
 	actions func(string) ListActions
 }
