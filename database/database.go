@@ -22,6 +22,10 @@ func Open(dbname, user, password, host string, port int, sslmode string) (db DB,
 	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
 		user, password, host, port, dbname, sslmode)
 	db.c, err = sql.Open("postgres", url)
+	if err != nil {
+		return
+	}
+	_, err = db.c.Query("SELECT 1")
 	return
 }
 
