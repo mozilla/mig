@@ -72,7 +72,7 @@ func main() {
 	s := r.PathPrefix(ctx.Server.BaseRoute).Subrouter()
 
 	postHeartbeat := agents.NewUploadHeartbeat(
-		agents.NewPersistHeartbeatPostgres(nil),
+		agents.NewPersistHeartbeatPostgres(&ctx.DB),
 		agents.NewNilAuthenticator())
 
 	// unauthenticated endpoints

@@ -7,15 +7,16 @@
 package agents
 
 import (
-	"database/sql"
 	"fmt"
+
+	migdb "github.com/mozilla/mig/database"
 )
 
 type PersistHeartbeatPostgres struct {
-	db *sql.DB
+	db *migdb.DB
 }
 
-func NewPersistHeartbeatPostgres(db *sql.DB) PersistHeartbeatPostgres {
+func NewPersistHeartbeatPostgres(db *migdb.DB) PersistHeartbeatPostgres {
 	return PersistHeartbeatPostgres{
 		db: db,
 	}
@@ -23,5 +24,9 @@ func NewPersistHeartbeatPostgres(db *sql.DB) PersistHeartbeatPostgres {
 
 func (persist PersistHeartbeatPostgres) PersistHeartbeat(heartbeat Heartbeat) error {
 	fmt.Printf("POST /heartbeat got heartbeat %v\n", heartbeat)
-	return nil
+
+	agent := heartbeat.ToMigAgent()
+	err := persist.db.InsertAgent(agent, nil)
+
+	return err
 }

@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/mozilla/mig"
 )
 
 const timeToExpireHeartbeat = 5 * time.Minute
@@ -172,4 +174,32 @@ func (handler UploadHeartbeat) ServeHTTP(response http.ResponseWriter, request *
 	}
 
 	resEncoder.Encode(&uploadHeartbeatResponse{nil})
+}
+
+func (hb Heartbeat) ToMigAgent() mig.Agent {
+	tags := make(map[string]string)
+	for _, tag := range hb.Tags {
+		tags[tag.Name] = tag.Value
+	}
+
+	return mig.Agent{
+		Name:      hb.Name,
+		Mode:      hb.Mode,
+		QueueLoc:  hb.QueueLoc,
+		Version:   hb.Version,
+		PID:       int(hb.PID),
+		StartTime: hb.StartTime,
+		Env: mig.AgentEnv{
+			Init:      hb.Environment.Init,
+			Ident:     hb.Environment.Ident,
+			OS:        hb.Environment.OS,
+			Arch:      hb.Environment.Arch,
+			IsProxied: hb.Environment.IsProxied,
+			Proxy:     hb.Environment.Proxy,
+			Addresses: hb.Environment.Addresses,
+			PublicIP:  hb.Environment.PublicIP,
+			Modules:   hb.Environment.Modules,
+		},
+		Tags: tags,
+	}
 }
