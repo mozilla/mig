@@ -7,12 +7,17 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"gopkg.in/gcfg.v1"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 const migAPIPort uint16 = 12345
@@ -43,9 +48,17 @@ func postHeartbeat(port uint16, body string) (int, heartbeatResponse, error) {
 	return response.StatusCode, respData, nil
 }
 
+type Config struct {
+	Postgres struct {
+		Host, User, Password, DBName, SSLMode string
+		Port, MaxConn                         int
+	}
+}
+
 func TestPostHeartbeatWithValidRequest(t *testing.T) {
+	agentName := "testagent123"
 	statusCode, response, err := postHeartbeat(migAPIPort, fmt.Sprintf(`{
-    "name": "testagent123",
+    "name": "%s",
     "mode": "checkin",
     "version": "20181012-0.abc123.dev",
     "pid": 1234,
@@ -68,7 +81,7 @@ func TestPostHeartbeatWithValidRequest(t *testing.T) {
         "value": "tester"
       }
     ]
-  }`, time.Now().Format(time.RFC3339)))
+  }`, agentName, time.Now().Format(time.RFC3339)))
 
 	errMsg := ""
 	if response.Error != nil {
@@ -83,5 +96,54 @@ func TestPostHeartbeatWithValidRequest(t *testing.T) {
 	}
 	if errMsg != "" {
 		t.Errorf("Did not expect an error from API, got '%s'", errMsg)
+	}
+
+	path, err := filepath.Abs("../../api.cfg")
+	if err != nil {
+		panic(err)
+	}
+
+	cfg := Config{}
+	err = gcfg.FatalOnly(gcfg.ReadFileInto(&cfg, path))
+	if err != nil {
+		panic(err)
+	}
+
+	user := cfg.Postgres.User
+	password := cfg.Postgres.Password
+	host := cfg.Postgres.Host
+	port := cfg.Postgres.Port
+	dbname := cfg.Postgres.DBName
+	sslmode := cfg.Postgres.SSLMode
+
+	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", user, password, host, port, dbname, sslmode)
+	db_conn, err := sql.Open("postgres", url)
+	if err != nil {
+		t.Fatalf("Failed to connect to postgresl DB: %s", err.Error())
+	}
+
+	defer db_conn.Close()
+
+	rows, err := db_conn.Query("SELECT name FROM agents WHERE mode='checkin'")
+	if err != nil {
+		t.Fatalf("Received error when querying for heartbeats: %v", err)
+	}
+
+	if rows != nil {
+		defer rows.Close()
+	}
+
+	numRows := 0
+	for rows.Next() {
+		numRows++
+		var name string
+		err = rows.Scan(&name)
+		if err != nil {
+			err = fmt.Errorf("Error while parsing name: '%v'", err)
+			return
+		}
+		if name != agentName {
+			t.Fatalf("Expected heartbeat with agent name: %s got %s", agentName, name)
+		}
 	}
 }
