@@ -30,7 +30,7 @@ type config struct {
 	MozDef struct {
 		URL      string // URL to post events to MozDef
 		Source   string // Source identifier for vulnerability events
-		UseProxy bool
+		UseProxy bool   // A switch to enable/disable the use of a system-configured proxy
 	}
 }
 
