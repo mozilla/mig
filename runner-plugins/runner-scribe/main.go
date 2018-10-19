@@ -16,7 +16,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jvehent/gozdef"
+	"github.com/mozilla/gozdef"
 	"github.com/mozilla/mig"
 	scribemod "github.com/mozilla/mig/modules/scribe"
 	"gopkg.in/gcfg.v1"
