@@ -830,10 +830,10 @@ GET /api/v1/command
 }
 ```
 
-### Upload result
+### Upload results
 
 ```
-PUT /api/v1/result
+PUT /api/v1/results
 ```
 
 * Description: upload a result produced by a module query
