@@ -16,10 +16,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jvehent/gozdef"
-	"gopkg.in/gcfg.v1"
+	"github.com/mozilla/gozdef"
 	"github.com/mozilla/mig"
 	scribemod "github.com/mozilla/mig/modules/scribe"
+	"gopkg.in/gcfg.v1"
 )
 
 // config represents the configuration used by runner-scribe, and is read in on
@@ -28,8 +28,9 @@ import (
 // URL and Source are mandatory settings
 type config struct {
 	MozDef struct {
-		URL    string // URL to post events to MozDef
-		Source string // Source identifier for vulnerability events
+		URL      string // URL to post events to MozDef
+		Source   string // Source identifier for vulnerability events
+		UseProxy bool   // A switch to enable/disable the use of a system-configured proxy
 	}
 }
 
@@ -85,7 +86,10 @@ func main() {
 }
 
 func sendVulnerability(item gozdef.VulnEvent) (err error) {
-	ac := gozdef.APIConf{URL: conf.MozDef.URL}
+	ac := gozdef.APIConf{
+		URL:      conf.MozDef.URL,
+		UseProxy: conf.MozDef.UseProxy,
+	}
 	pub, err := gozdef.InitAPI(ac)
 	if err != nil {
 		return
