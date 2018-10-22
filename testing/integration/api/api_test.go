@@ -98,15 +98,15 @@ func TestPostHeartbeatWithValidRequest(t *testing.T) {
 		t.Errorf("Did not expect an error from API, got '%s'", errMsg)
 	}
 
-	path, err := filepath.Abs("../../api.cfg")
+	path, err := filepath.Abs("api.cfg")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	cfg := Config{}
 	err = gcfg.FatalOnly(gcfg.ReadFileInto(&cfg, path))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	user := cfg.Postgres.User
