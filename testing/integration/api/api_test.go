@@ -98,7 +98,7 @@ func TestPostHeartbeatWithValidRequest(t *testing.T) {
 		t.Errorf("Did not expect an error from API, got '%s'", errMsg)
 	}
 
-	path, err := filepath.Abs("api.cfg")
+	path, err := filepath.Abs("../../api.cfg")
 	if err != nil {
 		t.Fatal(err)
 	}
