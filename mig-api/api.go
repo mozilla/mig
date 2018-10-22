@@ -18,7 +18,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jvehent/cljs"
 	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/mig-api/actions"
 	"github.com/mozilla/mig/mig-api/agents"
+	"github.com/mozilla/mig/mig-api/results"
 	"github.com/mozilla/mig/pgp"
 )
 
@@ -74,10 +76,18 @@ func main() {
 	postHeartbeat := agents.NewUploadHeartbeat(
 		agents.NewPersistHeartbeatPostgres(&ctx.DB),
 		agents.NewNilAuthenticator())
+	listActions := actions.NewList(func(queue string) actions.ListActions {
+		return actions.NewListActionsPostgres(&ctx.DB, queue)
+	})
+	postResults := results.NewUpload(results.NewPersistResultsPostgres(&ctx.DB))
+
+	// Endpoints that replace previously direct-to-rabbitmq communications.
+	s.Handle("/heartbeat", postHeartbeat).Methods("POST")
+	s.Handle("/actions", listActions).Methods("GET")
+	s.Handle("/results", postResults).Methods("POST")
 
 	// unauthenticated endpoints
 	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")
-	s.Handle("/heartbeat", postHeartbeat).Methods("POST")
 	s.HandleFunc("/ip", getIP).Methods("GET")
 	s.HandleFunc("/publickey/{pgp_fingerprint}", getPublicKey).Methods("GET")
 
