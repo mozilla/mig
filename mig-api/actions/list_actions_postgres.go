@@ -8,6 +8,7 @@ package actions
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/mozilla/mig"
 	migdb "github.com/mozilla/mig/database"
@@ -27,7 +28,7 @@ func NewListActionsPostgres(db *migdb.DB, queue string) ListActionsPostgres {
 
 func (list ListActionsPostgres) ListActions(limit uint) ([]mig.Action, error) {
 	now := time.Now().Add(-15 * time.Minute)
-	agents, err := list.db.ActiveAgentsByQueue(limit.queueLoc, now)
+	agents, err := list.db.ActiveAgentsByQueue(list.queueLoc, now)
 	if err != nil {
 		return []mig.Action{}, err
 	}

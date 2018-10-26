@@ -420,7 +420,7 @@ func (db *DB) SetupRunnableActions() (actions []mig.Action, err error) {
 	}
 	for rows.Next() {
 		retrieved := actionFromDB{}
-		err := actionRows.Scan(
+		err = rows.Scan(
 			&retrieved.ID,
 			&retrieved.Name,
 			&retrieved.Target,
