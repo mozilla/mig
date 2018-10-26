@@ -7,6 +7,8 @@
 package actions
 
 import (
+	"fmt"
+
 	"github.com/mozilla/mig"
 	migdb "github.com/mozilla/mig/database"
 )
@@ -24,5 +26,18 @@ func NewListActionsPostgres(db *migdb.DB, queue string) ListActionsPostgres {
 }
 
 func (list ListActionsPostgres) ListActions(limit uint) ([]mig.Action, error) {
-	return []mig.Action{}, nil
+	now := time.Now().Add(-15 * time.Minute)
+	agents, err := list.db.ActiveAgentsByQueue(limit.queueLoc, now)
+	if err != nil {
+		return []mig.Action{}, err
+	}
+	if len(agents) == 0 {
+		err := fmt.Errorf("No agents listening to queue %s", list.queueLoc)
+		return []mig.Action{}, err
+	}
+	actions, err := list.db.SetupRunnableActionsForAgent(agents[0])
+	if err != nil {
+		return []mig.Action{}, err
+	}
+	return actions, nil
 }
