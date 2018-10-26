@@ -356,7 +356,7 @@ func (db *DB) SetupRunnableActionsForAgent(agent mig.Agent) ([]mig.Action, error
 
 	for actionRows.Next() {
 		retrieved := actionFromDB{}
-		numAgentsTargeted := 0
+		agentIsTargeted := false
 
 		err := actionRows.Scan(
 			&retrieved.ID,
@@ -390,12 +390,12 @@ func (db *DB) SetupRunnableActionsForAgent(agent mig.Agent) ([]mig.Action, error
          and (%s)
       );
     `, mig.AgtStatusOnline, mig.AgtStatusIdle, action.Target)
-		err = db.c.QueryRow(query, agent.ID).Scan(&numAgentsTargeted)
+		err = db.c.QueryRow(query, agent.ID).Scan(&agentIsTargeted)
 		if err != nil {
 			return []mig.Action{}, err
 		}
 
-		if numAgentsTargeted > 0 {
+		if agentIsTargeted {
 			actions = append(actions, action)
 		}
 	}
