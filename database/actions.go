@@ -17,6 +17,50 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// A container for information about an action loaded directly from Postgres.
+// The `deserializeActionFromDB` function attempts to process this into a proper `Action`.
+type actionFromDB struct {
+	ID              float64
+	Name            string
+	Target          string
+	ValidFrom       time.Time
+	ExpireAfter     time.Time
+	Status          string
+	SyntaxVersion   uint16
+	DescriptionJSON []byte
+	ThreatJSON      []byte
+	OperationsJSON  []byte
+	SignaturesJSON  []byte
+}
+
+func deserializeActionFromDB(retrieved actionFromDB) (mig.Action, error) {
+	action := mig.Action{
+		ID:            retrieved.ID,
+		Name:          retrieved.Name,
+		Target:        retrieved.Target,
+		ValidFrom:     retrieved.ValidFrom,
+		ExpireAfter:   retrieved.ExpireAfter,
+		Status:        retrieved.Status,
+		SyntaxVersion: retrieved.SyntaxVersion,
+	}
+
+	deserializeErrors := map[string]error{
+		"description": json.Unmarshal(retrieved.DescriptionJSON, &action.Description),
+		"threat":      json.Unmarshal(retrieved.ThreatJSON, &action.Threat),
+		"operations":  json.Unmarshal(retrieved.OperationsJSON, &action.Operations),
+		"signatures":  json.Unmarshal(retrieved.SignaturesJSON, &action.PGPSignatures),
+	}
+
+	for attribute, err := range deserializeErrors {
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action %s: '%s'", attribute, err.Error())
+			return mig.Action{}, err
+		}
+	}
+
+	return action, nil
+}
+
 // LastActions retrieves the last X actions by time from the database
 func (db *DB) LastActions(limit int) (actions []mig.Action, err error) {
 	rows, err := db.c.Query(`SELECT id, name, target, description, threat, operations,
@@ -277,6 +321,86 @@ func (db *DB) GetActionCounters(aid float64) (counters mig.ActionCounters, err e
 		err = fmt.Errorf("Failed to complete database query: '%v'", err)
 	}
 	return
+}
+
+// SetupRunnableActionsForAgent retrieves actions that are ready to be run by a particular agent.
+func (db *DB) SetupRunnableActionsForAgent(agent mig.Agent) ([]mig.Action, error) {
+	actions := []mig.Action{}
+
+	actionRows, err := db.c.Query(`
+  update actions
+  set status='scheduled'
+  where status='pending'
+    and validfrom < now()
+    and expireafter > now()
+  returning id,
+            name,
+            target,
+            description,
+            threat,
+            operations,
+            validfrom,
+            expireafter,
+            status, 
+            pgpsignatures,
+            syntaxversion;
+  `)
+
+	if actionRows != nil {
+		defer actionRows.Close()
+	}
+	if err != nil && err != sql.ErrNoRows {
+		err = fmt.Errorf("Error while setting up runnable actions: '%s'", err.Error())
+		return []mig.Action{}, err
+	}
+
+	for actionRows.Next() {
+		retrieved := actionFromDB{}
+		numAgentsTargeted := 0
+
+		err := actionRows.Scan(
+			&retrieved.ID,
+			&retrieved.Name,
+			&retrieved.Target,
+			&retrieved.DescriptionJSON,
+			&retrieved.ThreatJSON,
+			&retrieved.OperationsJSON,
+			&retrieved.ValidFrom,
+			&retrieved.ExpireAfter,
+			&retrieved.Status,
+			&retrieved.SignaturesJSON,
+			&retrieved.SyntaxVersion)
+		if err != nil {
+			err = fmt.Errorf("Error retrieving action: '%s'", err.Error())
+			return []mig.Action{}, err
+		}
+
+		action, err := deserializeActionFromDB(retrieved)
+		if err != nil {
+			return []mig.Action{}, err
+		}
+
+		// This is a very unfortunate concession to have to make, but it's essentially
+		// the same thing that `ActiveAgentsByTarget` does in `database/agents.go`.
+		query := fmt.Sprintf(`
+    select $1 in
+      (select distinct on (queueloc) id
+       from agents
+       where status in ('%s', '%s')
+         and (%s)
+      );
+    `, mig.AgtStatusOnline, mig.AgtStatusIdle, action.Target)
+		err = db.c.QueryRow(query, agent.ID).Scan(&numAgentsTargeted)
+		if err != nil {
+			return []mig.Action{}, err
+		}
+
+		if numAgentsTargeted > 0 {
+			actions = append(actions, action)
+		}
+	}
+
+	return actions, nil
 }
 
 // SetupRunnableActions retrieves actions that are ready to run. This function is designed
