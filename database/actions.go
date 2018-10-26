@@ -419,35 +419,30 @@ func (db *DB) SetupRunnableActions() (actions []mig.Action, err error) {
 		return
 	}
 	for rows.Next() {
-		var jDesc, jThreat, jOps, jSig []byte
-		var a mig.Action
-		err = rows.Scan(&a.ID, &a.Name, &a.Target, &jDesc, &jThreat, &jOps,
-			&a.ValidFrom, &a.ExpireAfter, &a.Status, &jSig, &a.SyntaxVersion)
+		retrieved := actionFromDB{}
+		err := actionRows.Scan(
+			&retrieved.ID,
+			&retrieved.Name,
+			&retrieved.Target,
+			&retrieved.DescriptionJSON,
+			&retrieved.ThreatJSON,
+			&retrieved.OperationsJSON,
+			&retrieved.ValidFrom,
+			&retrieved.ExpireAfter,
+			&retrieved.Status,
+			&retrieved.SignaturesJSON,
+			&retrieved.SyntaxVersion)
 		if err != nil {
-			err = fmt.Errorf("Error while retrieving action: '%v'", err)
+			err = fmt.Errorf("Error while retrieving action: '%s'", err.Error())
 			return
 		}
-		err = json.Unmarshal(jDesc, &a.Description)
+
+		action, err := deserializeActionFromDB(retrieved)
 		if err != nil {
-			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
-			return
+			return []mig.Action{}, err
 		}
-		err = json.Unmarshal(jThreat, &a.Threat)
-		if err != nil {
-			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
-			return
-		}
-		err = json.Unmarshal(jOps, &a.Operations)
-		if err != nil {
-			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
-			return
-		}
-		err = json.Unmarshal(jSig, &a.PGPSignatures)
-		if err != nil {
-			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
-			return
-		}
-		actions = append(actions, a)
+
+		actions = append(actions, action)
 	}
 	if err := rows.Err(); err != nil {
 		err = fmt.Errorf("Failed to complete database query: '%v'", err)
