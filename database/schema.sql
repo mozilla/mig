@@ -42,6 +42,16 @@ CREATE INDEX agents_starttime_idx ON agents(starttime DESC);
 CREATE INDEX agents_queueloc_pid_idx ON agents(queueloc, pid);
 CREATE INDEX agents_status_idx ON agents(status);
 
+CREATE TABLE agent_action_relation (
+  agent_id  numeric NOT NULL,
+  action_id numeric NOT NULL,
+  retrieved boolean NOT NULL DEFAULT false,
+  FOREIGN KEY (agent_id) REFERENCES agents (id),
+  FOREIGN KEY (action_id) REFERENCES actions (id),
+  PRIMARY KEY (agent_id, action_id)
+);
+ALTER TABLE public.agent_action_relation OWNER to migadmin;
+
 CREATE TABLE agents_stats (
     timestamp                   timestamp with time zone not null,
     online_agents               numeric,
