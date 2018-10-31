@@ -10,7 +10,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"gopkg.in/gcfg.v1"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -18,14 +17,30 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"gopkg.in/gcfg.v1"
+
+	"github.com/mozilla/mig"
+	migdb "github.com/mozilla/mig/database"
 )
 
 const migAPIPort uint16 = 12345
+const testActionName string = "testaction"
+
+type config struct {
+	Postgres struct {
+		Host     string
+		User     string
+		Password string
+		DBName   string
+		SSLMode  string
+		Port     int
+		MaxConn  int
+	}
+}
 
 type testState struct {
-	AgentID       float64
-	QueueLocation string
-	ActionID      float64
+	AgentID  float64
+	ActionID float64
 }
 
 type operation struct {
@@ -61,12 +76,11 @@ type listActionsResponse struct {
 	Actions []action
 }
 
-func listActions(port uint16, queue string, limit uint) (int, listActionsResponse, error) {
+func listActions(port uint16, agent AgentID) (int, listActionsResponse, error) {
 	response, err := http.Get(fmt.Sprintf(
-		"http://127.0.0.1:%d/api/v1/actions?queue=%s&limit=%d",
+		"http://127.0.0.1:%d/api/v1/actions?agent=%f",
 		port,
-		queue,
-		limit))
+		agent))
 	if err != nil {
 		return 0, listActionsResponse{}, err
 	}
@@ -85,12 +99,86 @@ func listActions(port uint16, queue string, limit uint) (int, listActionsRespons
 }
 
 func TestListActionsWithValidRequest(t *testing.T) {
+	cfg := config{}
+	path, err := filepath.Abs("../../api.cfg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gcfg.FatalOnly(gcfg.ReadFileInto(&cfg, path)); err != nil {
+		t.Fatal(err)
+	}
+	url := fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		cfg.Postgres.User,
+		cfg.Postgres.Password,
+		cfg.Postgres.Host,
+		cfg.Postgres.Port,
+		cfg.Postgres.DBName,
+		cfg.Postgres.SSLMode)
+	db, err := sql.Open("postgres", url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	state, err := setup(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown(db, state)
+
+	statusCode, actions, err := listactions(migAPIPort, AgentID(state.Agent))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if statusCode != http.StatusOK {
+		t.Errorf("Expected to get status code %d but got %d", http.StatusOK, statusCode)
+	}
+
+	if len(actions) != 1 {
+		t.Errorf("Expected to get one action, but got %d", len(actions))
+	}
+
+	if actions[0].Name != testActionName {
+		t.Errorf("Expected action retrieved to have name '%s' but it is '%s'", testActionName, actions[0].Name)
+	}
 }
 
-func setup() (testState, error) {
-	return testState{}, nil
+func setup(db *migdb.DB) (testState, error) {
+	testAgent := mig.Agent{
+		ID:       mig.GenID(),
+		Name:     "testagent",
+		QueueLoc: "doesntmatter",
+		Mode:     "daemon",
+	}
+
+	testAction := mig.Action{
+		ID:          mig.GenID(),
+		Name:        testActionName,
+		Target:      "name = 'testagent'",
+		ValidFrom:   time.Now(),
+		ExpireAfter: time.Now().Add(5 * time.Minute),
+		Status:      "pending",
+	}
+
+	err := db.InsertAgent(testAgent, nil)
+	if err != nil {
+		return testState{}, err
+	}
+
+	err = db.InsertAction(testaction)
+	if err != nil {
+		return testState{}, err
+	}
+
+	state = testState{
+		AgentID:  testAgent.ID,
+		ActionID: testAction.ID,
+	}
+	return state, nil
 }
 
-func teardown(state testState) error {
+func teardown(db *migdb.DB, state testState) error {
 	return nil
 }
