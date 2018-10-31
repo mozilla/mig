@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -23,7 +22,6 @@ import (
 	migdb "github.com/mozilla/mig/database"
 )
 
-const migAPIPort uint16 = 12345
 const testActionName string = "testaction"
 
 type config struct {
@@ -76,7 +74,7 @@ type listActionsResponse struct {
 	Actions []action
 }
 
-func listActions(port uint16, agent AgentID) (int, listActionsResponse, error) {
+func listActions(port uint16, agent float64) (int, listActionsResponse, error) {
 	response, err := http.Get(fmt.Sprintf(
 		"http://127.0.0.1:%d/api/v1/actions?agent=%f",
 		port,
@@ -116,18 +114,19 @@ func TestListActionsWithValidRequest(t *testing.T) {
 		cfg.Postgres.DBName,
 		cfg.Postgres.SSLMode)
 	db, err := sql.Open("postgres", url)
+	migDB := migdb.NewDB(db)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	state, err := setup(db)
+	state, err := setup(migDB)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer teardown(db, state)
+	defer teardown(migDB, state)
 
-	statusCode, actions, err := listactions(migAPIPort, AgentID(state.Agent))
+	statusCode, respData, err := listActions(migAPIPort, state.AgentID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,16 +135,20 @@ func TestListActionsWithValidRequest(t *testing.T) {
 		t.Errorf("Expected to get status code %d but got %d", http.StatusOK, statusCode)
 	}
 
-	if len(actions) != 1 {
-		t.Errorf("Expected to get one action, but got %d", len(actions))
+	if respData.Error != nil {
+		t.Errorf("Got error from API: %s", *respData.Error)
 	}
 
-	if actions[0].Name != testActionName {
-		t.Errorf("Expected action retrieved to have name '%s' but it is '%s'", testActionName, actions[0].Name)
+	if len(respData.Actions) != 1 {
+		t.Errorf("Expected to get one action, but got %d", len(respData.Actions))
+	}
+
+	if respData.Actions[0].Name != testActionName {
+		t.Errorf("Expected action retrieved to have name '%s' but it is '%s'", testActionName, respData.Actions[0].Name)
 	}
 }
 
-func setup(db *migdb.DB) (testState, error) {
+func setup(db migdb.DB) (testState, error) {
 	testAgent := mig.Agent{
 		ID:       mig.GenID(),
 		Name:     "testagent",
@@ -167,18 +170,18 @@ func setup(db *migdb.DB) (testState, error) {
 		return testState{}, err
 	}
 
-	err = db.InsertAction(testaction)
+	err = db.InsertAction(testAction)
 	if err != nil {
 		return testState{}, err
 	}
 
-	state = testState{
+	state := testState{
 		AgentID:  testAgent.ID,
 		ActionID: testAction.ID,
 	}
 	return state, nil
 }
 
-func teardown(db *migdb.DB, state testState) error {
+func teardown(db migdb.DB, state testState) error {
 	return nil
 }
