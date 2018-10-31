@@ -506,8 +506,7 @@ GET /api/v1/actions
 * Description: retrieve a list of actions queued for the agent to run
 * Authentication: none
 * Parameters:
-  * `queue`: a string containing the name of the queue from which actions for the agent can be read
-  * `limit`: an integer limit on the number of actions that should be returned. 0 indicates no limit
+  * `agent`: the unique identifier of the agent requesting actions to run
 * Response Code:
   * `200`: Actions for the agent have been successfully retrieved
   * `400`: The request was missing required data or fomratted incorrectly

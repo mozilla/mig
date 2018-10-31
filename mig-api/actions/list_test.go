@@ -18,61 +18,61 @@ import (
 )
 
 type MockListActions struct {
-	ListFn func(uint) ([]mig.Action, error)
+	ListFn func(AgentID) ([]mig.Action, error)
 }
 
 func TestList(t *testing.T) {
 	testCases := []struct {
 		Description    string
-		QueueName      string
+		Agent          float64
 		ResultsLimit   uint
 		ShouldError    bool
 		ExpectedStatus int
 		RequestBody    string
-		ListFn         func(uint) ([]mig.Action, error)
+		ListFn         func(AgentID) ([]mig.Action, error)
 	}{
 		{
 			Description:    `Should get status 200 if retrieval succeeds`,
 			ShouldError:    false,
 			ExpectedStatus: http.StatusOK,
-			QueueName:      "testqueue",
+			Agent:          123.456,
 			ResultsLimit:   2,
-			ListFn:         func(limit uint) ([]mig.Action, error) { return []mig.Action{}, nil },
+			ListFn:         func(_ AgentID) ([]mig.Action, error) { return []mig.Action{}, nil },
 		},
 		{
 			Description:    `Should get status 400 if body is missing required data`,
 			ShouldError:    true,
 			ExpectedStatus: http.StatusBadRequest,
-			QueueName:      "",
+			Agent:          0.0,
 			ResultsLimit:   2,
-			ListFn:         func(limit uint) ([]mig.Action, error) { return []mig.Action{}, nil },
+			ListFn:         func(_ AgentID) ([]mig.Action, error) { return []mig.Action{}, nil },
 		},
 		{
 			Description:    `Should get status 500 if retrieving actions fails`,
 			ShouldError:    true,
 			ExpectedStatus: http.StatusInternalServerError,
-			QueueName:      "test",
+			Agent:          321.0,
 			ResultsLimit:   100,
-			ListFn:         func(limit uint) ([]mig.Action, error) { return []mig.Action{}, errors.New("test fail") },
+			ListFn:         func(_ AgentID) ([]mig.Action, error) { return []mig.Action{}, errors.New("test fail") },
 		},
 	}
 
 	for caseNum, testCase := range testCases {
 		t.Logf("Running TestList case #%d: %s", caseNum, testCase.Description)
 
+		// We run the test in a function so that calling `defer server.Close()` does the right
+		// thing.  If we didn't do this, we'd just queue up multiple calls that would all be
+		// invoked at once when the loop ends.
 		func() {
-			server := httptest.NewServer(NewList(func(_ string) ListActions {
-				return MockListActions{
-					ListFn: testCase.ListFn,
-				}
+			server := httptest.NewServer(NewList(MockListActions{
+				ListFn: testCase.ListFn,
 			}))
 			defer server.Close()
 
 			response, err := http.Get(fmt.Sprintf(
-				"%s?queue=%s&limit=%d",
+				"%s?agent=%f",
 				server.URL,
-				testCase.QueueName,
-				testCase.ResultsLimit))
+				testCase.Agent))
 			if err != nil {
 				t.Fatalf("Error making request: %s", err.Error())
 			}
@@ -101,6 +101,6 @@ func TestList(t *testing.T) {
 	}
 }
 
-func (mock MockListActions) ListActions(limit uint) ([]mig.Action, error) {
-	return mock.ListFn(limit)
+func (mock MockListActions) ListActions(agent AgentID) ([]mig.Action, error) {
+	return mock.ListFn(agent)
 }

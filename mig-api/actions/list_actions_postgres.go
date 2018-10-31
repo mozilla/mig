@@ -7,38 +7,36 @@
 package actions
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/mozilla/mig"
 	migdb "github.com/mozilla/mig/database"
 )
 
 type ListActionsPostgres struct {
-	db       *migdb.DB
-	queueLoc string
+	db *migdb.DB
 }
 
-func NewListActionsPostgres(db *migdb.DB, queue string) ListActionsPostgres {
+func NewListActionsPostgres(db *migdb.DB) ListActionsPostgres {
 	return ListActionsPostgres{
-		db:       db,
-		queueLoc: queue,
+		db: db,
 	}
 }
 
-func (list ListActionsPostgres) ListActions(limit uint) ([]mig.Action, error) {
-	now := time.Now().Add(-15 * time.Minute)
-	agents, err := list.db.ActiveAgentsByQueue(list.queueLoc, now)
-	if err != nil {
-		return []mig.Action{}, err
-	}
-	if len(agents) == 0 {
-		err := fmt.Errorf("No agents listening to queue %s", list.queueLoc)
-		return []mig.Action{}, err
-	}
-	actions, err := list.db.SetupRunnableActionsForAgent(agents[0])
-	if err != nil {
-		return []mig.Action{}, err
-	}
-	return actions, nil
+func (list ListActionsPostgres) ListActions(agent AgentID) ([]mig.Action, error) {
+	return []mig.Action{}, nil
+	/*
+		now := time.Now().Add(-15 * time.Minute)
+		agents, err := list.db.ActiveAgentsByQueue(list.queueLoc, now)
+		if err != nil {
+			return []mig.Action{}, err
+		}
+		if len(agents) == 0 {
+			err := fmt.Errorf("No agents listening to queue %s", list.queueLoc)
+			return []mig.Action{}, err
+		}
+		actions, err := list.db.SetupRunnableActionsForAgent(agents[0])
+		if err != nil {
+			return []mig.Action{}, err
+		}
+		return actions, nil
+	*/
 }

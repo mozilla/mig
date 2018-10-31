@@ -16,11 +16,14 @@ import (
 	"github.com/mozilla/mig"
 )
 
+// AgentID is a descriptive alias for the float64 type used to represent an agent's ID.
+type AgentID float64
+
 // ListActions abstracts over operations that allow the MIG API to retrieve
 // a list of actions that an agent should run. It allows for a limit to be set
 // on the number of actions to return.
 type ListActions interface {
-	ListActions(uint) ([]mig.Action, error)
+	ListActions(AgentID) ([]mig.Action, error)
 }
 
 // List is an HTTP request handler that serves GET requests intended by agents
@@ -29,7 +32,7 @@ type ListActions interface {
 // This request handler must be able to construct a means of retrieving actions
 // given a queue location string.
 type List struct {
-	actions func(string) ListActions
+	actions ListActions
 }
 
 type operation struct {
@@ -49,8 +52,7 @@ type action struct {
 }
 
 type listRequest struct {
-	Queue string `json:"queue"`
-	Limit uint   `json:"limit"`
+	Agent AgentID `json:"agent"`
 }
 
 type listResponse struct {
@@ -59,17 +61,17 @@ type listResponse struct {
 }
 
 // NewList constructs a new List handler.
-func NewList(listActionsConstructor func(string) ListActions) List {
+func NewList(listActions ListActions) List {
 	return List{
-		actions: listActionsConstructor,
+		actions: listActions,
 	}
 }
 
 // validate ensures that a request to list actions contains all of the data
 // required to satisfy the request.
 func (req listRequest) validate() error {
-	if req.Queue == "" {
-		return fmt.Errorf("missing queue field")
+	if req.Agent == AgentID(0.0) {
+		return fmt.Errorf("missing agent field")
 	}
 
 	return nil
@@ -83,17 +85,17 @@ func (a *action) fromMigAction(act mig.Action) {
 		Target:        act.Target,
 		ValidFrom:     act.ValidFrom,
 		ExpireAfter:   act.ExpireAfter,
-		Operations:    []operation{},
+		Operations:    make([]operation, len(act.Operations)),
 		Signatures:    act.PGPSignatures,
 		Status:        act.Status,
 		SyntaxVersion: uint(act.SyntaxVersion),
 	}
 
-	for _, op := range act.Operations {
-		a.Operations = append(a.Operations, operation{
+	for index, op := range act.Operations {
+		a.Operations[index] = operation{
 			Module:     op.Module,
 			Parameters: op.Parameters,
-		})
+		}
 	}
 }
 
@@ -104,27 +106,15 @@ func (handler List) ServeHTTP(response http.ResponseWriter, request *http.Reques
 
 	queryStringValues := request.URL.Query()
 
-	var paramsErr error
-	queue := queryStringValues.Get("queue")
-	limit, parseErr := strconv.Atoi(queryStringValues.Get("limit"))
-	if queue == "" {
-		paramsErr = fmt.Errorf("missing parameter 'queue'")
-	}
+	agent, parseErr := strconv.ParseFloat(queryStringValues.Get("agent"), 64)
 	if parseErr != nil {
-		paramsErr = parseErr
-	}
-	if paramsErr != nil {
-		errMsg := fmt.Sprintf("Missing or invalid request parameters: %s", paramsErr.Error())
+		errMsg := "Invalid agent id"
 		response.WriteHeader(http.StatusBadRequest)
 		resEncoder.Encode(&listResponse{&errMsg, []action{}})
 		return
 	}
 
-	reqData := listRequest{
-		Queue: queue,
-		Limit: uint(limit),
-	}
-
+	reqData := listRequest{AgentID(agent)}
 	validateErr := reqData.validate()
 	if validateErr != nil {
 		errMsg := fmt.Sprintf("Missing or invalid data in request: %s", validateErr.Error())
@@ -133,8 +123,7 @@ func (handler List) ServeHTTP(response http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	list := handler.actions(reqData.Queue)
-	actions, err := list.ListActions(reqData.Limit)
+	actions, err := handler.actions.ListActions(reqData.Agent)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to retrieve actions: %s", err.Error())
 		response.WriteHeader(http.StatusInternalServerError)

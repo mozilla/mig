@@ -76,9 +76,7 @@ func main() {
 	postHeartbeat := agents.NewUploadHeartbeat(
 		agents.NewPersistHeartbeatPostgres(&ctx.DB),
 		agents.NewNilAuthenticator())
-	listActions := actions.NewList(func(queue string) actions.ListActions {
-		return actions.NewListActionsPostgres(&ctx.DB, queue)
-	})
+	listActions := actions.NewList(actions.NewListActionsPostgres(&ctx.DB))
 	postResults := results.NewUpload(results.NewPersistResultsPostgres(&ctx.DB))
 
 	// Endpoints that replace previously direct-to-rabbitmq communications.
