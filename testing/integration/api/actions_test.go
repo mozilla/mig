@@ -126,6 +126,8 @@ func TestListActionsWithValidRequest(t *testing.T) {
 	}
 	defer teardown(migDB, state)
 
+	t.Logf("Finished setup and got action %f ; agent %f", state.ActionID, state.AgentID)
+
 	statusCode, respData, err := listActions(migAPIPort, state.AgentID)
 	if err != nil {
 		t.Fatal(err)
@@ -140,7 +142,7 @@ func TestListActionsWithValidRequest(t *testing.T) {
 	}
 
 	if len(respData.Actions) != 1 {
-		t.Errorf("Expected to get one action, but got %d", len(respData.Actions))
+		t.Fatalf("Expected to get one action, but got %d", len(respData.Actions))
 	}
 
 	if respData.Actions[0].Name != testActionName {
@@ -151,7 +153,7 @@ func TestListActionsWithValidRequest(t *testing.T) {
 func setup(db migdb.DB) (testState, error) {
 	testAgent := mig.Agent{
 		ID:       mig.GenID(),
-		Name:     "testagent",
+		Name:     "listactionstestagent",
 		QueueLoc: "doesntmatter",
 		Mode:     "daemon",
 	}
@@ -159,7 +161,7 @@ func setup(db migdb.DB) (testState, error) {
 	testAction := mig.Action{
 		ID:          mig.GenID(),
 		Name:        testActionName,
-		Target:      "name = 'testagent'",
+		Target:      "name = 'listactionstestagent'",
 		ValidFrom:   time.Now(),
 		ExpireAfter: time.Now().Add(5 * time.Minute),
 		Status:      "pending",

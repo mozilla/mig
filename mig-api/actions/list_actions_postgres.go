@@ -21,22 +21,10 @@ func NewListActionsPostgres(db *migdb.DB) ListActionsPostgres {
 	}
 }
 
-func (list ListActionsPostgres) ListActions(agent AgentID) ([]mig.Action, error) {
-	return []mig.Action{}, nil
-	/*
-		now := time.Now().Add(-15 * time.Minute)
-		agents, err := list.db.ActiveAgentsByQueue(list.queueLoc, now)
-		if err != nil {
-			return []mig.Action{}, err
-		}
-		if len(agents) == 0 {
-			err := fmt.Errorf("No agents listening to queue %s", list.queueLoc)
-			return []mig.Action{}, err
-		}
-		actions, err := list.db.SetupRunnableActionsForAgent(agents[0])
-		if err != nil {
-			return []mig.Action{}, err
-		}
-		return actions, nil
-	*/
+func (list ListActionsPostgres) ListActions(aid AgentID) ([]mig.Action, error) {
+	agent := mig.Agent{
+		ID: float64(aid),
+	}
+	actions, err := list.db.SetupRunnableActionsForAgent(agent)
+	return actions, err
 }

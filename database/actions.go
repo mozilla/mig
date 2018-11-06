@@ -10,6 +10,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/mozilla/mig"
@@ -207,7 +209,7 @@ func (db *DB) InsertAction(a mig.Action) (err error) {
 	// agents targeted by the action.
 	_, err = db.c.Exec(fmt.Sprintf(`
   insert into agent_action_relation (agent_id, action_id)
-  select $1, A.id
+  select A.id, $1
   from agents A
   where (%s);
   `, a.Target), a.ID)
@@ -339,25 +341,30 @@ func (db *DB) GetActionCounters(aid float64) (counters mig.ActionCounters, err e
 // SetupRunnableActionsForAgent retrieves actions that are ready to be run by a particular agent.
 func (db *DB) SetupRunnableActionsForAgent(agent mig.Agent) ([]mig.Action, error) {
 	actions := []mig.Action{}
+	actionIDs := []string{}
+
+	fmt.Fprintf(os.Stderr, "Looking for agent with ID %f and name %s\n", agent.ID, agent.Name)
 
 	actionRows, err := db.c.Query(`
-  update actions
-  set status='scheduled'
-  where status='pending'
-    and validfrom < now()
-    and expireafter > now()
-  returning id,
-            name,
-            target,
-            description,
-            threat,
-            operations,
-            validfrom,
-            expireafter,
-            status, 
-            pgpsignatures,
-            syntaxversion;
-  `)
+  select A1.id,
+         A1.name,
+         A1.target,
+         A1.description,
+         A1.threat,
+         A1.operations,
+         A1.validfrom,
+         A1.expireafter,
+         A1.status, 
+         A1.pgpsignatures,
+         A1.syntaxversion
+  from actions A1
+  where exists (select 1
+                from agent_action_relation R
+                where R.action_id = A1.id
+                  and R.agent_id = $1
+                  and not R.retrieved
+               );
+  `, agent.ID)
 
 	if actionRows != nil {
 		defer actionRows.Close()
@@ -369,7 +376,6 @@ func (db *DB) SetupRunnableActionsForAgent(agent mig.Agent) ([]mig.Action, error
 
 	for actionRows.Next() {
 		retrieved := actionFromDB{}
-		agentIsTargeted := false
 
 		err := actionRows.Scan(
 			&retrieved.ID,
@@ -393,24 +399,21 @@ func (db *DB) SetupRunnableActionsForAgent(agent mig.Agent) ([]mig.Action, error
 			return []mig.Action{}, err
 		}
 
-		// This is a very unfortunate concession to have to make, but it's essentially
-		// the same thing that `ActiveAgentsByTarget` does in `database/agents.go`.
-		query := fmt.Sprintf(`
-    select $1 in
-      (select distinct on (queueloc) id
-       from agents
-       where status in ('%s', '%s')
-         and (%s)
-      );
-    `, mig.AgtStatusOnline, mig.AgtStatusIdle, action.Target)
-		err = db.c.QueryRow(query, agent.ID).Scan(&agentIsTargeted)
-		if err != nil {
-			return []mig.Action{}, err
-		}
+		fmt.Printf("Got action with ID %f\n", action.ID)
+		actions = append(actions, action)
+		actionIDs = append(actionIDs, fmt.Sprintf("%f", action.ID))
+	}
 
-		if agentIsTargeted {
-			actions = append(actions, action)
-		}
+	array := strings.Join(actionIDs, ", ")
+	_, err = db.c.Exec(fmt.Sprintf(`
+  update agent_action_relation
+  set retrieved = true
+  where agent_id = $1
+    and action_id in (%s);
+  `, array), agent.ID)
+
+	if err != nil {
+		return actions, err
 	}
 
 	return actions, nil
