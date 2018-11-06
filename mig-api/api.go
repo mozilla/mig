@@ -76,13 +76,9 @@ func main() {
 	postHeartbeat := agents.NewUploadHeartbeat(
 		agents.NewPersistHeartbeatPostgres(&ctx.DB),
 		agents.NewNilAuthenticator())
-	listActions := actions.NewList(actions.NewListActionsPostgres(&ctx.DB))
-	postResults := results.NewUpload(results.NewPersistResultsPostgres(&ctx.DB))
 
 	// Endpoints that replace previously direct-to-rabbitmq communications.
 	s.Handle("/heartbeat", postHeartbeat).Methods("POST")
-	s.Handle("/actions", listActions).Methods("GET")
-	s.Handle("/results", postResults).Methods("POST")
 
 	// unauthenticated endpoints
 	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")
