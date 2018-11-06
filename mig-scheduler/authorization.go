@@ -8,7 +8,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/mozilla/mig"
 	"os"
 	"regexp"
 )
@@ -19,16 +18,10 @@ func isAgentAuthorized(agentQueueLoc string, ctx Context) (ok bool, err error) {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("isAgentAuthorized() -> %v", e)
 		}
-		if ctx.Debug.Heartbeats {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving isAgentAuthorized()"}.Debug()
-		}
 	}()
 	var re *regexp.Regexp
 	// bypass mode if there's no whitelist in the conf
 	if ctx.Agent.Whitelist == "" {
-		if ctx.Debug.Heartbeats {
-			ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "Agent authorization checking is disabled, all agents are authorized"}.Debug()
-		}
 		ok = true
 		return
 	}
@@ -50,17 +43,11 @@ func isAgentAuthorized(agentQueueLoc string, ctx Context) (ok bool, err error) {
 				panic(err)
 			}
 			if re.MatchString(agentQueueLoc) {
-				if ctx.Debug.Heartbeats {
-					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
-				}
 				ok = true
 				return
 			}
 		} else {
 			if scanner.Text() == agentQueueLoc {
-				if ctx.Debug.Heartbeats {
-					ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: fmt.Sprintf("Agent '%s' is authorized", agentQueueLoc)}.Debug()
-				}
 				ok = true
 				return
 			}

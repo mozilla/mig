@@ -37,10 +37,6 @@ func periodic(ctx Context) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	err = markIdleAgents(ctx)
-	if err != nil {
-		panic(err)
-	}
 	err = computeAgentsStats(ctx)
 	if err != nil {
 		panic(err)
@@ -105,26 +101,6 @@ func markOfflineAgents(ctx Context) (err error) {
 	}
 	pointInTime := time.Now().Add(-timeOutPeriod)
 	err = ctx.DB.MarkOfflineAgents(pointInTime)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-// markIdleAgents updates the status of agents that stopped sending heartbeats
-func markIdleAgents(ctx Context) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("markIdleAgents() -> %v", e)
-		}
-		ctx.Channels.Log <- mig.Log{OpID: ctx.OpID, Desc: "leaving markIdleAgents()"}.Debug()
-	}()
-	hbFreq, err := time.ParseDuration(ctx.Agent.HeartbeatFreq)
-	if err != nil {
-		panic(err)
-	}
-	pointInTime := time.Now().Add(-hbFreq * 5)
-	err = ctx.DB.MarkIdleAgents(pointInTime)
 	if err != nil {
 		panic(err)
 	}

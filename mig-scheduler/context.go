@@ -86,7 +86,6 @@ type Context struct {
 	}
 	Logging mig.Logging
 	Debug   struct {
-		Heartbeats bool
 	}
 }
 

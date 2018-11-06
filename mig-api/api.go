@@ -18,9 +18,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jvehent/cljs"
 	"github.com/mozilla/mig"
-	"github.com/mozilla/mig/mig-api/actions"
 	"github.com/mozilla/mig/mig-api/agents"
-	"github.com/mozilla/mig/mig-api/results"
 	"github.com/mozilla/mig/pgp"
 )
 

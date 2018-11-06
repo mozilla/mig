@@ -163,22 +163,6 @@ func startRoutines(ctx Context) {
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "updateAction() routine started"}
 
-	// start a listening channel to receive heartbeats from agents
-	heartbeatsChan, err := startHeartbeatsListener(ctx)
-	if err != nil {
-		panic(err)
-	}
-	go func() {
-		for msg := range heartbeatsChan {
-			ctx.OpID = mig.GenID()
-			err := getHeartbeats(msg, ctx)
-			if err != nil {
-				ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("heartbeat routine failed with error '%v'", err)}.Err()
-			}
-		}
-	}()
-	ctx.Channels.Log <- mig.Log{Desc: "agents heartbeats listener routine started"}
-
 	// start a listening channel to results from agents
 	agtResultsChan, err := startResultsListener(ctx)
 	if err != nil {
