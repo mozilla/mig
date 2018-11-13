@@ -183,12 +183,15 @@ func (hb Heartbeat) ToMigAgent() mig.Agent {
 	}
 
 	return mig.Agent{
-		Name:      hb.Name,
-		Mode:      hb.Mode,
-		QueueLoc:  hb.QueueLoc,
-		Version:   hb.Version,
-		PID:       int(hb.PID),
-		StartTime: hb.StartTime,
+		Name:            hb.Name,
+		Mode:            hb.Mode,
+		Status:          mig.AgtStatusOnline,
+		QueueLoc:        hb.QueueLoc,
+		Version:         hb.Version,
+		PID:             int(hb.PID),
+		StartTime:       hb.StartTime,
+		DestructionTime: time.Date(9998, time.December, 1, 1, 1, 1, 1, time.Local),
+		HeartBeatTS:     time.Now(),
 		Env: mig.AgentEnv{
 			Init:      hb.Environment.Init,
 			Ident:     hb.Environment.Ident,
