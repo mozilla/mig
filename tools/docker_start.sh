@@ -136,6 +136,8 @@ EOF
 		--secret-keyring ~/.mig/secring.gpg \
 		--export -a $(whoami)@localhost \
 		> ~/.mig/$(whoami)-pubkey.asc
+	# Wait for all the resources to start up
+	sleep 5
 	echo -e "create investigator\n$(whoami)\nyes\nyes\nyes\nyes\n$HOME/.mig/$(whoami)-pubkey.asc\ny\n" | \
 		/go/bin/mig-console -q
 	# Install the newly created pubkey in the agents keychain
@@ -172,9 +174,6 @@ EOF
 
 # Start integration tests.
 start_test() {
-	# Sleep a number of seconds to give the agent time to register before we run the
-	# test, the heartbeat interval is 30 seconds so 45 should be sufficient
-	sleep 45
 	mig -i /go/src/github.com/mozilla/mig/actions/integration_tests.json || exit 1
 }
 
@@ -211,6 +210,11 @@ while true; do
 	sleep 1
 done
 sudo service supervisor start
+
+# Sleep a number of seconds to give the agent time to register before we run the
+# test, the heartbeat interval is 30 seconds so 45 should be sufficient
+echo Sleeping for 45 seconds to give resources some time to bootup
+sleep 45
 
 if [[ $MIGMODE = "test" ]]; then
 	start_test
