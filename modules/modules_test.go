@@ -183,9 +183,8 @@ func TestReadInputParameters(t *testing.T) {
 func TestWatchForStop(t *testing.T) {
 	stopChan := make(chan bool)
 	w := NewModuleReader(strings.NewReader(`{"class":"stop"}`))
-	var err error
 	go func() {
-		err = WatchForStop(w, &stopChan)
+		WatchForStop(w, &stopChan)
 	}()
 	select {
 	case <-stopChan:
