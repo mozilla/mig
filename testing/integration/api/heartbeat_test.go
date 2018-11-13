@@ -146,7 +146,7 @@ func TestPostHeartbeatWithValidRequest(t *testing.T) {
 			t.Fatalf("Expected heartbeat with agent name: %s got %s", agentName, name)
 		}
 	}
-	if numRows != 1 {
-		t.Fatalf("Expected 1 row, got %d", numRows)
+	if numRows < 1 {
+		t.Fatalf("Expected at least 1 row")
 	}
 }
