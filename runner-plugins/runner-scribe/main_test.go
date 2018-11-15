@@ -31,7 +31,6 @@ func TestConfigParsing(t *testing.T) {
 			ConfigString: `
       [mozdef]
       url = "testurl"
-      source = "mozdef"
       useProxy = true
       `,
 			ExpectedConfig: config{
@@ -47,7 +46,6 @@ func TestConfigParsing(t *testing.T) {
 			ConfigString: `
       [mozdef]
       url = "testurl"
-      source = "mozdef"
       useProxy = "notbool"
       `,
 			ExpectedConfig: config{
