@@ -22,14 +22,15 @@ import (
 	"gopkg.in/gcfg.v1"
 )
 
+const sourceName = "runner-scribe"
+
 // config represents the configuration used by runner-scribe, and is read in on
 // initialization
 //
-// URL and Source are mandatory settings
+// URL is mandatory
 type config struct {
 	MozDef struct {
 		URL      string // URL to post events to MozDef
-		Source   string // Source identifier for vulnerability events
 		UseProxy bool   // A switch to enable/disable the use of a system-configured proxy
 	}
 }
@@ -78,6 +79,7 @@ func main() {
 		}
 	}
 	for _, y := range items {
+		y.SourceName = sourceName
 		err = sendVulnerability(y)
 		if err != nil {
 			panic(err)
@@ -167,7 +169,6 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command) (items []goz
 			return items, err
 		}
 		for _, x := range el.Results {
-			itemptr.SourceName = conf.MozDef.Source
 			if !x.MasterResult {
 				// Result was false (vulnerability did not match)
 				continue
