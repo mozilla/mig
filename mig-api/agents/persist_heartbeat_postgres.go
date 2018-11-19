@@ -26,9 +26,13 @@ func (persist PersistHeartbeatPostgres) PersistHeartbeat(heartbeat Heartbeat) er
 	fmt.Printf("POST /heartbeat got heartbeat %v\n", heartbeat)
 
 	agent := heartbeat.ToMigAgent()
-	err := persist.db.InsertAgent(agent, nil)
+	//err := persist.db.InsertAgent(agent, nil)
+	agent, err := persist.db.AgentByQueueAndPID(agent.QueueLoc, agent.PID)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return persist.db.UpdateAgentHeartbeat(agent)
 }
 
 // _dontrun invokes a goroutine that updates the agent table when a heartbeat
