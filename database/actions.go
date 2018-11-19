@@ -203,18 +203,6 @@ func (db *DB) InsertAction(a mig.Action) (err error) {
 		return fmt.Errorf("Failed to store action: '%v'", err)
 	}
 
-	// The following query establishes a relation between the new action and all
-	// agents targeted by the action.
-	_, err = db.c.Exec(fmt.Sprintf(`
-  insert into agent_action_relation (agent_id, action_id)
-  select $1, A.id
-  from agents A
-  where (%s);
-  `, a.Target), a.ID)
-	if err != nil {
-		return fmt.Errorf("Failed to establish relation between action and targeted agents: '%s'", err.Error())
-	}
-
 	return
 }
 
