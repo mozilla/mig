@@ -16,7 +16,6 @@ import (
 
 type mozdef struct {
 	URL      string
-	Source   string
 	UseProxy bool
 }
 
@@ -32,13 +31,11 @@ func TestConfigParsing(t *testing.T) {
 			ConfigString: `
       [mozdef]
       url = "testurl"
-      source = "mozdef"
       useProxy = true
       `,
 			ExpectedConfig: config{
 				MozDef: mozdef{
 					URL:      "testurl",
-					Source:   "mozdef",
 					UseProxy: true,
 				},
 			},
@@ -49,13 +46,11 @@ func TestConfigParsing(t *testing.T) {
 			ConfigString: `
       [mozdef]
       url = "testurl"
-      source = "mozdef"
       useProxy = "notbool"
       `,
 			ExpectedConfig: config{
 				MozDef: mozdef{
 					URL:      "testurl",
-					Source:   "mozdef",
 					UseProxy: false,
 				},
 			},
@@ -99,13 +94,6 @@ func TestConfigParsing(t *testing.T) {
 				"Expected parsed URL to be %s but it's %s",
 				testCase.ExpectedConfig.MozDef.URL,
 				conf.MozDef.URL)
-		}
-
-		if conf.MozDef.Source != testCase.ExpectedConfig.MozDef.Source {
-			t.Errorf(
-				"Expected parsed Source to be %s but it's %s",
-				testCase.ExpectedConfig.MozDef.Source,
-				conf.MozDef.Source)
 		}
 
 		if conf.MozDef.UseProxy != testCase.ExpectedConfig.MozDef.UseProxy {
