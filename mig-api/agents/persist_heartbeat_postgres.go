@@ -7,7 +7,7 @@
 package agents
 
 import (
-	"fmt"
+	"time"
 
 	"github.com/mozilla/mig"
 	migdb "github.com/mozilla/mig/database"
