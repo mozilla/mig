@@ -24,7 +24,8 @@ func NewPersistHeartbeatPostgres(db *migdb.DB) PersistHeartbeatPostgres {
 }
 
 func (persist PersistHeartbeatPostgres) PersistHeartbeat(heartbeat Heartbeat) error {
-	agent, err := persist.db.AgentByQueueAndPID(
+	agent := heartbeat.ToMigAgent()
+	foundAgent, err := persist.db.AgentByQueueAndPID(
 		heartbeat.QueueLoc,
 		int(heartbeat.PID))
 
@@ -39,9 +40,13 @@ func (persist PersistHeartbeatPostgres) PersistHeartbeat(heartbeat Heartbeat) er
 	}
 
 	agent.Status = mig.AgtStatusOnline
+	agent.HeartBeatTS = time.Now()
+	agent.RefreshTS = foundAgent.RefreshTS
+	agent.Authorized = foundAgent.Authorized
+	agent.ID = foundAgent.ID
 
-	cutoff := agent.RefreshTS.Add(15 * time.Second)
-	if !agent.RefreshTS.IsZero() && agent.RefreshTS.After(cutoff) {
+	cutoff := foundAgent.RefreshTS.Add(15 * time.Second)
+	if !foundAgent.RefreshTS.IsZero() && foundAgent.RefreshTS.After(cutoff) {
 		return persist.db.ReplaceRefreshedAgent(agent)
 	}
 
