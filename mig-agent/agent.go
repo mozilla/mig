@@ -96,6 +96,7 @@ type Heartbeat struct {
 	PID         uint        `json:"pid"`
 	QueueLoc    string      `json:"queueLoc"`
 	StartTime   time.Time   `json:"startTime"`
+	RefreshTime time.Time   `json:"refreshTime"`
 	Environment Environment `json:"environment"`
 	Tags        []Tag       `json:"tags"`
 }
@@ -945,12 +946,13 @@ func heartbeat(ctx *Context) (err error) {
 			tags = append(tags, updated_tag)
 		}
 		heartbeat := Heartbeat{
-			Name:      ctx.Agent.Hostname,
-			Mode:      ctx.Agent.Mode,
-			Version:   mig.Version,
-			PID:       uint(os.Getpid()),
-			QueueLoc:  ctx.Agent.QueueLoc,
-			StartTime: time.Now(),
+			Name:        ctx.Agent.Hostname,
+			Mode:        ctx.Agent.Mode,
+			Version:     mig.Version,
+			PID:         uint(os.Getpid()),
+			QueueLoc:    ctx.Agent.QueueLoc,
+			StartTime:   time.Now(),
+			RefreshTime: ctx.Agent.RefreshTS,
 			Environment: Environment{
 				Init:      ctx.Agent.Env.Init,
 				Ident:     ctx.Agent.Env.Ident,

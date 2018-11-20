@@ -72,6 +72,7 @@ type Heartbeat struct {
 	PID         uint        `json:"pid"`
 	QueueLoc    string      `json:"queueLoc"`
 	StartTime   time.Time   `json:"startTime"`
+	RefreshTime time.Time   `json:"refreshTime"`
 	Environment Environment `json:"environment"`
 	Tags        []Tag       `json:"tags"`
 }
@@ -190,6 +191,7 @@ func (hb Heartbeat) ToMigAgent() mig.Agent {
 		Version:         hb.Version,
 		PID:             int(hb.PID),
 		StartTime:       hb.StartTime,
+		RefreshTS:       hb.RefreshTime,
 		DestructionTime: time.Date(9998, time.December, 1, 1, 1, 1, 1, time.Local),
 		HeartBeatTS:     time.Now(),
 		Env: mig.AgentEnv{

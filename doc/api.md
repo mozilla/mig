@@ -63,6 +63,7 @@ POST /api/v1/heartbeat
   * `pid`: An integer representing the agent's process ID
   * `queueLoc`: The name of the queue the agent is reading from and writing to
   * `startTime:` The time at which the agent sent the heartbeat formatted like "2009-11-10T23:00:00Z"
+  * `refreshTime:` The time at which the agent was last updated formatted like "2009-11-10T23:00:00Z"
   * `environment`: An object
     * `init`: A string containing the name of the host's init system, such as systemd
     * `ident`: A string containing the name of the host's OS identifier
