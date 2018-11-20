@@ -210,6 +210,7 @@ GRANT USAGE ON SEQUENCE investigators_id_seq TO migscheduler;
 GRANT SELECT ON actions, agents, agents_stats, agtmodreq, commands, invagtmodperm, loaders, manifests, manifestsig, modules, signatures TO migapi;
 GRANT SELECT (id, name, pgpfingerprint, publickey, status, createdat, lastmodified, permissions, apikey, apisalt) ON investigators TO migapi;
 GRANT INSERT ON agents, actions, signatures, manifests, manifestsig, loaders TO migapi;
+GRANT UPDATE ON agents TO migapi;
 GRANT DELETE ON manifestsig TO migapi;
 GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified, permissions) ON investigators TO migapi;
 GRANT UPDATE (permissions, status, lastmodified, apikey, apisalt) ON investigators TO migapi;
