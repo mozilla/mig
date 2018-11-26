@@ -1,3 +1,11 @@
+CREATE ROLE migadmin;
+CREATE ROLE migapi;
+CREATE ROLE migscheduler;
+
+ALTER ROLE migadmin WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'password';
+ALTER ROLE migapi WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'password';
+ALTER ROLE migscheduler WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN PASSWORD 'password';
+
 CREATE TABLE actions (
     id              numeric NOT NULL,
     name            character varying(2048) NOT NULL,
@@ -209,8 +217,7 @@ GRANT USAGE ON SEQUENCE investigators_id_seq TO migscheduler;
 -- API has limited permissions, and cannot list scheduler private keys in the investigators table, but can update their statuses
 GRANT SELECT ON actions, agents, agents_stats, agtmodreq, commands, invagtmodperm, loaders, manifests, manifestsig, modules, signatures TO migapi;
 GRANT SELECT (id, name, pgpfingerprint, publickey, status, createdat, lastmodified, permissions, apikey, apisalt) ON investigators TO migapi;
-GRANT INSERT ON agents, actions, signatures, manifests, manifestsig, loaders TO migapi;
-GRANT UPDATE ON agents TO migapi;
+GRANT INSERT ON actions, signatures, manifests, manifestsig, loaders TO migapi;
 GRANT DELETE ON manifestsig TO migapi;
 GRANT INSERT (name, pgpfingerprint, publickey, status, createdat, lastmodified, permissions) ON investigators TO migapi;
 GRANT UPDATE (permissions, status, lastmodified, apikey, apisalt) ON investigators TO migapi;

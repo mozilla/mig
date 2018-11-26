@@ -17,6 +17,13 @@ type DB struct {
 	c *sql.DB
 }
 
+// NewDB constructs a new DB from a SQL database connection.
+func NewDB(conn *sql.DB) DB {
+	return DB{
+		c: conn,
+	}
+}
+
 // Connect opens a connection to the database and returns a handler
 func Open(dbname, user, password, host string, port int, sslmode string) (db DB, err error) {
 	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",

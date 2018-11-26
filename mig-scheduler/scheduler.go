@@ -13,10 +13,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/streadway/amqp"
 	"github.com/mozilla/mig"
 	"github.com/mozilla/mig/modules"
 	"github.com/mozilla/mig/pgp"
+	"github.com/streadway/amqp"
 )
 
 func main() {

@@ -17,6 +17,50 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// A container for information about an action loaded directly from Postgres.
+// The `deserializeActionFromDB` function attempts to process this into a proper `Action`.
+type actionFromDB struct {
+	ID              float64
+	Name            string
+	Target          string
+	ValidFrom       time.Time
+	ExpireAfter     time.Time
+	Status          string
+	SyntaxVersion   uint16
+	DescriptionJSON []byte
+	ThreatJSON      []byte
+	OperationsJSON  []byte
+	SignaturesJSON  []byte
+}
+
+func deserializeActionFromDB(retrieved actionFromDB) (mig.Action, error) {
+	action := mig.Action{
+		ID:            retrieved.ID,
+		Name:          retrieved.Name,
+		Target:        retrieved.Target,
+		ValidFrom:     retrieved.ValidFrom,
+		ExpireAfter:   retrieved.ExpireAfter,
+		Status:        retrieved.Status,
+		SyntaxVersion: retrieved.SyntaxVersion,
+	}
+
+	deserializeErrors := map[string]error{
+		"description": json.Unmarshal(retrieved.DescriptionJSON, &action.Description),
+		"threat":      json.Unmarshal(retrieved.ThreatJSON, &action.Threat),
+		"operations":  json.Unmarshal(retrieved.OperationsJSON, &action.Operations),
+		"signatures":  json.Unmarshal(retrieved.SignaturesJSON, &action.PGPSignatures),
+	}
+
+	for attribute, err := range deserializeErrors {
+		if err != nil {
+			err = fmt.Errorf("Failed to unmarshal action %s: '%s'", attribute, err.Error())
+			return mig.Action{}, err
+		}
+	}
+
+	return action, nil
+}
+
 // LastActions retrieves the last X actions by time from the database
 func (db *DB) LastActions(limit int) (actions []mig.Action, err error) {
 	rows, err := db.c.Query(`SELECT id, name, target, description, threat, operations,
@@ -158,6 +202,7 @@ func (db *DB) InsertAction(a mig.Action) (err error) {
 	if err != nil {
 		return fmt.Errorf("Failed to store action: '%v'", err)
 	}
+
 	return
 }
 
@@ -295,35 +340,30 @@ func (db *DB) SetupRunnableActions() (actions []mig.Action, err error) {
 		return
 	}
 	for rows.Next() {
-		var jDesc, jThreat, jOps, jSig []byte
-		var a mig.Action
-		err = rows.Scan(&a.ID, &a.Name, &a.Target, &jDesc, &jThreat, &jOps,
-			&a.ValidFrom, &a.ExpireAfter, &a.Status, &jSig, &a.SyntaxVersion)
+		retrieved := actionFromDB{}
+		err = rows.Scan(
+			&retrieved.ID,
+			&retrieved.Name,
+			&retrieved.Target,
+			&retrieved.DescriptionJSON,
+			&retrieved.ThreatJSON,
+			&retrieved.OperationsJSON,
+			&retrieved.ValidFrom,
+			&retrieved.ExpireAfter,
+			&retrieved.Status,
+			&retrieved.SignaturesJSON,
+			&retrieved.SyntaxVersion)
 		if err != nil {
-			err = fmt.Errorf("Error while retrieving action: '%v'", err)
+			err = fmt.Errorf("Error while retrieving action: '%s'", err.Error())
 			return
 		}
-		err = json.Unmarshal(jDesc, &a.Description)
+
+		action, err := deserializeActionFromDB(retrieved)
 		if err != nil {
-			err = fmt.Errorf("Failed to unmarshal action description: '%v'", err)
-			return
+			return []mig.Action{}, err
 		}
-		err = json.Unmarshal(jThreat, &a.Threat)
-		if err != nil {
-			err = fmt.Errorf("Failed to unmarshal action threat: '%v'", err)
-			return
-		}
-		err = json.Unmarshal(jOps, &a.Operations)
-		if err != nil {
-			err = fmt.Errorf("Failed to unmarshal action operations: '%v'", err)
-			return
-		}
-		err = json.Unmarshal(jSig, &a.PGPSignatures)
-		if err != nil {
-			err = fmt.Errorf("Failed to unmarshal action signatures: '%v'", err)
-			return
-		}
-		actions = append(actions, a)
+
+		actions = append(actions, action)
 	}
 	if err := rows.Err(); err != nil {
 		err = fmt.Errorf("Failed to complete database query: '%v'", err)

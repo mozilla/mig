@@ -1,0 +1,19 @@
+version: "3.7"
+services:
+  postgres:
+    image: postgres:9.5-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      PGUSER: "postgres"
+      PGPASSWORD: "password"
+      PGHOST: "127.0.0.1"
+      PGPORT: 5432
+    volumes:
+      - .:/var/lib/db
+    #user: postgres
+    #command: bash -c "postgres && psql -f /var/lib/db/init_migapi_db.sql mig"
+  rabbitmq:
+    image: rabbitmq:3.7-alpine
+    ports:
+      - "5671-5672:5671-5672"

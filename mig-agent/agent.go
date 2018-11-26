@@ -12,6 +12,8 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -20,11 +22,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streadway/amqp"
 	"github.com/mozilla/mig"
 	"github.com/mozilla/mig/mig-agent/agentcontext"
 	"github.com/mozilla/mig/modules"
 	"github.com/mozilla/mig/service"
+	"github.com/streadway/amqp"
 )
 
 // publication lock is used to prevent publication when the channels are not
@@ -65,6 +67,38 @@ type moduleOp struct {
 	resultChan   chan moduleResult
 	position     int
 	expireafter  time.Time
+}
+
+// Environment contains information about the environment an agent is running in.
+type Environment struct {
+	Init      string   `json:"init"`
+	Ident     string   `json:"ident"`
+	OS        string   `json:"os"`
+	Arch      string   `json:"arch"`
+	IsProxied bool     `json:"isProxied"`
+	Proxy     string   `json:"proxy"`
+	Addresses []string `json:"addresses"`
+	PublicIP  string   `json:"publicIP"`
+	Modules   []string `json:"modules"`
+}
+
+// Tag is a label associated with an agent.
+type Tag struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// Heartbeat contains information describing an active agent.
+type Heartbeat struct {
+	Name        string      `json:"name"`
+	Mode        string      `json:"mode"`
+	Version     string      `json:"version"`
+	PID         uint        `json:"pid"`
+	QueueLoc    string      `json:"queueLoc"`
+	StartTime   time.Time   `json:"startTime"`
+	RefreshTime time.Time   `json:"refreshTime"`
+	Environment Environment `json:"environment"`
+	Tags        []Tag       `json:"tags"`
 }
 
 var runningOps = make(map[float64]moduleOp)
@@ -903,23 +937,40 @@ func heartbeat(ctx *Context) (err error) {
 	// loop forever
 	for {
 		ctx.Agent.Lock()
-		// declare an Agent registration message
-		HeartBeat := mig.Agent{
-			Name:      ctx.Agent.Hostname,
-			Mode:      ctx.Agent.Mode,
-			Version:   mig.Version,
-			PID:       os.Getpid(),
-			QueueLoc:  ctx.Agent.QueueLoc,
-			StartTime: time.Now(),
-			Env:       ctx.Agent.Env,
-			Tags:      ctx.Agent.Tags,
-			RefreshTS: ctx.Agent.RefreshTS,
+		tags := make([]Tag, 0)
+		for k, v := range ctx.Agent.Tags {
+			updated_tag := Tag{
+				Name:  k,
+				Value: v,
+			}
+			tags = append(tags, updated_tag)
 		}
+		heartbeat := Heartbeat{
+			Name:        ctx.Agent.Hostname,
+			Mode:        ctx.Agent.Mode,
+			Version:     mig.Version,
+			PID:         uint(os.Getpid()),
+			QueueLoc:    ctx.Agent.QueueLoc,
+			StartTime:   time.Now(),
+			RefreshTime: ctx.Agent.RefreshTS,
+			Environment: Environment{
+				Init:      ctx.Agent.Env.Init,
+				Ident:     ctx.Agent.Env.Ident,
+				OS:        ctx.Agent.Env.OS,
+				Arch:      ctx.Agent.Env.Arch,
+				IsProxied: ctx.Agent.Env.IsProxied,
+				Proxy:     ctx.Agent.Env.Proxy,
+				Addresses: ctx.Agent.Env.Addresses,
+				PublicIP:  ctx.Agent.Env.PublicIP,
+				Modules:   ctx.Agent.Env.Modules,
+			},
+			Tags: tags,
+		}
+
 		ctx.Agent.Unlock()
 
 		// make a heartbeat
-		HeartBeat.HeartBeatTS = time.Now()
-		body, err := json.Marshal(HeartBeat)
+		body, err := json.Marshal(heartbeat)
 		if err != nil {
 			desc := fmt.Sprintf("heartbeat failed with error '%v'", err)
 			ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
@@ -930,7 +981,22 @@ func heartbeat(ctx *Context) (err error) {
 		}
 		desc := fmt.Sprintf("heartbeat %q", body)
 		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
-		publish(ctx, mig.ExchangeToSchedulers, mig.QueueAgentHeartbeat, body)
+
+		heartbeatURL, err := url.Parse(APIURL)
+		heartbeatURL.Path = path.Join(heartbeatURL.Path, "heartbeat")
+		heartbeatAPIURL := heartbeatURL.String()
+
+		response, err := http.Post(heartbeatAPIURL, "application/json", bytes.NewReader(body))
+		if err != nil {
+			panic(err)
+		}
+
+		if response.StatusCode != http.StatusOK {
+			content, _ := ioutil.ReadAll(response.Body)
+			desc := fmt.Sprintf("Expected status code %d but got %d \n %s", http.StatusOK, response.StatusCode, string(content))
+			ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
+		}
+
 		// update the local heartbeat file
 		err = ioutil.WriteFile(path.Join(ctx.Agent.RunDir, "mig-agent.ok"), []byte(time.Now().String()), 0644)
 		if err != nil {

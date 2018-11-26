@@ -18,6 +18,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jvehent/cljs"
 	"github.com/mozilla/mig"
+	"github.com/mozilla/mig/mig-api/agents"
 	"github.com/mozilla/mig/pgp"
 )
 
@@ -69,6 +70,13 @@ func main() {
 	// register routes
 	r := mux.NewRouter()
 	s := r.PathPrefix(ctx.Server.BaseRoute).Subrouter()
+
+	postHeartbeat := agents.NewUploadHeartbeat(
+		agents.NewPersistHeartbeatPostgres(&ctx.DB),
+		agents.NewNilAuthenticator())
+
+	// Endpoints that replace previously direct-to-rabbitmq communications.
+	s.Handle("/heartbeat", postHeartbeat).Methods("POST")
 
 	// unauthenticated endpoints
 	s.HandleFunc("/heartbeat", getHeartbeat).Methods("GET")

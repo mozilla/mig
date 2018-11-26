@@ -51,6 +51,79 @@ GET /api/v1/heartbeat
 		}
 	}
 
+POST /api/v1/heartbeat
+~~~~~~~~~~~~~~~~~~~~~~
+
+* Description: Report the ongoing activity of an agent
+* Parameters: See example 1
+* Authentication: none
+* Parameters:
+  - `name`: A string containing the hostname of the host the agent is running on
+  - `mode`: A string describing the mode the agent is running in
+  - `version`: A string representing the agent build version
+  - `pid`: An integer representing the agent's process ID
+  - `queueLoc`: The name of the queue the agent is reading from and writing to
+  - `startTime:` The time at which the agent sent the heartbeat formatted like "2009-11-10T23:00:00Z"
+  - `refreshTime:` The time at which the agent was last updated formatted like "2009-11-10T23:00:00Z"
+  - `environment`: An object
+  - `environment.init`: A string containing the name of the host's init system, such as systemd
+  - `environment.ident`: A string containing the name of the host's OS identifier
+  - `environment.os`: A string containing the name of the host's OS family (linux, darwin, windows, ...)
+  - `environment.arch`: A string containing the host's architecture, such as "x86_64"
+  - `environment.proxied`: A boolean that is true if the agent uses a proxy
+  - `environment.proxy`: A string containing the address of the proxy used by the agent if any
+  - `environment.addresses`: An array of strings containing IP addresses associated with network interfaces on the host
+  - `environment.publicIP`: A string containing the IP address of the agent's host from the API's perspective
+  - `environment.modules`: An array of strings containing names of modules enabled by the agent
+  - `tags`: An array of objects
+  - `tags[i].name`: A string name for the tag
+  - `tags[i].value`: A string value for the tag
+* Response Code:
+  - `200`: The heartbeat was accepted and recorded successfully
+  - `400`: The body of the request was incorrectly formatted or missing data
+  - `500`: The heartbeat could not be recorded
+* Response: JSON
+  - `error`: A string describing an error if one occurred, else null
+
+.. code:: bash
+
+  $ curl -XPOST https://api.mig.mozilla.org/api/v1/heartbeat \
+    -H "Content-Type: application/json" \
+    -d '
+  {
+    "name": "testing.server.com",
+    "mode": "checkin",
+    "version": "20181003-0.abcdef01.prod",
+    "pid": 3210,
+    "queueLoc": "agent@abcdef0123",
+    "startTime": "2018-10-03T18:10:32Z",
+    "environment": {
+      "init": "systemd",
+      "ident": "Ubuntu 16.04",
+      "os": "linux",
+      "arch": "x86_64",
+      "proxied": true,
+      "proxy": "https://my.proxy.com:8443",
+      "addresses": ["127.0.0.1", "192.168.2.13"],
+      "publicIP": "10.32.10.32",
+      "modules": ["file", "memory", "ping", "agentdestroy"]
+    },
+    "tags": [
+      {
+        "name": "operator",
+        "value": "IT"
+      },
+      {
+        "name": "target",
+        "value": "server"
+      }
+    ]
+  }'
+
+  {
+    "error": null
+  }
+
 GET /api/v1/ip
 ~~~~~~~~~~~~~~
 
