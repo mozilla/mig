@@ -39,15 +39,15 @@ type config struct {
 }
 
 type ServiceApiAsset struct {
-	Id 				string
-	Asset_type 		string
-	Asset_identifier string
-	Team 			string
-	Operator 		string
-	Zone 			string
-	Timestamp 		string
-	Description 	string
-	Score 			int
+	Id 				string `json:"id"`
+	AssetType 		string `json:"asset_type"`
+	AssetIdentifier string `json:"asset_identifier"`
+	Team 			string `json:"team"`
+	Operator 		string `json:"operator"`
+	Zone 			string `json:"zone"`
+	Timestamp 		string `json:"timestamp_utc"`
+	Description 	string `json:"description"`
+	Score 			int `json:"score"`
 }
 
 type ServiceApi struct {
@@ -59,10 +59,10 @@ type ServiceApi struct {
 }
 
 type Auth0Token struct {
-	Access_token	string
-	Scope			string
-	Expires_in		int
-	Token_type		string
+	AccessToken	string `json:"access_token"`
+	Scope			string `json:"scope"`
+	ExpiresIn		int `json:"expires_in"`
+	TokenType		string `json:"token_type"`
 }
 
 const configPath string = "/etc/mig/runner-scribe.conf"
@@ -280,7 +280,7 @@ func GetAuthToken(api ServiceApi) (authToken string) {
 	}
 
 	// serviceAPI expects the Access token in the form of "Bearer <token>"
-	authToken = "Bearer " + body.Access_token
+	authToken = "Bearer " + body.AccessToken
 	return
 }
 
@@ -324,10 +324,10 @@ func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) (err error){
 		return err
 	}
 
-	// build a searchable map, keyed on Asset_identifier (which is usually hostname)
+	// build a searchable map, keyed on AssetIdentifier (which is usually hostname)
 	for _, tempAsset := range allAssets {
 		permanentAsset := tempAsset				//not sure if this is needed
-		m[tempAsset.Asset_identifier] = permanentAsset
+		m[tempAsset.AssetIdentifier] = permanentAsset
 	}
 
 	return
