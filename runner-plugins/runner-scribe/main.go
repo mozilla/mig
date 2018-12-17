@@ -87,7 +87,10 @@ func main() {
 		panic(err)
 	}
 
-	// instantiate the searchable map of assets early so we can use it throughout
+	// generate a realtime auth0 auth token
+	conf.api.Token = GetAuthToken(conf.api)
+
+	// load a searchable map of assets from ServiceAPI
 	var serviceApiAssets = make(map[string]ServiceApiAsset)
 	err = GetAssets(serviceApiAssets, conf.api)
 	if err != nil {
