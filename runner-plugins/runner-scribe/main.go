@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mozilla/gozdef"
 	"github.com/mozilla/mig"
@@ -61,7 +62,7 @@ type ServiceApi struct {
 type Auth0Token struct {
 	AccessToken	string `json:"access_token"`
 	Scope			string `json:"scope"`
-	ExpiresIn		int `json:"expires_in"`
+	ExpiresIn		time.Duration `json:"expires_in"`
 	TokenType		string `json:"token_type"`
 }
 
@@ -259,7 +260,7 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command, serviceApiAs
 // given config for an API behind Auth0 (including client ID and Secret), 
 // return an Auth0 access token beginning with "Bearer "
 // pattern from https://auth0.com/docs/api-auth/tutorials/client-credentials
-func GetAuthToken(api ServiceApi) (authToken string) {
+func GetAuthToken(api ServiceApi) (string) {
 	payload := strings.NewReader("{\"grant_type\":\"client_credentials\",\"client_id\": \"" + api.ClientID + "\",\"client_secret\": \"" + api.ClientSecret + "\",\"audience\": \"" + api.URL + "\"}")
 	req, _ := http.NewRequest("POST", api.AuthEndpoint, payload)
 	req.Header.Add("content-type", "application/json")
@@ -280,8 +281,8 @@ func GetAuthToken(api ServiceApi) (authToken string) {
 	}
 
 	// serviceAPI expects the Access token in the form of "Bearer <token>"
-	authToken = "Bearer " + body.AccessToken
-	return
+	authToken := "Bearer " + body.AccessToken
+	return authToken
 }
 
 // query a ServiceAPI instance for the set of all assets
@@ -326,8 +327,7 @@ func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) (err error){
 
 	// build a searchable map, keyed on AssetIdentifier (which is usually hostname)
 	for _, tempAsset := range allAssets {
-		permanentAsset := tempAsset				//not sure if this is needed
-		m[tempAsset.AssetIdentifier] = permanentAsset
+		m[tempAsset.AssetIdentifier] = tempAsset
 	}
 
 	return
@@ -337,7 +337,6 @@ func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) (err error){
 // ServiceApiAssets. If they are not in the map or if the values are not present, 
 // operator and/or team will return as an empty string ""
 func LookupOperatorTeam(hostname string, m map[string]ServiceApiAsset) (operator string, team string) {
-	
 	operator = m[hostname].Operator
 	team = m[hostname].Team
 
