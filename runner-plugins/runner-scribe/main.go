@@ -18,6 +18,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"log"
 
 	"github.com/mozilla/gozdef"
 	"github.com/mozilla/mig"
@@ -85,27 +86,30 @@ func main() {
 
 	err = gcfg.ReadFileInto(&conf, configPath)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 
 	// generate a realtime auth0 auth token
-	conf.api.Token = GetAuthToken(conf.api)
+	conf.api.Token, err = GetAuthToken(conf.api)
+	if err != nil {
+		log.Println(err)
+	}
 
 	// load a searchable map of assets from ServiceAPI
 	var serviceApiAssets = make(map[string]ServiceApiAsset)
 	err = GetAssets(serviceApiAssets, conf.api)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 
 
 	buf, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 	err = json.Unmarshal(buf, &results)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 	var items []gozdef.VulnEvent
 	for _, x := range results.Commands {
@@ -117,14 +121,14 @@ func main() {
 		var err error
 		items, err = makeVulnerability(items, x, serviceApiAssets)
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 	}
 	for _, y := range items {
 		y.SourceName = sourceName
 		err = sendVulnerability(y)
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 	}
 }
@@ -260,14 +264,21 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command, serviceApiAs
 // given config for an API behind Auth0 (including client ID and Secret), 
 // return an Auth0 access token beginning with "Bearer "
 // pattern from https://auth0.com/docs/api-auth/tutorials/client-credentials
-func GetAuthToken(api ServiceApi) (string) {
-	payload := strings.NewReader("{\"grant_type\":\"client_credentials\",\"client_id\": \"" + api.ClientID + "\",\"client_secret\": \"" + api.ClientSecret + "\",\"audience\": \"" + api.URL + "\"}")
+func GetAuthToken(api ServiceApi) (string, error) {
+	payload := strings.NewReader(fmt.Sprintf(`{
+		"grant_type": "client_credentials",
+		"client_id": "%s",
+		"client_secret": "%s",
+		"audience": "%s"
+		}`, api.ClientID, api.ClientSecret, api.URL))
+	
+
 	req, _ := http.NewRequest("POST", api.AuthEndpoint, payload)
 	req.Header.Add("content-type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	defer res.Body.Close()
@@ -277,12 +288,12 @@ func GetAuthToken(api ServiceApi) (string) {
 	var body Auth0Token
 	err = json.Unmarshal(bodyJSON, &body)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	// serviceAPI expects the Access token in the form of "Bearer <token>"
 	authToken := "Bearer " + body.AccessToken
-	return authToken
+	return authToken, err
 }
 
 // query a ServiceAPI instance for the set of all assets
