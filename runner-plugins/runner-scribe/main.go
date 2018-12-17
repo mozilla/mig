@@ -13,12 +13,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
-	"log"
 
 	"github.com/mozilla/gozdef"
 	"github.com/mozilla/mig"
@@ -37,34 +37,34 @@ type config struct {
 		URL      string // URL to post events to MozDef
 		UseProxy bool   // A switch to enable/disable the use of a system-configured proxy
 	}
-	api 		ServiceApi
+	api ServiceApi
 }
 
 type ServiceApiAsset struct {
-	Id 				string `json:"id"`
-	AssetType 		string `json:"asset_type"`
+	Id              string `json:"id"`
+	AssetType       string `json:"asset_type"`
 	AssetIdentifier string `json:"asset_identifier"`
-	Team 			string `json:"team"`
-	Operator 		string `json:"operator"`
-	Zone 			string `json:"zone"`
-	Timestamp 		string `json:"timestamp_utc"`
-	Description 	string `json:"description"`
-	Score 			int `json:"score"`
+	Team            string `json:"team"`
+	Operator        string `json:"operator"`
+	Zone            string `json:"zone"`
+	Timestamp       string `json:"timestamp_utc"`
+	Description     string `json:"description"`
+	Score           int    `json:"score"`
 }
 
 type ServiceApi struct {
-	URL				string
-	AuthEndpoint 	string
-	ClientID 		string
-	ClientSecret	string
-	Token 			string // ephemeral token we generate to connect to ServiceAPI
+	URL          string
+	AuthEndpoint string
+	ClientID     string
+	ClientSecret string
+	Token        string // ephemeral token we generate to connect to ServiceAPI
 }
 
 type Auth0Token struct {
-	AccessToken	string `json:"access_token"`
-	Scope			string `json:"scope"`
-	ExpiresIn		time.Duration `json:"expires_in"`
-	TokenType		string `json:"token_type"`
+	AccessToken string        `json:"access_token"`
+	Scope       string        `json:"scope"`
+	ExpiresIn   time.Duration `json:"expires_in"`
+	TokenType   string        `json:"token_type"`
 }
 
 const configPath string = "/etc/mig/runner-scribe.conf"
@@ -101,7 +101,6 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-
 
 	buf, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
@@ -187,11 +186,11 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command, serviceApiAs
 		newevent.Asset.Hostname = assethostname
 		newevent.Asset.IPAddress = assetipaddress
 		newevent.Asset.OS = cmd.Agent.Env.OS
-		
+
 		assetoperator, assetteam = LookupOperatorTeam(assethostname, serviceApiAssets)
 		newevent.Asset.Owner.Operator = assetoperator
 		newevent.Asset.Owner.Team = assetteam
-		
+
 		// if we didn't find an operator from ServiceAPI assets
 		// set it based on the tag
 		if len(cmd.Agent.Tags) != 0 && newevent.Asset.Owner.Operator == "" {
@@ -261,7 +260,7 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command, serviceApiAs
 	return
 }
 
-// given config for an API behind Auth0 (including client ID and Secret), 
+// given config for an API behind Auth0 (including client ID and Secret),
 // return an Auth0 access token beginning with "Bearer "
 // pattern from https://auth0.com/docs/api-auth/tutorials/client-credentials
 func GetAuthToken(api ServiceApi) (string, error) {
@@ -271,7 +270,6 @@ func GetAuthToken(api ServiceApi) (string, error) {
 		"client_secret": "%s",
 		"audience": "%s"
 		}`, api.ClientID, api.ClientSecret, api.URL))
-	
 
 	req, err := http.NewRequest("POST", api.AuthEndpoint, payload)
 	if err != nil {
@@ -290,7 +288,7 @@ func GetAuthToken(api ServiceApi) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	// unpack the JSON into an Auth0 token struct
 	var body Auth0Token
 	err = json.Unmarshal(bodyJSON, &body)
@@ -306,8 +304,8 @@ func GetAuthToken(api ServiceApi) (string, error) {
 // query a ServiceAPI instance for the set of all assets
 // load them into a searchable map, keyed to asset hostname
 // the ServiceAPI object must already be loaded with a Bearer token
-func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) (error){
-	
+func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) error {
+
 	// get json array of assets from serviceapi
 	requestURL := api.URL + "api/v1/assets/"
 	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
@@ -331,14 +329,14 @@ func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) (error){
 	// because of the way that ServiceAPI returns the JSON content,
 	// we need to Unmarshal it twice
 	var allAssetsJson string
-	err  = json.Unmarshal(body, &allAssetsJson)
+	err = json.Unmarshal(body, &allAssetsJson)
 	if err != nil {
 		return err
 	}
 
 	// convert json into array of ServiceApiAsset objects
 	var allAssets []ServiceApiAsset
-	err  = json.Unmarshal([]byte(allAssetsJson), &allAssets)
+	err = json.Unmarshal([]byte(allAssetsJson), &allAssets)
 	if err != nil {
 		return err
 	}
@@ -351,8 +349,8 @@ func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) (error){
 	return err
 }
 
-// return the operator and team for a given hostname, provided they are in the map of 
-// ServiceApiAssets. If they are not in the map or if the values are not present, 
+// return the operator and team for a given hostname, provided they are in the map of
+// ServiceApiAssets. If they are not in the map or if the values are not present,
 // operator and/or team will return as an empty string ""
 func LookupOperatorTeam(hostname string, m map[string]ServiceApiAsset) (operator string, team string) {
 	operator = m[hostname].Operator
