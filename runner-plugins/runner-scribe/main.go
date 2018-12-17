@@ -273,7 +273,11 @@ func GetAuthToken(api ServiceApi) (string, error) {
 		}`, api.ClientID, api.ClientSecret, api.URL))
 	
 
-	req, _ := http.NewRequest("POST", api.AuthEndpoint, payload)
+	req, err := http.NewRequest("POST", api.AuthEndpoint, payload)
+	if err != nil {
+		return "", err
+	}
+
 	req.Header.Add("content-type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
@@ -282,7 +286,10 @@ func GetAuthToken(api ServiceApi) (string, error) {
 	}
 
 	defer res.Body.Close()
-	bodyJSON, _ := ioutil.ReadAll(res.Body)
+	bodyJSON, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
 	
 	// unpack the JSON into an Auth0 token struct
 	var body Auth0Token
@@ -299,7 +306,7 @@ func GetAuthToken(api ServiceApi) (string, error) {
 // query a ServiceAPI instance for the set of all assets
 // load them into a searchable map, keyed to asset hostname
 // the ServiceAPI object must already be loaded with a Bearer token
-func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) (err error){
+func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) (error){
 	
 	// get json array of assets from serviceapi
 	requestURL := api.URL + "api/v1/assets/"
@@ -341,7 +348,7 @@ func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) (err error){
 		m[tempAsset.AssetIdentifier] = tempAsset
 	}
 
-	return
+	return err
 }
 
 // return the operator and team for a given hostname, provided they are in the map of 
@@ -351,7 +358,7 @@ func LookupOperatorTeam(hostname string, m map[string]ServiceApiAsset) (operator
 	operator = m[hostname].Operator
 	team = m[hostname].Team
 
-	return
+	return operator, team
 }
 
 // cvssFromRisk returns a synthesized CVSS score as a string given a risk label
