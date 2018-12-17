@@ -37,7 +37,14 @@ type config struct {
 		URL      string // URL to post events to MozDef
 		UseProxy bool   // A switch to enable/disable the use of a system-configured proxy
 	}
-	api ServiceApi
+	
+	ServiceApi struct {
+		URL          string
+		AuthEndpoint string
+		ClientID     string
+		ClientSecret string
+		Token        string // ephemeral token we generate to connect to ServiceAPI
+	}
 }
 
 type ServiceApiAsset struct {
@@ -90,14 +97,14 @@ func main() {
 	}
 
 	// generate a realtime auth0 auth token
-	conf.api.Token, err = GetAuthToken(conf.api)
+	conf.ServiceApi.Token, err = GetAuthToken()
 	if err != nil {
 		log.Println(err)
 	}
 
 	// load a searchable map of assets from ServiceAPI
 	var serviceApiAssets = make(map[string]ServiceApiAsset)
-	err = GetAssets(serviceApiAssets, conf.api)
+	err = GetAssets(serviceApiAssets)
 	if err != nil {
 		log.Println(err)
 	}
@@ -263,15 +270,15 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command, serviceApiAs
 // given config for an API behind Auth0 (including client ID and Secret),
 // return an Auth0 access token beginning with "Bearer "
 // pattern from https://auth0.com/docs/api-auth/tutorials/client-credentials
-func GetAuthToken(api ServiceApi) (string, error) {
+func GetAuthToken() (string, error) {
 	payload := strings.NewReader(fmt.Sprintf(`{
 		"grant_type": "client_credentials",
 		"client_id": "%s",
 		"client_secret": "%s",
 		"audience": "%s"
-		}`, api.ClientID, api.ClientSecret, api.URL))
+		}`, conf.ServiceApi.ClientID, conf.ServiceApi.ClientSecret, conf.ServiceApi.URL))
 
-	req, err := http.NewRequest("POST", api.AuthEndpoint, payload)
+	req, err := http.NewRequest("POST", conf.ServiceApi.AuthEndpoint, payload)
 	if err != nil {
 		return "", err
 	}
@@ -304,16 +311,16 @@ func GetAuthToken(api ServiceApi) (string, error) {
 // query a ServiceAPI instance for the set of all assets
 // load them into a searchable map, keyed to asset hostname
 // the ServiceAPI object must already be loaded with a Bearer token
-func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) error {
+func GetAssets(m map[string]ServiceApiAsset) error {
 
 	// get json array of assets from serviceapi
-	requestURL := api.URL + "api/v1/assets/"
+	requestURL := conf.ServiceApi.URL + "api/v1/assets/"
 	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", api.Token)
+	req.Header.Add("Authorization", conf.ServiceApi.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
