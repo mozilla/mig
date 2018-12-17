@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
+// Contributor: Tristan Weir tweir@mozilla.com [:weir]
 
 // runner-scribe is a mig-runner plugin that processes results coming from automated
 // actions and forwards the results as vulnerability events to MozDef
@@ -13,6 +14,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 
@@ -33,6 +35,34 @@ type config struct {
 		URL      string // URL to post events to MozDef
 		UseProxy bool   // A switch to enable/disable the use of a system-configured proxy
 	}
+	api 		ServiceApi
+}
+
+type ServiceApiAsset struct {
+	Id 				string
+	Asset_type 		string
+	Asset_identifier string
+	Team 			string
+	Operator 		string
+	Zone 			string
+	Timestamp 		string
+	Description 	string
+	Score 			int
+}
+
+type ServiceApi struct {
+	URL				string
+	AuthEndpoint 	string
+	ClientID 		string
+	ClientSecret	string
+	Token 			string // ephemeral token we generate to connect to ServiceAPI
+}
+
+type Auth0Token struct {
+	Access_token	string
+	Scope			string
+	Expires_in		int
+	Token_type		string
 }
 
 const configPath string = "/etc/mig/runner-scribe.conf"
@@ -206,6 +236,94 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command) (items []goz
 	if insertNew {
 		items = append(items, *itemptr)
 	}
+	return
+}
+
+// given config for an API behind Auth0 (including client ID and Secret), 
+// return an Auth0 access token beginning with "Bearer "
+// pattern from https://auth0.com/docs/api-auth/tutorials/client-credentials
+func GetAuthToken(api ServiceApi) (authToken string) {
+	payload := strings.NewReader("{\"grant_type\":\"client_credentials\",\"client_id\": \"" + api.ClientID + "\",\"client_secret\": \"" + api.ClientSecret + "\",\"audience\": \"" + api.URL + "\"}")
+	req, _ := http.NewRequest("POST", api.AuthEndpoint, payload)
+	req.Header.Add("content-type", "application/json")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+
+	defer res.Body.Close()
+	bodyJSON, _ := ioutil.ReadAll(res.Body)
+	
+	// unpack the JSON into an Auth0 token struct
+	var body Auth0Token
+	err = json.Unmarshal(bodyJSON, &body)
+	if err != nil {
+		panic(err)
+	}
+
+	// serviceAPI expects the Access token in the form of "Bearer <token>"
+	authToken = "Bearer " + body.Access_token
+	return
+}
+
+// query a ServiceAPI instance for the set of all assets
+// load them into a searchable map, keyed to asset hostname
+// the ServiceAPI object must already be loaded with a Bearer token
+func GetAssets(m map[string]ServiceApiAsset, api ServiceApi) (err error){
+	
+	// get json array of assets from serviceapi
+	requestURL := api.URL + "api/v1/assets/"
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("Authorization", api.Token)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	// unpack the HTTP request response
+	defer res.Body.Close()
+	body, readErr := ioutil.ReadAll(res.Body)
+	if readErr != nil {
+		return readErr
+	}
+
+	// because of the way that ServiceAPI returns the JSON content,
+	// we need to Unmarshal it twice
+	var allAssetsJson string
+	err  = json.Unmarshal(body, &allAssetsJson)
+	if err != nil {
+		return err
+	}
+
+	// convert json into array of ServiceApiAsset objects
+	var allAssets []ServiceApiAsset
+	err  = json.Unmarshal([]byte(allAssetsJson), &allAssets)
+	if err != nil {
+		return err
+	}
+
+	// build a searchable map, keyed on Asset_identifier (which is usually hostname)
+	for _, tempAsset := range allAssets {
+		permanentAsset := tempAsset				//not sure if this is needed
+		m[tempAsset.Asset_identifier] = permanentAsset
+	}
+
+	return
+}
+
+// return the operator and team for a given hostname, provided they are in the map of 
+// ServiceApiAssets. If they are not in the map or if the values are not present, 
+// operator and/or team will return as an empty string ""
+func LookupOperatorTeam(hostname string, m map[string]ServiceApiAsset) (operator string, team string) {
+	
+	operator = m[hostname].Operator
+	team = m[hostname].Team
+
 	return
 }
 
