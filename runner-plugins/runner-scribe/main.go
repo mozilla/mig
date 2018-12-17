@@ -87,6 +87,14 @@ func main() {
 		panic(err)
 	}
 
+	// instantiate the searchable map of assets early so we can use it throughout
+	var serviceApiAssets = make(map[string]ServiceApiAsset)
+	err = GetAssets(serviceApiAssets, conf.api)
+	if err != nil {
+		panic(err)
+	}
+
+
 	buf, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
 		panic(err)
@@ -103,7 +111,7 @@ func main() {
 		// exists in items, makeVulnerability should attempt to append this data to
 		// the host rather than add a new item.
 		var err error
-		items, err = makeVulnerability(items, x)
+		items, err = makeVulnerability(items, x, serviceApiAssets)
 		if err != nil {
 			panic(err)
 		}
@@ -130,11 +138,12 @@ func sendVulnerability(item gozdef.VulnEvent) (err error) {
 	return
 }
 
-func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command) (items []gozdef.VulnEvent, err error) {
+func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command, serviceApiAssets map[string]ServiceApiAsset) (items []gozdef.VulnEvent, err error) {
 	var (
 		itemptr                       *gozdef.VulnEvent
 		assethostname, assetipaddress string
 		insertNew                     bool
+		assetoperator, assetteam      string
 	)
 	items = initems
 
@@ -170,14 +179,19 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command) (items []goz
 		newevent.Asset.Hostname = assethostname
 		newevent.Asset.IPAddress = assetipaddress
 		newevent.Asset.OS = cmd.Agent.Env.OS
-		if len(cmd.Agent.Tags) != 0 {
+		
+		assetoperator, assetteam = LookupOperatorTeam(assethostname, serviceApiAssets)
+		newevent.Asset.Owner.Operator = assetoperator
+		newevent.Asset.Owner.Team = assetteam
+		
+		// if we didn't find an operator from ServiceAPI assets
+		// set it based on the tag
+		if len(cmd.Agent.Tags) != 0 && newevent.Asset.Owner.Operator == "" {
 			if _, ok := cmd.Agent.Tags["operator"]; ok {
 				newevent.Asset.Owner.Operator = cmd.Agent.Tags["operator"]
 			}
 		}
-		// Apply a v2bkey to the event. This should be set using integration
-		// with service-map, but here for now we just apply it based on the operator
-		// and team values which may be present in the event.
+		// Apply a v2bkey to the event
 		if newevent.Asset.Owner.V2Bkey == "" {
 			if newevent.Asset.Owner.Operator != "" {
 				newevent.Asset.Owner.V2Bkey = newevent.Asset.Owner.Operator
