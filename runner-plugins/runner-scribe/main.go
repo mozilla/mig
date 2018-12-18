@@ -16,6 +16,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -312,10 +313,14 @@ func GetAuthToken() (string, error) {
 // load them into a searchable map, keyed to asset hostname
 // the ServiceAPI object must already be loaded with a Bearer token
 func GetAssets(m map[string]ServiceApiAsset) error {
-
 	// get json array of assets from serviceapi
-	requestURL := conf.ServiceApi.URL + "api/v1/assets/"
-	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+	requestURL, err := url.Parse(conf.ServiceApi.URL)
+	if err != nil {
+		return err
+	}
+
+	requestURL.Path = "api/v1/assets/"
+	req, err := http.NewRequest(http.MethodGet, requestURL.String(), nil)	
 	if err != nil {
 		return err
 	}
