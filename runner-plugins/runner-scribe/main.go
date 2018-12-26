@@ -60,14 +60,6 @@ type ServiceApiAsset struct {
 	Score           int    `json:"score"`
 }
 
-type ServiceApi struct {
-	URL          string
-	AuthEndpoint string
-	ClientID     string
-	ClientSecret string
-	Token        string // ephemeral token we generate to connect to ServiceAPI
-}
-
 type Auth0Token struct {
 	AccessToken string        `json:"access_token"`
 	Scope       string        `json:"scope"`
