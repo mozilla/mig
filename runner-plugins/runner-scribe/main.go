@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
+// Contributor: Tristan Weir tweir@mozilla.com [:weir]
 
 // runner-scribe is a mig-runner plugin that processes results coming from automated
 // actions and forwards the results as vulnerability events to MozDef
@@ -12,9 +13,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mozilla/gozdef"
 	"github.com/mozilla/mig"
@@ -33,6 +38,33 @@ type config struct {
 		URL      string // URL to post events to MozDef
 		UseProxy bool   // A switch to enable/disable the use of a system-configured proxy
 	}
+	
+	ServiceApi struct {
+		URL          string
+		AuthEndpoint string
+		ClientID     string
+		ClientSecret string
+		Token        string // ephemeral token we generate to connect to ServiceAPI
+	}
+}
+
+type ServiceApiAsset struct {
+	Id              string `json:"id"`
+	AssetType       string `json:"asset_type"`
+	AssetIdentifier string `json:"asset_identifier"`
+	Team            string `json:"team"`
+	Operator        string `json:"operator"`
+	Zone            string `json:"zone"`
+	Timestamp       string `json:"timestamp_utc"`
+	Description     string `json:"description"`
+	Score           int    `json:"score"`
+}
+
+type Auth0Token struct {
+	AccessToken string        `json:"access_token"`
+	Scope       string        `json:"scope"`
+	ExpiresIn   time.Duration `json:"expires_in"`
+	TokenType   string        `json:"token_type"`
 }
 
 const configPath string = "/etc/mig/runner-scribe.conf"
@@ -54,16 +86,29 @@ func main() {
 
 	err = gcfg.ReadFileInto(&conf, configPath)
 	if err != nil {
-		panic(err)
+		log.Println(err)
+	}
+
+	// generate a realtime auth0 auth token
+	conf.ServiceApi.Token, err = GetAuthToken()
+	if err != nil {
+		log.Println(err)
+	}
+
+	// load a searchable map of assets from ServiceAPI
+	var serviceApiAssets = make(map[string]ServiceApiAsset)
+	err = GetAssets(serviceApiAssets)
+	if err != nil {
+		log.Println(err)
 	}
 
 	buf, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 	err = json.Unmarshal(buf, &results)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 	var items []gozdef.VulnEvent
 	for _, x := range results.Commands {
@@ -73,16 +118,16 @@ func main() {
 		// exists in items, makeVulnerability should attempt to append this data to
 		// the host rather than add a new item.
 		var err error
-		items, err = makeVulnerability(items, x)
+		items, err = makeVulnerability(items, x, serviceApiAssets)
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 	}
 	for _, y := range items {
 		y.SourceName = sourceName
 		err = sendVulnerability(y)
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 	}
 }
@@ -100,11 +145,12 @@ func sendVulnerability(item gozdef.VulnEvent) (err error) {
 	return
 }
 
-func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command) (items []gozdef.VulnEvent, err error) {
+func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command, serviceApiAssets map[string]ServiceApiAsset) (items []gozdef.VulnEvent, err error) {
 	var (
 		itemptr                       *gozdef.VulnEvent
 		assethostname, assetipaddress string
 		insertNew                     bool
+		assetoperator, assetteam      string
 	)
 	items = initems
 
@@ -140,14 +186,19 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command) (items []goz
 		newevent.Asset.Hostname = assethostname
 		newevent.Asset.IPAddress = assetipaddress
 		newevent.Asset.OS = cmd.Agent.Env.OS
-		if len(cmd.Agent.Tags) != 0 {
+
+		assetoperator, assetteam = LookupOperatorTeam(assethostname, serviceApiAssets)
+		newevent.Asset.Owner.Operator = assetoperator
+		newevent.Asset.Owner.Team = assetteam
+
+		// if we didn't find an operator from ServiceAPI assets
+		// set it based on the tag
+		if len(cmd.Agent.Tags) != 0 && newevent.Asset.Owner.Operator == "" {
 			if _, ok := cmd.Agent.Tags["operator"]; ok {
 				newevent.Asset.Owner.Operator = cmd.Agent.Tags["operator"]
 			}
 		}
-		// Apply a v2bkey to the event. This should be set using integration
-		// with service-map, but here for now we just apply it based on the operator
-		// and team values which may be present in the event.
+		// Apply a v2bkey to the event
 		if newevent.Asset.Owner.V2Bkey == "" {
 			if newevent.Asset.Owner.Operator != "" {
 				newevent.Asset.Owner.V2Bkey = newevent.Asset.Owner.Operator
@@ -207,6 +258,109 @@ func makeVulnerability(initems []gozdef.VulnEvent, cmd mig.Command) (items []goz
 		items = append(items, *itemptr)
 	}
 	return
+}
+
+// given config for an API behind Auth0 (including client ID and Secret),
+// return an Auth0 access token beginning with "Bearer "
+// pattern from https://auth0.com/docs/api-auth/tutorials/client-credentials
+func GetAuthToken() (string, error) {
+	payload := strings.NewReader(fmt.Sprintf(`{
+		"grant_type": "client_credentials",
+		"client_id": "%s",
+		"client_secret": "%s",
+		"audience": "%s"
+		}`, conf.ServiceApi.ClientID, conf.ServiceApi.ClientSecret, conf.ServiceApi.URL))
+
+	req, err := http.NewRequest("POST", conf.ServiceApi.AuthEndpoint, payload)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Add("content-type", "application/json")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer res.Body.Close()
+	bodyJSON, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	// unpack the JSON into an Auth0 token struct
+	var body Auth0Token
+	err = json.Unmarshal(bodyJSON, &body)
+	if err != nil {
+		return "", err
+	}
+
+	// serviceAPI expects the Access token in the form of "Bearer <token>"
+	authToken := "Bearer " + body.AccessToken
+	return authToken, err
+}
+
+// query a ServiceAPI instance for the set of all assets
+// load them into a searchable map, keyed to asset hostname
+// the ServiceAPI object must already be loaded with a Bearer token
+func GetAssets(m map[string]ServiceApiAsset) error {
+	// get json array of assets from serviceapi
+	requestURL, err := url.Parse(conf.ServiceApi.URL)
+	if err != nil {
+		return err
+	}
+
+	requestURL.Path = "api/v1/assets/"
+	req, err := http.NewRequest(http.MethodGet, requestURL.String(), nil)	
+	if err != nil {
+		return err
+	}
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("Authorization", conf.ServiceApi.Token)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	// unpack the HTTP request response
+	defer res.Body.Close()
+	body, readErr := ioutil.ReadAll(res.Body)
+	if readErr != nil {
+		return readErr
+	}
+
+	// because of the way that ServiceAPI returns the JSON content,
+	// we need to Unmarshal it twice
+	var allAssetsJson string
+	err = json.Unmarshal(body, &allAssetsJson)
+	if err != nil {
+		return err
+	}
+
+	// convert json into array of ServiceApiAsset objects
+	var allAssets []ServiceApiAsset
+	err = json.Unmarshal([]byte(allAssetsJson), &allAssets)
+	if err != nil {
+		return err
+	}
+
+	// build a searchable map, keyed on AssetIdentifier (which is usually hostname)
+	for _, tempAsset := range allAssets {
+		m[tempAsset.AssetIdentifier] = tempAsset
+	}
+
+	return err
+}
+
+// return the operator and team for a given hostname, provided they are in the map of
+// ServiceApiAssets. If they are not in the map or if the values are not present,
+// operator and/or team will return as an empty string ""
+func LookupOperatorTeam(hostname string, m map[string]ServiceApiAsset) (operator string, team string) {
+	operator = m[hostname].Operator
+	team = m[hostname].Team
+
+	return operator, team
 }
 
 // cvssFromRisk returns a synthesized CVSS score as a string given a risk label
