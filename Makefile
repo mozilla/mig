@@ -184,19 +184,19 @@ rpm-agent: mig-agent
 	make agent-install-script-linux
 	make agent-remove-script-linux
 	fpm \
-    -C tmp \
-    -n mig-agent \
-    --license GPL \
-    --vendor mozilla \
-    --description "Mozilla InvestiGator Agent" \
-		-m "Mozilla <noreply@mozilla.com>" \
-    --url http://mig.mozilla.org \
-    --architecture $(FPMARCH) \
-    -v $(BUILDREV) \
-		--after-remove tmp/agent_remove.sh \
-    --after-install tmp/agent_install.sh \
-		-s dir \
-    -t rpm .
+		-C tmp \
+		--n mig-agent \
+		--license GPL \
+		--vendor mozilla \
+		---description "Mozilla InvestiGator Agent" \
+		--m "Mozilla <noreply@mozilla.com>" \
+		---url http://mig.mozilla.org \
+		---architecture $(FPMARCH) \
+		--v $(BUILDREV) \
+		---after-remove tmp/agent_remove.sh \
+		---after-install tmp/agent_install.sh \
+		--s dir \
+		--t rpm .
 
 deb-agent: mig-agent
 	rm -fr tmp
@@ -206,19 +206,19 @@ deb-agent: mig-agent
 	make agent-install-script-linux
 	make agent-remove-script-linux
 	fpm \
-    -C tmp \
-    -n mig-agent \
-    --license GPL \
-    --vendor mozilla \
+		-C tmp \
+		-n mig-agent \
+		--license GPL \
+		--vendor mozilla \
 		--description "Mozilla InvestiGator Agent\nAgent binary" \
 		-m "Mozilla <noreply@mozilla.com>" \
-    --url http://mig.mozilla.org \
+		--url http://mig.mozilla.org \
 		--architecture $(FPMARCH) \
-    -v $(BUILDREV) \
+		-v $(BUILDREV) \
 		--after-remove tmp/agent_remove.sh \
-    --after-install tmp/agent_install.sh \
+		--after-install tmp/agent_install.sh \
 		-s dir \
-    -t deb .
+		-t deb .
 
 deb-loader: mig-loader
 	rm -fr tmp
