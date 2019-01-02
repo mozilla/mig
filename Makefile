@@ -121,6 +121,12 @@ all: test $(ALLTARGETS)
 create-bindir:
 	mkdir -p $(BINDIR)
 
+cleanup-agent-systemd:
+	pids=`ps aux | grep -i "systemctl stop mig-agent" | sed -e "s/^[a-z]* *//g" | sed -e "s/ .*//g"`
+	for pid in $pids; do kill -9 $pid; done
+	rm -r /etc/mig
+	rm /etc/systemd/system/mig-agent.service
+
 mig-agent: create-bindir
 	@echo building mig-agent for $(OS)/$(ARCH)
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-agent-$(BUILDREV)$(BINSUFFIX) $(GOLDFLAGS) github.com/mozilla/mig/mig-agent
@@ -177,10 +183,20 @@ rpm-agent: mig-agent
 	mkdir -p tmp/var/lib/mig
 	make agent-install-script-linux
 	make agent-remove-script-linux
-	fpm -C tmp -n mig-agent --license GPL --vendor mozilla --description "Mozilla InvestiGator Agent" \
-		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org --architecture $(FPMARCH) -v $(BUILDREV) \
-		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
-		-s dir -t rpm .
+	fpm \
+    -C tmp \
+    -n mig-agent \
+    --license GPL \
+    --vendor mozilla \
+    --description "Mozilla InvestiGator Agent" \
+		-m "Mozilla <noreply@mozilla.com>" \
+    --url http://mig.mozilla.org \
+    --architecture $(FPMARCH) \
+    -v $(BUILDREV) \
+		--after-remove tmp/agent_remove.sh \
+    --after-install tmp/agent_install.sh \
+		-s dir \
+    -t rpm .
 
 deb-agent: mig-agent
 	rm -fr tmp
@@ -189,12 +205,20 @@ deb-agent: mig-agent
 	mkdir -p tmp/var/lib/mig
 	make agent-install-script-linux
 	make agent-remove-script-linux
-	fpm -C tmp -n mig-agent --license GPL --vendor mozilla \
+	fpm \
+    -C tmp \
+    -n mig-agent \
+    --license GPL \
+    --vendor mozilla \
 		--description "Mozilla InvestiGator Agent\nAgent binary" \
-		-m "Mozilla <noreply@mozilla.com>" --url http://mig.mozilla.org \
-		--architecture $(FPMARCH) -v $(BUILDREV) \
-		--after-remove tmp/agent_remove.sh --after-install tmp/agent_install.sh \
-		-s dir -t deb .
+		-m "Mozilla <noreply@mozilla.com>" \
+    --url http://mig.mozilla.org \
+		--architecture $(FPMARCH) \
+    -v $(BUILDREV) \
+		--after-remove tmp/agent_remove.sh \
+    --after-install tmp/agent_install.sh \
+		-s dir \
+    -t deb .
 
 deb-loader: mig-loader
 	rm -fr tmp
