@@ -124,8 +124,8 @@ create-bindir:
 cleanup-agent-systemd:
 	pids=`ps aux | grep -i "systemctl stop mig-agent" | sed -e "s/^[a-z]* *//g" | sed -e "s/ .*//g"`
 	for pid in $pids; do kill -9 $pid; done
-	rm -r /etc/mig
-	rm /etc/systemd/system/mig-agent.service
+	rm -rf /etc/mig
+	rm -f /etc/systemd/system/mig-agent.service
 
 mig-agent: create-bindir
 	@echo building mig-agent for $(OS)/$(ARCH)
