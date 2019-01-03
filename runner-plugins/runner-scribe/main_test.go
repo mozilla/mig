@@ -104,3 +104,44 @@ func TestConfigParsing(t *testing.T) {
 		}
 	}
 }
+
+func TestLookupOperatorTeam(t *testing.T) {
+	var serviceApiAssets = make(map[string]ServiceApiAsset)
+	testCases := [][]string{
+		{ "hostname1", "team1", "operator1" },
+		{ "hostname2", "", "operator2" },
+		{ "hostname3", "team3", "" },
+		{ "hostname4", "", ""},
+	}
+
+	// fill the map with test cases
+	for _, test := range testCases {
+		serviceApiAssets[test[0]] = ServiceApiAsset{AssetIdentifier: test[0], Team: test[1], Operator: test[2]}	
+	}
+
+	// run the test cases
+	for _, test := range testCases {
+		testOperator, testTeam := LookupOperatorTeam(test[0], serviceApiAssets)
+		if testOperator != test[2] || testTeam != test[1] {
+			t.Errorf(
+				"Expected operator to be %v but it is %v. Expected team to be %v but it is %v",
+				test[2],
+				testOperator,
+				test[1],
+				testTeam)
+		}	
+	}
+
+	// test lookup on a nonexistent hostname
+	testOperator, testTeam := LookupOperatorTeam("hostnameDoesNotExist", serviceApiAssets)
+	if testOperator != "" || testTeam != "" {
+		t.Errorf(
+			"Expected operator to be %v but it is %v. Expected team to be %v but it is %v",
+			"",
+			testOperator,
+			"",
+			testTeam)
+	}	
+
+
+}
