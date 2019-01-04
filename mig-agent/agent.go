@@ -12,8 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -24,6 +22,7 @@ import (
 
 	"github.com/mozilla/mig"
 	"github.com/mozilla/mig/mig-agent/agentcontext"
+	"github.com/mozilla/mig/mig-agent/api"
 	"github.com/mozilla/mig/modules"
 	"github.com/mozilla/mig/service"
 	"github.com/streadway/amqp"
@@ -67,38 +66,6 @@ type moduleOp struct {
 	resultChan   chan moduleResult
 	position     int
 	expireafter  time.Time
-}
-
-// Environment contains information about the environment an agent is running in.
-type Environment struct {
-	Init      string   `json:"init"`
-	Ident     string   `json:"ident"`
-	OS        string   `json:"os"`
-	Arch      string   `json:"arch"`
-	IsProxied bool     `json:"isProxied"`
-	Proxy     string   `json:"proxy"`
-	Addresses []string `json:"addresses"`
-	PublicIP  string   `json:"publicIP"`
-	Modules   []string `json:"modules"`
-}
-
-// Tag is a label associated with an agent.
-type Tag struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-// Heartbeat contains information describing an active agent.
-type Heartbeat struct {
-	Name        string      `json:"name"`
-	Mode        string      `json:"mode"`
-	Version     string      `json:"version"`
-	PID         uint        `json:"pid"`
-	QueueLoc    string      `json:"queueLoc"`
-	StartTime   time.Time   `json:"startTime"`
-	RefreshTime time.Time   `json:"refreshTime"`
-	Environment Environment `json:"environment"`
-	Tags        []Tag       `json:"tags"`
 }
 
 var runningOps = make(map[float64]moduleOp)
@@ -933,19 +900,19 @@ func sendResults(ctx *Context, result mig.Command) (err error) {
 
 // heartbeat will send heartbeats messages to the scheduler at regular intervals
 // and also store that heartbeat on disc
-func heartbeat(ctx *Context) (err error) {
+func heartbeat(ctx *Context) error {
 	// loop forever
 	for {
 		ctx.Agent.Lock()
-		tags := make([]Tag, 0)
+		tags := make([]api.Tag, 0)
 		for k, v := range ctx.Agent.Tags {
-			updated_tag := Tag{
+			updatedTag := api.Tag{
 				Name:  k,
 				Value: v,
 			}
-			tags = append(tags, updated_tag)
+			tags = append(tags, updatedTag)
 		}
-		heartbeat := Heartbeat{
+		heartbeat := api.Heartbeat{
 			Name:        ctx.Agent.Hostname,
 			Mode:        ctx.Agent.Mode,
 			Version:     mig.Version,
@@ -953,7 +920,7 @@ func heartbeat(ctx *Context) (err error) {
 			QueueLoc:    ctx.Agent.QueueLoc,
 			StartTime:   time.Now(),
 			RefreshTime: ctx.Agent.RefreshTS,
-			Environment: Environment{
+			Environment: api.Environment{
 				Init:      ctx.Agent.Env.Init,
 				Ident:     ctx.Agent.Env.Ident,
 				OS:        ctx.Agent.Env.OS,
@@ -969,43 +936,27 @@ func heartbeat(ctx *Context) (err error) {
 
 		ctx.Agent.Unlock()
 
-		// make a heartbeat
-		body, err := json.Marshal(heartbeat)
+		apiClient := api.NewClient(APIURL, PROXIES[:])
+		err := apiClient.Heartbeat(heartbeat)
+
 		if err != nil {
-			desc := fmt.Sprintf("heartbeat failed with error '%v'", err)
-			ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
-			// Don't treat this error as fatal, sleep for a period of time
-			// (as occurs at the end of this loop) and retry
-			time.Sleep(ctx.Sleeper)
-			continue
-		}
-		desc := fmt.Sprintf("heartbeat %q", body)
-		ctx.Channels.Log <- mig.Log{Desc: desc}.Debug()
-
-		heartbeatURL, err := url.Parse(APIURL)
-		heartbeatURL.Path = path.Join(heartbeatURL.Path, "heartbeat")
-		heartbeatAPIURL := heartbeatURL.String()
-
-		response, err := http.Post(heartbeatAPIURL, "application/json", bytes.NewReader(body))
-		if err != nil {
-			panic(err)
-		}
-
-		if response.StatusCode != http.StatusOK {
-			content, _ := ioutil.ReadAll(response.Body)
-			desc := fmt.Sprintf("Expected status code %d but got %d \n %s", http.StatusOK, response.StatusCode, string(content))
-			ctx.Channels.Log <- mig.Log{Desc: desc}.Err()
+			ctx.Channels.Log <- mig.Log{Desc: err.Error()}.Err()
+			return err
 		}
 
 		// update the local heartbeat file
-		err = ioutil.WriteFile(path.Join(ctx.Agent.RunDir, "mig-agent.ok"), []byte(time.Now().String()), 0644)
+		hbFile := path.Join(ctx.Agent.RunDir, "mig-agent.ok")
+		now := time.Now().String()
+		err = ioutil.WriteFile(hbFile, []byte(now), 0644)
 		if err != nil {
 			ctx.Channels.Log <- mig.Log{Desc: "Failed to write mig-agent.ok to disk"}.Err()
+			return err
 		}
 		os.Chmod(path.Join(ctx.Agent.RunDir, "mig-agent.ok"), 0644)
 		time.Sleep(ctx.Sleeper)
 	}
-	return
+
+	return nil
 }
 
 // publish is a generic function that sends messages to an AMQP exchange
