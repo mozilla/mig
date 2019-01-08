@@ -188,13 +188,13 @@ rpm-agent: mig-agent
 		-n mig-agent \
 		--license GPL \
 		--vendor mozilla \
-		---description "Mozilla InvestiGator Agent" \
+		--description "Mozilla InvestiGator Agent" \
 		-m "Mozilla <noreply@mozilla.com>" \
-		---url http://mig.mozilla.org \
-		---architecture $(FPMARCH) \
+		--url http://mig.mozilla.org \
+		--architecture $(FPMARCH) \
 		-v $(BUILDREV) \
-		---after-remove tmp/agent_remove.sh \
-		---after-install tmp/agent_install.sh \
+		--after-remove tmp/agent_remove.sh \
+		--after-install tmp/agent_install.sh \
 		-s dir \
 		-t rpm .
 
