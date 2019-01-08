@@ -185,18 +185,18 @@ rpm-agent: mig-agent
 	make agent-remove-script-linux
 	fpm \
 		-C tmp \
-		--n mig-agent \
+		-n mig-agent \
 		--license GPL \
 		--vendor mozilla \
 		---description "Mozilla InvestiGator Agent" \
-		--m "Mozilla <noreply@mozilla.com>" \
+		-m "Mozilla <noreply@mozilla.com>" \
 		---url http://mig.mozilla.org \
 		---architecture $(FPMARCH) \
-		--v $(BUILDREV) \
+		-v $(BUILDREV) \
 		---after-remove tmp/agent_remove.sh \
 		---after-install tmp/agent_install.sh \
-		--s dir \
-		--t rpm .
+		-s dir \
+		-t rpm .
 
 deb-agent: mig-agent
 	rm -fr tmp
