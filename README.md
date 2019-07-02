@@ -7,7 +7,7 @@ MIG is Mozilla's platform for investigative surgery of remote endpoints.
 ⚠️ Deprecation Notice ⚠️
 -------------------------
 
-Mozilla is no longer maintaining thie Mozilla InvestiGator (MIG) project.
+Mozilla is no longer maintaining the Mozilla InvestiGator (MIG) project.
 
 Mozilla is also no longer making use of this code internally.
 
