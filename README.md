@@ -2,9 +2,18 @@ MIG: Mozilla InvestiGator
 =========================
 <img style="float: right" src="doc/.files/MIG-logo-CC-small.jpg" size="300px">
 
-[![Build Status](https://travis-ci.org/mozilla/mig.svg?branch=master)](https://travis-ci.org/mozilla/mig)
-
 MIG is Mozilla's platform for investigative surgery of remote endpoints.
+
+⚠️ Deprecation Notice ⚠️
+-------------------------
+
+Mozilla is no longer maintaining the Mozilla InvestiGator (MIG) project.
+
+Mozilla is also no longer making use of this code internally.
+
+You are welcome to use this code as is with no warranty.
+
+If you would like to take or transfer ownership of this project, please let us know first by opening an issue.
 
 Quick Start w/ Docker
 ---------------------
