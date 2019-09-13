@@ -11,9 +11,8 @@ Mozilla is no longer maintaining the Mozilla InvestiGator (MIG) project.
 
 Mozilla is also no longer making use of this code internally.
 
-You are welcome to use this code as is with no warranty.
+You are welcome to use this code as is with no warranty. Please fork it to continue development.
 
-If you would like to take or transfer ownership of this project, please let us know first by opening an issue.
 
 Quick Start w/ Docker
 ---------------------
